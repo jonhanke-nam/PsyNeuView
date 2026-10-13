@@ -218,7 +218,9 @@ export function TourBar() {
         padding: "8px 12px",
         borderTop: "1px solid var(--pnv-walkthrough-border)",
         background: "var(--pnv-walkthrough-bg)",
-        fontSize: 13,
+        // Reading size (#5): the instruction is the text a learner reads, at
+        // the app's body size; the caption one step below it.
+        fontSize: 15,
         color: "var(--pnv-walkthrough-text)",
         // Above Settings and the other dialogs (zIndex 10000): a walkthrough
         // about Settings needs its bar while Settings is open.
@@ -226,7 +228,7 @@ export function TourBar() {
         zIndex: 10001,
       }}
     >
-      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--pnv-walkthrough-label)", whiteSpace: "nowrap" }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--pnv-walkthrough-label)", whiteSpace: "nowrap" }}>
         {walkthrough.title}
       </span>
 
@@ -245,11 +247,12 @@ export function TourBar() {
         ))}
       </span>
 
-      <span style={{ fontSize: 11, color: "var(--pnv-walkthrough-label)", whiteSpace: "nowrap" }}>
+      <span style={{ fontSize: 13, color: "var(--pnv-walkthrough-label)", whiteSpace: "nowrap" }}>
         {finished ? "complete" : `step ${stepIndex + 1} of ${walkthrough.steps.length}`}
       </span>
 
-      <span style={{ flex: 1, minWidth: 0 }}>
+      {/* A long instruction scrolls inside the bar rather than pushing the canvas away (#5). */}
+      <span data-testid="tour-text" style={{ flex: 1, minWidth: 0, maxHeight: "30vh", overflowY: "auto" }}>
         <span data-testid="tour-instruction" style={{ display: "block" }}>
           {instruction}
           {/* #1393: a boxed, red warning with a sign, so it doesn't read as
@@ -264,7 +267,7 @@ export function TourBar() {
                 alignItems: "flex-start",
                 marginTop: 3,
                 padding: "2px 8px",
-                fontSize: 12,
+                fontSize: 14,
                 color: "var(--pnv-danger)",
                 background: "var(--pnv-danger-tint)",
                 border: "1px solid var(--pnv-danger)",
@@ -295,13 +298,13 @@ export function TourBar() {
         {step && step.say && !finished && !complete && !holdForPointer && (
           <span
             data-testid="tour-caption"
-            style={{ display: "block", fontSize: 12, color: "var(--pnv-walkthrough-caption)", marginTop: 2, fontStyle: "italic" }}
+            style={{ display: "block", fontSize: 14, color: "var(--pnv-walkthrough-caption)", marginTop: 2, fontStyle: "italic" }}
           >
             {step.say}
           </span>
         )}
         {docs.length > 0 && (
-          <span data-testid="tour-docs" style={{ display: "block", fontSize: 11, color: "var(--pnv-walkthrough-docs)", marginTop: 2 }}>
+          <span data-testid="tour-docs" style={{ display: "block", fontSize: 12, color: "var(--pnv-walkthrough-docs)", marginTop: 2 }}>
             Based on:{" "}
             {docs.map((d, i) => (
               <span key={d}>
@@ -414,6 +417,6 @@ const barButton: React.CSSProperties = {
   border: "1px solid var(--pnv-walkthrough-border)",
   background: "var(--pnv-surface)",
   cursor: "pointer",
-  fontSize: 12,
+  fontSize: 13,
   color: "var(--pnv-walkthrough-text)",
 };
