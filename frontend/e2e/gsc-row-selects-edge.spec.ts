@@ -46,7 +46,9 @@ async function openFromPath(page: Page, model: string) {
   await expect(page.locator('.react-flow__node[data-id="TARGET"]')).toBeVisible({ timeout: 60_000 });
   await expect(page.getByTestId("gsc-edge-badge")).toHaveCount(3, { timeout: 30_000 });
   // The graph-condition legend floats over the canvas; it is not under test.
-  await page.getByTestId("gsc-legend-hide").click({ timeout: 10_000 }).catch(() => {});
+  // It opens collapsed by default (#7); hide it only if it was opened.
+  const legendHide = page.getByTestId("gsc-legend-hide");
+  if (await legendHide.isVisible().catch(() => false)) await legendHide.click();
 }
 
 /** Select a node by its top edge: an edge's badge can sit over its middle. */
