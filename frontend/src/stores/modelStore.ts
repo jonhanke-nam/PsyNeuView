@@ -11,6 +11,7 @@ import { recordAction } from "@/utils/history";
 import { usePortLayout } from "@/stores/portLayoutStore";
 import { useValueViews } from "@/stores/valueViewStore";
 import { useGraphSettings } from "./graphSettingsStore";
+import { useExternalChangeStore } from "./externalChangeStore";
 import type { GSCInfo, BasicConditionEntry, ConditionInfo, SchedulerConfig, DanglingProjectionInfo, BrokenProjectionInfo, CompositionExecutionModeInfo, InputSet, LearningProfile } from "@/types/model";
 import { buildStepNodeValues, type StepNodeValues } from "@/utils/traceValues";
 import { deriveTrialBoundaries } from "@/utils/trialBoundaries";
@@ -740,12 +741,30 @@ export const useModelStore = create<ModelState>((set, get) => ({
       const resp = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // base_source: what we believe is on disk, so the server refuses to
+        // write over a change made elsewhere since (#1). Inspector and canvas
+        // edits flush typed code first; without it, an outside edit was
+        // overwritten with no prompt.
         body: JSON.stringify(
           bundleOrigin
             ? { file_path: filePath, source, bundle_path: bundleOrigin }
-            : { file_path: filePath, source },
+            : { file_path: filePath, source, base_source: savedSource },
         ),
       });
+      if (resp.status === 409) {
+        // Changed on disk: ask, exactly as Save does, instead of writing.
+        const err = await resp.json().catch(() => null);
+        const detail = err?.detail;
+        if (detail && typeof detail.disk_source === "string") {
+          useExternalChangeStore.getState().setPending({
+            filePath,
+            source: detail.disk_source,
+            model: detail.disk_model,
+          });
+        }
+        record("model", `Save refused, changed on disk: ${filePath}`, { path: filePath, status: 409 });
+        return false;
+      }
       if (!resp.ok) {
         record("model", `Save failed: ${filePath}`, { path: filePath, status: resp.status });
         return false;

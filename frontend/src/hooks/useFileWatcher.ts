@@ -5,6 +5,7 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
+import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useModelStore } from "@/stores/modelStore";
 import { usePresenceStore } from "@/stores/presenceStore";
 import { useExternalChangeStore } from "@/stores/externalChangeStore";
@@ -13,6 +14,29 @@ import { useNotificationStore } from "@/stores/notificationStore";
 import { record } from "@/utils/activityLog";
 
 const RETRY_DELAYS = [1000, 2000, 4000, 8000]; // backoff in ms
+
+/**
+ * The model's file as it is on disk now, with its graph: what "Load from disk"
+ * takes (#1). Null when it can't be read, so the caller can fall back.
+ */
+export async function readDiskVersion(
+  filePath: string,
+  doFetch: typeof fetch = fetch,
+): Promise<{ source: string; model: unknown } | null> {
+  try {
+    const { flat, pytorch } = useGraphSettings.getState();
+    const resp = await doFetch("/api/model/load", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_path: filePath, flat, pytorch }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return typeof data?.source === "string" ? { source: data.source, model: data.model } : null;
+  } catch {
+    return null;
+  }
+}
 
 export function useFileWatcher() {
   const filePath = useModelStore((s) => s.filePath);
@@ -41,9 +65,13 @@ export function useFileWatcher() {
     [setSource, loadModelFromServer],
   );
 
-  const acceptPendingChange = useCallback(() => {
+  const acceptPendingChange = useCallback(async () => {
     if (!pendingChange) return;
-    applyChange(pendingChange.source, pendingChange.model);
+    // Read the file now (#1): the prompt holds the text from when the change
+    // was seen, and the other editor may have saved again since. The snapshot
+    // is used only if the file can't be read.
+    const fresh = await readDiskVersion(pendingChange.filePath);
+    applyChange(fresh?.source ?? pendingChange.source, fresh ? fresh.model : pendingChange.model);
     clearPendingChange();
   }, [pendingChange, applyChange, clearPendingChange]);
 
