@@ -15,6 +15,8 @@
 //                 value: string })                    -> MacAppSettings
 //   postMessage({ op: "checkInstall",  choice, path? }) -> InstallVerdict
 //   postMessage({ op: "switchInstall", choice, path? }) -> InstallVerdict
+//   postMessage({ op: "installUpdate" })               -> MacAppSettings
+//     (opens the app's own update window; PsyNeuView-MacApp#6)
 // A refused or malformed message rejects the Promise with the reason.
 // The app sends window events: "pnv:mac-settings-changed" (detail:
 // MacAppSettings) after any change, and "pnv:open-settings" for ⌘,.
@@ -47,6 +49,18 @@ export interface MacAppSettings {
   reportSendTo?: string;
   /** Who reports go to when "Send to" is empty. The app's, never written here. */
   reportSendToDefault?: string;
+  /**
+   * Whether an app update is waiting (PsyNeuView-MacApp#6). Absent from app
+   * builds before it, which the page treats as "none waiting".
+   */
+  appUpdate?: MacAppUpdate;
+}
+
+export interface MacAppUpdate {
+  available: boolean;
+  /** The waiting version, as people read it; present when available. */
+  version?: string;
+  releaseNotesURL?: string | null;
 }
 
 export type ReportSendWith = "ask" | "mail" | "outlook" | "gmail";
@@ -100,6 +114,12 @@ export const setMacAppReportSetting = (
   if (key === "reportSendWith") recordSettingChanged("mac-report-send-with", value);
   else recordSettingChanged("mac-report-send-to");
   return post<MacAppSettings>({ op: "set", key, value });
+};
+
+/** Open the app's own update window for the waiting update (PsyNeuView-MacApp#6). */
+export const installMacAppUpdate = () => {
+  record("menu", "Mac app: install the waiting update");
+  return post<MacAppSettings>({ op: "installUpdate" });
 };
 
 export const checkInstall = (c: InstallChoice) => post<InstallVerdict>({ op: "checkInstall", ...c });

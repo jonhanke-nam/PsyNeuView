@@ -14,6 +14,7 @@ import { menuGroups, orientationWalkthroughs } from "@/utils/tourStep";
 import { readOfferChoice, shouldRemindFromMenu, writeOfferChoice } from "@/utils/orientationOffer";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { PresenceIndicator } from "@/components/common/PresenceIndicator";
+import { AppUpdateNotice } from "@/components/common/AppUpdateNotice";
 import { importModelFiles, IMPORT_ACCEPT_ATTR } from "@/utils/importModelFiles";
 import { useStatusStore } from "@/stores/statusStore";
 import { useLayoutStore, type LayoutPreset } from "@/stores/layoutStore";
@@ -2355,6 +2356,10 @@ export function Toolbar() {
           Reset to Original
         </button>
       )}
+
+      {/* An app update is waiting (PsyNeuView-MacApp#6). Inside the Mac app
+          only; renders nothing otherwise. */}
+      <AppUpdateNotice />
 
       {/* Who else is on this instance (#1082). Renders nothing when alone or
           when presence can't be determined, which is every local run. */}
