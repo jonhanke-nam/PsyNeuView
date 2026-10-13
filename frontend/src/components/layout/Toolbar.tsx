@@ -11,6 +11,7 @@ import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useTourStore } from "@/stores/tourStore";
 import { useCatalogOpener } from "@/stores/catalogOpenerStore";
 import { menuGroups, orientationWalkthroughs } from "@/utils/tourStep";
+import { loadFoldedSections, saveFoldedSections, toggleFolded, unfoldActive } from "@/utils/tutorialsMenuFold";
 import { readOfferChoice, shouldRemindFromMenu, writeOfferChoice } from "@/utils/orientationOffer";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { PresenceIndicator } from "@/components/common/PresenceIndicator";
@@ -3159,6 +3160,25 @@ function WalkthroughMenu() {
   useDismiss(open, () => setOpen(false));
 
   const groups = menuGroups();
+  // #8: section headings fold, like the Open menu's. Remembered; the running
+  // walkthrough's section opens whenever the menu does.
+  const [folded, setFolded] = useState<Set<string>>(() => loadFoldedSections());
+  useEffect(() => {
+    if (!open) return;
+    setFolded((prev) => {
+      const next = unfoldActive(prev, groups, activeTourId);
+      if (next !== prev) saveFoldedSections(next);
+      return next;
+    });
+    // Re-checked each time the menu opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, activeTourId]);
+  const toggleGroup = (id: string) =>
+    setFolded((prev) => {
+      const next = toggleFolded(prev, id);
+      saveFoldedSections(next);
+      return next;
+    });
   // #1310: "Maybe later" on the first-launch offer puts a reminder here, until
   // a part of the orientation is started or the reminder is dismissed.
   const [offerChoice, setOfferChoice] = useState(readOfferChoice());
@@ -3256,10 +3276,42 @@ function WalkthroughMenu() {
               key={group.title}
               data-testid={`walkthrough-group-${group.id}`}
             >
-              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--pnv-text-faint)", padding: "4px 8px 2px", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                {group.title}
-              </div>
-              {group.walkthroughs.map((w) => (
+              <button
+                type="button"
+                data-testid={`tutorials-section-${group.id}`}
+                aria-expanded={!folded.has(group.id)}
+                onClick={() => toggleGroup(group.id)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  width: "100%",
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: "var(--pnv-text-faint)",
+                  padding: "4px 8px 2px",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  fontFamily: "inherit",
+                  lineHeight: "inherit",
+                }}
+              >
+                {/* Same fold glyph as the Open menu's section headings. */}
+                <span aria-hidden="true" style={{ fontSize: 9, width: 10, color: "var(--pnv-text-hint)" }}>
+                  {folded.has(group.id) ? "\u25b6" : "\u25bc"}
+                </span>
+                <span>{group.title}</span>
+                {folded.has(group.id) && (
+                  <span style={{ marginLeft: "auto", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
+                    {group.walkthroughs.length}
+                  </span>
+                )}
+              </button>
+              {!folded.has(group.id) && group.walkthroughs.map((w) => (
                 <button
                   key={w.id}
                   data-testid={`walkthrough-${w.id}`}

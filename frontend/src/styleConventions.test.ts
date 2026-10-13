@@ -50,11 +50,11 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
       "the Show N warnings fold on a failed run; a trial card's ×N steps fold; a debugger-snapshot category chip",
   },
   "components/layout/Toolbar.tsx": {
-    count: 34,
+    count: 35,
     what:
       "toolbar-sized buttons and menu triggers (⚙, Open ▾, Save, Save a copy as…, Layout ▾, Tutorials ▾: 6); " +
       "the Open menu's rows (actions, catalog models, a folder heading, recent files: 14) and a section's fold heading and ⇅ reorder (2); " +
-      "the Layout and Tutorials menus' rows (6); the tags beside the model name (the unsaved dot, view only, the checkout tag, Reset to Original for a demo and for a reference model: 5); " +
+      "the Layout and Tutorials menus' rows (6) and a Tutorials section's fold heading (1); the tags beside the model name (the unsaved dot, view only, the checkout tag, Reset to Original for a demo and for a reference model: 5); " +
       "the reminder's quiet Don't remind me (1)",
   },
   "components/layout/DeveloperModeIndicator.tsx": { count: 3, what: "the Developer badge that opens its menu, and that menu's two rows" },
