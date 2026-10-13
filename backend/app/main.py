@@ -9,11 +9,11 @@ from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 
 from app import __version__
 from app.api.routes import router
 from app.api.ws import handle_websocket
+from app.frontend_files import FrontendFiles
 from app.services import (
     edit_lock,
     github_auth,
@@ -241,4 +241,4 @@ async def health():
 # (after `npm run build`) this fields all non-API requests for the SPA shell.
 _frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 if _frontend_dist.is_dir():
-    app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="frontend")
+    app.mount("/", FrontendFiles(directory=str(_frontend_dist), html=True), name="frontend")
