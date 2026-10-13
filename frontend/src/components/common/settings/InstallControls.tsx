@@ -27,6 +27,7 @@ import { Combobox } from "../Combobox";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { hasFileBridge, pickOpenPath } from "@/utils/fileBridge";
 import { formatJobElapsed, useInstallJob } from "./useInstallJob";
+import { PnlRecordNotice } from "./PnlRecordNotice";
 import { newestInstallableRelease, useReleases } from "./useReleases";
 import {
   DEFAULT_DOWNLOAD_SOURCE,
@@ -195,6 +196,8 @@ export function InstallControls({
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {/* What is in use now, always; the button appears below only for a change (#1303). */}
         <InUseNow testId="install-in-use">{formatInstallSummary(currentPnl)}</InUseNow>
+        {/* The Mac app's saved choice, when it disagrees with the install (MacApp#9). */}
+        <PnlRecordNotice currentPnl={currentPnl} />
 
         <div style={{ ...row, alignItems: "flex-start" }}>
           <label id={SWITCH_LABEL_ID} style={{ ...labelStyle, paddingTop: 6 }}>Switch to</label>

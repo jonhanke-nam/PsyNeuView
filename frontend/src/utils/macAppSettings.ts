@@ -17,6 +17,9 @@
 //   postMessage({ op: "switchInstall", choice, path? }) -> InstallVerdict
 //   postMessage({ op: "installUpdate" })               -> MacAppSettings
 //     (opens the app's own update window; PsyNeuView-MacApp#6)
+//   postMessage({ op: "syncPnlSource" })               -> MacAppSettings
+//     (the app re-reads the installed PsyNeuLink and makes its record match;
+//      PsyNeuView-MacApp#9)
 // A refused or malformed message rejects the Promise with the reason.
 // The app sends window events: "pnv:mac-settings-changed" (detail:
 // MacAppSettings) after any change, and "pnv:open-settings" for ⌘,.
@@ -54,6 +57,12 @@ export interface MacAppSettings {
    * builds before it, which the page treats as "none waiting".
    */
   appUpdate?: MacAppUpdate;
+  /**
+   * The app's record of where PsyNeuLink comes from (PsyNeuView-MacApp#9):
+   * "github:<branch>", "pypi" or "local:<path>". It decides what a later
+   * environment rebuild installs. Absent from app builds before it.
+   */
+  pnlRecord?: string;
 }
 
 export interface MacAppUpdate {
@@ -114,6 +123,20 @@ export const setMacAppReportSetting = (
   if (key === "reportSendWith") recordSettingChanged("mac-report-send-with", value);
   else recordSettingChanged("mac-report-send-to");
   return post<MacAppSettings>({ op: "set", key, value });
+};
+
+/**
+ * Ask the app to re-read the installed PsyNeuLink and bring its record in
+ * step (PsyNeuView-MacApp#9). A no-op without the bridge (a browser), and
+ * harmless with an app that doesn't know the op: the rejection is swallowed.
+ */
+export const syncMacAppPnlSource = async (): Promise<MacAppSettings | null> => {
+  if (!hasSettingsBridge()) return null;
+  try {
+    return await post<MacAppSettings>({ op: "syncPnlSource" });
+  } catch {
+    return null;
+  }
 };
 
 /** Open the app's own update window for the waiting update (PsyNeuView-MacApp#6). */
