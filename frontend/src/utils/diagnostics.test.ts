@@ -13,7 +13,7 @@ import { useTourStore } from "@/stores/tourStore";
 import type { SettingsInfo } from "@/components/common/settings/types";
 import type { RunningInfo } from "./runningFrom";
 import { clearActivity, record } from "./activityLog";
-import {
+import { pageAgainstServer,
   DIAGNOSTICS_VERSION,
   classifyModel,
   collectDiagnostics,
@@ -62,6 +62,11 @@ describe("collectDiagnostics", () => {
     expect(snap.state.app).toEqual({
       psyneuviewVersion: "0.5.13",
       buildCommit: "abc1234",
+      // The page's own build (#2); unit tests have none, so it can't be compared.
+      pageVersion: null,
+      pageCommit: null,
+      pageMatchesServer: null,
+      versionWarning: null,
       deployment: "local",
       running: expect.objectContaining({ page: expect.any(Object) }),
     });
@@ -251,5 +256,35 @@ describe("classifyModel", () => {
 describe("diagnosticsFilename", () => {
   it("is psyneuview-diagnostics-<UTC time>.json, safe on every file system", () => {
     expect(diagnosticsFilename(new Date("2026-10-09T14:03:22.123Z"))).toBe("psyneuview-diagnostics-2026-10-09T14-03-22.json");
+  });
+});
+
+describe("pageAgainstServer (#2)", () => {
+  const page = (version: string | null, commit: string | null) =>
+    ({ version, commit, commitDate: null, dirty: null, builtAt: "2026-10-13T00:00:00Z" }) as const;
+
+  it("flags a cached older page against a newer server", () => {
+    const r = pageAgainstServer("0.5.16", "unknown", page("0.5.14", null), false);
+    expect(r.pageMatchesServer).toBe(false);
+    expect(r.pageVersion).toBe("0.5.14");
+    expect(r.versionWarning).toContain("0.5.14");
+    expect(r.versionWarning).toContain("0.5.16");
+    expect(r.versionWarning).toContain("stored copy");
+  });
+
+  it("compares commits when both are known", () => {
+    expect(pageAgainstServer("0.6.0", "abc1234def", page("0.6.0", "abc1234"), false).pageMatchesServer).toBe(true);
+    expect(pageAgainstServer("0.6.0", "abc1234", page("0.6.0", "fff9999"), false).pageMatchesServer).toBe(false);
+  });
+
+  it("agrees when the versions match and no commits are known", () => {
+    const r = pageAgainstServer("0.6.0", null, page("0.6.0", null), false);
+    expect(r.pageMatchesServer).toBe(true);
+    expect(r.versionWarning).toBeNull();
+  });
+
+  it("can't tell without a page build, and never flags the dev server", () => {
+    expect(pageAgainstServer("0.6.0", null, null, false).pageMatchesServer).toBeNull();
+    expect(pageAgainstServer("0.6.0", null, page("0.5.0", null), true).versionWarning).toBeNull();
   });
 });
