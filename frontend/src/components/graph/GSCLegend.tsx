@@ -12,6 +12,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useGraphLegendStore } from "@/stores/graphLegendStore";
 import { useReactFlow, useStore } from "@xyflow/react";
 import { useModelStore } from "@/stores/modelStore";
 import { DialogCloseButton } from "@/components/common/dialog/DialogHeader";
@@ -63,24 +64,37 @@ export function pickLegendCorner(gaps: { left: number; right: number; top: numbe
   return `${vert}${horiz}` as Corner;
 }
 
+// Only where the legend sits is remembered here. Whether it opens folded is
+// the Appearance setting (#7); an older stored `visible` is ignored.
 function loadPosition(): LegendPosition {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return { ...DEFAULT_POS, ...JSON.parse(stored) };
+    if (stored) {
+      const { visible: _ignored, ...where } = JSON.parse(stored);
+      return { ...DEFAULT_POS, ...where };
+    }
   } catch {}
   return DEFAULT_POS;
 }
 
 function savePosition(pos: LegendPosition) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(pos));
+    const { visible: _notStored, ...where } = pos;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(where));
   } catch {}
 }
 
 export function GSCLegend() {
   const gscConditions = useModelStore((s) => s.gscConditions);
   const hasModel = useModelStore((s) => s.filePath) !== null;
-  const [pos, setPos] = useState<LegendPosition>(loadPosition);
+  const filePath = useModelStore((s) => s.filePath);
+  const legendStart = useGraphLegendStore((s) => s.start);
+  const [pos, setPos] = useState<LegendPosition>(() => ({ ...loadPosition(), visible: legendStart === "expanded" }));
+  // How it opens is the setting (#7): on every model opened, and right away
+  // when the setting changes. Show/Hide only folds it for this view.
+  useEffect(() => {
+    setPos((p) => ({ ...p, visible: legendStart === "expanded" }));
+  }, [filePath, legendStart]);
   const [autoCorner, setAutoCorner] = useState<Corner>("br");
   const legendRef = useRef<HTMLDivElement | null>(null);
   const dragging = useRef(false);
@@ -170,11 +184,7 @@ export function GSCLegend() {
   }, [pos.x, pos.y]);
 
   const toggleVisible = useCallback(() => {
-    setPos((p) => {
-      const next = { ...p, visible: !p.visible };
-      savePosition(next);
-      return next;
-    });
+    setPos((p) => ({ ...p, visible: !p.visible }));
   }, []);
 
   // Don't render if no model is loaded or no GSC conditions exist
@@ -186,6 +196,7 @@ export function GSCLegend() {
       <button
         onClick={toggleVisible}
         title="Show legend"
+        data-testid="gsc-legend-show"
         style={{
           position: "absolute",
           top: 12,
@@ -225,6 +236,7 @@ export function GSCLegend() {
   return (
     <div
       ref={legendRef}
+      data-testid="gsc-legend"
       onMouseDown={onMouseDown}
       style={{
         position: "absolute",

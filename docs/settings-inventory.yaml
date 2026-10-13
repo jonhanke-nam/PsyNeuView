@@ -290,6 +290,19 @@ settings:
       load. Applies to the arrow; the hand is the system's own. Window zoom
       doesn't scale cursors, so this is the one control for the size.
 
+  - id: graph-legend-start
+    label: Appearance ▸ Graph legend ▸ How the legend opens
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.legendStart); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-graph-legend-start
+    notes: >-
+      Starts collapsed (default) or Starts expanded (#7). Decides how the
+      graph-structure-condition legend opens, on every model opened. The
+      legend's own Show/Hide folds it for the open model without changing
+      this setting; only the legend's position is remembered by the legend
+      (psynewview-gsc-legend).
+
   - id: catalogs
     label: Folders ▸ Your catalogs (add, rename, remove)
     home: settings

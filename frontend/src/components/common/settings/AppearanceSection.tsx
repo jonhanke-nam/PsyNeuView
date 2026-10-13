@@ -6,9 +6,11 @@
  * (stores/graphPointerStore.ts). A preview shows the arrow at the chosen
  * size, since the real pointer is only seen over the canvas; hovering the
  * preview shows the real thing too. Look-and-feel settings belong here
- * (docs/settings-etiquette.md §1).
+ * (docs/settings-etiquette.md §1). The graph legend's opening state (#7)
+ * is here too: collapsed by default.
  */
 
+import { LEGEND_STARTS, isLegendStart, useGraphLegendStore } from "@/stores/graphLegendStore";
 import { useGraphPointerStore } from "@/stores/graphPointerStore";
 import {
   GRAPH_POINTERS,
@@ -22,12 +24,46 @@ import { Group, SettingLabel, mutedStyle } from "./shared";
 
 export function AppearanceSection() {
   return (
-    <Group id="pointer" title="Pointer">
-      <GraphPointerRow />
-      <div style={{ marginTop: 14 }}>
-        <PointerSizeRow />
-      </div>
-    </Group>
+    <>
+      <Group id="pointer" title="Pointer">
+        <GraphPointerRow />
+        <div style={{ marginTop: 14 }}>
+          <PointerSizeRow />
+        </div>
+      </Group>
+      <Group id="graph-legend" title="Graph legend">
+        <GraphLegendRow />
+      </Group>
+    </>
+  );
+}
+
+function GraphLegendRow() {
+  const start = useGraphLegendStore((s) => s.start);
+  const setStart = useGraphLegendStore((s) => s.setStart);
+  return (
+    <div style={{ fontSize: 13 }}>
+      <SettingLabel title="How the legend opens" htmlFor="setting-graph-legend-start">
+        The legend in the graph view explains the edge types of graph-structure
+        conditions. Collapsed, it is a small Legend button in the corner of the
+        canvas. Either way, the legend's own Show and Hide fold it for the
+        model you have open.
+      </SettingLabel>
+      <select
+        id="setting-graph-legend-start"
+        data-testid="setting-graph-legend-start"
+        value={start}
+        onChange={(e) => isLegendStart(e.target.value) && setStart(e.target.value)}
+        style={selectStyle}
+      >
+        {LEGEND_STARTS.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+            {o.id === "collapsed" ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 

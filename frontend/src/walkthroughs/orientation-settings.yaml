@@ -46,10 +46,10 @@ steps:
       testid: settings-section-appearance
     instruct: >-
       Click Appearance: how the app looks and feels, remembered in this
-      browser. Today that is the pointer in the graph view, an arrow or a
-      hand, and its size, with a preview.
+      browser: the pointer in the graph view, an arrow or a hand, and its
+      size, with a preview; and whether the graph legend opens collapsed.
     say: >-
-      Appearance is how the app looks: the graph pointer and its size.
+      Appearance is how the app looks: the graph pointer, and the legend.
     done:
       visible: settings-content-appearance
     act:
