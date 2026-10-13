@@ -53,6 +53,7 @@ spline-straightness.spec.ts
 stroop-lc-reference.spec.ts
 style-sizes.spec.ts
 toolbar-menus-over-dividers.spec.ts
+toolbar-no-split-buttons.spec.ts
 tour-ring-behind-dialogs.spec.ts
 undo-depth.spec.ts
 undo-notices.spec.ts

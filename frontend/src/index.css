@@ -152,3 +152,15 @@ button:hover {
 .pnv-history-step[data-opens="true"]:not([data-current="true"]):hover {
   background: var(--pnv-surface-muted) !important;
 }
+
+/* #6: a toolbar control never breaks onto two lines ("Open" above its ▾).
+   The toolbar row wraps whole controls instead (flex-wrap in Toolbar.tsx).
+   Menus and dialogs opened from the toolbar sit inside it in the DOM, and
+   their rows are meant to wrap, so they go back to normal wrapping. */
+.app-toolbar {
+  white-space: nowrap;
+}
+.app-toolbar [role="menu"],
+.app-toolbar [role="dialog"] {
+  white-space: normal;
+}
