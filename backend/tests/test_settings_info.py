@@ -200,10 +200,17 @@ def test_psyneulink_malformed_direct_url():
     }
 
 
-def test_psyneulink_env_override_pypi(monkeypatch):
-    """Mac app sets PSYNEUVIEW_PNL_SOURCE=pypi → branch and repo are null regardless."""
-    monkeypatch.setenv("PSYNEUVIEW_PNL_SOURCE", "pypi")
-    monkeypatch.delenv("PSYNEUVIEW_PNL_BRANCH", raising=False)
+_GITHUB_DEVEL_DIRECT_URL = (
+    '{"url": "https://github.com/PrincetonUniversity/PsyNeuLink.git",'
+    ' "vcs_info": {"vcs": "git", "requested_revision": "devel", "commit_id": "abcdef1234"}}'
+)
+
+
+def test_psyneulink_disk_beats_stale_env_github_over_pypi(monkeypatch):
+    """MacApp#9: the Mac app's env still says GitHub devel, but an official
+    release was installed since (no direct_url.json) → the release is shown."""
+    monkeypatch.setenv("PSYNEUVIEW_PNL_SOURCE", "github")
+    monkeypatch.setenv("PSYNEUVIEW_PNL_BRANCH", "devel")
     monkeypatch.delenv("PSYNEUVIEW_PNL_REPO", raising=False)
     with patch.object(si, "distribution", return_value=_fake_dist("0.16.0.0", None)):
         out = si.get_psyneulink_info()
@@ -217,51 +224,41 @@ def test_psyneulink_env_override_pypi(monkeypatch):
     }
 
 
-def test_psyneulink_env_override_github(monkeypatch):
-    """Mac app sets source=github + branch → both honored; repo absent stays None (Princeton implied)."""
+def test_psyneulink_disk_beats_stale_env_pypi_over_github(monkeypatch):
+    """Env says pypi, disk says a GitHub install → the GitHub install is shown."""
+    monkeypatch.setenv("PSYNEUVIEW_PNL_SOURCE", "pypi")
+    with patch.object(si, "distribution", return_value=_fake_dist("0.16.0.0", _GITHUB_DEVEL_DIRECT_URL)):
+        out = si.get_psyneulink_info()
+    assert out["source"] == "github"
+    assert out["branch"] == "devel"
+    assert out["repo"] == "PrincetonUniversity/PsyNeuLink"
+
+
+def test_psyneulink_disk_beats_stale_env_fork_branch(monkeypatch):
+    """Env names a fork branch from an earlier setup; disk has Princeton devel."""
+    monkeypatch.setenv("PSYNEUVIEW_PNL_SOURCE", "github")
+    monkeypatch.setenv("PSYNEUVIEW_PNL_BRANCH", "feature/foo")
+    monkeypatch.setenv("PSYNEUVIEW_PNL_REPO", "jonhanke-nam/PsyNeuLink")
+    with patch.object(si, "distribution", return_value=_fake_dist("0.16.0.0", _GITHUB_DEVEL_DIRECT_URL)):
+        out = si.get_psyneulink_info()
+    assert (out["source"], out["branch"], out["repo"]) == ("github", "devel", "PrincetonUniversity/PsyNeuLink")
+
+
+def test_psyneulink_env_fills_in_when_disk_record_unreadable(monkeypatch):
+    """An unreadable direct_url.json → the Mac app's env is the best answer left."""
     monkeypatch.setenv("PSYNEUVIEW_PNL_SOURCE", "github")
     monkeypatch.setenv("PSYNEUVIEW_PNL_BRANCH", "devel")
-    monkeypatch.delenv("PSYNEUVIEW_PNL_REPO", raising=False)
-    with patch.object(si, "distribution", return_value=_fake_dist("0.16.0.0+devel", None)):
+    monkeypatch.setenv("PSYNEUVIEW_PNL_REPO", "jonhanke-nam/PsyNeuLink")
+    with patch.object(si, "distribution", return_value=_fake_dist("0.16.0.0+devel", "{not json")):
         out = si.get_psyneulink_info()
     assert out == {
         "version": "0.16.0.0+devel",
         "source": "github",
         "branch": "devel",
-        "repo": None,
-        "commit": None,
-        "path": None,
-    }
-
-
-def test_psyneulink_env_override_github_with_repo(monkeypatch):
-    """Mac app publishes PSYNEUVIEW_PNL_REPO when a fork is configured (issue #143)."""
-    monkeypatch.setenv("PSYNEUVIEW_PNL_SOURCE", "github")
-    monkeypatch.setenv("PSYNEUVIEW_PNL_BRANCH", "feature/foo")
-    monkeypatch.setenv("PSYNEUVIEW_PNL_REPO", "jonhanke-nam/PsyNeuLink")
-    with patch.object(si, "distribution", return_value=_fake_dist("0.16.0.0+foo", None)):
-        out = si.get_psyneulink_info()
-    assert out == {
-        "version": "0.16.0.0+foo",
-        "source": "github",
-        "branch": "feature/foo",
         "repo": "jonhanke-nam/PsyNeuLink",
         "commit": None,
         "path": None,
     }
-
-
-def test_psyneulink_env_override_overrides_introspection(monkeypatch):
-    """Even if direct_url.json says GitHub, env-var pypi wins (Mac app is source of truth)."""
-    monkeypatch.setenv("PSYNEUVIEW_PNL_SOURCE", "pypi")
-    direct_url = (
-        '{"url": "https://github.com/PrincetonUniversity/PsyNeuLink.git",'
-        ' "vcs_info": {"vcs": "git", "requested_revision": "devel"}}'
-    )
-    with patch.object(si, "distribution", return_value=_fake_dist("0.16.0.0", direct_url)):
-        out = si.get_psyneulink_info()
-    assert out["source"] == "pypi"
-    assert out["branch"] is None
 
 
 def test_psyneulink_env_override_invalid_value_falls_through(monkeypatch):

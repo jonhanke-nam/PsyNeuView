@@ -164,22 +164,6 @@ def _is_managed_clone(path: Path) -> bool:
         return False
 
 
-def _local_checkout_installed() -> bool:
-    """True when the installed psyneulink is an editable install from a folder
-    outside the managed clones: the user's own local checkout (#1276)."""
-    try:
-        text = distribution("psyneulink").read_text("direct_url.json")
-        direct_url = json.loads(text) if text else {}
-    except (PackageNotFoundError, json.JSONDecodeError):
-        return False
-    if not isinstance(direct_url, dict):
-        return False
-    url = direct_url.get("url", "") or ""
-    if not ((direct_url.get("dir_info") or {}).get("editable") and url.startswith("file://")):
-        return False
-    return not _is_managed_clone(Path(unquote(url[len("file://"):])))
-
-
 def active_psyneulink_package_dir() -> Optional[Path]:
     """The installed ``psyneulink`` package directory, read fresh from disk (#1225).
 
@@ -228,11 +212,17 @@ def get_psyneulink_info() -> PsyNeuLinkInfo:
         itself holds the real source-of-truth (origin remote, branch,
         commit), so we read git directly from it.
     """
-    # The Mac app's launch-time env vars describe what it installed then. A
-    # local checkout chosen later from Settings is unambiguous on disk, so it
-    # wins over a stale "github"/"pypi" from the environment (#1276).
-    if not _local_checkout_installed() and (override := _override_from_env()) is not None:
+    # What pip recorded on disk is what runs. The Mac app's launch-time env
+    # vars describe the source it last set up, which goes stale as soon as
+    # the source is switched from Settings (#1276, MacApp#9), so they only
+    # fill in when the disk can't say.
+    info = _psyneulink_info_from_disk()
+    if info["source"] == "unknown" and (override := _override_from_env()) is not None:
         return override
+    return info
+
+
+def _psyneulink_info_from_disk() -> PsyNeuLinkInfo:
     try:
         dist = distribution("psyneulink")
     except PackageNotFoundError:
