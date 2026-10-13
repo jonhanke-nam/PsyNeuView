@@ -1,0 +1,119 @@
+# PsyNeuView First Steps, part 2: opening a model (#1312, under #1310).
+#
+# The Open menu, section by section, and where each section's models come
+# from. Everything said here is on docs/where-things-live.md; the menu's own
+# headings say the same in fewer words.
+#
+# The menu stays open while the bar's Next is used (the toolbar treats the
+# walkthrough bar as part of the menu for that purpose), so the steps can walk
+# down it. Recent only appears once something has been opened, so it is
+# described rather than ringed.
+
+id: orientation-open
+title: "Opening a model: the Open menu and where each section comes from"
+orientation: 2
+minutes: 3
+docs:
+  - where-things-live.md
+
+steps:
+  - id: open-the-menu
+    anchor:
+      testid: open-menu
+    instruct: Click Open to see every place a model can come from.
+    say: >-
+      The Open menu lists every place a model can come from.
+    done:
+      visible: open-menu-list
+    act:
+      click: open-menu
+
+  - id: new-model
+    anchor:
+      testid: open-menu-new-model
+    pointer: true
+    instruct: >-
+      At the top are actions. New Model starts a fresh model file in My Project
+      Folder, with one input node and one output node to build on.
+    say: >-
+      New Model starts a fresh file of your own.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: open-from-path
+    anchor:
+      testid: open-menu-open-from-path
+    pointer: true
+    instruct: >-
+      Open from path opens any PsyNeuLink .py file on this computer by its path.
+      The file is yours and opens in place. Below it are import options, for a
+      .pnlproject bundle, an MDF file, or a file from a GitHub repository.
+    say: >-
+      Open from path takes any Python model file on this computer.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: my-project-folder
+    anchor:
+      testid: open-menu-section-myModels
+    pointer: true
+    instruct: >-
+      My Project Folder is the first catalog: your own models. New models are
+      saved here. On a Mac it is Documents ▸ PsyNeuView-My-Models; Settings ▸
+      Folders shows the exact folder and lets you change or move it.
+    say: >-
+      My Project Folder is where your own models live.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: the-library
+    anchor:
+      testid: open-menu-section-library
+    pointer: true
+    instruct: >-
+      PsyNeuLink Library lists the models that come with the PsyNeuLink in use.
+      The heading says which PsyNeuLink that is. Switch PsyNeuLink in Settings,
+      and this section lists that PsyNeuLink's models instead; My Project Folder
+      stays the same.
+    say: >-
+      The Library comes with the PsyNeuLink you have selected, and changes with it.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: under-development
+    anchor:
+      testid: open-menu-section-references
+    pointer: true
+    instruct: >-
+      Lower down are catalogs under development: Reference Models and Demo
+      Models, included with PsyNeuView, and PsyNeuLink Examples. They show in
+      developer mode, when switched on in Settings ▸ Open menu, or, as now,
+      during a walkthrough that uses them. Once something has been opened, a
+      Recent list appears at the bottom.
+    say: >-
+      Lower down are catalogs still under development, and your recent files.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: open-one
+    anchor:
+      testid: open-menu-section-references
+    instruct: >-
+      Open Stroop — Basic from Reference Models. It is a model of
+      the Stroop task that the other parts of this orientation use.
+    say: >-
+      Open the Stroop model. The next parts use it.
+    done:
+      nodeExists: color_hidden
+    act:
+      openModel: Stroop — Basic

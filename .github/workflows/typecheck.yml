@@ -1,0 +1,142 @@
+name: Frontend
+
+# Fast frontend gate: runs `tsc -b` (typecheck) and `npm test` (vitest unit
+# tests) for every PR to devel and devel push that touches frontend code. No
+# PsyNeuLink/torch install, so it's cheap (seconds of compute) and catches type
+# and edge-routing-geometry regressions before they land (#967).
+
+on:
+  # No path filter on triggers (so the `typecheck (tsc)` check is always
+  # reported for branch protection); the `changes` job decides whether it runs.
+
+  # `feature/tutorials` gates here and only here (plus the docs drift guard).
+  # typecheck + vitest run in well under a minute, so every tutorial slice gets
+  # a real check without paying for the tutorials/e2e/pytest suites -- those run
+  # once at the PR into devel. See docs/testing.md.
+  push:
+    branches: [devel, devel-unsafe]
+  pull_request:
+    branches: [devel, devel-unsafe, feature/tutorials]
+  workflow_dispatch:
+
+concurrency:
+  group: typecheck-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.f.outputs.run }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: f
+        env:
+          # docs/settings-inventory.yaml: vitest checks it against the
+          # Settings controls (#1279), so editing it alone must run vitest.
+          PATTERN: '^(frontend/|docs/settings-inventory\.yaml|\.github/workflows/typecheck\.yml)'
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # `github.sha` is the auto-generated merge commit, and its FIRST
+            # parent is the base branch as it stands *now*. Use that.
+            #
+            # `pull_request.base.sha` is the base as it was when the PR was
+            # opened, so diffing from it also sweeps up everything the base
+            # gained since -- #989. A one-line docs PR (#1184) ran tutorials,
+            # e2e and both pytest variants because devel had moved under it:
+            # the diff reported five frontend/workflow files the PR never
+            # touched. The merge-base call below cannot save us there, because
+            # the merge commit descends from the stale base, so the merge base
+            # *is* the stale base.
+            base="$(git rev-parse "${{ github.sha }}^1" 2>/dev/null || true)"
+            # An unmergeable PR has no merge commit -> fall back to the
+            # recorded base rather than skipping.
+            [ -n "$base" ] || base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif mb="$(git merge-base "$base" "${{ github.sha }}" 2>/dev/null)"; [ -z "$mb" ]; then
+            # merge base unresolvable -> fail safe by running, never by skipping
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$mb" "${{ github.sha }}" | grep -qE "$PATTERN"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  typecheck:
+    name: typecheck (tsc)
+    needs: changes
+    # #991: `!= 'false'` rather than `== 'true'`, so this gate only skips when
+    # `changes` actually decided the paths were irrelevant. If `changes` dies
+    # (it failed to even start during the 2026-08-25 Actions billing outage),
+    # `run` is empty and this job runs — and a required check that fails blocks
+    # the merge, where a skipped one silently satisfies branch protection.
+    if: ${{ !cancelled() && needs.changes.outputs.run != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck (tsc -b)
+        working-directory: frontend
+        run: npx tsc -b
+
+  unit-tests:
+    name: unit tests (vitest)
+    needs: changes
+    # #991: `!= 'false'` rather than `== 'true'`, so this gate only skips when
+    # `changes` actually decided the paths were irrelevant. If `changes` dies
+    # (it failed to even start during the 2026-08-25 Actions billing outage),
+    # `run` is empty and this job runs — and a required check that fails blocks
+    # the merge, where a skipped one silently satisfies branch protection.
+    if: ${{ !cancelled() && needs.changes.outputs.run != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Unit tests (vitest)
+        working-directory: frontend
+        run: npm test
+
+      # #1302: every file is on the palette, so a colour written by hand (or a
+      # token palette.css does not define) fails here, with the file named.
+      # styleConventions.test.ts above holds the same line, plus the buttons.
+      - name: Style check (no hand-written colours)
+        working-directory: frontend
+        run: node scripts/style-report.mjs --check

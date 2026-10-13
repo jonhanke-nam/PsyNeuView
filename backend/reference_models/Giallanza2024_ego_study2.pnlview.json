@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "positions": {
+    "state_input_layer": {
+      "x": 150,
+      "y": 900
+    },
+    "context_bias": {
+      "x": 480,
+      "y": 900
+    },
+    "previous_state_layer": {
+      "x": -160,
+      "y": 560
+    },
+    "context_layer": {
+      "x": 320,
+      "y": 700
+    },
+    "context_normalized": {
+      "x": 420,
+      "y": 520
+    },
+    "EM": {
+      "x": 90,
+      "y": 400
+    },
+    "prediction_layer": {
+      "x": 90,
+      "y": 220
+    },
+    "LOSS for PREDICTION": {
+      "x": -180,
+      "y": 200
+    }
+  }
+}

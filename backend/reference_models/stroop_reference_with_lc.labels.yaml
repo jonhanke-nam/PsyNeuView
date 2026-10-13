@@ -1,0 +1,68 @@
+# Semantic element labels for stroop_reference_with_lc.py.
+#
+# Stroop model (Cohen et al., 1990) augmented with a Locus Coeruleus
+# (LC) control mechanism. The processing nodes mirror the basic Stroop
+# reference (stroop_reference_basic), so the literature names match:
+# index 0 = "red", index 1 = "green" throughout.
+#
+# This is the convention the literature uses; the model code itself
+# doesn't fix the names. Flip the pairs here if you want a different
+# semantic mapping — the model continues to compute the same values,
+# only the rendering changes.
+#
+# Read by `app/services/labels.py` (#361 Layer 3); consumed by the pill,
+# pill tooltip, and Run State tab in the frontend.
+
+# ── Color naming pathway ─────────────────────────────────────────────
+color_input:
+  element_names: [red_ink, green_ink]
+
+color_hidden:
+  element_names: [red_from_color, green_from_color]
+
+# ── Word reading pathway ─────────────────────────────────────────────
+word_input:
+  element_names: [red_word, green_word]
+
+word_hidden:
+  element_names: [red_from_word, green_from_word]
+
+# ── Shared response layer ────────────────────────────────────────────
+decision:
+  element_names: [response_red, response_green]
+
+# ── Task instruction ────────────────────────────────────────────────
+# task_to_color matrix [[4,4],[0,0]]: index 0 enables both color-hidden
+# units, so task_input[0] selects the color-naming task.
+# task_to_word matrix [[0,0],[4,4]]: index 1 enables word-hidden, so
+# task_input[1] selects the word-reading task.
+task_input:
+  element_names: [color_task, word_task]
+
+# ── Run-panel value labels (#564) ────────────────────────────────────
+# `value_labels` names each component of a node's `value` by position, as
+# rendered in the Run / Run State panels. This is the "Run panel" meaning
+# of an output port (one row per value component), which is distinct from
+# the "graph" meaning (one node port per real PsyNeuLink OutputPort). The
+# two diverge for the LC: it has a single ControlSignal port but its value
+# carries four components (gain + FitzHugh-Nagumo v/w/time).
+#
+# Exposing v/w/time as real OutputPorts (so they render in the graph too)
+# and the LC's 2-element drive are tracked separately — see the split-off
+# issue noted in #564.
+
+# Response (DDM, DriftDiffusionIntegrator mode).
+# value[0] = decision variable: accumulated relative evidence to threshold.
+#   Sign convention (verified): > 0 favours red (index 0), < 0 favours
+#   green (index 1).
+# value[1] = response time: steps to threshold.
+response:
+  value_labels: [evidence_red_vs_green, decision_time]
+
+# Locus Coeruleus (LCControlMechanism, FitzHugh-Nagumo).
+# value[0] = gain g(t) = k·w + G, modulating color_hidden / word_hidden.
+# value[1] = v, the FHN fast excitation variable (LC activation).
+# value[2] = w, the FHN slow recovery variable (gain is derived from this).
+# value[3] = time, the integrator's internal elapsed-time accumulator.
+LC:
+  value_labels: [lc_gain, lc_activation_v, lc_recovery_w, integration_time]

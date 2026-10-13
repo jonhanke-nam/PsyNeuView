@@ -1,0 +1,224 @@
+# PsyNeuView First Steps, part 8: for developers (#1318, under #1310).
+#
+# The developer track. It turns developer mode on for its duration
+# (`developerMode: true`; the bar puts it back afterwards, finished or ended)
+# so the badges and the Developer section are what the learner sees. From
+# docs/what-you-can-edit.md and the developer parts of
+# docs/where-things-live.md.
+#
+# Nothing is switched or installed: a PsyNeuLink switch reinstalls and restarts
+# the model runner, so the steps point and explain.
+
+id: orientation-developers
+title: "For developers: developer mode, checkouts, and editing PsyNeuLink"
+orientation: 8
+minutes: 4
+developerMode: true
+docs:
+  - what-you-can-edit.md
+  - where-things-live.md
+
+steps:
+  - id: the-indicator
+    anchor:
+      testid: developer-mode-indicator
+    pointer: true
+    instruct: >-
+      Developer mode is on for this walkthrough; it goes back to how it was
+      when the walkthrough ends. While it is on, this Developer badge shows in
+      the toolbar, and everything the mode adds carries the same badge. Click
+      the badge for a menu: turn the mode off, or open its settings.
+    say: >-
+      Developer mode is on. The badge in the toolbar says so, and marks everything it adds.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: open-settings
+    anchor:
+      testid: settings-button
+    instruct: Open Settings.
+    say: >-
+      Open Settings.
+    done:
+      visible: settings-panel
+    act:
+      click: settings-button
+
+  - id: developer-section
+    anchor:
+      testid: settings-section-developer
+    instruct: Click Developer (advanced).
+    say: >-
+      The Developer section.
+    done:
+      visible: settings-content-developer
+    act:
+      click: settings-section-developer
+
+  - id: the-switch
+    anchor:
+      testid: settings-group-developer-mode
+    pointer: true
+    instruct: >-
+      The developer-mode switch is the first item, and the only control for
+      it. In the Mac app, the app keeps its value, since the page's own storage
+      starts empty on every launch there.
+    say: >-
+      The one switch for developer mode.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: which-psyneulink
+    anchor:
+      testid: settings-group-pnl-install
+    pointer: true
+    instruct: >-
+      Which PsyNeuLink is installed, in full: a line says what is in use, and
+      the Switch to dropdown offers another checkout or repo, then your
+      checkouts, each GitHub repo's branches and the official releases in
+      groups that fold. Settings says what the
+      switch will change before you press Apply & restart, which appears only
+      for a choice that differs from what is installed.
+    say: >-
+      Which PsyNeuLink is installed: GitHub, PyPI, or your own checkout.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: where-installed
+    anchor:
+      testid: settings-group-install-locations
+    pointer: true
+    instruct: >-
+      Where PsyNeuView and PsyNeuLink are installed, with their paths and
+      whether each is yours to edit. A PsyNeuLink that PsyNeuView installed is
+      a managed copy, kept identical to its source and read only. Your own
+      checkout is yours.
+    say: >-
+      Where each is installed, and whose it is to edit.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: details
+    anchor:
+      testid: settings-group-pnl-details
+    pointer: true
+    instruct: >-
+      PsyNeuLink details: repository, branch, commit, path, version, whether
+      the branch has moved on, and Debugging support, which says whether this
+      build has the debugger hook that run stepping needs.
+    say: >-
+      The details of the PsyNeuLink in use, including whether it supports stepping.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: managed-copies
+    anchor:
+      testid: settings-group-managed-copies
+    pointer: true
+    instruct: >-
+      Managed PsyNeuLink copies and checkouts: every GitHub copy PsyNeuView has
+      cloned, with its size and when it was last used, kept official releases,
+      and the checkouts you have switched to. Remove any copy not in use.
+    say: >-
+      The copies PsyNeuView keeps, and the checkouts it knows.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: checkout-updates
+    anchor:
+      testid: settings-group-checkout-updates
+    pointer: true
+    instruct: >-
+      Keep your checkouts current: per checkout, Check for upstream changes
+      and Pull on launch, both off by default. A pull is fast-forward only and
+      never switches a branch; with local changes nothing is pulled, and it
+      says why. A checkout of your own is never updated any other way.
+    say: >-
+      Your checkouts update only on your say-so, and only by fast-forward.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: close-settings
+    anchor:
+      testid: settings-panel
+    instruct: Press Escape to close Settings.
+    say: >-
+      Close Settings.
+    done:
+      hidden: settings-panel
+    act:
+      pressKey: Escape
+
+  - id: open-menu
+    anchor:
+      testid: open-menu
+    instruct: Click Open to see what developer mode adds to the menu.
+    say: >-
+      Developer mode adds to the Open menu, too.
+    done:
+      visible: open-menu-list
+    act:
+      click: open-menu
+
+  - id: dev-tests
+    anchor:
+      testid: open-menu-dev-tests
+    pointer: true
+    instruct: >-
+      Developer / Tests… opens one of PsyNeuLink's own tests as a model. It,
+      and the catalogs under development below, carry the Developer badge: they
+      are here because the mode is on.
+    say: >-
+      Developer Tests, and the catalogs under development, carry the badge.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: editing-psyneulink
+    anchor:
+      testid: open-menu-section-library
+    pointer: true
+    instruct: >-
+      The Library opens PsyNeuLink's own files in place. From a managed
+      PsyNeuLink the toolbar tag reads "PsyNeuLink from GitHub · read only"
+      and the editor says why. From your own checkout it reads "your
+      PsyNeuLink checkout · editing": type, Save, and the change is in your
+      repository. Click that tag to protect the checkout; click again to allow
+      edits. PsyNeuView remembers this per checkout. To keep just one model
+      from changing, lock it instead: Layout ▸ Lock this model (view only).
+    say: >-
+      Library files are read only from a managed PsyNeuLink, and editable from your own checkout.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: mac-app
+    anchor:
+      testid: open-menu-section-library
+    instruct: >-
+      In the Mac app, Settings ▸ Developer also chooses which PsyNeuView runs,
+      the copy included with the app or a checkout of yours, which is how a
+      test build is tried. Help ▸ Report a Problem… adds Open as GitHub issue
+      while developer mode is on. Press Next to finish the orientation.
+    say: >-
+      In the Mac app, Developer also chooses which PsyNeuView runs. That is the end of the orientation.
+    done:
+      next: true
+    act:
+      next: true

@@ -1,0 +1,191 @@
+id: conflict
+title: Conflict monitoring — a Stroop model that measures its own conflict
+course: "7.1"
+model: Conflict Monitoring
+minutes: 5
+docs:
+  - tutorials/02-running-a-model.md
+  - tutorials/05-editing-inspector.md
+
+# Module 7 of the Cognitive Neuroscience Course, "Conflict Monitoring,
+# Effort, and Control" (#57). Opened rather than built: seven mechanisms and
+# fourteen projections, with loops, which a walkthrough can't wire.
+#
+# The notebook builds a Stroop model and works out "decision energy" in numpy
+# afterwards: the product of the two response units' activity, high when both
+# are active, which is what conflict looks like. The Conflict Monitoring demo
+# is PsyNeuLink's own model of that idea (Botvinick et al. 2001, from the
+# PsyNeuLink Library), where the energy is an output port of the RESPONSE
+# layer, so the app can show it. See backend/demos/conflict_monitoring.py for
+# the two changes that let a run fit in the Run tab: an integration rate of
+# 0.1 rather than 0.01, and a settle period that keeps the response weights.
+#
+# Every number below was measured in the app. The notebook's second half, the
+# task-demand sweep and the reaction-time plots, is numpy over many runs and
+# isn't here; the last two steps make its point with one edit instead.
+
+steps:
+  - id: open-conflict
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Conflict Monitoring demo: the Stroop model of Botvinick et al.
+      (2001). Colour and word pathways compete for a response, and the
+      response layer reports its own conflict.
+    say: >-
+      Open the Conflict Monitoring demo.
+    done:
+      nodeExists: RESPONSE
+    act:
+      openModel: Conflict Monitoring
+
+  - id: task-demand
+    anchor:
+      node: TASK DEMAND
+    instruct: >-
+      Select TASK DEMAND. Its two units stand for the two tasks, colour naming
+      and word reading. Each inhibits the other (hetero is -2), and each feeds
+      its own pathway's hidden layer, so the task cue decides which pathway
+      gets attention.
+    say: >-
+      Task demand: two units, one per task, each holding the other down.
+    done:
+      selectedNode: TASK DEMAND
+    act:
+      selectNode: TASK DEMAND
+
+  - id: word-hidden
+    anchor:
+      node: WORD HIDDEN
+    instruct: >-
+      Select WORD HIDDEN, the word-reading pathway. Its weights to the response
+      are 2.5; the colour pathway's are 1.5. Reading is the stronger habit,
+      which is the whole Stroop effect.
+    say: >-
+      The word pathway is the stronger one. That is the Stroop effect.
+    done:
+      selectedNode: WORD HIDDEN
+    act:
+      selectNode: WORD HIDDEN
+
+  - id: the-response
+    anchor:
+      node: RESPONSE
+    instruct: >-
+      Select RESPONSE: two units, red and green, inhibiting each other. Its
+      second output port, DECISION ENERGY, is the conflict monitor. It is the
+      energy of the two units together, highest when both are active at once.
+    say: >-
+      The response layer has a second output: decision energy, the conflict monitor.
+    done:
+      selectedNode: RESPONSE
+    act:
+      selectNode: RESPONSE
+
+  # The three sets are 150 trials each, over the Run tab's preload limit of
+  # 100 (MAX_PRELOAD_TRIALS), so they are in the From menu but not filled in.
+  - id: run-incongruent
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Open the Run tab. The demo declares the three trial types of the
+      colour-naming task; pick incongruent from the From menu. It is 50
+      trials of the task cue alone to settle, then 100 trials of red ink
+      under the word GREEN. Run it.
+    say: >-
+      Pick the incongruent trial, red ink and the word green, and run it.
+    done:
+      trialsAtLeast: 150
+    act:
+      pickSet:
+        tab: run
+        name: incongruent
+      runModel: true
+
+  - id: step-the-trace
+    anchor:
+      testid: trace-next-step
+    instruct: >-
+      Press ▶ on the trace bar to step through the run. On the first trials
+      only the task cue is on, both response units sit near 0.48, and the
+      energy is already about 0.9: two half-active responses are as
+      conflicted as it gets.
+    say: >-
+      Step through the run. Early on, both responses are half active.
+    done:
+      traceStepAtLeast: 1
+    act:
+      click: trace-next-step
+
+  - id: read-the-energy
+    anchor:
+      testid: run-panel
+    pointer: true
+    instruct: >-
+      The results list each trial's COLOR HIDDEN, RESPONSE, WORD HIDDEN and
+      TASK DEMAND; the second RESPONSE row, a single number, is the energy.
+      By trial 150 it has climbed to about 1.87, and green (0.84) beats red
+      (0.56): the word wins, and the monitor says so.
+    say: >-
+      By the last trial the energy is near 1.9, and the word has won.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: run-congruent
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Pick congruent from the From menu (red ink, the word RED) and run again.
+      Same settle, same task; this time red reaches 0.96 and the energy ends
+      near 0.82, peaking at about 1.19. Low conflict.
+    say: >-
+      Now the congruent trial. Red wins easily, and the energy stays low.
+    done:
+      runsAtLeast: 2
+    act:
+      pickSet:
+        tab: run
+        name: congruent
+      runModel: true
+
+  # The chapter's point is that a conflict signal can call for more control.
+  # The notebook sweeps task-demand activity across many runs; here one edit
+  # makes the task units sharper and the incongruent trial is run again.
+  - id: sharpen-control
+    anchor:
+      node: TASK DEMAND
+    instruct: >-
+      Conflict is the signal; control is the answer. Make the task units
+      sharper: raise TASK DEMAND's gain from 1 to 2.
+    say: >-
+      Now add control. Raise the task demand gain to 2.
+    done:
+      paramEquals:
+        node: TASK DEMAND
+        param: gain
+        value: "2"
+    act:
+      setParameter:
+        node: TASK DEMAND
+        param: gain
+        value: "2"
+
+  - id: run-incongruent-again
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Pick incongruent again and run it. The word-reading unit of TASK DEMAND
+      now drops to about 0.12 instead of staying near 0.96, red wins (0.66
+      against 0.35), and the energy ends near 0.94 instead of 1.87. More
+      control, less conflict.
+    say: >-
+      Run the incongruent trial again. Red wins now, and the conflict halves.
+    done:
+      runsAtLeast: 3
+    act:
+      pickSet:
+        tab: run
+        name: incongruent
+      runModel: true

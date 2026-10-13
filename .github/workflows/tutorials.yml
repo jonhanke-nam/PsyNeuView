@@ -1,0 +1,237 @@
+name: Tutorials
+
+# Runs the executable tutorial suite (frontend/e2e/tutorials/*.tutorial.spec.ts)
+# on every PR and on pushes to devel. Each tutorial both verifies a user-facing
+# workflow and regenerates the screenshots its doc embeds, so a broken workflow
+# fails here instead of in a user's hands.
+#
+# Part of the automated-testing footprint (umbrella #652) and the e2e
+# counterpart to the backend pytest job (#654); tracks the tutorials umbrella
+# #662. Unlike e2e.yml (manual-only pending the #168 activation plan), this job
+# is scoped to the tutorial specs only, so it's fast and safe to auto-trigger.
+
+on:
+  # Triggers have NO path filter (so the `tutorials` check is always reported —
+  # required by branch protection). The cheap `changes` job decides whether the
+  # expensive `tutorials` job runs; when it doesn't, that job is skipped, which
+  # branch protection treats as passing. So unrelated PRs don't burn CI minutes
+  # and don't deadlock.
+
+  # `feature/tutorials` gates here, but narrowly. This suite costs ~14 min per
+  # run in CI (~2.4 min locally -- the difference is almost all PsyNeuLink
+  # install), and Actions spend is capped with stop-usage on (#991). So a PR
+  # into feature/tutorials runs it only when it touches what the walkthroughs
+  # are made of: walkthrough YAML, tour-named source, anything under
+  # frontend/e2e/, or this file (PATTERN_TOUR below). Until this, the
+  # walkthrough specs had never run in CI at all -- only on laptops.
+  #
+  # Slices that change other shared frontend code still get only the cheap
+  # tier (typecheck + vitest); the full suite catches those at the PR from
+  # feature/tutorials into devel. Keep running e2e/tutorials locally first.
+  push:
+    branches: [devel, devel-unsafe]
+  pull_request:
+    branches: [devel, devel-unsafe, feature/tutorials]
+  workflow_dispatch:
+
+concurrency:
+  group: tutorials-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Hook-capable PsyNeuLink (PrincetonUniversity @ jonhanke-dev) so the debugger
+  # tutorial's `_debugger`-hook assertions hold — this matches the build the
+  # shipped app runs. Bump when the app's pinned source moves forward.
+  PSYNEULINK_GIT_REF: b0a750db14f0e18f13f4af6d4228e5824a7f2797
+  PYTHON_VERSION: "3.13"
+  NODE_VERSION: "22"
+
+jobs:
+  # Decide whether the suite needs to run. Path-filtering lives here (not on the
+  # trigger) so the required `tutorials` check is always reported.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.f.outputs.run }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: f
+        env:
+          PATTERN_FULL: '^(frontend/|backend/|\.github/workflows/tutorials\.yml)'
+          # PRs into feature/tutorials: only what walkthroughs are made of.
+          PATTERN_TOUR: '^(frontend/src/walkthroughs/|frontend/e2e/|frontend/src/.*/(use)?[Tt]our[A-Z.]|\.github/workflows/tutorials\.yml)'
+        run: |
+          PATTERN="$PATTERN_FULL"
+          if [ "${{ github.base_ref }}" = "feature/tutorials" ]; then
+            PATTERN="$PATTERN_TOUR"
+          fi
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # `github.sha` is the auto-generated merge commit, and its FIRST
+            # parent is the base branch as it stands *now*. Use that.
+            #
+            # `pull_request.base.sha` is the base as it was when the PR was
+            # opened, so diffing from it also sweeps up everything the base
+            # gained since -- #989. A one-line docs PR (#1184) ran tutorials,
+            # e2e and both pytest variants because devel had moved under it:
+            # the diff reported five frontend/workflow files the PR never
+            # touched. The merge-base call below cannot save us there, because
+            # the merge commit descends from the stale base, so the merge base
+            # *is* the stale base.
+            base="$(git rev-parse "${{ github.sha }}^1" 2>/dev/null || true)"
+            # An unmergeable PR has no merge commit -> fall back to the
+            # recorded base rather than skipping.
+            [ -n "$base" ] || base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          # If we can't diff (manual run, first push, force-push), run to be safe.
+          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif mb="$(git merge-base "$base" "${{ github.sha }}" 2>/dev/null)"; [ -z "$mb" ]; then
+            # merge base unresolvable -> fail safe by running, never by skipping
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$mb" "${{ github.sha }}" | grep -qE "$PATTERN"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  tutorials:
+    name: tutorials
+    needs: changes
+    # #991: `!= 'false'` rather than `== 'true'`, so this gate only skips when
+    # `changes` actually decided the paths were irrelevant. If `changes` dies
+    # (it failed to even start during the 2026-08-25 Actions billing outage),
+    # `run` is empty and this job runs — and a required check that fails blocks
+    # the merge, where a skipped one silently satisfies branch protection.
+    if: ${{ !cancelled() && needs.changes.outputs.run != 'false' }}
+    runs-on: ubuntu-latest
+    # The suite grows a minute or two with each walkthrough: 15 min of tests
+    # plus ~6 of setup ran into 30 on a slow runner (#1344).
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # PsyNeuLink pulls torch, whose default wheel bundles multi-GB CUDA
+      # libraries that exhaust the runner's root disk ([Errno 28]). The tests
+      # don't use a GPU, so reclaim space by dropping pre-installed toolchains
+      # we don't need (frees ~15-25 GB). Runs before setup-python/node so it
+      # doesn't touch the tool caches they populate.
+      - name: Free up runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          sudo docker image prune --all --force || true
+          df -h /
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        # #1368: no `cache: pip`. PsyNeuLink pulls torch and its CUDA wheels, so
+        # the pip cache is ~2.8 GB, and its key (a hash of pyproject.toml) moves
+        # with every version bump, so each PR saved another copy. Three of them
+        # filled the repo's 10 GB Actions cache and evicted the Playwright browser
+        # cache. Restoring it already took 30-60 s a job, so downloading the
+        # wheels instead should cost little. See docs/testing.md.
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # Create backend/.venv where playwright.config.ts expects the uvicorn the
+      # harness launches. Install PsyNeuLink from the pinned hook-capable ref
+      # first so the editable backend install doesn't pull a different version.
+      - name: Create backend venv + install PsyNeuLink (pinned, hook-capable)
+        run: |
+          python -m venv backend/.venv
+          backend/.venv/bin/pip install --upgrade pip wheel
+          backend/.venv/bin/pip install "git+https://github.com/PrincetonUniversity/PsyNeuLink.git@${PSYNEULINK_GIT_REF}"
+
+      - name: Install backend (editable)
+        run: backend/.venv/bin/pip install -e backend/
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Resolve Playwright version
+        id: pw
+        working-directory: frontend
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      # #931: the browser install used to hang on apt and burn the whole job
+      # timeout. System deps (apt) and the browser download are now separate
+      # steps, each bounded per attempt and retried; a cache hit skips only
+      # the download. apt gets network timeouts so a stalled mirror errors out
+      # instead of hanging.
+      - name: Restore Playwright browsers cache
+        id: pw-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Playwright system deps (bounded, retried)
+        working-directory: frontend
+        timeout-minutes: 12
+        run: |
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' \
+            | sudo tee /etc/apt/apt.conf.d/99-ci-network-timeouts
+          for attempt in 1 2; do
+            timeout --kill-after=15 300 npx playwright install-deps chromium && exit 0
+            echo "::warning::Playwright install-deps attempt $attempt failed or timed out"
+            sudo dpkg --configure -a || true
+          done
+          exit 1
+
+      - name: Download Playwright browsers (bounded, retried)
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        working-directory: frontend
+        timeout-minutes: 8
+        run: |
+          for attempt in 1 2 3; do
+            timeout --kill-after=15 120 npx playwright install chromium && exit 0
+            echo "::warning::Playwright browser download attempt $attempt failed or timed out"
+          done
+          exit 1
+
+      # Saved straight after the download, not in a post-job step, so a job
+      # that later fails or is cancelled still leaves the cache for next time.
+      - name: Save Playwright browsers cache
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      # Production mode: the backend serves the built SPA on an allocated port and
+      # runs with PSYNEWVIEW_TEST_MODE=1 (per playwright.config.ts), so the build
+      # tutorial's New Model writes into a fresh temp models dir — no collisions.
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Run tutorial suite
+        working-directory: frontend
+        run: npx playwright test e2e/tutorials
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tutorials-results-${{ github.run_id }}
+          path: |
+            frontend/test-results/
+            frontend/playwright-report/
+          retention-days: 14
+          if-no-files-found: ignore

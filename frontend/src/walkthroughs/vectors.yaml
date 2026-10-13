@@ -1,0 +1,245 @@
+id: vectors
+title: Vectors and matrices — what a projection computes
+course: "0.1"
+model: Vectors and Matrices
+minutes: 5
+docs:
+  - tutorials/02-running-a-model.md
+  - tutorials/05-editing-inspector.md
+
+# Module 0 of the Cognitive Neuroscience Course, notebook 1, "Scalars,
+# Vectors, and Matrices" (#45). The notebook is numpy only, with no
+# PsyNeuLink model; this is the same lesson as one, tried at the user's
+# request after the module was first judged a poor fit.
+#
+# Source notebook:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/docs/refactor-documentation/docs/source/tutorials/cognitive_neuroscience_course/0_primer/notebooks/1_scalars_vectors_and_matrices.ipynb
+# Course landing page:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/docs/refactor-documentation/docs/source/tutorials/cognitive_neuroscience_course/index.rst
+# Validated against PsyNeuLink 0.21.0.0.
+#
+# The demo is three numbers into two through a projection holding the
+# notebook's A = [[1, 2, 3], [4, 5, 6]], so a run is the notebook's A b, and
+# two trials are its A B. PsyNeuLink writes the matrix with a row per sending
+# unit, the transpose of the notebook's A, which the walkthrough says. See
+# backend/demos/vectors_and_matrices.py. Every number below was measured in
+# the app, and backend/tests/test_demo_vectors_and_matrices.py pins them.
+
+steps:
+  - id: open-vectors
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Vectors and Matrices demo. It does the course's first lesson
+      with a PsyNeuLink model instead of numpy: two mechanisms and the
+      projection between them, with the notebook's own numbers.
+    say: >-
+      Open the Vectors and Matrices demo.
+    done:
+      nodeExists: vector_c
+    act:
+      openModel: Vectors and Matrices
+
+  - id: a-vector
+    anchor:
+      node: vector_b
+    instruct: >-
+      Select vector_b. It has three units, so what goes in and what comes out
+      are vectors of three numbers. Its function is Linear with slope 1:
+      the output is the input, unchanged.
+    say: >-
+      vector b: three units, so its input and output are vectors of three numbers.
+    done:
+      selectedNode: vector_b
+    act:
+      selectNode: vector_b
+
+  - id: a-matrix
+    anchor:
+      testid: rf__edge-matrix_A
+    pointer: true
+    instruct: >-
+      Click the arrow from vector_b to vector_c: the projection matrix_A. Its
+      matrix is [[1, 4], [2, 5], [3, 6]]: one row for each unit of vector_b,
+      one column for each unit of vector_c. The notebook writes the same
+      numbers as A = [[1, 2, 3], [4, 5, 6]]. PsyNeuLink's is its transpose:
+      rows and columns swapped.
+    say: >-
+      The arrow is a projection. Its matrix holds the weights.
+    done:
+      selectedNode: matrix_A
+    act:
+      selectNode: matrix_A
+
+  - id: run-b
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Open the Run tab. b_is_7_8_9 is filled in: the notebook's b, 7, 8 and 9.
+      Run it. vector_c comes out as 50 and 122.
+    say: >-
+      Run the notebook's vector, 7, 8, 9.
+    done:
+      lastRunInputs:
+        vector_b:
+        - [7, 8, 9]
+    act:
+      runModel: true
+
+  - id: by-hand
+    anchor:
+      testid: run-panel
+    pointer: true
+    instruct: >-
+      Check it by hand. The first output multiplies b by the matrix's first
+      column, number by number, and adds: 1 × 7 + 2 × 8 + 3 × 9 = 7 + 16 + 27
+      = 50. That is a dot product. The second uses the second column: 4 × 7
+      + 5 × 8 + 6 × 9 = 28 + 40 + 54 = 122. Each output unit is one dot
+      product, a weighted sum of the input.
+    say: >-
+      Each output is a dot product: 1 times 7, plus 2 times 8, plus 3 times 9, is 50.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: times-a-matrix
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Pick columns_of_B from the From menu and run it: two trials, 7, 8, 9
+      and then 10, 11, 12, the two columns of the notebook's B. The outputs,
+      50 and 122, then 68 and 167, are the two columns of A times B. Matrix
+      times matrix is matrix times vector, one column at a time.
+    say: >-
+      Two vectors in, two out: that's matrix times matrix.
+    done:
+      lastRunInputs:
+        vector_b:
+        - [7, 8, 9]
+        - [10, 11, 12]
+    act:
+      pickSet:
+        tab: run
+        name: columns_of_B
+      runModel: true
+
+  - id: identity
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Now pick identity and run it: three trials, 1, 0, 0, then 0, 1, 0, then
+      0, 0, 1, the rows of the identity matrix. Each picks out one row of
+      matrix_A: 1 and 4, then 2 and 5, then 3 and 6. Multiplying by the
+      identity gives the matrix back, unchanged.
+    say: >-
+      The identity matrix gives the weights back, one row at a time.
+    done:
+      lastRunInputs:
+        vector_b:
+        - [1, 0, 0]
+        - [0, 1, 0]
+        - [0, 0, 1]
+    act:
+      pickSet:
+        tab: run
+        name: identity
+      runModel: true
+
+  - id: edit-a-weight
+    anchor:
+      testid: rf__edge-matrix_A
+    instruct: >-
+      Change one weight. Click the arrow again, and in the Inspector, under
+      Projection Parameters, set matrix to [[10, 4], [2, 5], [3, 6]] and press
+      Enter. Only the top-left weight changed, the one from vector_b's first
+      unit to vector_c's first unit. The code changes to match.
+    say: >-
+      Change one weight, from 1 to 10.
+    done:
+      paramEquals:
+        node: matrix_A
+        param: matrix
+        value: "[[10,4],[2,5],[3,6]]"
+    act:
+      setParameter:
+        node: matrix_A
+        param: matrix
+        value: "[[10,4],[2,5],[3,6]]"
+
+  - id: which-output
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Pick b_is_7_8_9 again and run it. vector_c is now 113 and 122. Only the
+      first output moved, by 9 × 7 = 63, since only its weight from the first
+      input changed. The second output never uses that weight.
+    say: >-
+      Only the first output changed: 113 instead of 50.
+    done:
+      lastRunInputs:
+        vector_b:
+        - [7, 8, 9]
+    act:
+      pickSet:
+        tab: run
+        name: b_is_7_8_9
+      runModel: true
+
+  - id: scale
+    anchor:
+      node: vector_b
+    instruct: >-
+      Now multiply by a scalar. Select vector_b and set its slope to 2.
+      vector_b now doubles every number it passes on, the notebook's alpha
+      times a, with alpha = 2. That's the same as multiplying by a scaling
+      matrix: 2 times the identity.
+    say: >-
+      Set vector b's slope to 2: a scalar times a vector.
+    done:
+      paramEquals:
+        node: vector_b
+        param: slope
+        value: "2"
+    act:
+      setParameter:
+        node: vector_b
+        param: slope
+        value: "2"
+
+  - id: scaled
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Pick identity and run it again. vector_b passes on 2, 0, 0, then 0, 2,
+      0, then 0, 0, 2, and every output doubles: 20 and 8, then 4 and 10,
+      then 6 and 12. Twice the matrix, with your 10 in it.
+    say: >-
+      Every number doubles.
+    done:
+      lastRunInputs:
+        vector_b:
+        - [1, 0, 0]
+        - [0, 1, 0]
+        - [0, 0, 1]
+    act:
+      pickSet:
+        tab: run
+        name: identity
+      runModel: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: run-panel
+    instruct: >-
+      What this isn't: the notebook teaches these in numpy, with code to type
+      and two exercises on dimensions. Here they are what a PsyNeuLink
+      projection does, so vector addition, the transpose as an operation and
+      a mismatched-size error aren't shown. For those, and the exercises, see
+      the notebook, 1_scalars_vectors_and_matrices, in the course's 0_primer.
+    say: >-
+      This is the PsyNeuLink side of a numpy lesson. The exercises are in the notebook.
+    done:
+      next: true
+    act:
+      next: true

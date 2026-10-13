@@ -1,0 +1,154 @@
+# PsyNeuView First Steps, part 7: Settings in two minutes (#1317, under
+# #1310).
+#
+# One pass down the sidebar: what each section is for, what to leave alone,
+# how to close it. From docs/settings-and-mac-app.md. Problem reports is the
+# Mac app's section, listed only inside it, so it is described rather than
+# ringed; the same for Help ▸ Report a Problem…, the app's menu.
+
+id: orientation-settings
+title: Settings in two minutes
+orientation: 7
+minutes: 2
+docs:
+  - settings-and-mac-app.md
+
+steps:
+  - id: open-settings
+    anchor:
+      testid: settings-button
+    instruct: >-
+      Open Settings with the gear. Layout ▸ Settings… and, in the Mac app, ⌘,
+      open the same window; there is only one.
+    say: >-
+      There is one Settings window, and three ways to open it.
+    done:
+      visible: settings-panel
+    act:
+      click: settings-button
+
+  - id: general
+    anchor:
+      testid: settings-section-general
+    instruct: >-
+      Settings opens on About, which lists the versions in use. Click General:
+      the PsyNeuLink version and its updates (part 5), autosave, and where a
+      new model's layout and label files go.
+    say: >-
+      About lists versions. General holds the PsyNeuLink version and the few everyday choices.
+    done:
+      visible: settings-content-general
+    act:
+      click: settings-section-general
+
+  - id: appearance
+    anchor:
+      testid: settings-section-appearance
+    instruct: >-
+      Click Appearance: how the app looks and feels, remembered in this
+      browser. Today that is the pointer in the graph view, an arrow or a
+      hand, and its size, with a preview.
+    say: >-
+      Appearance is how the app looks: the graph pointer and its size.
+    done:
+      visible: settings-content-appearance
+    act:
+      click: settings-section-appearance
+
+  - id: tutorials-voice
+    anchor:
+      testid: settings-section-tutorials-voice
+    instruct: >-
+      Click Tutorials and Voice: the voice that reads these captions, and how
+      fast, with a sample to listen to and where to get better voices; and
+      whether PsyNeuView reminds you about these First Steps.
+    say: >-
+      Tutorials and Voice is how narration sounds, and the walkthrough reminders.
+    done:
+      visible: settings-content-tutorials-voice
+    act:
+      click: settings-section-tutorials-voice
+
+  - id: open-menu
+    anchor:
+      testid: settings-section-open-menu
+    instruct: >-
+      Click Open menu. Only the menu's shape: the order of its sections, and
+      which catalogs under development show. Nothing here changes a file.
+    say: >-
+      Open menu only shapes the menu.
+    done:
+      visible: settings-content-open-menu
+    act:
+      click: settings-section-open-menu
+
+  - id: folders
+    anchor:
+      testid: settings-section-folders
+    instruct: >-
+      Click Folders. Everything you can open and where it lives, one row each,
+      with whose it is to edit and a Show in Finder (Copy path in a browser).
+      Add a folder of your own models here as a catalog.
+    say: >-
+      Folders is the map of everything you can open.
+    done:
+      visible: settings-content-folders
+    act:
+      click: settings-section-folders
+
+  - id: shortcuts
+    anchor:
+      testid: settings-section-shortcuts
+    instruct: >-
+      Click Keyboard shortcuts. Every shortcut, and each can be rebound.
+    say: >-
+      Every keyboard shortcut, rebindable.
+    done:
+      visible: settings-content-shortcuts
+    act:
+      click: settings-section-shortcuts
+
+  - id: developer
+    anchor:
+      testid: settings-section-developer
+    instruct: >-
+      Click Developer (advanced). Its first item is the developer-mode switch;
+      the rest is which PsyNeuLink is installed, where, and the managed copies.
+      Leave it alone unless you develop PsyNeuLink or PsyNeuView: part 8 is for
+      you then.
+    say: >-
+      Developer is last, and for developers. Leave it alone otherwise.
+    done:
+      visible: settings-content-developer
+    act:
+      click: settings-section-developer
+
+  - id: problem-reports
+    anchor:
+      testid: settings-sidebar
+    pointer: true
+    instruct: >-
+      Inside the Mac app, one more section, Problem reports, chooses how a
+      report is sent. When something goes wrong there, Help ▸ Report a Problem…
+      gathers a screenshot, the versions and the last log lines into one folder
+      for the PsyNeuView team, and shows you each item before saving it.
+    say: >-
+      In the Mac app, Help, Report a Problem, gathers what the team needs into one folder.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: close
+    anchor:
+      testid: settings-panel
+    instruct: >-
+      Settings closes with Escape, the × in its header, or a click outside.
+      Press Escape now. That is the regular-user orientation; part 8 is the
+      developer track.
+    say: >-
+      Escape closes it. That is the end of the regular track.
+    done:
+      hidden: settings-panel
+    act:
+      pressKey: Escape

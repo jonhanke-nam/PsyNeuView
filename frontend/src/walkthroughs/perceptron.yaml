@@ -1,0 +1,74 @@
+id: perceptron
+title: Perceptron — AND, and why not XOR
+course: "0.3"
+model: Logic Gate Network
+
+# Module 0 of the Cognitive Neuroscience Course, "Perceptron and XOR" (#47).
+# Opened rather than built: it's the notebook's two-layer AutodiffComposition,
+# and the lesson is in *training* it, not in wiring it. Train it on AND, which
+# it learns, then on XOR, which it can't: XOR isn't linearly separable.
+#
+# The demo seeds its starting weights, so the losses below are what the app
+# measures every time (50 epochs, learning rate 10): AND 0.32 -> 0.0007,
+# XOR 0.57 -> 0.251.
+
+steps:
+  - id: open-network
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Logic Gate Network demo: three inputs feeding one Logistic
+      output, trained by backpropagation.
+    done:
+      nodeExists: out_layer
+    act:
+      openModel: Logic Gate Network
+
+  - id: the-output
+    anchor:
+      node: out_layer
+    instruct: >-
+      Select out_layer, a single Logistic unit. in_layer has three inputs: A,
+      B, and a constant 1 that works as a bias the network can learn, since
+      its weight trains like any other.
+    done:
+      selectedNode: out_layer
+    act:
+      selectNode: out_layer
+
+  - id: learn-and
+    anchor:
+      testid: tab-learn
+    instruct: >-
+      Teach it AND. Open the Learn tab: the demo declares the course's training
+      sets, and and_gate is already filled in (the four patterns, targets 0, 0,
+      0, 1, 50 epochs). Start learning. The loss falls from about 0.32 to under
+      0.001: it has learned AND.
+    done:
+      lastTraining:
+        targets:
+          out_layer: [0, 0, 0, 1]
+        epochsAtLeast: 50
+    act:
+      pickSet:
+        tab: learn
+        name: and_gate
+
+  - id: try-xor
+    anchor:
+      testid: tab-learn
+    instruct: >-
+      Now XOR: pick xor_gate in the From menu (targets 0, 1, 1, 0) and train
+      again. The loss
+      stalls near 0.25, which is the loss of answering 0.5 to everything. One
+      layer of weights draws one straight line, and no straight line separates
+      XOR's two 1s from its two 0s.
+    done:
+      lastTraining:
+        targets:
+          out_layer: [0, 1, 1, 0]
+        epochsAtLeast: 50
+    act:
+      pickSet:
+        tab: learn
+        name: xor_gate

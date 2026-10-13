@@ -1,0 +1,85 @@
+id: memory
+title: Episodic memory — how a query finds a memory
+course: "5.1"
+model: Episodic Memory
+
+# Module 5 of the Cognitive Neuroscience Course, "Episodic Memory" (#54).
+# Opened and explored: the notebook builds an EMComposition and reads its
+# graph, bottom to top. This walks the same path through what the app draws.
+#
+# The notebook's picture has STORE and MATCH nodes. The PsyNeuLink the app pins
+# (0.19) builds the same computation without them, so the steps name what is
+# on the canvas: [QUERY] -> [FIELD_MEMORY] -> [WEIGHTED SCORES] (x [WEIGHT])
+# -> COMBINED SCORES -> [RETRIEVED]. Roles are from EMComposition's docstring.
+
+steps:
+
+  - id: open-memory
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Episodic Memory demo: one EMComposition whose episodes have
+      three fields, of sizes 2, 4 and 3.
+    done:
+      nodeExists: "1 [QUERY]"
+    act:
+      openModel: Episodic Memory
+
+  - id: the-query
+    anchor:
+      node: "1 [QUERY]"
+    instruct: >-
+      Select 1 [QUERY]. A query is what you ask the memory, one input per
+      field. This one carries field 1.
+    done:
+      selectedNode: "1 [QUERY]"
+    act:
+      selectNode: "1 [QUERY]"
+
+  - id: the-field-memory
+    anchor:
+      node: "1 [FIELD_MEMORY]"
+    instruct: >-
+      Select 1 [FIELD_MEMORY]. It holds field 1 of every stored episode and
+      scores how similar the query is to each one. (The course notebook calls
+      this step MATCH.)
+    done:
+      selectedNode: "1 [FIELD_MEMORY]"
+    act:
+      selectNode: "1 [FIELD_MEMORY]"
+
+  - id: the-weighting
+    anchor:
+      node: "1 [WEIGHTED SCORES]"
+    instruct: >-
+      Select 1 [WEIGHTED SCORES]. It scales field 1's similarity scores by the
+      field's weight, supplied by 1 [WEIGHT] (0.33 here), so each field counts
+      for as much as its weight says.
+    done:
+      selectedNode: "1 [WEIGHTED SCORES]"
+    act:
+      selectNode: "1 [WEIGHTED SCORES]"
+
+  - id: the-combination
+    anchor:
+      node: "COMBINED SCORES"
+    instruct: >-
+      Select COMBINED SCORES. It adds the weighted scores from all three fields
+      and applies a softmax, so the episode that matches best across the
+      fields gets most of the weight. That weighting decides what is recalled.
+    done:
+      selectedNode: "COMBINED SCORES"
+    act:
+      selectNode: "COMBINED SCORES"
+
+  - id: the-retrieval
+    anchor:
+      node: "1 [RETRIEVED]"
+    instruct: >-
+      Select 1 [RETRIEVED], field 1 of the recalled episode. Every field has
+      its own, so a match found through some fields brings back the whole
+      episode.
+    done:
+      selectedNode: "1 [RETRIEVED]"
+    act:
+      selectNode: "1 [RETRIEVED]"

@@ -1,0 +1,18 @@
+# Semantic element labels for simple_stroop_learn.py.
+#
+# Same conventions as simple_stroop.py:
+#   colors_input / words_input — [red, green, blue], 3 units each.
+#   response — [say_red, say_green].
+#
+# "blue" is a distractor channel: its weights start near zero like the
+# others, and nothing in the standard training set teaches it a mapping,
+# so it should stay near zero after training.
+
+colors_input:
+  element_names: [red, green, blue]
+
+words_input:
+  element_names: [red, green, blue]
+
+response:
+  element_names: [say_red, say_green]

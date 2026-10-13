@@ -1,0 +1,32 @@
+# Sidecar element-name labels for stroop_reference_basic.py
+# (PsyNeuView three-layer plan #356 / #361, Layer 3).
+#
+# Cohen 1990 convention: each 2-unit layer's index 0 represents
+# "red" / first response channel, index 1 represents "green" /
+# second response channel. Per-mechanism labels are scoped to the
+# layer's role in the architecture (red_ink vs red_word vs
+# response_red) so step-through debugging surfaces meaningful
+# per-position labels.
+#
+# Keeping these in the sidecar (rather than inline element_names=
+# on the .py mechanisms) lets the .py load on stock PsyNeuLink —
+# the jonhanke-nam fork's model-intrinsic element_names is not
+# required for the labels to appear in the UI.
+
+color_input:
+  element_names: [red_ink, green_ink]
+
+color_hidden:
+  element_names: [red_from_color, green_from_color]
+
+word_input:
+  element_names: [red_word, green_word]
+
+word_hidden:
+  element_names: [red_from_word, green_from_word]
+
+output:
+  element_names: [response_red, response_green]
+
+task_input:
+  element_names: [color_task, word_task]

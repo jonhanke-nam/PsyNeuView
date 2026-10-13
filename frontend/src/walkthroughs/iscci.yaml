@@ -1,0 +1,217 @@
+id: iscci
+title: ISC-CI — inferring a context from what occurs together
+course: "8.1"
+model: ISC-CI Model
+minutes: 5
+docs:
+  - tutorials/02-running-a-model.md
+  - tutorials/12-training-a-model.md
+
+# Module 8 of the Cognitive Neuroscience Course, "Integration, Attention,
+# Context, and Control" (#58). Opened rather than built: eight mechanisms and
+# seven projections.
+#
+# Source notebook:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/docs/refactor-documentation/docs/source/tutorials/cognitive_neuroscience_course/8_integration_attention_context_and_control/notebooks/1_iscci_model.ipynb
+# Course landing page:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/docs/refactor-documentation/docs/source/tutorials/cognitive_neuroscience_course/index.rst
+# Validated against PsyNeuLink 0.21.0.0.
+#
+# There is no ISC-CI model in the PsyNeuLink Library, so the demo is the
+# notebook's create_model() itself. Its data is a slice: the notebook
+# downloads the Leuven Concepts Database (293 objects, 385 features, a
+# 64-number embedding each) and generates 20,000 training episodes from it
+# in Python. The demo carries 24 objects and 10 features, and 24 episodes by
+# the notebook's recipe; see backend/demos/iscci_model.py. The last two
+# steps say what that leaves out. Every number below was measured in the
+# app, and backend/tests/test_demo_iscci_model.py pins them.
+
+steps:
+  - id: open-iscci
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the ISC-CI Model demo: the course's model of inferring a context
+      from the things seen in it. An owl and a falcon together suggest birds,
+      or things that eat mice, and so what else might turn up.
+    say: >-
+      Open the ISC-CI Model demo.
+    done:
+      nodeExists: context_label
+    act:
+      openModel: ISC-CI Model
+
+  - id: the-supports
+    anchor:
+      node: support_1
+    instruct: >-
+      Select support_1. The model sees two objects together, the support set:
+      support_1 and support_2. Each comes in as a 64-number embedding, a
+      description of the object that doesn't depend on any context.
+    say: >-
+      Two objects seen together, each as a list of 64 numbers.
+    done:
+      selectedNode: support_1
+    act:
+      selectNode: support_1
+
+  - id: the-mean
+    anchor:
+      node: mean
+    instruct: >-
+      Select mean: the two supports added and halved (Linear, slope 0.5).
+      Averaging is the simplest way to put together what was seen together.
+    say: >-
+      The two are averaged.
+    done:
+      selectedNode: mean
+    act:
+      selectNode: mean
+
+  - id: the-context
+    anchor:
+      node: context
+    instruct: >-
+      Select context: 128 ReLU units that turn the average into an inferred
+      context, a guess at which feature the two objects share.
+    say: >-
+      From the average, the model infers a context.
+    done:
+      selectedNode: context
+    act:
+      selectNode: context
+
+  - id: the-label
+    anchor:
+      node: context_label
+    instruct: >-
+      Select context_label. It names the context: one unit per feature, as
+      probabilities (SoftMax). The demo has 10 of the notebook's 385
+      features, such as eats mice, is a bird and can fly.
+    say: >-
+      Context label names the context, one unit per feature.
+    done:
+      selectedNode: context_label
+    act:
+      selectNode: context_label
+
+  - id: the-query
+    anchor:
+      node: context_dependent
+    instruct: >-
+      Select context_dependent. A third object, the query, comes in at query
+      and meets the context here, so the same object can count differently
+      in a different context.
+    say: >-
+      A third object is seen through that context.
+    done:
+      selectedNode: context_dependent
+    act:
+      selectNode: context_dependent
+
+  - id: the-response
+    anchor:
+      node: response
+    instruct: >-
+      Select response: two units, yes and no. Does the query belong in this
+      context too?
+    say: >-
+      Yes or no: does it belong here too?
+    done:
+      selectedNode: response
+    act:
+      selectNode: response
+
+  - id: run-test
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Open the Run tab, pick owl_falcon_test and run it: the notebook's test.
+      The supports are an owl and a falcon; the query is a cat, then a
+      penguin. Untrained, context_label gives every feature 0.1 and response
+      says 0.5 and 0.5 both times. It knows nothing yet.
+    say: >-
+      Ask the untrained model about an owl and a falcon. It knows nothing yet.
+    done:
+      trialsAtLeast: 2
+    act:
+      pickSet:
+        tab: run
+        name: owl_falcon_test
+      runModel: true
+
+  - id: train
+    anchor:
+      testid: tab-learn
+    instruct: >-
+      Open the Learn tab. episodes is filled in: 24 episodes made by the
+      notebook's recipe. Pick a feature, two objects that have it, and a
+      query that does or doesn't, with the answer as the target. Start
+      learning. In 30 epochs the loss falls from about 0.34 to about 0.08.
+    say: >-
+      Train it on 24 episodes. The loss falls to about 0.08.
+    done:
+      lastTraining:
+        epochsAtLeast: 30
+        targets:
+          response:
+          - [1, 0]
+          - [1, 0]
+          - [0, 1]
+          - [1, 0]
+          - [0, 1]
+          - [1, 0]
+          - [1, 0]
+          - [1, 0]
+          - [1, 0]
+          - [0, 1]
+          - [0, 1]
+          - [1, 0]
+          - [0, 1]
+          - [1, 0]
+          - [0, 1]
+          - [0, 1]
+          - [0, 1]
+          - [1, 0]
+          - [1, 0]
+          - [1, 0]
+          - [1, 0]
+          - [0, 1]
+          - [0, 1]
+          - [0, 1]
+    act:
+      pickSet:
+        tab: learn
+        name: episodes
+
+  - id: what-it-learned
+    anchor:
+      testid: tab-learn
+    pointer: true
+    instruct: >-
+      On its last pass it answers all 24 episodes right, at 0.94 or better.
+      But context_label never goes above 0.42 for any of them. It has
+      memorized the answers, not learned to infer a context. The notebook
+      trains on 20,000 episodes, and says even that is not enough.
+    say: >-
+      It memorized the answers, but it hasn't learned to infer the context.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: tab-learn
+    instruct: >-
+      What the app can't do here: make the training data. The notebook builds
+      its episodes in Python from the downloaded Leuven data, and the Learn
+      tab shows a training set as one box per number, 204 per episode. And
+      PsyNeuView doesn't yet carry learned weights into a run, so the trained
+      network can't be asked about the owl and the falcon.
+    say: >-
+      Making the training data, and running the trained network, happen outside the app.
+    done:
+      next: true
+    act:
+      next: true

@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "positions": {
+    "words_input_layer": {
+      "x": 18,
+      "y": 900
+    },
+    "bias_input": {
+      "x": 188,
+      "y": 900
+    },
+    "colors_input_layer": {
+      "x": 358,
+      "y": 900
+    },
+    "task_input_layer": {
+      "x": 718,
+      "y": 900
+    },
+    "word_feature_layer": {
+      "x": -2,
+      "y": 720
+    },
+    "color_feature_layer": {
+      "x": 338,
+      "y": 720
+    },
+    "task_demand_layer": {
+      "x": 698,
+      "y": 720
+    },
+    "response_layer": {
+      "x": 168,
+      "y": 540
+    }
+  }
+}

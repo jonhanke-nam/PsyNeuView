@@ -1,0 +1,78 @@
+id: dynamics
+title: Dynamics — a two-node attractor
+course: "1.3"
+model: Bistable Attractor
+
+# Module 1 of the Cognitive Neuroscience Course, "Dynamic Systems and Bistable
+# Perception" (#50). Opened rather than built: the two nodes inhibit each other
+# in a loop, and wiring the back-projection needs drag-to-connect, which a
+# walkthrough can't script. What the learner does is *drive* it: the lesson
+# lives in the per-trial inputs, not the structure.
+
+steps:
+  - id: open-bistable
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Bistable Attractor demo: two nodes, each inhibiting the other.
+    done:
+      nodeExists: node_attract1
+    act:
+      openModel: Bistable Attractor
+
+  - id: the-node
+    anchor:
+      node: node_attract1
+    instruct: >-
+      Select node_attract1. It integrates over time (integration_rate 0.5) and
+      feeds node_attract2 through a weight of -1. node_attract2 does the same
+      back, so each holds the other down.
+    done:
+      selectedNode: node_attract1
+    act:
+      selectNode: node_attract1
+
+  - id: kick-it
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Open the Run tab. The demo declares the course's experiment as kick, so
+      its inputs are already filled in: 2 and 6 on the first of ten trials,
+      then nothing. Run it.
+    done:
+      lastRunInputs:
+        node_attract1: [2, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        node_attract2: [6, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    act:
+      runModel: true
+
+  - id: it-settles
+    anchor:
+      testid: tab-run
+    instruct: >-
+      The two start far apart, about 0.68 and 0.94, and pull together until
+      both sit near 0.40. That resting point is an attractor: once the kick is
+      gone, the mutual inhibition decides where the system ends up. Select
+      node_attract2 to carry on.
+    done:
+      selectedNode: node_attract2
+    act:
+      selectNode: node_attract2
+
+  - id: push-apart
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Now pick steady_difference in the Run tab's From menu (0 to node_attract1
+      and 1 to node_attract2 on every trial) and run again. This time
+      they pull apart. node_attract2 wins, and the gap is still widening at
+      the tenth trial.
+    done:
+      lastRunInputs:
+        node_attract1: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        node_attract2: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    act:
+      pickSet:
+        tab: run
+        name: steady_difference
+      runModel: true

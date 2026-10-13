@@ -1,0 +1,26 @@
+# Running a model, as a guided walkthrough (#1180, #1181).
+#
+# The third shape of step, after "select something" (demo) and "make something
+# exist" (build): **make something happen and read the result**. Completion is
+# neither a selection nor the node list, but whether the model has actually
+# produced trials.
+#
+# That is why `trialsAtLeast` is a count rather than a boolean. "Has it run?"
+# is ambiguous once a walkthrough wants to say "run it again with the edit
+# applied" — a count can distinguish runs, a flag cannot.
+
+id: run
+title: Running a model
+model: Stroop — Basic
+
+steps:
+  - id: run-the-model
+    # The Run tab, by test id rather than by its visible label, which is free
+    # to be reworded.
+    anchor:
+      testid: tab-run
+    instruct: Open the Run tab and press Run Model to execute the model.
+    done:
+      trialsAtLeast: 1
+    act:
+      runModel: true

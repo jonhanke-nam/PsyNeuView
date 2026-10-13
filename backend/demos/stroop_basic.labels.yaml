@@ -1,0 +1,32 @@
+# Semantic element labels for stroop_basic.py.
+#
+# Cohen et al. (1990) simplified Stroop — two-channel red/green convention,
+# same architecture as the reference variant (stroop_reference_basic).
+# Weight matrices [[2,-2],[-2,2]] are diagonal-positive: stimulus A excites
+# response A, inhibits response B.
+#
+# Index 0 = "red", index 1 = "green" throughout.
+
+# ── Color naming pathway ─────────────────────────────────────────────
+color_input:
+  element_names: [red_ink, green_ink]
+
+color_hidden:
+  element_names: [red_from_color, green_from_color]
+
+# ── Word reading pathway ─────────────────────────────────────────────
+word_input:
+  element_names: [red_word, green_word]
+
+word_hidden:
+  element_names: [red_from_word, green_from_word]
+
+# ── Shared response layer ────────────────────────────────────────────
+output:
+  element_names: [response_red, response_green]
+
+# ── Task instruction ────────────────────────────────────────────────
+# task_to_color [[4,4],[0,0]] enables color-hidden via index 0.
+# task_to_word  [[0,0],[4,4]] enables word-hidden via index 1.
+task_input:
+  element_names: [color_task, word_task]

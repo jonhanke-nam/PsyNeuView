@@ -1,0 +1,19 @@
+# Semantic element labels for simple_stroop.py.
+#
+# Three-channel input convention (the model comments are explicit):
+#   colors_input / words_input — [red, green, blue], 3 units each.
+# Two-channel response convention (also explicit in the model):
+#   response — [say_red, say_green].
+#
+# Note that "blue" is in the input vocabulary but has no projection to
+# either response (the colors_to_response / words_to_response third row
+# is all zeros) — it's there as a distractor channel.
+
+colors_input:
+  element_names: [red, green, blue]
+
+words_input:
+  element_names: [red, green, blue]
+
+response:
+  element_names: [say_red, say_green]

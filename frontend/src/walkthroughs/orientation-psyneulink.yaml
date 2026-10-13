@@ -1,0 +1,115 @@
+# PsyNeuView First Steps, part 5: what it runs on (#1315, under #1310).
+#
+# Settings ▸ General ▸ PsyNeuLink version: the two everyday choices, the
+# status line, and automatic updates (#1304). From docs/where-things-live.md,
+# "Which PsyNeuLink". The steps point and explain; nothing is switched, since
+# a switch reinstalls PsyNeuLink and restarts the model runner.
+
+id: orientation-psyneulink
+title: "What it runs on: which PsyNeuLink, its version, and keeping it up to date"
+orientation: 5
+minutes: 2
+docs:
+  - where-things-live.md
+
+steps:
+  - id: open-settings
+    anchor:
+      testid: settings-button
+    instruct: >-
+      PsyNeuView runs your models with one PsyNeuLink at a time. Open Settings
+      (the gear) to see which.
+    say: >-
+      PsyNeuView uses one PsyNeuLink at a time. Settings says which.
+    done:
+      visible: settings-panel
+    act:
+      click: settings-button
+
+  - id: general
+    anchor:
+      testid: settings-section-general
+    instruct: Click General.
+    say: >-
+      The General section.
+    done:
+      visible: settings-content-general
+    act:
+      click: settings-section-general
+
+  - id: the-choice
+    anchor:
+      testid: settings-group-pnl-version
+    pointer: true
+    instruct: >-
+      PsyNeuLink version has two everyday choices. Latest development is
+      recommended and the default: the newest PsyNeuLink, from its devel
+      branch. Official release is a numbered release from PyPI, picked from the
+      list with its date; releases before 0.19.1.0 are marked "no run
+      stepping". Nothing changes until you press Apply & restart.
+    say: >-
+      Latest development is the recommended choice. An official release is the
+      numbered alternative. Nothing changes until you apply.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: the-status-line
+    anchor:
+      testid: pnl-update-status
+    pointer: true
+    instruct: >-
+      Under it, one line says how current the installed PsyNeuLink is: its
+      version, up to date or how many commits behind, and when that was last
+      checked. Check now asks again.
+    say: >-
+      The status line says whether the installed PsyNeuLink is up to date, and when that was checked.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: automatic-updates
+    anchor:
+      testid: setting-pnl-auto-update
+    pointer: true
+    instruct: >-
+      Keep Latest development up to date automatically is on by default.
+      PsyNeuView checks when it starts and every four hours; an update found
+      installs the next time PsyNeuView starts, never in the middle of a
+      session. An official release is only reported, never switched for you.
+    say: >-
+      Updates install at the next start, never mid-session.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: about
+    anchor:
+      testid: settings-section-about
+    instruct: >-
+      Click About. It says in one line which PsyNeuLink is in use and where it
+      comes from, alongside PsyNeuView's own version.
+    say: >-
+      About says in one line what is in use.
+    done:
+      visible: settings-content-about
+    act:
+      click: settings-section-about
+
+  - id: close
+    anchor:
+      testid: settings-panel
+    instruct: >-
+      Press Escape to close Settings. Switching PsyNeuLink changes what the
+      Open menu's Library, Examples and Tests sections list, and nothing else:
+      My Project Folder and your catalogs stay as they are. Next: running a
+      model.
+    say: >-
+      Switching PsyNeuLink changes the Library, not your own models. Next: running.
+    done:
+      hidden: settings-panel
+    act:
+      pressKey: Escape

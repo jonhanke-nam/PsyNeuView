@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "positions": {
+    "sample_mechanism": {
+      "x": 58,
+      "y": 900
+    },
+    "TARGET for Action Selection": {
+      "x": 460,
+      "y": 900
+    },
+    "action_selection": {
+      "x": 38,
+      "y": 720
+    },
+    "PredictionError": {
+      "x": 478,
+      "y": 720
+    },
+    "Learning Mechanism for MappingProjection from SAMPLE[RESULT] to Action Selection[InputPort-0]": {
+      "x": 130,
+      "y": 540
+    }
+  }
+}

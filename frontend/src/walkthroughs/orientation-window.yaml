@@ -1,0 +1,184 @@
+# PsyNeuView First Steps, part 1: the window (#1311, under #1310).
+#
+# The first thing a new user needs is not a model but a map: what each part of
+# the window is for, and the one idea everything else rests on — a model is a
+# PsyNeuLink Python file, and the picture on the canvas is that same file drawn.
+#
+# Most steps only point ("look here") and move on with Next; the two that ask
+# for an action complete on it, as every walkthrough's steps do. Captions are
+# the spoken lines; the instruction is what to do.
+
+id: orientation-window
+title: "The window: the panels, and what \"the model\" is"
+orientation: 1
+minutes: 3
+docs:
+  - introduction.md
+model: Stroop — Basic
+
+steps:
+  - id: the-toolbar
+    anchor:
+      testid: app-toolbar
+    pointer: true
+    instruct: >-
+      This is the toolbar: Settings (the gear), Layout, Tutorials, undo and redo,
+      the Open menu, Save, and the name of the open model. Press Next to go on.
+    say: >-
+      Welcome to PsyNeuView. Along the top is the toolbar. Everything you open,
+      save or change starts here.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: the-code
+    anchor:
+      testid: code-editor-pane
+    pointer: true
+    instruct: >-
+      On the left is the code editor. A model is a PsyNeuLink Python file, and
+      this is that file. You can read it and edit it here.
+    say: >-
+      A model is a Python file. The code editor shows the file itself, not a copy
+      of it.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: the-canvas
+    anchor:
+      testid: graph-canvas
+    pointer: true
+    instruct: >-
+      The canvas shows the same model as a graph: boxes are mechanisms, arrows are
+      the projections between them, and colour marks their role (inputs green,
+      outputs red). The code and the picture are two views of one file.
+    say: >-
+      The canvas is that same file, drawn. Change one and the other follows.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: the-palette
+    anchor:
+      testid: palette-sidebar
+    pointer: true
+    instruct: >-
+      The Components palette lists PsyNeuLink's mechanisms and functions. Click
+      one, or drag it onto the canvas, to add it to the model. Close it with its
+      × when you want the room.
+    say: >-
+      The palette is where new parts come from.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: select-a-node
+    anchor:
+      node: color_hidden
+    instruct: >-
+      Click color_hidden on the canvas (ringed) to select it. The Inspector
+      below the canvas shows its parameters.
+    say: >-
+      Select a node, and the Inspector shows what it is made of.
+    done:
+      selectedNode: color_hidden
+    act:
+      selectNode: color_hidden
+
+  - id: the-run-tab
+    anchor:
+      testid: tab-run
+    instruct: >-
+      The bottom panel has tabs. Click Run: it is where you give the model its
+      inputs and run it.
+    say: >-
+      Run is where the model runs.
+    done:
+      visible: panel-run
+    act:
+      click: tab-run
+
+  - id: the-learn-tab
+    anchor:
+      testid: tab-learn
+    instruct: >-
+      Click Learn. For models that learn, this is where you give them training
+      data and watch the loss fall.
+    say: >-
+      Learn is for models that learn.
+    done:
+      visible: panel-learn
+    act:
+      click: tab-learn
+
+  - id: the-run-state-tab
+    anchor:
+      testid: tab-run-state
+    instruct: >-
+      Click Run State. After a run, it shows what every node holds at the step
+      you are looking at, as you step through the run.
+    say: >-
+      Run State is for looking inside a run, one step at a time.
+    done:
+      visible: panel-run-state
+    act:
+      click: tab-run-state
+
+  - id: the-scheduler-tab
+    anchor:
+      testid: tab-scheduler
+    instruct: >-
+      Click Scheduler. It shows the order PsyNeuLink will run the nodes in, and
+      the conditions that control it.
+    say: >-
+      The Scheduler tab shows the order things run in.
+    done:
+      visible: panel-scheduler
+    act:
+      click: tab-scheduler
+
+  - id: back-to-inspector
+    anchor:
+      testid: tab-inspector
+    instruct: >-
+      Click Inspector to come back to it. The Inspector is the tab you will use
+      most: it is where a selected node's parameters are read and changed.
+    say: >-
+      And back to the Inspector, the tab you will use most.
+    done:
+      visible: panel-inspector
+    act:
+      click: tab-inspector
+
+  - id: the-model-name
+    anchor:
+      testid: model-name
+    pointer: true
+    instruct: >-
+      The model's name sits in the toolbar. Hover it for the file's full path.
+      An orange dot beside it means there are unsaved changes.
+    say: >-
+      The model's name, and whether it has unsaved changes.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: the-tutorials-menu
+    anchor:
+      testid: walkthrough-menu
+    pointer: true
+    instruct: >-
+      These walkthroughs live in the Tutorials menu, under PsyNeuView First
+      Steps. The next part is about opening a model. Press Next to finish.
+    say: >-
+      That is the window. Next: opening a model.
+    done:
+      next: true
+    act:
+      next: true

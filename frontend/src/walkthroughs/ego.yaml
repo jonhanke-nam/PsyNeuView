@@ -1,0 +1,199 @@
+id: ego
+title: EGO — learning which coffee shop you are in
+course: "5.2"
+model: EGO Coffee Shop
+minutes: 6
+docs:
+  - tutorials/02-running-a-model.md
+
+# Module 5 of the Cognitive Neuroscience Course, "Episodic Memory", notebook
+# 2, the EGO model (#55). Opened rather than built: seven mechanisms, a nested
+# EMComposition and ten projections.
+#
+# Source notebook:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/docs/refactor-documentation/docs/source/tutorials/cognitive_neuroscience_course/5_episodic_memory/notebooks/2_ego.ipynb
+# Course landing page:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/docs/refactor-documentation/docs/source/tutorials/cognitive_neuroscience_course/index.rst
+# Validated against PsyNeuLink 0.21.0.0.
+#
+# Why a demo and not the PsyNeuLink Library's "Giallanza2024 EGO Study2": the
+# library file builds the model in construct_model(), whose memory holds 2
+# episodes unless told otherwise, and opened as it is a run predicts nothing
+# (measured: 0 on every predictable state). Its own experiment passes
+# memory_capacity=len(states). The EGO Coffee Shop demo is the library model
+# with the memory sized to the day, and the course's two training orders
+# declared as run sets. See backend/demos/ego_coffee_shop.py.
+#
+# The notebook's training data is generated in Python (random first states,
+# 1,000 trials, a test phase, many participants) and its result is a
+# matplotlib plot. The demo carries one fixed 60-trial day in each order
+# instead, and the last step says what the app doesn't do. Every number below
+# was measured in the app, and backend/tests/test_demo_ego_coffee_shop.py
+# pins them.
+
+steps:
+  - id: open-ego
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the EGO Coffee Shop demo: PsyNeuLink's EGO model, from the
+      PsyNeuLink Library, set up for the course's Coffee Shop World. It learns
+      to predict the next state, and to tell two coffee shops apart.
+    say: >-
+      Open the EGO Coffee Shop demo.
+    done:
+      nodeExists: PREDICTION
+    act:
+      openModel: EGO Coffee Shop
+
+  - id: the-state
+    anchor:
+      node: STATE
+    instruct: >-
+      Select STATE, the only input: one state per trial, numbered 1 to 10.
+      States 9 and 10 are the two shops' cues. After 9 the states go up by
+      two (1, 3, 5, 7 or 2, 4, 6, 8). After 10 they take other paths (1, 4,
+      5, 8 or 2, 3, 6, 7).
+    say: >-
+      One state per trial. Nine or ten says which coffee shop you are in.
+    done:
+      selectedNode: STATE
+    act:
+      selectNode: STATE
+
+  - id: the-context
+    anchor:
+      node: CONTEXT
+    instruct: >-
+      Select CONTEXT. It integrates the states as they arrive (integration
+      rate 0.7, then Tanh), so it carries a fading trace of where the model
+      has been, the cue included. This is EGO's working memory.
+    say: >-
+      Context keeps a fading trace of the recent states.
+    done:
+      selectedNode: CONTEXT
+    act:
+      selectNode: CONTEXT
+
+  - id: the-memory
+    anchor:
+      node: EM
+    instruct: >-
+      Select EM, the episodic memory. Each trial it stores the state with the
+      previous state and the context. To recall, it asks: given the state I
+      was just in, and this context, what came next before?
+    say: >-
+      Episodic memory: what came next, last time I was here, in this context?
+    done:
+      selectedNode: EM
+    act:
+      selectNode: EM
+
+  - id: the-learning
+    anchor:
+      node: CONTEXT [NORMALIZED]
+    instruct: >-
+      Select CONTEXT [NORMALIZED]. The connection into it from CONTEXT, with
+      CONTEXT [BIAS], is the only thing EGO learns. It is how the context asks
+      the memory, and it learns from the prediction's errors to ask better.
+    say: >-
+      The one thing EGO learns: how its context asks the memory.
+    done:
+      selectedNode: CONTEXT [NORMALIZED]
+    act:
+      selectNode: CONTEXT [NORMALIZED]
+
+  - id: the-prediction
+    anchor:
+      node: PREDICTION
+    instruct: >-
+      Select PREDICTION: the state EM recalled, EGO's guess at this trial's
+      state before seeing it. Ten numbers, one per state; the right one should
+      be near 1.
+    say: >-
+      The prediction: ten numbers, one per state.
+    done:
+      selectedNode: PREDICTION
+    act:
+      selectNode: PREDICTION
+
+  - id: run-blocked
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Open the Run tab, pick blocked from the From menu, and run it: twelve
+      visits, 60 trials. Six visits to the cue-9 shop come first, then six to
+      the cue-10 shop. EGO learns as it runs, one trial at a time.
+    say: >-
+      Run the blocked day: one shop, then the other.
+    done:
+      trialsAtLeast: 60
+    act:
+      pickSet:
+        tab: run
+        name: blocked
+      runModel: true
+
+  - id: read-blocked
+    anchor:
+      testid: run-panel
+    pointer: true
+    instruct: >-
+      Scroll down to the last trial in the results, trial 60: state 7, after
+      6, in the cue-10 shop, the third time down that path. PREDICTION puts
+      0.93 on state 7 (the seventh number). Once it has seen a path twice, it
+      predicts it.
+    say: >-
+      By the end, it predicts the next state at about 0.9.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: run-interleaved
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Now pick interleaved and run again: the same twelve visits, but the two
+      shops take turns.
+    say: >-
+      Now the same visits, with the shops taking turns.
+    done:
+      runsAtLeast: 2
+    act:
+      pickSet:
+        tab: run
+        name: interleaved
+      runModel: true
+
+  - id: read-interleaved
+    anchor:
+      testid: run-panel
+    pointer: true
+    instruct: >-
+      Trial 60 again, the same state on the same third visit. PREDICTION now
+      splits: 0.48 on state 7 and 0.47 on state 8. After 6, one shop goes to
+      7 and the other to 8, and with the shops taking turns the context
+      can't tell them apart. Across the day, blocked averages about 0.58 on
+      the predictable states; interleaved, about 0.29. People learn this way too.
+    say: >-
+      Interleaved, it can't tell the shops apart. Blocked learning wins.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: run-panel
+    instruct: >-
+      What this walkthrough leaves out: the notebook makes its days in Python,
+      1,000 trials with random first states and a test phase, for many
+      participants, and plots the learning curves. The app runs one day you
+      declare at a time and doesn't make the data or the plot.
+    say: >-
+      The notebook's long experiments and plots are Python, outside the app.
+    done:
+      next: true
+    act:
+      next: true

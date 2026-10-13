@@ -1,0 +1,298 @@
+name: Container image
+
+# Builds the deployment image and proves it actually runs (#1063).
+#
+# A Dockerfile that builds is not evidence of anything — the failure modes that
+# matter here are "PsyNeuLink imports but can't load a model", "the SPA didn't
+# land where app.main looks for it", and "the venv is writable so container
+# mode isn't really enforced". The smoke job exercises all three against a
+# running container.
+#
+# Publishing to GHCR happens only on devel, so a PR proves the image without
+# creating a tag anyone could mistake for a release.
+
+on:
+  push:
+    branches: [devel, devel-unsafe]
+  pull_request:
+    branches: [devel, devel-unsafe]
+  workflow_dispatch: {}
+
+concurrency:
+  group: container-image-${{ github.ref }}
+  cancel-in-progress: true
+
+# NOTE: no IMAGE_NAME here. GHCR rejects any tag containing uppercase, and
+# ${{ github.repository }} is "jonhanke-nam/PsyNeuView" — so the name has to be
+# lowercased at run time, which an `env:` block cannot do.
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.f.outputs.run }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: f
+        env:
+          PATTERN: '^(backend/|frontend/|Dockerfile|\.dockerignore|\.github/workflows/container-image\.yml)'
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # `github.sha` is the auto-generated merge commit, and its FIRST
+            # parent is the base branch as it stands *now*. Use that.
+            #
+            # `pull_request.base.sha` is the base as it was when the PR was
+            # opened, so diffing from it also sweeps up everything the base
+            # gained since -- #989. A one-line docs PR (#1184) ran tutorials,
+            # e2e and both pytest variants because devel had moved under it:
+            # the diff reported five frontend/workflow files the PR never
+            # touched. The merge-base call below cannot save us there, because
+            # the merge commit descends from the stale base, so the merge base
+            # *is* the stale base.
+            base="$(git rev-parse "${{ github.sha }}^1" 2>/dev/null || true)"
+            # An unmergeable PR has no merge commit -> fall back to the
+            # recorded base rather than skipping.
+            [ -n "$base" ] || base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif mb="$(git merge-base "$base" "${{ github.sha }}" 2>/dev/null)"; [ -z "$mb" ]; then
+            # merge base unresolvable -> fail safe by running, never by skipping
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$mb" "${{ github.sha }}" | grep -qE "$PATTERN"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  pin-guard:
+    name: PsyNeuLink pin matches CI
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.run != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: Dockerfile pin must equal backend-tests.yml pin
+        run: |
+          # Otherwise "the tests passed" says nothing about the image that ships.
+          ci_ref="$(grep -oE 'PSYNEULINK_GIT_REF: [0-9a-f]{40}' .github/workflows/backend-tests.yml | awk '{print $2}')"
+          img_ref="$(grep -oE 'ARG PSYNEULINK_GIT_REF=[0-9a-f]{40}' Dockerfile | cut -d= -f2)"
+          echo "backend-tests.yml: ${ci_ref:-<none>}"
+          echo "Dockerfile:        ${img_ref:-<none>}"
+          if [ -z "$ci_ref" ] || [ -z "$img_ref" ]; then
+            echo "::error::could not read one of the pins"; exit 1
+          fi
+          if [ "$ci_ref" != "$img_ref" ]; then
+            echo "::error::PsyNeuLink pin drift — the image would ship a build CI never tested"
+            exit 1
+          fi
+
+  # PAUSED (2026-09-15, at the maintainer's request) — see the note on `apptainer` below.
+  # Container deployment is not the current strategy: the Mac app is the primary
+  # one, with the React app from this repo second. Building the image on every
+  # pull request is work spent proving a path nobody is using this week.
+  build:
+    name: build and smoke test
+    needs: [changes, pin-guard]
+    if: ${{ !cancelled() && needs.changes.outputs.run != 'false' && github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: psyneuview:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start the container
+        run: |
+          docker run -d --name pnv -p 8000:8000 \
+            --memory 6g --cpus 2 \
+            psyneuview:ci
+          # Generous: first boot pre-warms a PsyNeuLink worker (app.main lifespan).
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/health >/dev/null 2>&1; then
+              echo "healthy after ${i}0s"; exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::container never became healthy"
+          docker logs pnv
+          exit 1
+
+      - name: Serves the SPA
+        run: |
+          # app.main resolves frontend/dist relative to its own file, so a
+          # mislaid COPY shows up here and nowhere else.
+          body="$(curl -fsS http://127.0.0.1:8000/)"
+          echo "$body" | grep -qi '<div id="root"' \
+            || { echo "::error::index.html did not come back from /"; echo "$body" | head -20; exit 1; }
+
+      - name: Loads and introspects a real model
+        run: |
+          # Ask the app which models it ships rather than hardcoding a path —
+          # the first version of this step named a file that only existed as
+          # untracked scratch in a working copy, so it 404'd in CI.
+          demos="$(curl -fsS http://127.0.0.1:8000/api/demos)"
+          path="$(echo "$demos" | jq -r '.demos[0].pristine_path')"
+          [ -n "$path" ] && [ "$path" != "null" ] \
+            || { echo "::error::image ships no demo models"; echo "$demos"; exit 1; }
+          echo "loading: $path"
+
+          # The actual risk: PsyNeuLink imports fine but can't exec a model in
+          # the sandbox worker. Assert on node count, not just HTTP 200.
+          resp="$(curl -fsS -X POST http://127.0.0.1:8000/api/model/load \
+            -H 'Content-Type: application/json' \
+            -d "{\"file_path\": \"${path}\"}")"
+          # Mechanisms hang off each composition, not off `model` directly.
+          nodes="$(echo "$resp" | jq '[.model.compositions[].nodes[]] | length')"
+          pnl="$(echo "$resp" | jq -r '.model.diagnostics.pnlVersion')"
+          echo "mechanisms: $nodes  (PsyNeuLink $pnl)"
+          [ "${nodes:-0}" -gt 0 ] \
+            || { echo "::error::model loaded with no mechanisms"; echo "$resp" | jq '.model | keys'; exit 1; }
+
+      - name: Container mode is actually in force
+        run: |
+          # The image sets PSYNEUVIEW_DEPLOYMENT_MODE=container (#1062). If that
+          # regressed, the backend would offer pip installs into the image.
+          mode="$(curl -fsS http://127.0.0.1:8000/api/settings/info | jq -r '.deployment.mode')"
+          [ "$mode" = "container" ] || { echo "::error::mode is '$mode', expected 'container'"; exit 1; }
+          caps="$(curl -fsS http://127.0.0.1:8000/api/settings/install/capabilities)"
+          echo "$caps"
+          [ "$(echo "$caps" | jq -r '.enabled')" = "false" ] \
+            || { echo "::error::install controls are enabled in a container"; exit 1; }
+
+      - name: Runs as a non-root user
+        run: |
+          who="$(docker exec pnv id -un)"
+          [ "$who" != "root" ] || { echo "::error::container runs as root"; exit 1; }
+          echo "running as: $who"
+
+      - name: Saved models land on the volume, not in the image
+        run: |
+          # The default models dir is <repo>/models, which inside the image is a
+          # layer that a redeploy discards — and that Apptainer mounts read-only.
+          # A user importing a .pnlproject would silently lose it.
+          dir="$(docker exec pnv python -c "from app.services.model_dirs import get_default_save_dir; print(get_default_save_dir())")"
+          echo "save dir: $dir"
+          case "$dir" in
+            /home/pnv/*) ;;
+            *) echo "::error::save dir '$dir' is not under the mounted home"; exit 1 ;;
+          esac
+
+      - name: Report footprint
+        run: |
+          # These numbers size the deployment VM, so print them where anyone
+          # planning capacity can find them rather than guessing.
+          size="$(docker image inspect psyneuview:ci --format '{{.Size}}')"
+          rss="$(docker stats --no-stream --format '{{.MemUsage}}' pnv)"
+          # Also to stdout: the job summary isn't retrievable from the logs API,
+          # so numbers written only there can't be read back afterwards.
+          echo "image-size: $(numfmt --to=iec "$size")"
+          echo "container-memory: ${rss}"
+          {
+            echo "### Image footprint"
+            echo ""
+            echo "| Measure | Value |"
+            echo "|---|---|"
+            echo "| Image size (uncompressed) | $(numfmt --to=iec "$size") |"
+            echo "| Container memory, model loaded | ${rss} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Container logs
+        if: always()
+        run: docker logs pnv || true
+
+      - name: Lowercase the image name
+        id: img
+        if: github.event_name == 'push' && github.ref_name == 'devel'
+        # GHCR requires a lowercase repository name and this repo is mixed
+        # case, so the tag must be built here rather than in `env:`.
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref_name == 'devel'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish (devel only)
+        if: github.event_name == 'push' && github.ref_name == 'devel'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          # SHA-tagged as well as `devel`, so a rollback is one pull rather
+          # than a rebuild.
+          tags: |
+            ${{ steps.img.outputs.name }}:devel
+            ${{ steps.img.outputs.name }}:${{ github.sha }}
+          cache-from: type=gha
+
+  # PAUSED (2026-09-15, at the maintainer's request). Runs on manual dispatch only.
+  #
+  # The HPC/Apptainer path is not being worked on — the focus is the Mac app and
+  # the local React deployment — and this job builds the container image a
+  # second time, on top of the one `build` already made, for every pull request.
+  # It had also started failing on runner disk exhaustion ("No space left on
+  # device") twice in one day, costing a re-run each time.
+  #
+  # To resume: delete the `github.event_name == 'workflow_dispatch'` clause
+  # from this job and from `build` above. Nothing else was changed, so they come
+  # back exactly as they were, and both still run on demand from the Actions
+  # tab. The platform decision behind this is recorded on #1058.
+  apptainer:
+    name: converts to Apptainer
+    needs: [changes, build]
+    if: ${{ !cancelled() && needs.changes.outputs.run != 'false' && github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: psyneuview:ci
+          cache-from: type=gha
+
+      - name: Install Apptainer
+        run: |
+          # Not in Ubuntu's default repositories — the project's PPA is the
+          # documented install route.
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends software-properties-common
+          sudo add-apt-repository -y ppa:apptainer/ppa
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends apptainer
+
+      - name: Convert and run
+        run: |
+          # Conversion breakage should surface here, not on someone's cluster.
+          apptainer build --disable-cache psyneuview.sif docker-daemon://psyneuview:ci
+          ls -lh psyneuview.sif
+          # Apptainer mounts the image read-only, which is the constraint the
+          # Docker path never exercises: prove the app still starts under it.
+          apptainer exec psyneuview.sif python -c "import psyneulink; print('psyneulink', psyneulink.__version__)"

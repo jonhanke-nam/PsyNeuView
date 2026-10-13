@@ -1,0 +1,77 @@
+# How narration says the words a voice would get wrong (#1407).
+#
+# Voices spell out anything in capitals ("E-G-O") and stumble over joined
+# names (PsyNeuLink). Each entry here changes only what is SPOKEN; the caption
+# on screen keeps the real word.
+#
+#   word:      the word as captions write it. Case-sensitive, whole word.
+#   say:       a respelling every voice reads right. Used for live narration
+#              (the browser's voices) and, when there are no phonemes, for the
+#              recorded narration too.
+#   phonemes:  optional, eSpeak IPA with stress marks (ˈ primary, ˌ secondary).
+#              Used only when recording with Piper, which takes them exactly.
+#              The browser's voices ignore phonetic markup.
+#   confirm:   true until someone has listened to it and agreed.
+#
+# A step can also carry its own `say_phonemes:` for one-off emphasis in the
+# recording, e.g. "where the model has [[ bˈɪn ]]" (a listening test showed
+# that fixes a misplaced stress).
+#
+# `reads_fine` lists capitalised words voices already say as words (node
+# names like CONTEXT). A unit test fails on any capitalised or joined-up word
+# in a caption that is in neither list, so each new one gets a decision.
+
+words:
+  - word: EGO
+    say: Ego
+    phonemes: ˈiːɡoʊ
+  - word: PsyNeuLink
+    say: Sigh-new-link
+    confirm: true
+  - word: PsyNeuView
+    say: Sigh-new-view
+    confirm: true
+  - word: DDM
+    say: D D M
+  - word: TD
+    say: T D
+  - word: MDF
+    say: M D F
+  - word: CIM
+    say: C I M
+    confirm: true # some say "sim"
+  - word: GRU
+    say: G R U
+    confirm: true # some say "grew"
+  - word: ISC-CI
+    say: I S C, C I
+    confirm: true
+  - word: XOR
+    say: ex-or
+    confirm: true
+  - word: ReLU
+    say: ray-loo
+    confirm: true
+  - word: PyPI
+    say: pie P I
+    confirm: true
+  - word: EMComposition
+    say: E M Composition
+  - word: TransferMechanism
+    say: Transfer Mechanism
+  - word: FIELD_MEMORY
+    say: field memory
+
+reads_fine:
+  # Node names and logic words, written in capitals as the model writes them.
+  - AND
+  - COMBINED
+  - CONTEXT
+  - MATCH
+  - QUERY
+  - RETRIEVED
+  - SCORES
+  - STATE
+  - WEIGHT
+  - WEIGHTED
+  - GitHub

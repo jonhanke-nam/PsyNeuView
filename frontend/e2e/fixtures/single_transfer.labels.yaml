@@ -1,0 +1,3 @@
+# Test sidecar for #361 Layer 3 verification.
+solo:
+  element_names: [first_unit, second_unit]

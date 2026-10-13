@@ -1,0 +1,133 @@
+# PsyNeuView First Steps, part 6: running a model (#1316, under #1310).
+#
+# Run with the inputs a model declares, read the results, step through the
+# run, and look inside it in Run State. The Bistable Attractor demo declares
+# two input sets (kick, steady_difference) and runs ten trials, so there is
+# something to step through. From docs/tutorials/02-running-a-model.md and
+# docs/tutorials/04-debugger-stepping.md.
+#
+# Stepping needs a PsyNeuLink with the debugger hook (0.19.1.0 or later); the
+# Run panel says so when it is missing.
+
+id: orientation-running
+title: "Running a model: Run, inputs, results, and stepping"
+orientation: 6
+minutes: 3
+docs:
+  - tutorials/02-running-a-model.md
+  - tutorials/04-debugger-stepping.md
+model: Bistable Attractor
+
+steps:
+  - id: the-run-tab
+    anchor:
+      testid: tab-run
+    instruct: >-
+      This is the Bistable Attractor demo: two units that inhibit each other.
+      Click the Run tab.
+    say: >-
+      Two units that inhibit each other. Open the Run tab.
+    done:
+      visible: panel-run
+    act:
+      click: tab-run
+
+  - id: declared-inputs
+    anchor:
+      testid: run-input-set
+    pointer: true
+    instruct: >-
+      The grid holds one block of trials per input node. This model declares
+      its own input sets, so the From menu offers them by name and the first,
+      kick, is already filled in: a push on the first trial, then nothing for
+      nine more.
+    say: >-
+      A model can bring its own inputs. The From menu lists them by name.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: run
+    anchor:
+      testid: run-panel
+    instruct: Press Run Model.
+    say: >-
+      Run the model.
+    done:
+      trialsAtLeast: 10
+    act:
+      runModel: true
+
+  - id: the-results
+    anchor:
+      testid: run-panel
+    pointer: true
+    instruct: >-
+      Results appear below the inputs: one row per trial, each node's output
+      next to the inputs that produced it. The two units settle together after
+      the push.
+    say: >-
+      Results come back per trial, beside the inputs that produced them.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: step-forward
+    anchor:
+      testid: trace-next-step
+    instruct: >-
+      After a run, a trace bar appears under the canvas. Press its ▶ to move one
+      step forward. As you step, each node shows the value it had at that step.
+    say: >-
+      The trace bar steps through the run, and the canvas shows each node's value as it goes.
+    done:
+      traceStepAtLeast: 1
+    act:
+      click: trace-next-step
+
+  - id: run-state
+    anchor:
+      testid: tab-run-state
+    instruct: >-
+      Click Run State. It shows the step you are on in detail: which nodes ran,
+      and what each one holds.
+    say: >-
+      Run State shows the current step in detail.
+    done:
+      visible: panel-run-state
+    act:
+      click: tab-run-state
+
+  - id: another-set
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Back in the Run tab, pick steady_difference from the From menu and press
+      Run Model again. The inputs now differ on every trial, and the two units
+      pull apart instead of settling together.
+    say: >-
+      Pick the other input set and run again: this time the units pull apart.
+    done:
+      runsAtLeast: 2
+    act:
+      pickSet:
+        tab: run
+        name: steady_difference
+      runModel: true
+
+  - id: learn
+    anchor:
+      testid: tab-learn
+    pointer: true
+    instruct: >-
+      Briefly: the Learn tab is for models that learn. It takes inputs and
+      targets, runs the training, and reports the loss. Next: Settings in two
+      minutes.
+    say: >-
+      Learn is for models that learn. Next: Settings in two minutes.
+    done:
+      next: true
+    act:
+      next: true

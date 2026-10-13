@@ -1,0 +1,364 @@
+/*
+ * The palette: every colour PsyNeuView draws with, named once. (#1302)
+ *
+ * A component says what a colour is for (`var(--pnv-text-muted)`), never
+ * what it is (`#666`). docs/ui-style-conventions.md says which token is for
+ * what. Every file is on these tokens: frontend/scripts/style-report.mjs
+ * --check (in CI) and styleConventions.test.ts fail on a colour written by
+ * hand anywhere else, bar the few exceptions the report names.
+ *
+ * Light values only: the app has no dark theme. When one comes, it is a
+ * second block of the same names under `prefers-color-scheme: dark`.
+ *
+ * Groups: text, surfaces and borders, the primary blue and its tints, the
+ * four status colours, the developer mark, scrims and shadows, the node
+ * role colours from docs/icon-ontology.md, the graph canvas and its
+ * projections, the walkthrough, and the component types. Roles, projections
+ * and types are their own sets and are not reused for buttons or text.
+ */
+:root {
+  /* Text, darkest to faintest. */
+  --pnv-text: #222;            /* headings, values, the strongest text */
+  --pnv-text-body: #333;       /* running text */
+  --pnv-text-secondary: #555;  /* labels, a secondary button's text */
+  --pnv-text-muted: #666;      /* help text under a setting, the × */
+  --pnv-text-hint: #888;       /* hints, counts, a disabled button's text */
+  --pnv-text-faint: #999;      /* placeholders, line numbers, "No history" */
+  --pnv-on-primary: #fff;      /* text on a filled primary button, or on a filled badge */
+
+  /* Surfaces and borders. */
+  --pnv-surface: #fff;         /* a dialog, an input, a secondary button */
+  --pnv-surface-muted: #fafafa;/* a sidebar, a small button, a group heading */
+  --pnv-surface-sunken: #f5f5f5;/* a path box, a code chip, the Up button */
+  --pnv-border: #ccc;          /* inputs and secondary buttons */
+  --pnv-border-light: #ddd;    /* small buttons, chips, fields in a row */
+  --pnv-border-faint: #e5e5e5; /* dividers: a dialog's header and footer, a group's underline */
+  --pnv-surface-band: #ececec; /* a heading band across a menu: the Open menu's Actions / Catalogs / History */
+  --pnv-disabled-bg: #e0e0e0;  /* a disabled filled button */
+  --pnv-text-selection: #d4e4ff; /* selected text, anywhere */
+
+  /* The primary blue: links, the one filled button, the selected row. */
+  --pnv-primary: #1a73e8;
+  --pnv-primary-deep: #1565c0; /* text on a blue tint, where the primary blue is too light */
+  --pnv-primary-tint: #e8f0fe; /* the selected sidebar item, the chosen option, a numbered badge */
+  --pnv-primary-tint-border: #c9ddf3;
+  --pnv-primary-text-on-tint: #1c4f8a; /* a note in a blue box */
+  --pnv-primary-ring: rgba(26, 115, 232, 0.2); /* the glow round a focused field */
+
+  /* Status. Each has a text colour and a tint for a box behind it. */
+  --pnv-success: #2e7d32;
+  --pnv-success-tint: #e8f5e9;
+  --pnv-success-border: #9ccc9c;
+  --pnv-danger: #c62828;
+  --pnv-danger-tint: #fdecea;
+  --pnv-danger-border: #f5c6c6; /* the edge of a box behind an error: a toast, the dangling-projection list */
+  --pnv-warning: #b26a00;
+  --pnv-warning-tint: #fff8e1;
+  --pnv-warning-border: #ffe082;
+  --pnv-warning-text-on-tint: #5a3e00; /* a note in an amber box, where the amber is too light to read */
+  /* An amber tag: "view only", "protected", "read only" beside the model
+     name, and Reset to Original. Darker than the box's border, so a tag a
+     few pixels high still has an edge. */
+  --pnv-warning-tag-text: #8a6d00;
+  --pnv-warning-tag-border: #e0c060;
+
+  /* The dot beside the model name that says there are unsaved changes
+     (and, clicked, shows them: #1348). */
+  --pnv-unsaved: #e65100;
+
+  /* A favourite: the filled star beside a component in the palette. */
+  --pnv-favorite: #f9a825;
+
+  /* The one mark for "developer mode only" (DeveloperBadge, #1291). */
+  --pnv-developer: #7b1fa2;
+
+  /* A parameter changed from its default: the Inspector's purple bar, the
+     tint behind the row and its field's border, and the legend's swatch. */
+  --pnv-customized: #9333ea;
+  --pnv-customized-tint: #f5f0ff;
+  --pnv-customized-border: #c4b0e0;
+
+  /* A value at the current trace step (#336): the value pill on a node, the
+     Run State table, the Inspector's "Value at this step" box. */
+  --pnv-trace-value: #1b5e20;
+  --pnv-trace-tint: #f0fff0;
+  --pnv-trace-border: #b6e0b6;
+  /* The node firing at the current trace step, on the canvas: its outline,
+     its execution-count badge and the glow round it; and the value pill on
+     it, a shade deeper than the node's own tint so it reads on it. */
+  --pnv-trace-active: #4caf50;
+  --pnv-trace-glow: 0 0 12px rgba(76, 175, 80, 0.4);
+  --pnv-trace-pill: #e6f4e6;
+
+  /* A layer's values drawn as a grid of shaded cells (#1387): in the Run
+     panel's results, Run State and the value pill. Low is light, high is
+     dark. Values that go negative are centred on 0 (mid): the negative side
+     runs to a pale warm tint, the positive side to the dark end, so a
+     Hopfield letter's +1 pixels are dark and its -1 pixels light. */
+  --pnv-grid-low: #f4f6f9;
+  --pnv-grid-high: #1d3557;
+  --pnv-grid-mid: #a9b4c2;
+  --pnv-grid-neg: #fbe3c9;
+
+  /* A chart's series, in order: the Run panel's trial-by-trial line charts
+     give each node the next one, and the Learn panel's loss line is the
+     first. Plotly needs real colours, so a chart reads these through
+     utils/paletteColor.ts rather than writing var(). */
+  --pnv-chart-1: #1a73e8;
+  --pnv-chart-2: #e8710a;
+  --pnv-chart-3: #0d904f;
+  --pnv-chart-4: #d93025;
+  --pnv-chart-5: #9334e6;
+  --pnv-chart-6: #e52592;
+  --pnv-chart-7: #00796b;
+  --pnv-chart-8: #c2185b;
+
+  /* The code editor's band behind the selected node's lines, and its left
+     edge. (The selected parameter's line is the primary tint, an error's
+     line the danger tint.) */
+  --pnv-editor-node-tint: #fef6e4;
+  --pnv-editor-node-accent: #e8a317;
+
+  /* A terminal's output in Settings (the install log). */
+  --pnv-code-bg: #1e1e1e;
+  --pnv-code-text: #ddd;
+
+  /* Over the page: the dim behind a dialog, and the two shadows. */
+  --pnv-scrim: rgba(0, 0, 0, 0.4);
+  --pnv-shadow-dialog: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --pnv-shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.15);
+  /* A small thing floating over the page: a toast, a combobox's list, the
+     focus breadcrumb and the dangling-projection list over the canvas. */
+  --pnv-shadow-float: 0 2px 8px rgba(0, 0, 0, 0.12);
+  /* The palette's flyout, beside the compact palette. */
+  --pnv-shadow-flyout: 2px 0 8px rgba(0, 0, 0, 0.08);
+
+  /* Node roles, from docs/icon-ontology.md: the colour a mechanism's role
+     has in PsyNeuLink's own show_graph. Their own set: a button is never
+     "INPUT green", and a role is never "the primary blue". */
+  --pnv-role-input: #2e7d32;
+  --pnv-role-output: #c62828;
+  --pnv-role-control: #1565c0;
+  --pnv-role-learning: #e65100;
+  --pnv-role-probe: #e91e63;
+  --pnv-role-internal: #555;
+  /* The rest of show_graph's role colours: a node that is both INPUT and
+     OUTPUT, the composition's controller (and its objective), a node that
+     sends a feedback projection, and one in a cycle. */
+  --pnv-role-singleton: #795548;
+  --pnv-role-controller: #7b1fa2;
+  --pnv-role-feedback-sender: #ef6c00;
+  --pnv-role-cycle: #5d4037;
+  /* A node the PyTorch view runs but leaves out of the gradient (#230):
+     show_graph's brown dotted style, as text, tint and dashed border. */
+  --pnv-role-no-gradient: #7a5a2e;
+  --pnv-role-no-gradient-tint: #fbf6ef;
+  --pnv-role-no-gradient-border: #c9a16b;
+
+  /* Graph-structure conditions by type: the badge in the Inspector and the
+     Scheduler tab, and the dashed edge on the canvas. Their own set, like
+     the roles: "Before" blue is not the primary blue. */
+  --pnv-gsc-before: #2196f3;
+  --pnv-gsc-after: #ff9800;
+  --pnv-gsc-add-edge: #4caf50;
+  --pnv-gsc-remove-edge: #f44336;
+  --pnv-gsc-with: #9c27b0;
+  --pnv-gsc-other: #607d8b;   /* a custom or unknown condition type */
+  /* The edge of a condition's badge on the canvas, and the ring round it
+     under the pointer. */
+  --pnv-gsc-badge-edge: rgba(0, 0, 0, 0.2);
+  --pnv-gsc-badge-hover-ring: 0 0 0 2px rgba(0, 0, 0, 0.25);
+
+  /* The graph canvas: nodes, frames, edges and what floats over them.
+     Values as they always were; the role colours above are the nodes'
+     own, and these are the rest of what the canvas draws. */
+  --pnv-node-border: #d0d0d0;        /* a node's outline when it is not coloured by role */
+  --pnv-node-tag-bg: #f0f0f0;        /* the "view only" tag on a node */
+  --pnv-node-divider: #e0e0e0;       /* the line above an expanded node's ports */
+  --pnv-node-text-strong: #444;      /* a composition frame's title, the legend's heading */
+  --pnv-node-text-detail: #777;      /* a function parameter in an expanded node, a legend row's name */
+  --pnv-node-text-dim: #aaa;         /* a port's shape in an expanded node, the empty canvas's hint */
+  --pnv-count-badge: #666;           /* a node's execution-count badge while it is not firing */
+  --pnv-order-badge: #475569;        /* a node's execution-order badge (slate, apart from the greens) */
+  /* The node or edge the code editor's cursor is in. */
+  --pnv-cursor-highlight: #06b6d4;
+  --pnv-cursor-glow: 0 0 8px rgba(6, 182, 212, 0.35);
+  /* A dark tooltip on the canvas: a port's name and shape, a value pill's detail. */
+  --pnv-tooltip-bg: #1f2937;
+  --pnv-tooltip-text-muted: #9ca3af;
+  --pnv-tooltip-accent: #7dd3fc;
+  /* Ports, in the Okabe-Ito colours (distinguishable with the common
+     colour-vision deficiencies): a node's handles and an edge's ends. */
+  --pnv-port-input: #0072b2;
+  --pnv-port-output: #009e73;
+  --pnv-port-parameter: #e69f00;
+  /* A nested composition's frame: dashed while nested, solid while inset. */
+  --pnv-composition: #7c8db5;                /* the COMPOSITION tag, the frame's port handles */
+  --pnv-composition-border: #9ca3af;         /* a nested frame's dashed edge */
+  --pnv-composition-inset: #6b7da3;          /* an inset frame's edge, the ▣ toggle while on */
+  --pnv-composition-tint: rgba(230, 238, 255, 0.6);
+  --pnv-composition-inset-tint: rgba(244, 247, 253, 0.92);
+  --pnv-composition-control-border: #b6c3d9; /* a frame's ⛶ ▣ − and a collapsed composition's + */
+  --pnv-composition-control-text: #445;
+  /* Edges. A projection's own colour comes with its type; these are the rest. */
+  --pnv-edge-default: #b1b1b7;      /* an edge with no type colour (React Flow's default) */
+  --pnv-edge-hover: #5b9bd5;        /* an edge under the pointer: a light blue that reads on dark edges */
+  --pnv-edge-bend-forced: #8a8f98;  /* a bend the router placed (a bend you placed is the primary blue) */
+  --pnv-edge-label-bg: rgba(255, 255, 255, 0.95);
+  --pnv-edge-legend: #888;          /* the legend's sample line for a data projection */
+  /* A projection's own colour, by its type (show_graph's): the edge's line
+     and its arrowhead. React Flow names an arrowhead's <marker> after its
+     colour, so modelStore reads these through paletteColor() rather than
+     writing var(). Inactive is a projection the composition does not use
+     (shown under More ▸ Inactive); dangling is one whose sender or receiver
+     is missing from the file. */
+  --pnv-projection-mapping: #555;
+  --pnv-projection-control: #1565c0;
+  --pnv-projection-learning: #e65100;
+  --pnv-projection-autoassociative: #7b1fa2;
+  --pnv-projection-inactive: #c62828;
+  --pnv-projection-cim: #888;
+  --pnv-projection-dangling: #c62828;
+  /* The banner across the canvas while you pick a node: for a scheduling
+     condition, and for a new projection. */
+  --pnv-gesture-condition: #1565c0;
+  --pnv-gesture-projection: #37474f;
+  /* Shadows on the canvas. */
+  --pnv-shadow-node: 0 1px 4px rgba(0, 0, 0, 0.08);        /* a node at rest */
+  --pnv-shadow-node-raised: 0 2px 8px rgba(0, 0, 0, 0.12); /* a selected or firing node, the legend, the trace bar */
+  --pnv-shadow-cim: 0 1px 3px rgba(0, 0, 0, 0.08);         /* a composition's input or output port node */
+  --pnv-shadow-dangling: 0 1px 2px rgba(0, 0, 0, 0.06);    /* the stand-in for a missing node */
+  --pnv-shadow-frame: 0 1px 4px rgba(0, 0, 0, 0.12);       /* an inset frame, the stale-graph banner */
+  --pnv-shadow-badge: 0 1px 3px rgba(0, 0, 0, 0.2);        /* a node's count and order badges */
+  --pnv-shadow-tooltip: 0 2px 6px rgba(0, 0, 0, 0.25);
+  --pnv-shadow-chip: 0 1px 4px rgba(0, 0, 0, 0.1);         /* an edge's label, the Legend button */
+  --pnv-shadow-banner: 0 2px 8px rgba(0, 0, 0, 0.2);       /* the gesture banners */
+
+  /* The guided walkthrough (#1181, #1310): its bar under the app, the ring
+     round what a step points at, and the pointer that glides to it. */
+  --pnv-walkthrough-bg: #f5f9ff;
+  --pnv-walkthrough-border: #c5d9ef;    /* the bar's top edge and its buttons' edge */
+  --pnv-walkthrough-text: #123;         /* the instruction and the buttons */
+  --pnv-walkthrough-label: #5a7ba6;     /* the walkthrough's title, "step 2 of 7", a docs link */
+  --pnv-walkthrough-caption: #4a6283;   /* the caption a step reads aloud */
+  --pnv-walkthrough-docs: #7a8ba6;      /* "Based on:" */
+  --pnv-walkthrough-current: #1565c0;   /* the step under way: its dot, its ring, the pointer, Next ▸ */
+  --pnv-walkthrough-done: #2e7d32;      /* a finished step: its dot, and the ring once the step is done */
+  --pnv-walkthrough-todo: #cfdcea;      /* a step still to come: its dot */
+  --pnv-shadow-pointer: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35)); /* a filter, not a box-shadow */
+
+  /* Component types: each PsyNeuLink class's colour in the Components
+     palette (its dot) and on its node when nodes are coloured by type
+     (constants/pnlTypes.ts names each one). Their own set, like the roles. */
+  /* Mechanisms */
+  --pnv-type-transfer-mechanism: #1a73e8;
+  --pnv-type-recurrent-transfer-mechanism: #7b1fa2;
+  --pnv-type-kwta-mechanism: #9c27b0;
+  --pnv-type-lca-mechanism: #ef6c00;
+  --pnv-type-contrastive-hebbian-mechanism: #6a1b9a;
+  --pnv-type-kohonen-mechanism: #4527a0;
+  --pnv-type-processing-mechanism: #2e7d32;
+  --pnv-type-integrator-mechanism: #00796b;
+  --pnv-type-timer-mechanism: #00897b;
+  --pnv-type-ddm: #e65100;
+  --pnv-type-episodic-memory-mechanism: #00695c;
+  --pnv-type-leabra-mechanism: #33691e;
+  --pnv-type-objective-mechanism: #c62828;
+  --pnv-type-comparator-mechanism: #d32f2f;
+  --pnv-type-prediction-error-mechanism: #e53935;
+  --pnv-type-control-mechanism: #ad1457;
+  --pnv-type-optimization-control-mechanism: #880e4f;
+  --pnv-type-agt-control-mechanism: #b71c1c;
+  --pnv-type-lc-control-mechanism: #c62828;
+  --pnv-type-gating-mechanism: #4a148c;
+  --pnv-type-learning-mechanism: #f9a825;
+  --pnv-type-auto-associative-learning-mechanism: #f57f17;
+  --pnv-type-kohonen-learning-mechanism: #ff8f00;
+  --pnv-type-em-storage-mechanism: #ffa000;
+  /* Projections */
+  --pnv-type-mapping-projection: #555;
+  --pnv-type-masked-mapping-projection: #616161;
+  --pnv-type-auto-associative-projection: #7b1fa2;
+  --pnv-type-control-projection: #1565c0;
+  --pnv-type-gating-projection: #4a148c;
+  --pnv-type-learning-projection: #e65100;
+  /* Compositions */
+  --pnv-type-composition: #37474f;
+  --pnv-type-autodiff-composition: #455a64;
+  --pnv-type-gru-composition: #546e7a;
+  --pnv-type-em-composition: #607d8b;
+  --pnv-type-parameter-estimation-composition: #78909c;
+  --pnv-type-composition-function-approximator: #90a4ae;
+  --pnv-type-regression-cfa: #b0bec5;
+  /* Functions */
+  --pnv-type-identity: #1565c0;
+  --pnv-type-linear: #1976d2;
+  --pnv-type-exponential: #1e88e5;
+  --pnv-type-logistic: #2196f3;
+  --pnv-type-tanh: #42a5f5;
+  --pnv-type-relu: #64b5f6;
+  --pnv-type-gaussian: #90caf9;
+  --pnv-type-gaussian-distort: #bbdefb;
+  --pnv-type-binomial-distort: #e3f2fd;
+  --pnv-type-softmax: #1e88e5;
+  --pnv-type-transfer-with-costs: #1565c0;
+  --pnv-type-angle: #0d47a1;
+  --pnv-type-hyperspherical-to-cartesian: #1a237e;
+  --pnv-type-dropout: #0d47a1;
+  --pnv-type-user-defined-function: #37474f;
+  --pnv-type-linear-timer: #00838f;
+  --pnv-type-accelerating-timer: #00acc1;
+  --pnv-type-decelerating-timer: #26c6da;
+  --pnv-type-asymptotic-timer: #4dd0e1;
+  --pnv-type-simple-integrator: #2e7d32;
+  --pnv-type-accumulator-integrator: #388e3c;
+  --pnv-type-adaptive-integrator: #43a047;
+  --pnv-type-dual-adaptive-integrator: #4caf50;
+  --pnv-type-drift-diffusion-integrator: #66bb6a;
+  --pnv-type-drift-on-a-sphere-integrator: #81c784;
+  --pnv-type-ornstein-uhlenbeck-integrator: #a5d6a7;
+  --pnv-type-leaky-competing-integrator: #c8e6c9;
+  --pnv-type-fitz-hugh-nagumo-integrator: #388e3c;
+  --pnv-type-interactive-activation-integrator: #1b5e20;
+  --pnv-type-normal-dist: #6a1b9a;
+  --pnv-type-uniform-dist: #7b1fa2;
+  --pnv-type-exponential-dist: #8e24aa;
+  --pnv-type-gamma-dist: #9c27b0;
+  --pnv-type-wald-dist: #ab47bc;
+  --pnv-type-uniform-to-normal-dist: #ce93d8;
+  --pnv-type-drift-diffusion-analytical: #ba68c8;
+  --pnv-type-linear-combination: #f57c00;
+  --pnv-type-matrix-transform: #ef6c00;
+  --pnv-type-reduce: #e65100;
+  --pnv-type-concatenate: #ff9800;
+  --pnv-type-rearrange: #ffa726;
+  --pnv-type-combine-means: #ffb74d;
+  --pnv-type-prediction-error-delta-function: #e65100;
+  --pnv-type-stability: #d84315;
+  --pnv-type-energy: #e64a19;
+  --pnv-type-entropy: #f4511e;
+  --pnv-type-distance: #ff5722;
+  --pnv-type-gradient-optimization: #4e342e;
+  --pnv-type-grid-search: #5d4037;
+  --pnv-type-gaussian-process: #6d4c41;
+  --pnv-type-pec-optimization-function: #795548;
+  --pnv-type-one-hot: #795548;
+  --pnv-type-hebbian: #ff6f00;
+  --pnv-type-contrastive-hebbian: #ff8f00;
+  --pnv-type-kohonen: #ffa000;
+  --pnv-type-reinforcement: #ffb300;
+  --pnv-type-td-learning: #ffc107;
+  --pnv-type-back-propagation: #ffd54f;
+  --pnv-type-bayes-glm: #ffe082;
+  --pnv-type-em-storage: #ffecb3;
+  --pnv-type-buffer: #3e2723;
+  --pnv-type-content-addressable-memory: #4e342e;
+  --pnv-type-dictionary-memory: #5d4037;
+  /* Ports */
+  --pnv-type-input-port: #2e7d32;
+  --pnv-type-output-port: #c62828;
+  --pnv-type-parameter-port: #1565c0;
+  --pnv-type-control-signal: #ad1457;
+  --pnv-type-gating-signal: #4a148c;
+  --pnv-type-learning-signal: #e65100;
+}

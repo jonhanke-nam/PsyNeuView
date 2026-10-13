@@ -1,0 +1,154 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    sans-serif;
+  font-size: 14px;
+  color: var(--pnv-text-body);
+  background: var(--pnv-surface);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--pnv-surface-sunken);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--pnv-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--pnv-text-faint);
+}
+
+/* Button reset */
+button {
+  font-family: inherit;
+}
+button:hover {
+  filter: brightness(0.97);
+}
+
+/* Open-menu rows: declarative hover (replaces imperative JS that mutated the
+   shared inline style and left stale backgrounds on re-render, #845). filter:none
+   cancels the global button:hover brightness so the tint stays a clean blue
+   rather than muddy gray. */
+.open-menu-dropdown button:hover {
+  background: var(--pnv-primary-tint);
+  filter: none;
+}
+
+/* Selection color */
+::selection {
+  background: var(--pnv-text-selection);
+}
+
+/* React Flow customization */
+.react-flow__node {
+  transition: box-shadow 0.15s ease;
+}
+.react-flow__node.selected {
+  box-shadow: 0 0 0 2px var(--pnv-primary), 0 2px 8px var(--pnv-primary-ring);
+}
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+.react-flow__attribution {
+  font-size: 10px;
+  opacity: 0.5;
+}
+
+/* #1301: the pointer in the graph view. React Flow's stylesheet puts a grab
+   hand on the pane and a pointer or grab hand on nodes and edges; under the
+   arrow setting (Settings ▸ Appearance, the default) the canvas, nodes and
+   edges all show the arrow instead — its tip is the exact point that clicks
+   — and the grabbing hand appears only while a drag is in progress. The
+   arrow itself is our own image at the chosen size, in --graph-arrow-cursor
+   (set by GraphCanvas from utils/graphCursor.ts), with the system arrow as
+   the fallback. Real controls keep their own cursor: a <button> inside a
+   node, a clickable edge label and a bend handle say pointer or grab
+   themselves (docs/ui-interaction-conventions.md). Under "hand" nothing here
+   applies and React Flow's cursors stand, with the edge hit path's grab. */
+.graph-pointer-arrow .react-flow__pane.draggable,
+.graph-pointer-arrow .react-flow__node.selectable,
+.graph-pointer-arrow .react-flow__node.draggable,
+.graph-pointer-arrow .react-flow__edge.selectable,
+.graph-pointer-arrow .react-flow__nodesselection-rect {
+  cursor: var(--graph-arrow-cursor, default);
+}
+.graph-pointer-arrow .react-flow__pane.dragging,
+.graph-pointer-arrow .react-flow__node.draggable.dragging {
+  cursor: grabbing;
+}
+.graph-pointer-hand .projection-edge-hit {
+  cursor: grab;
+}
+
+/* Allotment sash styling */
+.sash {
+  background: var(--pnv-border-faint) !important;
+}
+.sash:hover {
+  background: var(--pnv-primary) !important;
+}
+
+/* #409: brief flash highlight on the labels.yaml line the Inspector
+   just jumped to, in the amber of the YAML-cursor row (#1302). The fade-out is purely visual — the StateField
+   clears the decoration after FLASH_DURATION_MS regardless. */
+.psynewview-yaml-flash {
+  background: color-mix(in srgb, var(--pnv-warning-border) 55%, transparent);
+  animation: psynewview-yaml-flash-fade 1.2s ease-out;
+}
+@keyframes psynewview-yaml-flash-fade {
+  0%   { background: color-mix(in srgb, var(--pnv-warning-border) 85%, transparent); }
+  100% { background: color-mix(in srgb, var(--pnv-warning-border) 0%, transparent); }
+}
+
+/* #984: interactive elements that aren't <button> miss the global button:hover
+   rule above and get no hover feedback at all. These two are divs carrying an
+   onClick. Declarative rather than imperative for the same reason as the
+   open-menu rows (#845): JS that mutates a shared inline style leaves stale
+   backgrounds behind on re-render. */
+.trace-step-row:hover {
+  background: var(--pnv-primary-tint);
+}
+.placement-row:hover {
+  background: var(--pnv-primary-tint);
+}
+.diagnostics-collapsed-bar:hover {
+  filter: brightness(0.97);
+}
+
+/* A small × that removes something from a row (a port, a condition) is grey
+   until pointed at, then red: the warning when it counts, without a panel
+   full of red (#1302; docs/ui-style-conventions.md). */
+.pnv-remove-x:hover:not(:disabled) {
+  color: var(--pnv-danger) !important;
+  border-color: var(--pnv-danger) !important;
+}
+
+/* #1349: a save marker in History is a full-width row; the global brightness
+   hover is invisible on its transparent ground, so it tints like a selection. */
+.pnv-history-save-marker:hover {
+  background: var(--pnv-success-tint) !important;
+  filter: none;
+}
+
+/* #1377: a step in History opens on a click (its code change, and going to
+   it), so pointing at one tints it, as a row does. The current step is
+   already tinted. */
+.pnv-history-step[data-opens="true"]:not([data-current="true"]):hover {
+  background: var(--pnv-surface-muted) !important;
+}

@@ -1,0 +1,5 @@
+# Docs site build deps (#736). Build locally with:
+#   python -m venv .docs-venv && .docs-venv/bin/pip install -r docs/requirements.txt
+#   .docs-venv/bin/mkdocs serve     # live preview at http://127.0.0.1:8000
+#   .docs-venv/bin/mkdocs build     # static site → site/
+mkdocs-material>=9.5

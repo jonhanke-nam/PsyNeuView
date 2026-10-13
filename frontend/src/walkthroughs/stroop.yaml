@@ -1,0 +1,112 @@
+# Stroop — selective attention, automaticity and control (#56, under #1180).
+#
+# The second course model, and deliberately a different KIND of walkthrough
+# from the DDM one.
+#
+# The DDM is three mechanisms, so a learner can build it. Stroop is seven
+# mechanisms and seven projections, and wiring those means drag-to-connect —
+# which the tutorials can demonstrate but not script. #1180 asked whether
+# build-from-scratch was realistic for every model; this is the answer for the
+# complex ones: **open and explore**, with the building taught on models small
+# enough to build.
+#
+# What the walkthrough teaches instead is the model's *shape*. Chapter 6 is
+# about two pathways competing — colour naming and word reading — converging on
+# one decision. Reading that off the canvas is the thing the notebook cannot
+# do, and it is why a graphical walkthrough is worth having at all.
+#
+# The last step is the link back to chapter 2: Stroop's `decision` node is a
+# `pnl.DDM`, the same mechanism the DDM walkthrough builds from the palette.
+
+id: stroop
+title: Exploring and testing the Stroop model
+course: "6.1"
+model: Stroop — Basic
+
+steps:
+  - id: open-stroop
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Stroop — Basic model. Unlike the DDM, this one is bundled —
+      seven mechanisms already wired together.
+    done:
+      nodeExists: color_hidden
+    act:
+      openModel: Stroop — Basic
+
+  - id: the-colour-pathway
+    anchor:
+      node: color_hidden
+    instruct: >-
+      Select color_hidden — the colour-naming pathway. Its Logistic gain is the
+      parameter that makes this pathway weak relative to word reading.
+    done:
+      selectedNode: color_hidden
+    act:
+      selectNode: color_hidden
+
+  - id: the-word-pathway
+    anchor:
+      node: word_hidden
+    instruct: >-
+      Now word_hidden, the word-reading pathway. Same structure, stronger
+      weights — the asymmetry is the whole Stroop effect.
+    done:
+      selectedNode: word_hidden
+    act:
+      selectNode: word_hidden
+
+  - id: run-stroop
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Run the model and watch both pathways feed one decision.
+    done:
+      trialsAtLeast: 1
+    act:
+      runModel: true
+
+  - id: the-decision
+    anchor:
+      node: decision
+    instruct: >-
+      Select decision. It is a DDM — the same mechanism you built in the Drift
+      Diffusion walkthrough, here accumulating evidence from both pathways.
+    done:
+      selectedNode: decision
+    act:
+      selectNode: decision
+
+  # Chapter 6 does not stop at looking at the model — it changes the balance
+  # between the pathways and watches the behaviour change. These two steps are
+  # what make the walkthrough teach the model rather than the interface.
+  - id: strengthen-colour
+    anchor:
+      node: color_hidden
+    instruct: >-
+      Raise color_hidden's gain to 2.5. You are making colour naming compete
+      harder against word reading.
+    done:
+      paramEquals:
+        node: color_hidden
+        param: gain
+        value: "2.5"
+    act:
+      setParameter:
+        node: color_hidden
+        param: gain
+        value: "2.5"
+
+  - id: run-again
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Run it again and compare the decision. Same model, one parameter changed
+      — this is the experiment, not the interface.
+    done:
+      # Not trialsAtLeast: a second run produces the same trial count as the
+      # first, so only a run COUNT can tell them apart.
+      runsAtLeast: 2
+    act:
+      runModel: true

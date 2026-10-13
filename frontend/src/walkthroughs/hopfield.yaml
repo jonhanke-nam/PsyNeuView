@@ -1,0 +1,234 @@
+id: hopfield
+title: Hopfield networks — recalling a letter from a noisy copy
+course: "1.2"
+model: Hopfield Network
+minutes: 5
+docs:
+  - tutorials/02-running-a-model.md
+
+# Module 1 of the Cognitive Neuroscience Course, notebook 2, "Hopfield
+# Networks" (#49). The notebook does it in numpy, with no PsyNeuLink model;
+# this is the same network as a PsyNeuLink RecurrentTransferMechanism, tried
+# at the user's request after the module was first judged a poor fit.
+#
+# Source notebook:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/docs/refactor-documentation/docs/source/tutorials/cognitive_neuroscience_course/1_dynamics_in_perception/notebooks/2_hopfield_networks.ipynb
+# Course landing page:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/docs/refactor-documentation/docs/source/tutorials/cognitive_neuroscience_course/index.rst
+# Validated against PsyNeuLink 0.21.0.0.
+#
+# The demo stores the notebook's A and Z with its outer-product rule (diagonal
+# 0), uses a steep Logistic as the sign function (PsyNeuLink has none, and its
+# Tanh overflows at that gain), and makes each trial one update of every unit,
+# as the notebook's loop does. The cue is the notebook's own noisy Z (seed 42).
+# See backend/demos/hopfield_network.py. The notebook has no energy plot.
+#
+# Every number below was measured in the app, and
+# backend/tests/test_demo_hopfield_network.py pins them: recall of Z from the
+# noisy cue, the in-between cue going to Z, and, with four letters stored,
+# the same cue settling on X.
+
+steps:
+  - id: open-hopfield
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Hopfield Network demo: one layer of 25 units, one for each
+      pixel of a 5 by 5 letter. It has stored two letters, A and Z, and
+      recalls one from a noisy copy, as you recognise a view through rain.
+    say: >-
+      Open the Hopfield Network demo.
+    done:
+      nodeExists: hopfield
+    act:
+      openModel: Hopfield Network
+
+  - id: the-letters
+    anchor:
+      testid: code-editor-pane
+    instruct: >-
+      Scroll the code to the letters. Each is drawn with # for a dark pixel,
+      +1, and a dot for a light one, -1. Units 0 to 4 are the top row, 5 to 9
+      the next, and so on. The line training_set = [A, Z] says what the
+      network stores.
+    say: >-
+      Each letter is 25 pixels, plus one for dark and minus one for light.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: the-weights
+    anchor:
+      node: hopfield
+    instruct: >-
+      Select hopfield. Its weights come from the notebook's Hebbian rule: in
+      each stored letter, two pixels that agree add to their weight, and two
+      that disagree subtract. The Inspector shows them as hetero, between
+      units, and auto, each unit to itself, which is 0. The function is a
+      Logistic stretched from -1 to +1 and so steep (gain 1000) that it is a
+      step: a unit with positive input becomes +1, negative, -1.
+    say: >-
+      Units that agree in a letter are wired together. Each unit is a step, plus or minus one.
+    done:
+      selectedNode: hopfield
+    act:
+      selectNode: hopfield
+
+  - id: run-noisy
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Open the Run tab. noisy_Z is filled in: the notebook's own noisy Z, with
+      four pixels wrong, units 6, 11, 14 and 18. There are six trials. The
+      first puts the cue in. The other five have no input, so each one is an
+      update driven only by the network's own weights. Run it.
+    say: >-
+      Run the noisy Z. One trial puts it in, five more let the network settle.
+    done:
+      lastRunInputs:
+        hopfield:
+        - [1, 1, 1, 1, 1, -1, 1, -1, 1, -1, -1, 1, 1, -1, 1, -1, 1, -1, 1, -1, 1, 1, 1, 1, 1]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    act:
+      runModel: true
+
+  - id: as-grid
+    anchor:
+      testid: run-value-view-hopfield-grid
+    pointer: true
+    instruct: >-
+      The results list hopfield's 25 values as numbers. Above the trial
+      cards, switch hopfield from list to grid. Each trial now draws the
+      layer as a 5 by 5 picture, a row of units at a time: dark is +1, light
+      is -1. Trial 1 is the noisy Z. Its four wrong pixels are units 6, 11,
+      14 and 18: a dark one in the second row, two in the third, and one in
+      the fourth.
+    say: >-
+      Show the layer as a grid. Trial 1 is a Z with four pixels wrong.
+    done:
+      visible: run-trial-1-grid-hopfield
+    act:
+      click: run-value-view-hopfield-grid
+
+  - id: step-once
+    anchor:
+      testid: trace-next-step
+    instruct: >-
+      Press ▶ on the trace bar to step from trial 1 to trial 2, one update.
+      The trial 2 card is now the one stepping, and its grid is a clean Z:
+      the four wrong pixels flipped together. hopfield's value on the canvas
+      draws the same letter, small, and the Run State tab draws it large as
+      you step.
+    say: >-
+      Step one update forward, and watch the letter clean up.
+    done:
+      traceStepAtLeast: 1
+    act:
+      click: trace-next-step
+
+  - id: what-flipped
+    anchor:
+      testid: run-trial-deltas
+    instruct: >-
+      In the results, turn on Δ diff. Each trial now lists, under its grid,
+      the units that changed since the trial before. Trial 2: [6] -2, [11]
+      -2, [14] -2, [18] -2, the four pixels you saw flip, in one update.
+      Trials 3 to 6 list nothing, and their grids are the same Z: it doesn't
+      change. It is a stable state, an attractor.
+    say: >-
+      All four wrong pixels flipped at once, and then nothing changes. Z is an attractor.
+    done:
+      visible: run-trial-delta
+    act:
+      click: run-trial-deltas
+
+  - id: in-between
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Pick A_over_Z from the From menu and run it: A's top two rows over Z's
+      bottom three, as trial 1's grid shows. It looks like a bit of both, but
+      it differs from A in 10 pixels and from Z in only 5. Trial 2 is Z. The
+      network goes to the stored letter nearest the cue.
+    say: >-
+      A cue between the letters goes to the nearer one.
+    done:
+      lastRunInputs:
+        hopfield:
+        - [-1, 1, 1, 1, -1, 1, -1, -1, -1, 1, -1, -1, 1, -1, -1, -1, 1, -1, -1, -1, 1, 1, 1, 1, 1]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    act:
+      pickSet:
+        tab: run
+        name: A_over_Z
+      runModel: true
+
+  - id: overload
+    anchor:
+      testid: code-editor-pane
+    instruct: >-
+      Now store more. In the code, change training_set = [A, Z] to
+      training_set = [A, Z, X, O]; the file draws X and O too. Then pick
+      noisy_Z from the From menu and run it again.
+    say: >-
+      Store four letters instead of two, and run the noisy Z again.
+    done:
+      lastRunInputs:
+        hopfield:
+        - [1, 1, 1, 1, 1, -1, 1, -1, 1, -1, -1, 1, 1, -1, 1, -1, 1, -1, 1, -1, 1, 1, 1, 1, 1]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        - [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    act:
+      replaceInCode:
+        find: "training_set = [A, Z]"
+        replace: "training_set = [A, Z, X, O]"
+      pickSet:
+        tab: run
+        name: noisy_Z
+      runModel: true
+
+  - id: overloaded
+    anchor:
+      testid: run-panel
+    pointer: true
+    instruct: >-
+      This time it doesn't come back to Z. Read down the grids: trial 2 has
+      X's top row on a Z; trial 3 is all X but the bottom row; from trial 4
+      on it is X, a different memory. Four letters are too many for 25 units, above all
+      letters that share pixels: their weights interfere, and the memories
+      run into each other.
+    say: >-
+      With four letters stored, the noisy Z settles on X. The memories interfere.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: run-panel
+    instruct: >-
+      What this isn't: the notebook does this in numpy. Its add_noise makes
+      a new random cue each run; here the cues are fixed, but you can type
+      your own in the Run tab. The grid view is kept with the model, so
+      hopfield opens as a grid next time; switch it back to list for the
+      numbers. For the exercise, see the notebook, 2_hopfield_networks, in
+      the course's 1_dynamics_in_perception.
+    say: >-
+      This is the PsyNeuLink side of a numpy lesson. The exercise is in the notebook.
+    done:
+      next: true
+    act:
+      next: true

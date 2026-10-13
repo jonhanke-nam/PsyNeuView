@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "positions": {
+    "word_input": {
+      "x": 18,
+      "y": 900
+    },
+    "task_input": {
+      "x": 218,
+      "y": 900
+    },
+    "color_input": {
+      "x": 418,
+      "y": 900
+    },
+    "word_hidden": {
+      "x": -2,
+      "y": 720
+    },
+    "color_hidden": {
+      "x": 398,
+      "y": 720
+    },
+    "decision": {
+      "x": 198,
+      "y": 540
+    },
+    "response": {
+      "x": 198,
+      "y": 360
+    },
+    "LC_objective": {
+      "x": 700,
+      "y": 540
+    },
+    "lc": {
+      "x": 738,
+      "y": 720
+    }
+  }
+}

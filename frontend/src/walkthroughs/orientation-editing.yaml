@@ -1,0 +1,153 @@
+# PsyNeuView First Steps, part 3: editing (#1313, under #1310).
+#
+# One change in the code, one on the canvas, and the proof that they are two
+# views of one file: each shows up in the other. Then undo and redo, and what
+# happens when the file changes outside PsyNeuView.
+#
+# It starts a new model so the edits land in a file of the learner's own, in
+# My Project Folder. The function switch is judged by `functionIs`, which reads
+# the model the canvas was rebuilt from — typing is not enough; the preview has
+# to have taken.
+
+id: orientation-editing
+title: "Editing: in code or on the canvas, and how they stay in sync"
+orientation: 3
+minutes: 4
+docs:
+  - tutorials/06-editing-code.md
+  - tutorials/05-editing-inspector.md
+  - external-editor-workflow.md
+
+steps:
+  - id: start-a-model
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Start a new model: Open ▸ New Model…, and call it orientation_edit (any
+      name will do if that one is taken). It has an input node, an output
+      node, and one projection between them.
+    say: >-
+      Start a small model of your own to edit.
+    done:
+      # The starter's input node: proof the new model landed, whatever its name.
+      nodeExists: input_node
+    act:
+      newModel: orientation_edit
+
+  - id: edit-the-code
+    anchor:
+      testid: code-editor-pane
+    instruct: >-
+      In the code, find output_node and change its function from pnl.Linear()
+      to pnl.Logistic(). A moment after you stop typing, the canvas rebuilds
+      from the new code. Nothing is written to the file until you Save.
+    say: >-
+      Edit the code, and the canvas follows. The file is not written until you save.
+    done:
+      functionIs:
+        node: output_node
+        type: Logistic
+    act:
+      replaceInCode:
+        find: |-
+          function=pnl.Linear(),
+              name='output_node'
+        replace: |-
+          function=pnl.Logistic(),
+              name='output_node'
+
+  - id: select-output
+    anchor:
+      node: output_node
+    instruct: >-
+      Click output_node on the canvas. The Inspector shows its Logistic
+      function and the function's parameters.
+    say: >-
+      Select the node to see its parameters in the Inspector.
+    done:
+      selectedNode: output_node
+    act:
+      selectNode: output_node
+
+  - id: edit-in-inspector
+    anchor:
+      testid: param-gain
+    instruct: >-
+      In the Inspector, set gain to 2 and press Enter. Watch the code: the
+      line that builds output_node now says gain=2. An edit on either side
+      lands in the one file.
+    say: >-
+      Change a parameter in the Inspector, and the code changes to match.
+    done:
+      paramEquals:
+        node: output_node
+        param: gain
+        value: "2"
+    act:
+      setParameter:
+        node: output_node
+        param: gain
+        value: "2"
+
+  - id: undo
+    anchor:
+      testid: undo-button
+    instruct: >-
+      Press Undo (or ⌘Z). The gain goes back to 1, in the Inspector and in the
+      code. Every edit, from either side, can be undone.
+    say: >-
+      Undo takes the last change back, wherever you made it.
+    done:
+      paramEquals:
+        node: output_node
+        param: gain
+        value: "1"
+    act:
+      undo: true
+
+  - id: redo
+    anchor:
+      testid: redo-button
+    instruct: Press Redo (or ⌘⇧Z) to put the change back.
+    say: >-
+      Redo puts it back.
+    done:
+      paramEquals:
+        node: output_node
+        param: gain
+        value: "2"
+    act:
+      redo: true
+
+  - id: outside-edits
+    anchor:
+      testid: code-editor-pane
+    pointer: true
+    instruct: >-
+      If the file changes outside PsyNeuView, in PyCharm say, PsyNeuView
+      notices. With nothing unsaved here, it loads the new version. With unsaved
+      edits here, it asks which version you want, and never guesses.
+    say: >-
+      Edits made outside PsyNeuView are noticed too. If both sides changed, you choose.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: when-the-file-is-written
+    anchor:
+      testid: toolbar-save
+    pointer: true
+    instruct: >-
+      Two kinds of edit, two rules. A change typed in the code is only
+      previewed: the canvas follows, the orange dot shows, and nothing is
+      written until you press Save. A change made in the Inspector or on the
+      canvas, and an undo or redo, is written to the file straight away, so
+      Save stays greyed out. The next part is about where that file lives.
+    say: >-
+      Typed code is previewed until you save. Inspector and canvas changes are written at once.
+      Next: where files live.
+    done:
+      next: true
+    act:
+      next: true

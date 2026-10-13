@@ -1,0 +1,189 @@
+id: td
+title: TD learning — the prediction error moves to the cue
+course: "3.1"
+model: TD Learning
+minutes: 5
+docs:
+  - tutorials/12-training-a-model.md
+
+# Module 3 of the Cognitive Neuroscience Course, notebook 1, "Reinforcement
+# Learning" (#52): temporal-difference learning, after Montague, Dayan and
+# Sejnowski (1996). Opened rather than built: add_td_learning_pathway makes
+# the learning nodes, which the Inspector can't.
+#
+# Source notebook:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/docs/refactor-documentation/docs/source/tutorials/cognitive_neuroscience_course/3_reinforcement_learning/notebooks/1_reinforcement_learning.ipynb
+# Course landing page:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/docs/refactor-documentation/docs/source/tutorials/cognitive_neuroscience_course/index.rst
+# Validated against PsyNeuLink 0.21.0.0.
+#
+# The demo is the notebook's build_model() scaled down: 10 timesteps, not 60,
+# reward at timestep 7 (counting from 0). See backend/demos/td_learning.py.
+#
+# The Learn tab charts the total prediction error per epoch, not where in the
+# trial it is. With the cue on from the start the total falls to zero; with a
+# cue that comes on part-way through, as in the notebook, it doesn't fall, it
+# moves to the cue. So the walkthrough trains both, and says where the error
+# is at each stage; backend/tests/test_demo_td_learning.py checks those
+# per-timestep claims, and every number below was measured in the app.
+
+steps:
+  - id: open-td
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the TD Learning demo: a model that learns when a reward is coming,
+      from Montague, Dayan and Sejnowski (1996). Each trial is ten timesteps.
+      A cue, like a light, is on, and a reward comes near the end.
+    say: >-
+      Open the TD Learning demo.
+    done:
+      nodeExists: PredictionError
+    act:
+      openModel: TD Learning
+
+  - id: the-cue
+    anchor:
+      node: cue
+    instruct: >-
+      Select cue: ten units, one per timestep, so a whole trial goes in at
+      once. In the demo's trials the cue is on at every timestep.
+    say: >-
+      The cue, one unit per timestep.
+    done:
+      selectedNode: cue
+    act:
+      selectNode: cue
+
+  - id: the-value
+    anchor:
+      node: value_estimate
+    instruct: >-
+      Select value_estimate: at each timestep, the model's prediction of the
+      reward to come. It's the cue through cue_to_value, whose weights start
+      at 0. Those weights are what learns.
+    say: >-
+      The value estimate: its prediction of reward, timestep by timestep.
+    done:
+      selectedNode: value_estimate
+    act:
+      selectNode: value_estimate
+
+  - id: the-error
+    anchor:
+      node: PredictionError
+    instruct: >-
+      Select PredictionError. PsyNeuLink added it, with the TARGET node and a
+      learning mechanism, for add_td_learning_pathway. At each timestep it
+      takes the reward, adds the prediction now, and subtracts the prediction
+      a moment ago. That is the TD error: how much better things went than
+      predicted.
+    say: >-
+      The prediction error: how much better things went than predicted.
+    done:
+      selectedNode: PredictionError
+    act:
+      selectNode: PredictionError
+
+  - id: train-conditioning
+    anchor:
+      testid: tab-learn
+    instruct: >-
+      Open the Learn tab. conditioning is filled in: five trials, the cue on
+      throughout, and a reward of 1 in box [7]. Start learning. Over 20
+      epochs the prediction error falls from about 0.06 to 0.
+    say: >-
+      Train it. The prediction error falls to zero.
+    done:
+      lastTraining:
+        epochsAtLeast: 20
+        targets:
+          value_estimate:
+          - [0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+    act:
+      pickSet:
+        tab: learn
+        name: conditioning
+
+  - id: where-it-went
+    anchor:
+      testid: learn-metric-chart
+    pointer: true
+    instruct: >-
+      The chart shows the total. Inside each trial, the error moved. At first
+      it was at the reward, a surprise. As the value estimate learned, the
+      error moved earlier, a timestep at a time, until it reached the start
+      of the trial and vanished. The cue is on from the start, so the reward
+      is predicted from the first moment, and nothing is left to surprise.
+    say: >-
+      The error moved back to the start of the trial, and vanished.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: train-late-cue
+    anchor:
+      testid: tab-learn
+    instruct: >-
+      Now make the cue come on part-way through, as the light does in the
+      notebook. Set Trials to 1, set the cue's boxes [0], [1] and [2] to 0,
+      set Epochs to 50, and start learning.
+    say: >-
+      Now the cue comes on part-way through. Train it again.
+    done:
+      lastTraining:
+        epochsAtLeast: 50
+        inputs:
+          cue:
+          - [0, 0, 0, 1, 1, 1, 1, 1, 1, 1]
+        targets:
+          value_estimate:
+          - [0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+    act:
+      train:
+        inputs:
+          cue:
+          - [0, 0, 0, 1, 1, 1, 1, 1, 1, 1]
+        targets:
+          value_estimate:
+          - [0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+        epochs: 50
+
+  - id: it-moved
+    anchor:
+      testid: learn-metric-chart
+    pointer: true
+    instruct: >-
+      This time the error doesn't go away. It starts at 0.1, all of it at the
+      reward. It dips to about 0.02 while it is spread over several timesteps
+      on its way back. Then it climbs to about 0.1 again, all of it now at
+      the moment the cue comes on. Nothing predicts the cue, so the cue is
+      the surprise. Dopamine neurons do the same: after learning, they fire
+      at the cue, not at the reward.
+    say: >-
+      The error didn't vanish. It moved from the reward to the cue.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: learn-metric-chart
+    instruct: >-
+      What the app can't do here: show the error at each timestep, as the
+      notebook's Figure 5 does, so this walkthrough has told you where it is.
+      The notebook's experiments are also bigger: 60 timesteps, 120 trials,
+      the reward withheld on some. The Learn tab draws one box per number,
+      so the demo is scaled down.
+    say: >-
+      The notebook's plots and long experiments stay in the notebook.
+    done:
+      next: true
+    act:
+      next: true

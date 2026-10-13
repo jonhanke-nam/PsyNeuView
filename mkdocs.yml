@@ -1,0 +1,94 @@
+site_name: PsyNeuView documentation
+site_description: >-
+  Documentation for PsyNeuView — a GUI for building, running, and visualizing
+  PsyNeuLink models.
+repo_url: https://github.com/jonhanke-nam/PsyNeuView
+repo_name: jonhanke-nam/PsyNeuView
+# The existing in-repo markdown is the canonical source; this site is a thin,
+# non-disruptive layer over it (#736). GitHub still renders the same files.
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  # Collapsible "Advanced" notes — the progressive-disclosure approach from #733.
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.emoji
+  - tables
+  - toc:
+      permalink: true
+
+# Diátaxis-aligned sections (#733): Tutorials (learning) up front; the technical
+# notes grouped under Developer. How-to / Explanation sections come later.
+nav:
+  - Home: index.md
+  - What PsyNeuView is: introduction.md
+  - PsyNeuView First Steps: psyneuview-first-steps.md
+  - Getting started: getting-started.md
+  - Two ways to work: workflow-modes.md
+  - Using PsyNeuView with PyCharm: external-editor-workflow.md
+  - PyCharm setup (macOS): guides/pycharm-setup-macos.md
+  - Existing PsyNeuLink setup: guides/existing-psyneulink-setup.md
+  - Hosted instance (demo): guides/hosted-instance.md
+  - Where PsyNeuView keeps things: where-things-live.md
+  - What you can edit, and why: what-you-can-edit.md
+  - Saving, autosave and undo: saving-autosave-and-undo.md
+  - Documentation plan: documentation-plan.md
+  - Tutorials:
+      - Overview: tutorials/README.md
+      - Loading a model: tutorials/01-loading-a-model.md
+      - Running a model: tutorials/02-running-a-model.md
+      - Building a model: tutorials/03-building-a-model.md
+      - Stepping with the debugger: tutorials/04-debugger-stepping.md
+      - Editing via the inspector: tutorials/05-editing-inspector.md
+      - Editing via the code editor: tutorials/06-editing-code.md
+      - Live editing: tutorials/07-live-editing.md
+      - Configuring the PsyNeuLink source: tutorials/08-configuring-psyneulink-source.md
+      - Incomplete / broken state: tutorials/09-incomplete-state.md
+      - Saving & exporting: tutorials/10-saving-exporting.md
+      - Viewing options & the flat view: tutorials/11-viewing-options.md
+      - Training a learning model: tutorials/12-training-a-model.md
+      - The sync check: tutorials/13-sync-check.md
+      - Starting a model (two-editor): tutorials/14-starting-a-model.md
+      - The two-editor workflow: tutorials/15-two-headed-workflow.md
+      - Guided walkthroughs (the course): tutorials/16-course-walkthroughs.md
+  - Developer:
+      - Testing: testing.md
+      - Writing a guided walkthrough: guided-walkthroughs.md
+      - File conventions: file-conventions.md
+      - File handling: file-handling.md
+      - Python conventions (PEPs): python-code-conventions-peps.md
+      - Python conventions (survey): python-code-conventions-survey.md
+      - Icon ontology: icon-ontology.md
+      - UI interaction conventions: ui-interaction-conventions.md
+      - Settings and the Mac app: settings-and-mac-app.md
+      - Settings etiquette (draft): settings-etiquette.md
+      - Execution modes and stepping: execution-modes-and-stepping.md
+      - Deployment modes: deployment-modes.md
+      - Deploying: deploying.md
+      - Deployments (inventory): deployments.md
+      - MDF versioning: mdf-versioning.md
+      - CI catches: ci/catches.md
+      - Updates (2026-04-28): updates-2026-04-28.md

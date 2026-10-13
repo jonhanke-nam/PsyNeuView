@@ -1,0 +1,8 @@
+{
+  "_comment": "Rendering defaults override (#912). Copy to public/rendering-defaults.json (served at the app root) to retune the graph look without a rebuild. Any subset of keys is allowed; omitted keys keep the built-in show_graph-parity defaults.",
+  "arrowLineThickness": 3,
+  "arrowheadSize": 7,
+  "arrowheadPosition": 0.5,
+  "nodeBorderWidth": 1,
+  "nodeBorderWidthEmphasis": 3
+}

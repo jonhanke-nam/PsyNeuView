@@ -1,0 +1,39 @@
+# Building a model, as a guided walkthrough (#1180, #1181).
+#
+# The premise of the course walkthroughs is that a learner builds each model
+# themselves in the GUI rather than opening a finished one. This is the
+# smallest version of that: start from the two-node starter model and add a
+# component from the palette.
+#
+# It exercises a different shape of step from demo.yaml. There, the anchor was
+# a canvas node and completion was a selection. Here the anchor is the palette
+# — an element outside the canvas — and completion is "a node that did not
+# exist now does". Both runners had to learn those, which is the point: the
+# vocabulary grows only when a walkthrough genuinely needs it.
+
+id: build
+title: Adding a component
+model: Stroop — Basic
+
+steps:
+  - id: add-transfer-mechanism
+    # Not a canvas node — the Components palette, by its test id. The node
+    # this step creates does not exist yet, so there is nothing on the canvas
+    # to point at.
+    anchor:
+      testid: palette-sidebar
+    instruct: Search the palette for TransferMechanism and click it to add one.
+    done:
+      # The #181 default name for a newly added component.
+      nodeExists: New_TransferMechanism_1
+    act:
+      addFromPalette: TransferMechanism
+
+  - id: select-the-new-node
+    anchor:
+      node: New_TransferMechanism_1
+    instruct: Select New_TransferMechanism_1, the component you just added, to see its parameters.
+    done:
+      selectedNode: New_TransferMechanism_1
+    act:
+      selectNode: New_TransferMechanism_1

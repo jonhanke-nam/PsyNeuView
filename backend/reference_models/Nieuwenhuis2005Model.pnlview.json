@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "positions": {
+    "input_layer": {
+      "x": 78,
+      "y": 900
+    },
+    "decision_layer": {
+      "x": 58,
+      "y": 720
+    },
+    "response_layer": {
+      "x": 58,
+      "y": 540
+    },
+    "Combine values": {
+      "x": 420,
+      "y": 720
+    },
+    "LC": {
+      "x": 458,
+      "y": 540
+    }
+  }
+}

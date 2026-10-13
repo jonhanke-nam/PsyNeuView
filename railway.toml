@@ -1,0 +1,36 @@
+# Railway deployment (#1063).
+#
+# Railway builds the Dockerfile at the repo root and runs the resulting
+# container, so this is the same image the Princeton VM runs — no second build
+# path to keep honest.
+#
+# Railway injects PORT; the Dockerfile's CMD already binds it.
+#
+# READ THIS BEFORE DEPLOYING: a Railway service is ONE container, so it is one
+# user's workspace, and Railway puts no authentication in front of it. Running a
+# model executes Python on the server by design, so an unauthenticated public
+# URL is remote code execution offered to anyone who finds it. Put an access
+# layer in front (Cloudflare Access or equivalent) before sharing the URL. See
+# docs/deploying.md.
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# /health is a plain liveness endpoint with no PsyNeuLink work behind it.
+healthcheckPath = "/health"
+# First boot pre-warms a PsyNeuLink worker (app.main lifespan) and that import
+# is slow — a short healthcheck window would kill the container mid-warmup and
+# loop forever.
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+# One container, one user. Scaling the replica count would hand users a random
+# one of N unrelated workspaces, since all state is on the instance's disk.
+numReplicas = 1
+
+[deploy.variables]
+# Declared, not inferred (#1062). Redundant with the Dockerfile's ENV, but
+# stated here so it survives someone overriding the start command.
+PSYNEUVIEW_DEPLOYMENT_MODE = "container"

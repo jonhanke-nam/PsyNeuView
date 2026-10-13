@@ -1,0 +1,171 @@
+# PsyNeuView First Steps, part 4: saving, and where things live (#1314,
+# under #1310).
+#
+# Save against Save a copy, the folders in Settings ▸ Folders, the layout and
+# label files that travel with a model, which files are read only and why, and
+# the per-model lock. Every claim is on docs/what-you-can-edit.md and
+# docs/where-things-live.md.
+#
+# Starts a new model so Save, the lock and the folder are all the learner's
+# own; locking is undone at the end so nothing is left changed.
+
+id: orientation-saving
+title: "Saving, and where things live: what you can edit and why"
+orientation: 4
+minutes: 4
+docs:
+  - what-you-can-edit.md
+  - where-things-live.md
+
+steps:
+  - id: start-a-model
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Start a new model, Open ▸ New Model…, called orientation_save (any name
+      will do if that one is taken). It is saved into My Project Folder as a
+      .py file as it is created.
+    say: >-
+      A new model is a file in My Project Folder from the start.
+    done:
+      nodeExists: input_node
+    act:
+      newModel: orientation_save
+
+  - id: save
+    anchor:
+      testid: toolbar-save
+    pointer: true
+    instruct: >-
+      Save writes your changes back to that file, then reloads the model. It is
+      greyed out until there is something unsaved: the orange dot by the name.
+    say: >-
+      Save writes to the file you opened. Greyed out means nothing has changed.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: save-a-copy
+    anchor:
+      testid: toolbar-save-copy
+    pointer: true
+    instruct: >-
+      Save a copy as… writes a copy somewhere else, as a .py file, a
+      .pnlproject bundle, or MDF. A .py copy becomes the open file. It is also
+      the way to keep your own version of a model you cannot edit in place.
+    say: >-
+      Save a copy makes a new file elsewhere, and a Python copy becomes the open one.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: open-settings
+    anchor:
+      testid: settings-button
+    instruct: Open Settings (the gear) to see where everything lives.
+    say: >-
+      Settings shows every folder PsyNeuView uses.
+    done:
+      visible: settings-panel
+    act:
+      click: settings-button
+
+  - id: folders
+    anchor:
+      testid: settings-section-folders
+    instruct: Click Folders.
+    say: >-
+      The Folders section.
+    done:
+      visible: settings-content-folders
+    act:
+      click: settings-section-folders
+
+  - id: my-project-folder
+    anchor:
+      testid: project-folder-settings
+    pointer: true
+    instruct: >-
+      My Project Folder, with its path. Beside each model .py go its layout
+      and label files, or a hidden .psyneuview folder holding them; they move
+      with the folder. Change… points PsyNeuView at another folder; Move… moves
+      the folder and everything in it.
+    say: >-
+      Your models, with their layout and label files beside them.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: whose-files
+    anchor:
+      testid: location-library
+    pointer: true
+    instruct: >-
+      The PsyNeuLink Library and Examples are PsyNeuLink's own files. When
+      PsyNeuView installed that PsyNeuLink, they are read only, and the editor
+      says why at the top. Reference and Demo models are included with
+      PsyNeuView and open as working copies, so the originals are never
+      changed. Your own PsyNeuLink checkout is editable: that is the
+      developer track, part 8.
+    say: >-
+      PsyNeuLink's own files are read only when PsyNeuView manages that PsyNeuLink.
+      Included models open as copies.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: close-settings
+    anchor:
+      testid: settings-panel
+    instruct: Press Escape to close Settings.
+    say: >-
+      Escape closes Settings.
+    done:
+      hidden: settings-panel
+    act:
+      pressKey: Escape
+
+  - id: layout-menu
+    anchor:
+      testid: layout-menu-button
+    instruct: >-
+      One more way a model can be protected: open the Layout menu.
+    say: >-
+      Any model can also be locked, from the Layout menu.
+    done:
+      visible: layout-menu-lock-model
+    act:
+      click: layout-menu-button
+
+  - id: lock
+    anchor:
+      testid: layout-menu-lock-model
+    instruct: >-
+      Choose Lock this model (view only). While locked, nothing can change the
+      model by accident: not the graph, the Inspector or the code editor, which
+      says so at the top of the file. You can still arrange the layout, and
+      Save a copy as… gives you an unlocked copy. The lock is kept in the
+      model's layout file, so it travels with the model.
+    say: >-
+      Locked, the model can't be changed: not on the graph, in the Inspector, or in the code.
+    done:
+      visible: edit-mode-badge
+    act:
+      click: layout-menu-lock-model
+
+  - id: unlock
+    anchor:
+      testid: edit-mode-badge
+    instruct: >-
+      A view only tag appears by the model's name. Click it to unlock the
+      model again. Next: which PsyNeuLink the model runs on.
+    say: >-
+      Click the tag to unlock. Next: what it runs on.
+    done:
+      hidden: edit-mode-badge
+    act:
+      click: edit-mode-badge

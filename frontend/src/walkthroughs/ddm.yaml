@@ -1,0 +1,72 @@
+# Drift Diffusion Model — build it yourself (#51, under #1180).
+#
+# The first walkthrough for a Cognitive Neuroscience Course model, and the
+# pilot #1181 proposed: the DDM is the smallest real model in the course, so it
+# stresses the walkthrough engine rather than the modelling.
+#
+# It is also the first walkthrough that opens NO model. Every earlier one
+# started from Stroop; this one starts from an empty canvas and builds, which
+# is the premise the course walkthroughs rest on — a learner who assembles the
+# model understands it in a way that someone who pressed Run on a finished file
+# does not.
+#
+# Chapter 2 of the course introduces the DDM as the model that formalises
+# decision-making as noisy evidence accumulation to a threshold. Here the
+# learner puts one on a canvas, runs it, and reads what it produced.
+
+id: ddm
+title: Building a Drift Diffusion Model
+course: "2.1"
+# No `model:` — this walkthrough creates its own.
+
+steps:
+  - id: start-a-new-model
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Start a new model: Open ▾ → + New Model…, and call it ddm_demo.
+      PsyNeuView scaffolds a runnable two-node starter for you.
+    done:
+      # The starter model's input node — proof the scaffold landed.
+      nodeExists: input_node
+    act:
+      newModel: ddm_demo
+
+  - id: add-the-ddm
+    anchor:
+      testid: palette-sidebar
+    instruct: >-
+      Search the palette for DDM and click it. This is the mechanism that
+      accumulates noisy evidence until it crosses a threshold.
+    done:
+      nodeExists: New_DDM_1
+    act:
+      addFromPalette: DDM
+
+  - id: run-it
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Open the Run tab and press Run Model. The DDM decides on every trial.
+    done:
+      trialsAtLeast: 1
+    act:
+      runModel: true
+
+  - id: inspect-the-ddm
+    anchor:
+      node: New_DDM_1
+    instruct: >-
+      Select the DDM to see its parameters — drift rate, threshold and noise
+      are the ones chapter 2 varies.
+    done:
+      selectedNode: New_DDM_1
+    act:
+      selectNode: New_DDM_1
+
+# Chapter 2 goes on to vary the DDM's parameters and watch behaviour change.
+# Those steps are NOT here yet: a DDM added from the palette is written as
+# `pnl.DDM(name=...)` with no explicit `function=`, and editing an inherited
+# function parameter then fails with "Could not find parameter 'threshold' in
+# function context". Filed as #1200. The analyze steps live on the Stroop
+# walkthrough meanwhile, whose mechanisms declare their functions explicitly.

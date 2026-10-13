@@ -1,0 +1,60 @@
+name: Version matches tag
+
+# The version in backend/pyproject.toml is what Settings and About report as
+# "PsyNeuView". It sat at 0.1.0 through five releases because nothing checked
+# it (#1096).
+#
+# It cannot be derived. The Mac app bundles a GitHub tarball with no .git, so
+# setuptools-scm — which is how PsyNeuLink does it — has nothing to read there.
+# So it is a literal, and a literal needs a guard or it drifts again.
+#
+# This fires on the release tag itself, which is the moment the two must agree
+# and the last moment a mismatch can still be fixed cheaply.
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: pyproject version matches the tag
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          DECLARED=$(python3 - <<'PY'
+          import re, pathlib
+          text = pathlib.Path("backend/pyproject.toml").read_text()
+          m = re.search(r'^version\s*=\s*"([^"]+)"', text, re.M)
+          print(m.group(1) if m else "")
+          PY
+          )
+          echo "tag:        ${TAG}"
+          echo "pyproject:  ${DECLARED}"
+          if [ "${TAG}" != "${DECLARED}" ]; then
+            echo "::error::backend/pyproject.toml says ${DECLARED} but this tag is ${TAG}. Settings and About report the pyproject value, so they would show the wrong version."
+            exit 1
+          fi
+          echo "They agree."
+
+      - name: app/__init__ version matches the tag
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          FALLBACK=$(python3 - <<'PY'
+          import re, pathlib
+          text = pathlib.Path("backend/app/__init__.py").read_text()
+          m = re.search(r'__version__\s*=\s*"([^"]+)"', text)
+          print(m.group(1) if m else "")
+          PY
+          )
+          echo "tag:              ${TAG}"
+          echo "app/__init__.py:  ${FALLBACK}"
+          if [ "${TAG}" != "${FALLBACK}" ]; then
+            echo "::error::backend/app/__init__.py says ${FALLBACK} but this tag is ${TAG}. That value is what gets reported when the backend runs from source rather than an installed distribution."
+            exit 1
+          fi
+          echo "They agree."

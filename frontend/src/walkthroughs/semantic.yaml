@@ -1,0 +1,205 @@
+id: semantic
+title: Rumelhart's semantic network — learning what a robin is
+course: "4.1"
+model: Rumelhart Semantic Network
+minutes: 5
+docs:
+  - tutorials/12-training-a-model.md
+
+# Module 4 of the Cognitive Neuroscience Course, "Statistical Learning and
+# Backpropagation" (#53). Opened rather than built: eight layers and seven
+# projections, which a walkthrough can't wire. The lesson is in training it.
+#
+# The demo carries the notebook's data: all 24 noun-relation pairs as one
+# training set (all_relations), and the notebook's Exercise 3 as a second
+# (all_relations_discounted). The notebook trains one noun at a time and
+# repeats; the Learn tab trains one set, so the demo uses a learning rate of
+# 4 and 100 epochs to reach the same place. Every number below was measured
+# in the app.
+#
+# Two things the notebook does that the app can't: run the trained network
+# (PsyNeuView trains a fresh copy and doesn't write learned weights back into
+# the model, so Run always uses the starting weights), and plot the strength
+# of association per output unit. The answers quoted below are the outputs
+# of the training's last pass, which the walkthrough's test reads.
+
+steps:
+  - id: open-semantic
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Rumelhart Semantic Network demo: a noun and a relation go in,
+      and what the noun is, has and can do come out.
+    say: >-
+      Open the Rumelhart Semantic Network demo.
+    done:
+      nodeExists: hidden_mixed
+    act:
+      openModel: Rumelhart Semantic Network
+
+  - id: the-nouns
+    anchor:
+      node: input_nouns
+    instruct: >-
+      Select input_nouns. Eight units, one per noun (oak, pine, rose, daisy,
+      canary, robin, salmon, sunfish), plus a ninth that is always 1 and
+      works as a bias the network can learn. input_relations is the same
+      shape for is, has and can.
+    say: >-
+      One input unit per noun, plus a constant one as a bias.
+    done:
+      selectedNode: input_nouns
+    act:
+      selectNode: input_nouns
+
+  - id: the-representation
+    anchor:
+      node: hidden_nouns
+    instruct: >-
+      Select hidden_nouns, nine Logistic units that see only the noun. This
+      is Rumelhart's representation layer: after training, nouns with similar
+      properties get similar patterns here. The app can't plot those patterns
+      yet, but this is where they live.
+    say: >-
+      The representation layer. Similar nouns end up with similar patterns here.
+    done:
+      selectedNode: hidden_nouns
+    act:
+      selectNode: hidden_nouns
+
+  - id: the-mixing
+    anchor:
+      node: hidden_mixed
+    instruct: >-
+      Select hidden_mixed: sixteen units where the noun's representation meets
+      the relation. It feeds all four output layers: output_I (the noun
+      itself), output_is, output_has and output_can.
+    say: >-
+      Here the noun meets the relation, and all four outputs are read from it.
+    done:
+      selectedNode: hidden_mixed
+    act:
+      selectNode: hidden_mixed
+
+  - id: ask-untrained
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Open the Run tab. The demo declares questions as input sets, and
+      robin_is is filled in: the robin unit and the is unit, each with its
+      bias. Run it. Untrained, every output is about 1.0: the network says
+      yes to everything.
+    say: >-
+      Ask it what a robin is. Untrained, it says yes to everything.
+    done:
+      lastRunInputs:
+        input_nouns: [[0, 0, 0, 0, 0, 1, 0, 0, 1]]
+        input_relations: [[1, 0, 0, 1]]
+    act:
+      runModel: true
+
+  - id: train
+    anchor:
+      testid: tab-learn
+    instruct: >-
+      Open the Learn tab. all_relations is filled in: all 24 noun-relation
+      pairs, the asked-about relation's true answers as targets and zeros for
+      the other two, 100 epochs. Start learning. The loss falls from about
+      3.5 to about 0.04.
+    say: >-
+      Train it on every noun and relation. The loss falls to about 0.04.
+    done:
+      lastTraining:
+        epochsAtLeast: 100
+        targets:
+          output_has:
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [1, 1, 1, 1, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [1, 1, 1, 1, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [1, 1, 0, 0, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [1, 1, 0, 0, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 1, 1, 1, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 1, 1, 1, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 1, 1]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 1, 1]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    act:
+      pickSet:
+        tab: learn
+        name: all_relations
+
+  - id: what-it-learned
+    anchor:
+      testid: tab-learn
+    pointer: true
+    instruct: >-
+      On its last pass, robin + is gave living 0.97, animal 0.88, bird 0.80
+      and yellow 0.82, with fish at 0.14, and every has and can output below
+      0.13: it answers the question asked. PsyNeuView doesn't yet write
+      learned weights back into the model, so Run still uses the starting
+      weights; the loss is what the Learn tab shows.
+    say: >-
+      Now a robin is living, an animal, a bird, and yellow. Not a fish.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: train-discounted
+    anchor:
+      testid: tab-learn
+    instruct: >-
+      The notebook's Exercise 3: pick all_relations_discounted. Same pairs,
+      but the two relations not asked about get their true answers halved
+      instead of zeroed. Train again. The loss ends near 0.013, and robin + is
+      now also gives skin, feathers and wings about 0.5 each: a true but
+      irrelevant answer is no longer treated as wrong.
+    say: >-
+      Train again with the irrelevant answers halved instead of zeroed.
+    done:
+      lastTraining:
+        epochsAtLeast: 100
+        targets:
+          output_has:
+          - [0.5, 0.5, 0.5, 0.5, 0, 0, 0, 0, 0]
+          - [1, 1, 1, 1, 0, 0, 0, 0, 0]
+          - [0.5, 0.5, 0.5, 0.5, 0, 0, 0, 0, 0]
+          - [0.5, 0.5, 0.5, 0.5, 0, 0, 0, 0, 0]
+          - [1, 1, 1, 1, 0, 0, 0, 0, 0]
+          - [0.5, 0.5, 0.5, 0.5, 0, 0, 0, 0, 0]
+          - [0.5, 0.5, 0, 0, 0, 0, 0, 0, 0]
+          - [1, 1, 0, 0, 0, 0, 0, 0, 0]
+          - [0.5, 0.5, 0, 0, 0, 0, 0, 0, 0]
+          - [0.5, 0.5, 0, 0, 0, 0, 0, 0, 0]
+          - [1, 1, 0, 0, 0, 0, 0, 0, 0]
+          - [0.5, 0.5, 0, 0, 0, 0, 0, 0, 0]
+          - [0, 0, 0, 0, 0.5, 0.5, 0.5, 0, 0]
+          - [0, 0, 0, 0, 1, 1, 1, 0, 0]
+          - [0, 0, 0, 0, 0.5, 0.5, 0.5, 0, 0]
+          - [0, 0, 0, 0, 0.5, 0.5, 0.5, 0, 0]
+          - [0, 0, 0, 0, 1, 1, 1, 0, 0]
+          - [0, 0, 0, 0, 0.5, 0.5, 0.5, 0, 0]
+          - [0, 0, 0, 0, 0, 0, 0, 0.5, 0.5]
+          - [0, 0, 0, 0, 0, 0, 0, 1, 1]
+          - [0, 0, 0, 0, 0, 0, 0, 0.5, 0.5]
+          - [0, 0, 0, 0, 0, 0, 0, 0.5, 0.5]
+          - [0, 0, 0, 0, 0, 0, 0, 1, 1]
+          - [0, 0, 0, 0, 0, 0, 0, 0.5, 0.5]
+    act:
+      pickSet:
+        tab: learn
+        name: all_relations_discounted

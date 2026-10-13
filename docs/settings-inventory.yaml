@@ -1,0 +1,344 @@
+# Settings inventory (#1279, PsyNeuView-MacApp#200; sections #1290)
+#
+# Every setting in PsyNeuView's Settings, with its one home, its section, the
+# side that stores it, and its one control. Rules: docs/settings-and-mac-app.md
+# and docs/settings-etiquette.md. A PR that adds or changes a setting updates
+# this file; frontend/src/settingsInventory.test.ts fails if a Settings
+# control's test id is missing here or appears more than once, an entry here
+# has no control, or a control is not rendered by its section's file.
+#
+# Fields
+#   id             stable name for the setting
+#   label          what Settings calls it, as "Section ▸ Group ▸ Setting"
+#   home           settings          — PsyNeuView's Settings, everywhere
+#                  settings:mac-app  — shown only inside the Mac app
+#                                      (pnvSettings bridge present)
+#   section        the sidebar section it is in, one of the ids in
+#                  frontend/src/components/common/settings/sections.ts:
+#                  about | general | appearance | open-menu | folders | shortcuts | reports | developer
+#                  (reports is the Mac app's Problem reports, listed only inside it)
+#   storage        who stores it (the side that acts on it owns it)
+#   control        data-testid of its one control, always "setting-<…>", written
+#                  literally in the source so the check can find it
+#   simple_control (optional) the one allowed second view of the same setting
+#   simple_section (#1295 round 4): a simple control for everyone in
+#                  `simple_section`, while `control` is the full form in
+#                  Developer. Both edit the same stored value through the same
+#                  mechanism; never two independent pickers
+#                  (docs/settings-etiquette.md §8)
+#   bridge_key     (settings:mac-app only) the pnvSettings key; the Mac app's
+#                  SettingsBridge.macAppKeys and NativeWindowPolicyTests copy these
+#   developer_only true for a setting only developers change (#1291); it lives
+#                  in the Developer section and carries the Developer badge
+#   notes          optional
+
+sections:
+  - about
+  - general
+  - appearance
+  - tutorials-voice
+  - open-menu
+  - folders
+  - shortcuts
+  - reports
+  - developer
+
+settings:
+  - id: developer-mode
+    label: Developer ▸ Developer mode
+    home: settings
+    section: developer
+    storage: >-
+      browser localStorage; inside the Mac app, the app keeps it (pnvSettings
+      key developerMode) because the page's storage starts empty each launch
+      there, and the app acts on it before the page loads (--reload, menus)
+    control: setting-developer-mode
+    notes: >-
+      The first item of Developer, which is always listed. Everything it shows
+      is marked with the Developer badge (#1291; the list is in
+      docs/settings-etiquette.md).
+
+  - id: psyneulink-source
+    label: Developer ▸ Which PsyNeuLink is installed ▸ Switch to (with Manage known sources)
+    home: settings
+    section: developer
+    storage: backend — the installed PsyNeuLink, and the known-sources list (#1276/#1277)
+    control: setting-pnl-source
+    simple_control: setting-pnl-version
+    simple_section: general
+    developer_only: true
+    notes: >-
+      One setting, two views (#1295 round 4): General ▸ PsyNeuLink version is
+      the simple choice for everyone — Latest development (recommended, the
+      default) or Official release — and Developer has the full form. Both
+      go through the same install request (settings/useInstallJob.ts); when
+      the installed PsyNeuLink is anything else, General says "Custom —
+      chosen in Developer" with the source and its path instead of radios.
+      Official release is a dropdown of every PyPI release with its date
+      (/api/settings/pnl-releases): incompatible ones greyed with the reason,
+      ones before 0.19.1.0 marked "no run stepping" and warned about, kept
+      ones marked; a chosen version travels as {source: "pypi", version}.
+      The Mac app's own PsyNeuLink picker is gone (PsyNeuView-MacApp#200). Its
+      Setup Wizard still asks once, on first install, before PsyNeuView runs.
+      What is installed is one line in About and, in full, Developer ▸
+      PsyNeuLink details; every folder is in Folders (#1295). Developer's
+      control is one "Switch to" dropdown (#1331, folded in #1334):
+      "Another local checkout…" (Path, with a Finder Choose… inside the Mac
+      app; checked as it is typed, an empty or missing folder offering to
+      download PsyNeuLink into it, #1342) and "Another GitHub repo or branch…" (Repo, Branch) first, then
+      groups that fold with their counts — your checkouts, one per GitHub
+      repo (rows say the branch alone), and the official releases on PyPI
+      with dates, the newest five then "Show older (n)"; only the group
+      holding the one in use starts open, that row marked. Before Apply & restart it
+      says what the switch changes (Library, Examples, Tests) and what it
+      doesn't; the button appears only for a valid choice that differs from
+      what is installed (#1303, etiquette §10), and a "✓ In use now" line
+      always says what is in use. "Manage known sources" (folded) holds
+      Rename and Remove, never Remove for the one in use; a placeholder
+      source (owner/repo) is never recorded (#1292). The managed copies
+      under ~/.psyneuview/sources are listed in Developer with Remove; that
+      is housekeeping, not a setting.
+
+  - id: pnl-auto-update
+    label: General ▸ PsyNeuLink version ▸ Keep Latest development up to date automatically
+    home: settings
+    section: general
+    storage: backend (pnl_auto_update in ~/.psynewview.json; the last check, a ready update and the last automatic install in pnl_update_state)
+    control: setting-pnl-auto-update
+    notes: >-
+      On by default (#1304). The backend checks how current the installed
+      PsyNeuLink is at launch and every 4 hours (one constant,
+      pnl_updates.CHECK_INTERVAL_S); a managed GitHub install that is
+      behind is marked ready and installed at the next start, never
+      mid-session, through the one install mechanism (install_manager). A
+      failure keeps the install in use and is shown. The status line
+      ("3 commits behind · last checked 10:42", "✓ Up to date", "a newer
+      release, 0.21.0.0, is available", "✓ Newest release") and Check now
+      sit with it; an official release is only reported, never switched.
+      Shown for a GitHub or PyPI install; a checkout of your own points at
+      Developer ▸ Keep your checkouts current. Everything it records is in
+      GET /api/settings/pnl-updates and, in short, /api/settings/info
+      "updates", for Report a Problem.
+
+  - id: checkout-check-upstream
+    label: Developer ▸ Keep your checkouts current ▸ Check for upstream changes (per checkout)
+    home: settings
+    section: developer
+    storage: backend (checkout_updates in ~/.psynewview.json, keyed by the checkout's path; the last check in checkout_update_state)
+    control: setting-checkout-check-upstream
+    developer_only: true
+    notes: >-
+      Off by default, one per checkout (#1304): the PsyNeuLink checkouts
+      Settings knows and the PsyNeuView checkout the backend runs from.
+      Fetches the remote branch the checkout tracks (shown beside the
+      switch, e.g. origin/devel) on the same schedule as the PsyNeuLink
+      check and says behind or up to date, with uncommitted changes
+      counted ("3 files changed locally; not pulled").
+
+  - id: checkout-pull-on-launch
+    label: Developer ▸ Keep your checkouts current ▸ Pull on launch (per checkout)
+    home: settings
+    section: developer
+    storage: backend (checkout_updates in ~/.psynewview.json, keyed by the checkout's path; the last pull in checkout_update_state)
+    control: setting-checkout-pull-on-launch
+    developer_only: true
+    notes: >-
+      Off by default, one per checkout (#1304). At the backend's start:
+      fast-forward only, from the tracked remote branch; refused with
+      uncommitted changes or a diverged branch, and never switches branch.
+      The outcome is shown under the checkout and recorded for Report a
+      Problem. A PsyNeuLink checkout in use that moved restarts the model
+      runner.
+
+  - id: mac-install
+    label: Developer ▸ Which PsyNeuView runs (included with the app, or a checkout)
+    home: settings:mac-app
+    section: developer
+    storage: Mac app UserDefaults (repoPath, recentCheckouts)
+    control: setting-mac-install
+    bridge_key: install
+    developer_only: true
+    notes: >-
+      Apply & restart appears only when the app's checkInstall says the
+      choice would switch something (#1303); what runs now, or a refused
+      folder, shows no button.
+
+  - id: mac-auto-restart
+    label: General ▸ Mac app ▸ Restart PsyNeuView if it crashes
+    home: settings:mac-app
+    section: general
+    storage: Mac app UserDefaults (autoRestart)
+    control: setting-mac-auto-restart
+    bridge_key: autoRestart
+
+  - id: mac-launch-at-login
+    label: General ▸ Mac app ▸ Open PsyNeuView when you log in
+    home: settings:mac-app
+    section: general
+    storage: Mac app UserDefaults (launchAtLogin) and the macOS login item
+    control: setting-mac-launch-at-login
+    bridge_key: launchAtLogin
+
+  - id: project-folder
+    label: Folders ▸ My Project Folder
+    home: settings
+    section: folders
+    storage: backend (catalog config)
+    control: setting-project-folder
+    notes: >-
+      Change… points at another folder; Move… (project-folder-move) moves the
+      folder and everything in it through one backend migration, which the
+      one-time offer to leave a hidden legacy folder also uses (#1295). Both
+      act on this one setting. The default for a new install on a Mac is
+      ~/Documents/PsyNeuView-My-Models (one constant in model_dirs.py); the
+      environment variable wins over everything and hides both.
+
+  - id: autosave
+    label: General ▸ Model files ▸ Autosave
+    home: settings
+    section: general
+    storage: backend (~/.psynewview.json, "autosave")
+    control: setting-autosave
+    notes: >-
+      Off by default (#1347): a model's .py then changes only when Save is
+      pressed, which is what an external editor open on the same file needs
+      (#1029, #1027). When on, the page presses the same Save N seconds after
+      the last edit; it waits while the code has an error and never saves a
+      locked model, a protected PsyNeuLink file, a .pnlproject bundle, or a
+      file that changed on disk. Rules: frontend/src/utils/autosave.ts.
+
+  - id: autosave-delay
+    label: General ▸ Model files ▸ Autosave ▸ after N seconds without activity
+    home: settings
+    section: general
+    storage: backend (~/.psynewview.json, "autosave")
+    control: setting-autosave-delay
+    notes: >-
+      Shown only while autosave is on. Whole seconds, 2 to 600, default 10;
+      the backend refuses anything outside that range.
+
+  - id: sidecar-placement-default
+    label: General ▸ Model files ▸ Sidecar files (new models)
+    home: settings
+    section: general
+    storage: backend
+    control: setting-sidecar-placement
+
+  - id: narration-voice
+    label: Tutorials and Voice ▸ Voice ▸ Narration voice
+    home: settings
+    section: tutorials-voice
+    storage: browser localStorage (psyneuview.tour.narrationVoice); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-narration-voice
+    notes: >-
+      Automatic (nothing stored) reads in the best English voice installed:
+      Premium and Enhanced first, then Karen, Daniel, and the other standard
+      voices that read well; never the novelty voices (utils/narration.ts).
+      A chosen voice is stored by its voiceURI and falls back to Automatic
+      when it is no longer installed. The list is the browser's own voices,
+      so it differs between machines. Turning narration on or off stays on
+      the walkthrough bar's speaker button. Captions are read with the
+      respellings in frontend/src/walkthroughs/pronunciations.yaml (#1407).
+
+  - id: narration-rate
+    label: Tutorials and Voice ▸ Voice ▸ Speaking rate
+    home: settings
+    section: tutorials-voice
+    storage: browser localStorage (psyneuview.tour.narrationRate); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-narration-rate
+    notes: >-
+      Slower to faster (0.8–1.25); the default, 0.95, stores nothing. Applies
+      to narration and to ▶ Play sample.
+
+  - id: orientation-reminder
+    label: Tutorials and Voice ▸ Tutorials ▸ PsyNeuView First Steps reminder
+    home: settings
+    section: tutorials-voice
+    storage: browser localStorage (psyneuview.orientation.offer); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-orientation-reminder
+    notes: >-
+      The first-launch offer's answer (#1310): offer again next launch
+      (nothing stored), remind in the Tutorials menu ("later"), or don't
+      remind ("never"); "started" shows once a part has begun. The Tutorials
+      menu's own Don't remind me writes the same key, so this is where that
+      is undone.
+
+  - id: graph-pointer
+    label: Appearance ▸ Pointer ▸ Pointer in the graph view
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.pointer)
+    control: setting-graph-pointer
+    notes: >-
+      Arrow (default) or Hand (#1301). The arrow is our own SVG image with
+      the hot spot on its tip, over the canvas, nodes and edges; the grabbing
+      hand shows only while a drag is in progress. Hand keeps React Flow's
+      cursors. Real controls (buttons in a node, a clickable edge label, a
+      bend handle) keep their own cursor either way; the rule is in
+      docs/ui-interaction-conventions.md.
+
+  - id: graph-pointer-size
+    label: Appearance ▸ Pointer ▸ Pointer size
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.pointerSize)
+    control: setting-graph-pointer-size
+    notes: >-
+      Small, Medium (default), Large, Extra large: 16, 24, 48 and 96 px
+      images (utils/graphCursor.ts), all under Chromium's 128 px cap for a
+      custom cursor; the system arrow is the fallback if the image can't
+      load. Applies to the arrow; the hand is the system's own. Window zoom
+      doesn't scale cursors, so this is the one control for the size.
+
+  - id: catalogs
+    label: Folders ▸ Your catalogs (add, rename, remove)
+    home: settings
+    section: folders
+    storage: backend (catalog config)
+    control: setting-catalogs
+    notes: >-
+      Moved from Open menu in the #1295 review: Folders is everything you can
+      open and where it lives; Open menu is only the sections' order and
+      which catalogs under development show.
+
+  - id: open-menu-sections
+    label: Open menu ▸ Sections and their order (and which developer catalogs show; the ones under development always below the everyday sections)
+    home: settings
+    section: open-menu
+    storage: browser localStorage
+    control: setting-open-menu-sections
+    notes: >-
+      Known exception, to decide (#1279): the Open menu itself also reorders
+      its sections by dragging a heading (#1135). Both write the same stored
+      order.
+
+  - id: keyboard-shortcuts
+    label: Keyboard shortcuts
+    home: settings
+    section: shortcuts
+    storage: browser localStorage (overrides)
+    control: setting-keyboard-shortcuts
+
+  - id: mac-report-send-with
+    label: Problem reports ▸ Send reports with
+    home: settings:mac-app
+    section: reports
+    storage: Mac app UserDefaults (reportSendWith)
+    control: setting-mac-report-send-with
+    bridge_key: reportSendWith
+    notes: >-
+      ask (default) | mail | outlook | gmail. Report a Problem leads with that
+      way, and says so and falls back when it isn't available
+      (PsyNeuView-MacApp#202).
+
+  - id: mac-report-send-to
+    label: Problem reports ▸ Send to
+    home: settings:mac-app
+    section: reports
+    storage: Mac app UserDefaults (reportSendTo)
+    control: setting-mac-report-send-to
+    bridge_key: reportSendTo
+    notes: >-
+      One email address. The default contact is the Mac app's
+      ReportDefaults.contactEmail, reported by the bridge as
+      reportSendToDefault; empty means that default.

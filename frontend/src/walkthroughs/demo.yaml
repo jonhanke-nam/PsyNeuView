@@ -1,0 +1,46 @@
+# A guided walkthrough, as data (#1181).
+#
+# This file is the single source of truth for the walkthrough. Two things read
+# it and neither owns it:
+#
+#   - the in-app overlay (src/components/graph/TourOverlay.tsx)
+#   - the CI driver     (frontend/e2e/tourDriver.ts)
+#
+# That is the whole point. A walkthrough described twice drifts; described once
+# and consumed twice, it cannot. If a step here stops working in the app, the
+# driver walking these same steps fails the build.
+#
+# Being data rather than code is also what lets the e2e suite read it without
+# compiling app modules into the tests, which the suite deliberately avoids.
+#
+# Conditions and actions are deliberately a tiny vocabulary. Add a verb only
+# when a walkthrough genuinely needs it -- every one is a thing both runners
+# have to understand.
+
+id: demo
+title: Selecting nodes
+model: Stroop — Basic
+
+steps:
+  - id: select-color-hidden
+    # What to ring. A canvas node, by the name the model gives it —
+    # suffixed ids ("color_hidden-7") match.
+    anchor:
+      node: color_hidden
+    instruct: Select color_hidden (ringed in blue) to see its parameters in the Inspector.
+    # How the app knows the learner did it — read from app state, never the DOM.
+    done:
+      selectedNode: color_hidden
+    # What the CI driver does to play the learner's part. The app ignores this;
+    # only the driver reads it.
+    act:
+      selectNode: color_hidden
+
+  - id: select-word-hidden
+    anchor:
+      node: word_hidden
+    instruct: Now select word_hidden, the other hidden layer, on the word-reading pathway.
+    done:
+      selectedNode: word_hidden
+    act:
+      selectNode: word_hidden

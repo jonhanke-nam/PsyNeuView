@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "positions": {
+    "word_input_layer": {
+      "x": 18,
+      "y": 900
+    },
+    "color_input_layer": {
+      "x": 358,
+      "y": 900
+    },
+    "task_input_layer": {
+      "x": 718,
+      "y": 900
+    },
+    "word_hidden_layer": {
+      "x": -2,
+      "y": 720
+    },
+    "color_hidden_layer": {
+      "x": 338,
+      "y": 720
+    },
+    "task_layer": {
+      "x": 698,
+      "y": 720
+    },
+    "response_layer": {
+      "x": 168,
+      "y": 540
+    }
+  }
+}

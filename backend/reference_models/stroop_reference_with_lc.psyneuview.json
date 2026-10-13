@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "layouts": [
+    {
+      "name": "1",
+      "file": "stroop_reference_with_lc.1.pnlview.json",
+      "order": 0
+    },
+    {
+      "name": "Default",
+      "file": "stroop_reference_with_lc.pnlview.json",
+      "order": 1
+    }
+  ],
+  "activeLayout": "Default",
+  "settings": [],
+  "activeSetting": null
+}

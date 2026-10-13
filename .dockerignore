@@ -1,0 +1,42 @@
+# Keep the build context small and the image reproducible (#1063).
+#
+# Everything the image needs is built inside it: the SPA comes from the node
+# stage, the venv from pip. Anything host-built that leaks in is at best dead
+# weight and at worst a macOS binary in a Linux image.
+
+.git
+.github
+.planning
+.claude
+.DS_Store
+**/.DS_Store
+
+# Host-built artifacts — rebuilt inside the image.
+**/node_modules
+**/.venv
+**/__pycache__
+**/*.pyc
+frontend/dist
+frontend/test-results
+frontend/playwright-report
+frontend/tsconfig.tsbuildinfo
+backend/*.egg-info
+backend/psynewview.egg-info
+
+# Tests and their fixtures: the image ships the app, not the suite. CI runs
+# pytest against a checkout, not against this image.
+frontend/e2e
+backend/tests
+
+# Docs and release artifacts — large, and not served by the app.
+docs
+mkdocs.yml
+Papers
+Papers.zip
+*.pdf
+OLDER
+
+# Local developer state.
+*.log
+.env
+.env.*

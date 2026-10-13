@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "layouts": [
+    {
+      "name": "Default",
+      "file": "Giallanza2024_ego_study2.pnlview.json",
+      "order": 0
+    }
+  ],
+  "activeLayout": "Default",
+  "settings": [],
+  "activeSetting": null
+}

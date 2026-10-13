@@ -1,0 +1,173 @@
+id: hebbian
+title: Hebbian learning — what fires together wires together
+course: "1.1"
+model: Hebbian Learning
+minutes: 4
+docs:
+  - tutorials/02-running-a-model.md
+  - tutorials/12-training-a-model.md
+
+# Module 1 of the Cognitive Neuroscience Course, notebook 1, "Hebbian
+# Learning" (#48). Opened rather than built: the model is one layer, but its
+# learning comes from enable_learning=True, which the Inspector can't set.
+#
+# Source notebook:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/docs/refactor-documentation/docs/source/tutorials/cognitive_neuroscience_course/1_dynamics_in_perception/notebooks/1_hebbian_learning.ipynb
+# Course landing page:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/docs/refactor-documentation/docs/source/tutorials/cognitive_neuroscience_course/index.rst
+# Validated against PsyNeuLink 0.21.0.0.
+#
+# The demo is the notebook's Hebbian Model #3 (a RecurrentTransferMechanism
+# with enable_learning=True, weights starting at 0), with activity cleared at
+# the start of each trial, as the notebook's last model does, and one extra
+# pass per trial so a partial cue comes back completed. See
+# backend/demos/hebbian_learning.py.
+#
+# The Learn tab charts only the weight change; it doesn't show the weights
+# or the outputs. What the network learned is quoted from the training's
+# last pass, which the walkthrough's test reads. Every number below was
+# measured in the app, and backend/tests/test_demo_hebbian_learning.py pins
+# them.
+
+steps:
+  - id: open-hebbian
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Hebbian Learning demo: one layer of nine units that learns
+      which features of an object go together, with no teacher. Neurons that
+      fire together wire together.
+    say: >-
+      Open the Hebbian Learning demo.
+    done:
+      nodeExists: feature_layer
+    act:
+      openModel: Hebbian Learning
+
+  - id: the-features
+    anchor:
+      node: feature_layer
+    instruct: >-
+      Select feature_layer. Nine units, one per feature, in this order:
+      small, medium, large, red, yellow, blue, circle, rectangle, triangle.
+      Its loop connects every unit to every other, and those connections
+      start at 0 (auto and hetero are 0).
+    say: >-
+      Nine feature units, all connected to each other, starting at zero.
+    done:
+      selectedNode: feature_layer
+    act:
+      selectNode: feature_layer
+
+  - id: the-rule
+    anchor:
+      node: AutoAssociativeLearningMechanism for feature_layer
+    instruct: >-
+      Select the learning mechanism above it. PsyNeuLink added it because
+      the code says enable_learning=True. Its function is Hebbian: after each
+      trial, the connection between two units grows by the learning rate,
+      0.05, times their two activities. Two units on together get stronger.
+      A unit on with one that's off gets nothing.
+    say: >-
+      The Hebbian rule: units on together get a stronger connection.
+    done:
+      selectedNode: AutoAssociativeLearningMechanism for feature_layer
+    act:
+      selectNode: AutoAssociativeLearningMechanism for feature_layer
+
+  - id: cue-before
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Before it learns anything, give it part of an object. Open the Run tab
+      and run a triangle alone: 1 in box [8], 0 everywhere else. Only the
+      triangle comes on. Nothing is wired to it yet.
+    say: >-
+      Untrained, a triangle brings back nothing but itself.
+    done:
+      lastRunInputs:
+        feature_layer:
+        - [0, 0, 0, 0, 0, 0, 0, 0, 1]
+    act:
+      setTrialInputs:
+        feature_layer:
+        - [0, 0, 0, 0, 0, 0, 0, 0, 1]
+      runModel: true
+
+  - id: train
+    anchor:
+      testid: tab-learn
+    instruct: >-
+      Open the Learn tab. three_objects is filled in: a small red circle, a
+      medium yellow rectangle and a large blue triangle. Set Trials to 4, and
+      make the new fourth row a triangle alone: [3] to 0 and [8] to 1. Then
+      start learning, 20 epochs.
+    say: >-
+      Train it on three objects, then a triangle by itself.
+    done:
+      lastTraining:
+        epochsAtLeast: 20
+        inputs:
+          feature_layer:
+          - [1, 0, 0, 1, 0, 0, 1, 0, 0]
+          - [0, 1, 0, 0, 1, 0, 0, 1, 0]
+          - [0, 0, 1, 0, 0, 1, 0, 0, 1]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 1]
+    act:
+      train:
+        inputs:
+          feature_layer:
+          - [1, 0, 0, 1, 0, 0, 1, 0, 0]
+          - [0, 1, 0, 0, 1, 0, 0, 1, 0]
+          - [0, 0, 1, 0, 0, 1, 0, 0, 1]
+          - [0, 0, 0, 0, 0, 0, 0, 0, 1]
+        epochs: 20
+
+  - id: the-chart
+    anchor:
+      testid: learn-metric-chart
+    pointer: true
+    instruct: >-
+      There is no right answer to learn, so there is no loss. The chart shows
+      how much the weights changed each epoch, compared with their size: 1,
+      then a half, a third, down to 0.05. Every epoch adds the same 0.05 to
+      each pair of features seen together, so Hebbian learning never stops.
+      The pattern just stops changing shape.
+    say: >-
+      No loss here: the chart shows how much the weights changed.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: what-it-learned
+    anchor:
+      testid: learn-metric-chart
+    instruct: >-
+      After 20 epochs, features seen together are wired together at 1.0:
+      small, red and circle, and likewise for the other two objects. Pairs
+      never seen together, like red and triangle, stay at 0. On the last
+      pass, the triangle alone came out as large, blue and triangle. From
+      part of an object, the network recalled the whole of it.
+    say: >-
+      From a triangle alone, it recalls the large blue triangle.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: learn-metric-chart
+    instruct: >-
+      What the app can't do here: show the learned weights, or the
+      notebook's plots of them. And a run doesn't use what training learned,
+      so the recall above comes from the training's last pass, not from the
+      Run tab. The notebook's first two models are plain Python arithmetic,
+      with no PsyNeuLink model to open.
+    say: >-
+      The weights, the plots and the plain-Python models stay in the notebook.
+    done:
+      next: true
+    act:
+      next: true

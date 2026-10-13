@@ -1,0 +1,77 @@
+node_modules/
+# Also ignore a *symlink* named node_modules: the trailing-slash pattern above
+# matches directories only, so a symlink slipped into the index once.
+node_modules
+dist/
+build/
+.vite/
+*.tsbuildinfo
+*.pyc
+__pycache__/
+
+# Daily planning notes (#646): keep the folder tracked via the placeholder,
+# but ignore the actual dated notes — those are local-only scratch.
+.planning/*
+!.planning/.gitkeep
+*.egg-info/
+.venv/
+# And a *symlink* named .venv (worktrees borrow the main checkout's): the
+# trailing-slash pattern above matches directories only.
+.venv
+.env
+.DS_Store
+
+# Playwright artifacts
+frontend/test-results/
+frontend/playwright-report/
+# Audit screenshots written by occlusion-audit.spec.ts (repo root, not frontend/).
+.curated/
+frontend/blob-report/
+frontend/playwright/.cache/
+# models/ doubles as runtime model-discovery directory (user-loaded .py
+# files land here) and as the home for the repo-tracked custom/experimental
+# model set under models/custom/ (see models/README.md, issue #192). Ignore
+# user runtime contents but keep the tracked subtree.
+models/*
+!models/README.md
+!models/custom/
+!models/custom/**
+
+# Sidecar dot-folders (#927): demo/test runs may write a model's layout/labels
+# into a hidden .psyneuview/ next to the .py. These are working-copy artifacts,
+# never source — ignore them anywhere in the repo.
+.psyneuview/
+
+# PsyNeuLink's show_graph output. It writes PDFs here whenever a graph is
+# rendered, and `backend/` is the working directory when the app runs — so this
+# accretes on any machine that opens a model, and is never anyone's work (#1134).
+backend/pnl-show_graph-output/
+
+# Demo working copies (pristine originals are in backend/demos/)
+backend/simple_stroop.py
+backend/nested_compositions.py
+backend/simple_stroop.pnlview.json
+backend/nested_compositions.pnlview.json
+backend/scheduling_demo.py
+backend/scheduling_demo.pnlview.json
+backend/stroop_basic.py
+backend/stroop_basic.pnlview.json
+backend/feedforward_network.py
+backend/feedforward_network.pnlview.json
+backend/neural_network_with_ddm.py
+backend/neural_network_with_ddm.pnlview.json
+
+# Reference-model working copies (pristine originals are in backend/reference_models/)
+backend/Giallanza2024_ego_study2.py
+backend/Giallanza2024_ego_study2.pnlview.json
+backend/stroop_reference_basic.py
+backend/stroop_reference_basic.pnlview.json
+
+# Paper drafts + simulation bundles, kept out of the app repo for now.
+# Revisit if we wire papers to demo/example models (#323).
+Papers/
+Papers.zip
+
+# MkDocs site build output + local docs build venv (#736)
+/site/
+.docs-venv/
