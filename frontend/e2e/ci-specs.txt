@@ -33,6 +33,7 @@ open-menu-foldable.spec.ts
 open-menu-follows-source-switch.spec.ts
 open-menu-source-labels.spec.ts
 own-checkout-editable.spec.ts
+pnl-record-mismatch.spec.ts
 pnl-source-list-switch.spec.ts
 pnl-source-switch-refreshes-library.spec.ts
 pnl-version-choice.spec.ts

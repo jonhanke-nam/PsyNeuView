@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 import { record } from "@/utils/activityLog";
 import { announcePnlSourceChanged } from "@/utils/pnlSourceEvents";
+import { syncMacAppPnlSource } from "@/utils/macAppSettings";
 import { describeInstallForm, pnlSourceName, type InstallForm, type InstallSource, type PsyNeuLinkInfo } from "@/utils/pnlSources";
 
 export type InstallStatus = "pending" | "running" | "succeeded" | "failed" | "cancelled";
@@ -143,6 +144,10 @@ export function useInstallJob({
       announcedSourceRef.current = job.id;
       record("psyneulink", `PsyNeuLink switched: ${job.source}${job.repo ? ` ${job.repo}` : ""}${job.ref ? ` @ ${job.ref}` : ""}${job.path ? ` at ${job.path}` : ""}`, what);
       announcePnlSourceChanged();
+      // MacApp#9: the Mac app keeps its own record of the source, which moves
+      // and repairs reinstall from. Have it re-read the new install (no-op in
+      // a browser).
+      void syncMacAppPnlSource();
       onSucceededRef.current?.();
     } else if (job.status === "failed" || job.status === "cancelled") {
       announcedSourceRef.current = job.id;
