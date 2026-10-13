@@ -18,6 +18,11 @@ enough.
 Open **Tutorials ▾** in the toolbar and pick one. A walkthrough can also be
 linked directly with `?tour=<id>`, e.g. `?tour=ddm`.
 
+The menu's sections fold: click a heading (▼/▶) to show or hide its
+walkthroughs. The first time, PsyNeuView First Steps is open and the rest are
+folded; after that the menu remembers your choice, and the section of a running
+walkthrough opens by itself.
+
 ![The Tutorials menu](assets/tour/menu.png)
 
 The instruction sits in a bar along the bottom of the window, and a ring marks
