@@ -1530,8 +1530,12 @@ export function Toolbar() {
       data-testid="app-toolbar"
       role="toolbar"
       aria-label="Main toolbar"
+      // #6: no control breaks onto two lines (index.css); when the row is
+      // full, whole controls move to a second row instead.
+      className="app-toolbar"
       style={{
         display: "flex",
+        flexWrap: "wrap",
         alignItems: "center",
         gap: 8,
         padding: "8px 16px",
