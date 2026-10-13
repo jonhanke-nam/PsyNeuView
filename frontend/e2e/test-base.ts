@@ -29,6 +29,8 @@ const DEV_SECTIONS = ["examples", "references", "demos"];
  * spec about the offer removes the key in its own `addInitScript`.
  */
 const ORIENTATION_OFFER_KEY = "psyneuview.orientation.offer";
+/** Folded Tutorials-menu sections (#8). Kept literal, like the keys above. */
+const TUTORIALS_FOLDED_KEY = "psyneuview.tutorials.foldedSections";
 
 /**
  * Start with the Open menu's catalog sections expanded.
@@ -65,6 +67,12 @@ async function expandOpenMenuSections(page: import("@playwright/test").Page) {
     },
     [SHOWN_DEV_SECTIONS_KEY, [...DEV_SECTIONS]] as const,
   );
+  // #8: the Tutorials menu's sections all open, so specs that pick a
+  // walkthrough from it needn't unfold one first. A spec about folding clears
+  // the key in its own init script.
+  await page.addInitScript((key) => {
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, "[]");
+  }, TUTORIALS_FOLDED_KEY);
   // #1310: the orientation offer is for a person's first launch, never a test's.
   await page.addInitScript((key) => {
     if (localStorage.getItem(key) === null) localStorage.setItem(key, "never");
@@ -96,7 +104,7 @@ export const mutatingTest = base.extend({
 });
 
 /** Exported so a spec about folding can opt out of the seeding above. */
-export { COLLAPSED_SECTIONS_KEY, SHOWN_DEV_SECTIONS_KEY, ORIENTATION_OFFER_KEY };
+export { COLLAPSED_SECTIONS_KEY, SHOWN_DEV_SECTIONS_KEY, ORIENTATION_OFFER_KEY, TUTORIALS_FOLDED_KEY };
 
 /**
  * Dismiss the Components palette, if it's showing.

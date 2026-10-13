@@ -54,6 +54,7 @@ stroop-lc-reference.spec.ts
 style-sizes.spec.ts
 toolbar-menus-over-dividers.spec.ts
 tour-ring-behind-dialogs.spec.ts
+tutorials-menu-folding.spec.ts
 undo-depth.spec.ts
 undo-notices.spec.ts
 value-grid.spec.ts
