@@ -36,7 +36,7 @@ import { loadOverrides } from "@/shortcuts/storage";
 import type { SettingsInfo } from "@/components/common/settings/types";
 import { activityEntries, record, scrub, type ActivityEntry } from "./activityLog";
 import { pnlSourceName } from "./pnlSources";
-import { fetchRunning, isDevServer, pageBuild, runningDiagnostics, type RunningInfo } from "./runningFrom";
+import { fetchRunning, isDevServer, pageBuild, runningDiagnostics, sameCommit, type PageBuild, type RunningInfo } from "./runningFrom";
 
 export const DIAGNOSTICS_VERSION = 1;
 
@@ -52,8 +52,16 @@ export interface ModelOrigin {
 
 export interface DiagnosticsState {
   app: {
+    /** The server's PsyNeuView version and commit. */
     psyneuviewVersion: string | null;
     buildCommit: string | null;
+    /** This page's own build (#2): a page kept in a cache can be older than the server. */
+    pageVersion: string | null;
+    pageCommit: string | null;
+    /** Whether the page and the server are the same build; null when it can't be told. */
+    pageMatchesServer: boolean | null;
+    /** Said in a report when they differ. */
+    versionWarning: string | null;
     deployment: string | null;
     /** What is running and from where, and this page's build against the server's (#1356). */
     running: ReturnType<typeof runningDiagnostics>;
@@ -189,11 +197,46 @@ function graphView(flat: boolean, pytorch: boolean): "nested" | "flat" | "pytorc
   return flat ? "flat" : "nested";
 }
 
+/** A commit the server or the build couldn't name ("unknown"), as no commit. */
+function knownCommit(c: string | null | undefined): string | null {
+  return c && c !== "unknown" ? c : null;
+}
+
+/**
+ * The page's own build against the server's (#2). After an update, a window
+ * could keep showing the previous version's page from the browser's cache;
+ * reports only gave the server's version, so the mismatch was invisible.
+ * Commits are compared when both are known, else the version numbers. The
+ * Vite dev server serves the checkout as it is, so it is never stale.
+ */
+export function pageAgainstServer(
+  serverVersion: string | null,
+  serverCommit: string | null,
+  page: PageBuild | null,
+  dev: boolean,
+): Pick<DiagnosticsState["app"], "pageVersion" | "pageCommit" | "pageMatchesServer" | "versionWarning"> {
+  const pageVersion = page?.version ?? null;
+  const pageCommit = knownCommit(page?.commit);
+  const server = knownCommit(serverCommit);
+  let matches: boolean | null = null;
+  if (dev) matches = true;
+  else if (pageCommit && server) matches = sameCommit(pageCommit, server);
+  else if (pageVersion && serverVersion) matches = pageVersion === serverVersion;
+  const warning =
+    matches === false
+      ? `This page is PsyNeuView ${pageVersion ?? "(unknown)"}${pageCommit ? ` (${pageCommit})` : ""} but the server is ` +
+        `${serverVersion ?? "(unknown)"}${server ? ` (${server})` : ""}: the window may be showing a stored copy of an older page.`
+      : null;
+  return { pageVersion, pageCommit, pageMatchesServer: matches, versionWarning: warning };
+}
+
 /** The page's state, read from the stores now. Pure apart from reading them. */
 export function buildDiagnosticsState(
   info: SettingsInfo | null,
   server: ServerPart,
   running: ReturnType<typeof runningDiagnostics> = runningDiagnostics(null, pageBuild(), isDevServer()),
+  page: PageBuild | null = pageBuild(),
+  dev: boolean = isDevServer(),
 ): DiagnosticsState {
   const model = useModelStore.getState();
   const ui = useUIStore.getState();
@@ -219,6 +262,7 @@ export function buildDiagnosticsState(
     app: {
       psyneuviewVersion: info?.psyneuview?.version ?? null,
       buildCommit: info?.psyneuview?.commit ?? null,
+      ...pageAgainstServer(info?.psyneuview?.version ?? null, info?.psyneuview?.commit ?? null, page, dev),
       deployment: info?.deployment?.mode ?? null,
       running,
     },
