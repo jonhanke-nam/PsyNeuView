@@ -17,6 +17,7 @@ import { applyShowGraphLayoutNow } from "@/hooks/useShowGraphLayout";
 import { LAYOUT_STYLES } from "@/stores/graphLayoutDefaultStore";
 import { useDismiss } from "@/components/common/dialog/useDismiss";
 import { MENU_ROW_HOVER, menuRowColours, toggleColours } from "@/components/common/toolbarStyles";
+import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
 
 export function GraphToolbar() {
   const filePath = useModelStore((s) => s.filePath);
@@ -56,6 +57,7 @@ export function GraphToolbar() {
         file_path: filePath,
         flat: useGraphSettings.getState().flat,
         pytorch: useGraphSettings.getState().pytorch,
+      ...showGraphLoadRequest(),
       }),
     })
       .then((r) => r.json())

@@ -8,6 +8,7 @@ import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useStatusStore } from "@/stores/statusStore";
 import { recordAction } from "@/utils/history";
 import { generateDefaultVarName } from "@/utils/defaultNaming";
+import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
 
 // modelStore reads collapsedCompositions at dispatch time (modelStore.ts
 // dispatch), so flipping the set isn't enough — the graph has to be
@@ -21,7 +22,7 @@ export async function toggleCompositionCollapse(label: string) {
     const resp = await fetch("/api/model/load", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath }),
+      body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -44,7 +45,7 @@ export async function toggleCompositionInset(label: string) {
     const resp = await fetch("/api/model/load", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath }),
+      body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -67,7 +68,7 @@ export async function focusComposition(label: string | null) {
     const resp = await fetch("/api/model/load", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath }),
+      body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -146,7 +147,7 @@ export async function addNodeToModel(
   const resp = await fetch("/api/model/load", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ file_path: filePath }),
+    body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
   });
   const loadData = await resp.json();
   const compVarName = loadData.model?.compositions?.[0]?.varName;

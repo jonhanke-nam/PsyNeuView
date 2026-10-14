@@ -51,6 +51,7 @@ import { useEdgeAttach } from "@/stores/edgeAttachStore";
 import { prunePositions } from "@/utils/prunePositions";
 import { useGraphPointerStore } from "@/stores/graphPointerStore";
 import { ARROW_CURSOR_VAR, arrowCursorValue, graphPointerClass } from "@/utils/graphCursor";
+import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
 
 const nodeTypes = {
   mechanismNode: MechanismNode,
@@ -262,7 +263,7 @@ async function resyncFromFile(
     const resp = await fetch("/api/model/load", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath }),
+      body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -403,7 +404,7 @@ export function GraphCanvas() {
           const resp = await fetch("/api/model/load", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ file_path: filePath }),
+            body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
           });
           const data = await resp.json();
           const compVarName = data.model?.compositions?.[0]?.varName;
@@ -446,7 +447,7 @@ export function GraphCanvas() {
           const resp = await fetch("/api/model/load", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ file_path: filePath }),
+            body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
           });
           const data = await resp.json();
           const compVarName = data.model?.compositions?.[0]?.varName;

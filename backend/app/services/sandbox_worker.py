@@ -1160,6 +1160,13 @@ def task_introspect(params):
     diagnostics = _compute_diagnostics(module, compositions, line_map, pnl)
 
     result = {"compositions": compositions, "lineMap": line_map, "header": header, "diagnostics": diagnostics}
+    if params.get("show_graph") and compositions and not developer_mode:
+        try:
+            result["showGraph"] = _show_graph_while_loaded(
+                module, compositions, params["show_graph"], pnl
+            )
+        except Exception:  # an extra; never let it break loading the model
+            pass
     try:
         input_sets = _find_input_sets(module, all_comps)
     except Exception:  # never let an optional extra break loading the model
@@ -1209,6 +1216,77 @@ def task_introspect(params):
                 "Define one with: comp = pnl.Composition(name='my_model')"
             )
     return result
+
+
+# At most this many compositions are asked about per load: the outermost, and
+# the one the page has open if that is a different one.
+_SHOW_GRAPH_MAX_COMPOSITIONS = 2
+
+
+def _show_graph_while_loaded(module, compositions, request, pnl):
+    """Ask show_graph about the model this load just built (#27).
+
+    The "Like show_graph" layout asks show_graph for the model's arrangement
+    right after it loads. Asked separately, that loads the model a second time
+    (about 2 s for EGO); asked here, from the model already built, it costs
+    about 0.07 s per answer. The route keeps these answers in the show_graph
+    cache, so the layout's own request is answered at once.
+
+    The layout's options depend on the graph as drawn, which is only known
+    after this load: whether nested compositions are shown open or folded
+    (``show_nested``), and, when show_graph misses nodes, a retry with
+    ``show_learning``. So each variant is asked for; an answer nobody uses
+    costs little. ``request`` carries the options the page will ask with
+    (``show_controller``, ``show_learning``) and, optionally, the composition
+    it has open (``composition``).
+
+    Never fails the load: a failure is recorded as show_graph's own refusal,
+    which is what asking separately would have returned.
+    """
+    # The page's rule (modelStore): the outermost composition is the first
+    # whose name isn't a node inside another composition.
+    def clean(n):
+        return re.sub(r'-\d+$', '', n) if n else n
+
+    nested = set()
+    for c in compositions:
+        for node in c.get("nodes") or []:
+            if node.get("kind") == "composition":
+                n = node.get("varName") or node.get("name")
+                nested.update({n, clean(n)})
+    names = [c["varName"] for c in compositions if c.get("varName")]
+    outermost = next((n for n in names if n not in nested and clean(n) not in nested),
+                     names[0] if names else None)
+    wanted = []
+    for name in (outermost, request.get("composition")):
+        if name and name in names and name not in wanted:
+            wanted.append(name)
+    wanted = wanted[:_SHOW_GRAPH_MAX_COMPOSITIONS]
+
+    show_controller = bool(request.get("show_controller", True))
+    show_learning = bool(request.get("show_learning", False))
+    answers = []
+    for name in wanted:
+        comp = _resolve_composition(module, name)
+        if comp is None or not isinstance(comp, pnl.Composition):
+            continue
+        for learning in sorted({show_learning, True}):
+            for show_nested in ("nested", False):
+                # The same options, in the same form, the page sends
+                # (useShowGraphLayout.ts), so the cached answer is the one
+                # it asks for.
+                options = {
+                    "show_controller": show_controller,
+                    "show_learning": learning,
+                    "show_cim": False,
+                    "show_nested": show_nested,
+                }
+                try:
+                    answer = {"dot": comp.show_graph(output_fmt='source', **options)}
+                except Exception as e:
+                    answer = {"error": f"show_graph failed: {e}"}
+                answers.append({"composition": name, "options": options, "answer": answer})
+    return answers
 
 
 def describe_load_error(exc, file_path):

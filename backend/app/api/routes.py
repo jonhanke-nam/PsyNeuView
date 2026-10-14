@@ -754,6 +754,11 @@ class LoadModelRequest(BaseModel):
     # PyTorch view (#230): the autodiff-flattened graph (AutodiffComposition
     # only). Takes precedence over `flat` when applicable.
     pytorch: bool = False
+    # "Like show_graph" layout (#27): ask show_graph while the model is loaded
+    # and keep the answers for the layout's own request. Carries the options
+    # the page will ask with ({show_controller, show_learning}) and,
+    # optionally, the composition it has open ({composition}).
+    show_graph: dict | None = None
 
 
 class LoadModelResponse(BaseModel):
@@ -1109,6 +1114,16 @@ def _sidecar_payload(path: Path) -> tuple[dict | None, dict | None, list[dict], 
     return layout, labels, bundle, sidecars
 
 
+def _keep_show_graph_answers(file_path: str, answers: list | None) -> None:
+    """Keep show_graph's answers from a load for the layout's request (#27)."""
+    from app.services import show_graph_cache
+
+    for a in answers or []:
+        key = show_graph_cache.cache_key(file_path, a["composition"], a["options"], "dot")
+        if key is not None:
+            show_graph_cache.put(key, a["answer"])
+
+
 @router.post("/model/load", response_model=LoadModelResponse)
 def load_model(request: LoadModelRequest):
     """Load a .py model file: execute it, introspect the PsyNeuLink objects,
@@ -1154,7 +1169,11 @@ def load_model(request: LoadModelRequest):
         logger.info(f"[star-import] Converted 'from psyneulink import *' in {path.name} (backup: {backup_path.name})")
 
     t1 = time.time()
-    model = load_and_introspect(str(path), developer_mode=request.developer_mode, flat=request.flat, pytorch=request.pytorch)
+    model = load_and_introspect(
+        str(path), developer_mode=request.developer_mode, flat=request.flat,
+        pytorch=request.pytorch, show_graph=request.show_graph,
+    )
+    _keep_show_graph_answers(str(path), model.pop("showGraph", None))
     t2 = time.time()
     layout, labels, bundle, sidecars = _sidecar_payload(path)
     standardized = is_standardized_format(source)
