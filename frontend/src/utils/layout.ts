@@ -11,7 +11,8 @@ import Dagre from "@dagrejs/dagre";
 import type { Node, Edge } from "@xyflow/react";
 import type { LayoutStyle } from "@/stores/graphSettingsStore";
 import { acyclicEdges } from "./roleRanks";
-import { applyShowGraphPlacement } from "./showGraphLayout";
+import { applyShowGraphPlacementWithCurves } from "./showGraphLayout";
+import { useShowGraphCurves } from "@/stores/showGraphCurvesStore";
 
 interface LayoutOptions {
   direction?: "TB" | "BT" | "LR" | "RL";
@@ -536,6 +537,9 @@ export function applyLayout(
   // below leave untouched (they only reposition top-level nodes).
   const insetSizes = layoutInsetInternals(nodes, edges, options.direction);
 
+  // show_graph's edge courses (#23) belong to its layout alone.
+  if (style !== "showgraph") useShowGraphCurves.getState().clear();
+
   switch (style) {
     case "radial":
       return applyRadialLayout(nodes, edges);
@@ -544,9 +548,14 @@ export function applyLayout(
     case "showgraph": {
       // #19: positions come from show_graph's own layout, computed
       // asynchronously (useShowGraphLayout). Until it arrives, or if it was
-      // computed for a different graph, the Layered layout stands in.
-      const placed = applyShowGraphPlacement(nodes);
-      if (placed) return placed;
+      // computed for a different graph, the Layered layout stands in. #23:
+      // edges then follow show_graph's own courses.
+      const placed = applyShowGraphPlacementWithCurves(nodes, edges);
+      if (placed) {
+        useShowGraphCurves.getState().setCurves(placed.curves);
+        return placed.nodes;
+      }
+      useShowGraphCurves.getState().clear();
       return applyDagreLayout(nodes, edges, { ...options, direction: "BT", insetSizes });
     }
     case "layered":
