@@ -11,6 +11,7 @@ import Dagre from "@dagrejs/dagre";
 import type { Node, Edge } from "@xyflow/react";
 import type { LayoutStyle } from "@/stores/graphSettingsStore";
 import { acyclicEdges } from "./roleRanks";
+import { applyShowGraphPlacement } from "./showGraphLayout";
 
 interface LayoutOptions {
   direction?: "TB" | "BT" | "LR" | "RL";
@@ -540,6 +541,14 @@ export function applyLayout(
       return applyRadialLayout(nodes, edges);
     case "force":
       return applyForceLayout(nodes, edges);
+    case "showgraph": {
+      // #19: positions come from show_graph's own layout, computed
+      // asynchronously (useShowGraphLayout). Until it arrives, or if it was
+      // computed for a different graph, the Layered layout stands in.
+      const placed = applyShowGraphPlacement(nodes);
+      if (placed) return placed;
+      return applyDagreLayout(nodes, edges, { ...options, direction: "BT", insetSizes });
+    }
     case "layered":
     default:
       return applyDagreLayout(nodes, edges, { ...options, insetSizes });

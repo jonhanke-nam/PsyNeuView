@@ -13,6 +13,8 @@ import { useModelStore } from "@/stores/modelStore";
 import { EDGE_ROUTING_OPTIONS, useGraphSettings } from "@/stores/graphSettingsStore";
 import { usePaletteStore } from "@/stores/paletteStore";
 import { applyLayout } from "@/utils/layout";
+import { applyShowGraphLayoutNow } from "@/hooks/useShowGraphLayout";
+import { LAYOUT_STYLES } from "@/stores/graphLayoutDefaultStore";
 import { useDismiss } from "@/components/common/dialog/useDismiss";
 import { MENU_ROW_HOVER, menuRowColours, toggleColours } from "@/components/common/toolbarStyles";
 
@@ -370,6 +372,13 @@ export function GraphToolbar() {
         onChange={(e) => {
           const style = e.target.value as any;
           useGraphSettings.getState().setLayoutStyle(style);
+          if (style === "showgraph") {
+            // show_graph flows bottom-to-top; turn the ports to match, then
+            // fetch and apply its layout (#19).
+            useGraphSettings.getState().setDirection("BT");
+            void applyShowGraphLayoutNow();
+            return;
+          }
           const { nodes, edges, setNodes } = useModelStore.getState();
           const laid = applyLayout(style, nodes, edges, { direction });
           setNodes(laid);
@@ -381,11 +390,13 @@ export function GraphToolbar() {
           borderRadius: 4,
           background: "var(--pnv-surface)",
         }}
-        title="Auto-layout engine (Layered = Dagre DAG; Radial/Force ignore direction)"
+        title="Auto-layout engine (Layered = Dagre DAG; Radial/Force ignore direction; Like show_graph = PsyNeuLink's show_graph arrangement)"
       >
-        <option value="layered">Layered</option>
-        <option value="radial">Radial</option>
-        <option value="force">Force</option>
+        {LAYOUT_STYLES.map((o) => (
+          <option key={o.id} value={o.id} title={o.hint}>
+            {o.label}
+          </option>
+        ))}
       </select>
 
       <select

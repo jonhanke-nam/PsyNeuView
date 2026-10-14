@@ -1872,6 +1872,10 @@ class ShowGraphRequest(BaseModel):
     file_path: str
     composition_name: str
     options: dict = {}
+    # "svg" renders the picture (needs the Graphviz programs on the machine);
+    # "dot" returns show_graph's Graphviz description unrendered, which the
+    # page lays out itself for the "Like show_graph" layout (#19).
+    format: str = "svg"
 
 
 @router.post("/model/show-graph")
@@ -1891,6 +1895,7 @@ def show_graph(request: ShowGraphRequest):
         "file_path": request.file_path,
         "composition_name": request.composition_name,
         "options": request.options,
+        "format": request.format,
     })
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
