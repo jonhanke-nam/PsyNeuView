@@ -48,10 +48,20 @@ export function clearShowGraphPlacement(): void {
   current = null;
 }
 
+// The model store's nodes don't carry React Flow's measured sizes, so read a
+// node's drawn size from the page when it has been drawn.
+function drawnSize(id: string): { w: number; h: number } | null {
+  if (typeof document === "undefined") return null;
+  const el = document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(id)}"]`);
+  return el && el.offsetWidth > 0 ? { w: el.offsetWidth, h: el.offsetHeight } : null;
+}
+
 export function nodeSize(n: Node): { w: number; h: number } {
   const w = n.measured?.width ?? (n.style?.width as number | undefined) ?? n.width;
   const h = n.measured?.height ?? (n.style?.height as number | undefined) ?? n.height;
-  return { w: w ?? DEFAULT_SIZE.w, h: h ?? DEFAULT_SIZE.h };
+  if (w !== undefined && h !== undefined) return { w, h };
+  const drawn = drawnSize(n.id);
+  return { w: w ?? drawn?.w ?? DEFAULT_SIZE.w, h: h ?? drawn?.h ?? DEFAULT_SIZE.h };
 }
 
 /** The graph's node ids: a new show_graph layout is needed when they change. */
@@ -161,11 +171,7 @@ export interface ShowGraphRequest {
   options: Record<string, boolean | string>;
 }
 
-/** Fetch show_graph's description, lay it out, and store the result. */
-export async function computeShowGraphPlacement(
-  req: ShowGraphRequest,
-  nodes: Node[],
-): Promise<ShowGraphPlacement> {
+async function fetchDot(req: ShowGraphRequest): Promise<string> {
   const resp = await fetch("/api/model/show-graph", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -180,10 +186,55 @@ export async function computeShowGraphPlacement(
     const err = await resp.json().catch(() => ({}));
     throw new Error(err.detail || `show_graph request failed (${resp.status})`);
   }
-  const { dot } = (await resp.json()) as { dot: string };
+  return ((await resp.json()) as { dot: string }).dot;
+}
+
+/** How many of PsyNeuView's nodes show_graph drew. */
+function matchedCount(nodes: Node[], placement: ShowGraphPlacement): number {
+  return nodes.filter((n) => n.type === "mechanismNode" && placement.nodes.has(n.id)).length;
+}
+
+// The layout menu and the background watcher (useShowGraphLayout) can ask for
+// the same layout at the same moment; they share one fetch.
+const inFlight = new Map<string, Promise<ShowGraphPlacement>>();
+
+/** Fetch show_graph's description, lay it out, and store the result. */
+export function computeShowGraphPlacement(
+  req: ShowGraphRequest,
+  nodes: Node[],
+): Promise<ShowGraphPlacement> {
+  const key = placementKey(nodes, req);
+  let pending = inFlight.get(key);
+  if (!pending) {
+    pending = computeOnce(req, nodes, key).finally(() => inFlight.delete(key));
+    inFlight.set(key, pending);
+  }
+  return pending;
+}
+
+async function computeOnce(
+  req: ShowGraphRequest,
+  nodes: Node[],
+  key: string,
+): Promise<ShowGraphPlacement> {
   const gv = await loadGraphviz();
-  const laid = JSON.parse(gv.layout(dot, "json", "dot")) as GvJson;
-  const placement = placementFromGraphviz(laid, placementKey(nodes, req));
+  const layOut = async (r: ShowGraphRequest) =>
+    placementFromGraphviz(JSON.parse(gv.layout(await fetchDot(r), "json", "dot")) as GvJson, key);
+
+  let placement = await layOut(req);
+  // PsyNeuView draws some models' learning parts (a TARGET, a prediction
+  // error, the learning mechanism) as ordinary nodes, which show_graph hides
+  // unless asked. If show_graph missed nodes, ask again with learning shown
+  // and keep whichever drew more of them.
+  const mechs = nodes.filter((n) => n.type === "mechanismNode").length;
+  if (matchedCount(nodes, placement) < mechs && !req.options.show_learning) {
+    try {
+      const withLearning = await layOut({ ...req, options: { ...req.options, show_learning: true } });
+      if (matchedCount(nodes, withLearning) > matchedCount(nodes, placement)) placement = withLearning;
+    } catch {
+      // Keep the first layout.
+    }
+  }
   current = placement;
   return placement;
 }
