@@ -24,6 +24,7 @@ def load_and_introspect(
     developer_mode: bool = False,
     flat: bool = False,
     pytorch: bool = False,
+    show_graph: dict | None = None,
 ) -> dict:
     """Execute a .py file and introspect all PsyNeuLink Compositions.
 
@@ -41,13 +42,17 @@ def load_and_introspect(
         pytorch: If True, serialize the autodiff-flattened (PyTorch) view for
             an AutodiffComposition (#230); ignored for non-autodiff comps.
             Sandbox path only.
+        show_graph: If given, also ask show_graph about the model while it is
+            loaded, for the "Like show_graph" layout (#27); the answers come
+            back under ``showGraph``. Sandbox path only.
 
     Returns a JSON-serializable dict describing the full model graph.
     """
     if use_sandbox:
         result = run_in_sandbox(
             "introspect",
-            {"file_path": file_path, "developer_mode": developer_mode, "flat": flat, "pytorch": pytorch},
+            {"file_path": file_path, "developer_mode": developer_mode, "flat": flat, "pytorch": pytorch,
+             "show_graph": show_graph},
         )
         # Return the full result even if it contains an error — the error
         # message, diagnostics, and any partial data are all useful to the
