@@ -2045,7 +2045,11 @@ def task_show_graph(params):
     comp_name = params["composition_name"]
     options = params.get("options", {})
 
-    module = load_module(file_path)
+    # A reload in this long-lived worker otherwise re-registers names with
+    # suffixes, and show_graph of a model with a nested EMComposition (EGO)
+    # then fails looking up its own nodes ("'STATE [VALUE]' is not in
+    # Component").
+    module = load_module(file_path, reset_registry=True)
 
     comp = _resolve_composition(module, comp_name)
     if comp is None or not isinstance(comp, pnl.Composition):
@@ -2056,6 +2060,14 @@ def task_show_graph(params):
     # comps rather than forward an unrecognized argument (#437).
     if not isinstance(comp, pnl.AutodiffComposition):
         options.pop("show_pytorch", None)
+
+    if params.get("format") == "dot":
+        # The description only: no Graphviz programs needed, since the page
+        # runs the layout itself (#19).
+        try:
+            return {"dot": comp.show_graph(output_fmt='source', **options)}
+        except Exception as e:
+            return {"error": f"show_graph failed: {e}"}
 
     try:
         import graphviz as gv

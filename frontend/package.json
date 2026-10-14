@@ -22,6 +22,7 @@
     "@codemirror/lang-python": "^6.1.0",
     "@codemirror/lint": "^6.9.5",
     "@dagrejs/dagre": "^3.0.0",
+    "@hpcc-js/wasm-graphviz": "^1.29.2",
     "@types/js-yaml": "^4.0.9",
     "@types/react-plotly.js": "^2.6.4",
     "@uiw/react-codemirror": "^4.21.0",

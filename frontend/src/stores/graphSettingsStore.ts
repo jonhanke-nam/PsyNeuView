@@ -10,7 +10,8 @@ export type GraphDirection = "TB" | "BT" | "LR" | "RL";
 // Which auto-layout engine arranges the graph (#415). "layered" is the
 // original Dagre sugiyama-style DAG (the `direction` setting orients it);
 // "radial" and "force" are distinct algorithms that ignore direction.
-export type LayoutStyle = "layered" | "radial" | "force";
+// "showgraph" reproduces PsyNeuLink's show_graph() arrangement (#19).
+export type LayoutStyle = "layered" | "radial" | "force" | "showgraph";
 
 // How single (non-bundled) projection edges are routed between ports.
 // Bundled edges sharing a port always fan out as bowed beziers regardless,
