@@ -274,7 +274,7 @@ export default function App() {
                         <RunStatePanel />
                       </div>
                       <div style={{ display: bottomTab === "showgraph" ? "block" : "none", height: "100%" }}>
-                        <ShowGraphPanel />
+                        <ShowGraphPanel active={bottomTab === "showgraph"} />
                       </div>
                       <div style={{ display: bottomTab === "style" ? "block" : "none", height: "100%" }}>
                         <GraphStylePanel />
