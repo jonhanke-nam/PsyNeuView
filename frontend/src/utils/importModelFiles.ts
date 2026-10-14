@@ -13,6 +13,7 @@
 
 import { useModelStore } from "@/stores/modelStore";
 import { useNotificationStore } from "@/stores/notificationStore";
+import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
 
 /** Extensions the importer understands — also the file picker's `accept`. */
 export const IMPORTABLE_EXTENSIONS = [".py", ".pnlproject"] as const;
@@ -90,7 +91,7 @@ async function importPython(file: File): Promise<void> {
     const loadResp = await fetch("/api/model/load", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: fullPath }),
+      body: JSON.stringify({ file_path: fullPath, ...showGraphLoadRequest() }),
     });
     if (!loadResp.ok) {
       const err = await loadResp.json().catch(() => ({ detail: "Load failed" }));

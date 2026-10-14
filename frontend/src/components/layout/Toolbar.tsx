@@ -74,6 +74,7 @@ import { noteModelOrigin } from "@/utils/diagnostics";
 import { SAVE_COPY_EVENT } from "@/utils/saveRequest";
 import { stripProtectionLine } from "@/utils/protectionLine";
 import { AutosaveStatus } from "./AutosaveStatus";
+import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
 
 function newModelTemplate(pnlVersion: string) {
   return `# PsyNeuLink Model File
@@ -854,6 +855,7 @@ export function Toolbar() {
           file_path: path,
           flat: useGraphSettings.getState().flat,
           pytorch: useGraphSettings.getState().pytorch,
+        ...showGraphLoadRequest(),
         }),
       });
       const t1 = performance.now();
