@@ -18,7 +18,10 @@ the model runner restarts (``sandbox.restart_warm_worker``), which is how every
 change of PsyNeuLink takes effect: an install, a checkout update, or an edit to
 a local checkout's code.
 
-Errors are never kept, so a failure is retried next time.
+A failure reported by show_graph itself is kept: for an unchanged model it
+fails the same way every time (EGO refuses ``show_learning``, which the layout
+asks for when show_graph misses nodes). Any other error, such as the runner
+crashing or timing out, is not kept, so it is retried next time.
 """
 
 from __future__ import annotations
@@ -78,8 +81,13 @@ def get(key: str) -> dict | None:
         return dict(result)
 
 
+# The prefix task_show_graph gives PsyNeuLink's own show_graph failures.
+SHOW_GRAPH_FAILED = "show_graph failed:"
+
+
 def put(key: str, result: dict) -> None:
-    if "error" in result:
+    error = result.get("error")
+    if error is not None and not str(error).startswith(SHOW_GRAPH_FAILED):
         return
     with _lock:
         _entries[key] = dict(result)

@@ -1896,19 +1896,18 @@ def show_graph(request: ShowGraphRequest):
     key = show_graph_cache.cache_key(
         request.file_path, request.composition_name, request.options, request.format,
     )
-    if key is not None and (cached := show_graph_cache.get(key)) is not None:
-        return cached
-
-    result = run_in_sandbox("show_graph", {
-        "file_path": request.file_path,
-        "composition_name": request.composition_name,
-        "options": request.options,
-        "format": request.format,
-    })
+    result = show_graph_cache.get(key) if key is not None else None
+    if result is None:
+        result = run_in_sandbox("show_graph", {
+            "file_path": request.file_path,
+            "composition_name": request.composition_name,
+            "options": request.options,
+            "format": request.format,
+        })
+        if key is not None:
+            show_graph_cache.put(key, result)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
-    if key is not None:
-        show_graph_cache.put(key, result)
     return result
 
 

@@ -18,8 +18,10 @@ def runner(monkeypatch):
 
     def fake_run(task, params, timeout=None):
         calls.append(params)
-        if params["composition_name"] == "broken":
-            return {"error": "show_graph failed: boom"}
+        if params["composition_name"] == "refused":
+            return {"error": "show_graph failed: use show_pytorch=True"}
+        if params["composition_name"] == "crashed":
+            return {"error": "Worker communication error: broken pipe"}
         return {"dot": f"digraph {{ /* call {len(calls)} */ }}"}
 
     monkeypatch.setattr(sandbox, "run_in_sandbox", fake_run)
@@ -77,9 +79,18 @@ def test_edited_helper_module_next_to_the_model_is_noticed(runner, model):
     assert len(runner) == 2
 
 
-def test_errors_are_not_kept(runner, model):
-    assert ask(model, composition="broken").status_code == 400
-    assert ask(model, composition="broken").status_code == 400
+def test_show_graph_refusal_is_kept(runner, model):
+    # Same model, same refusal: no need to reload it to hear it again.
+    first = ask(model, composition="refused")
+    second = ask(model, composition="refused")
+    assert first.status_code == second.status_code == 400
+    assert second.json() == first.json()
+    assert len(runner) == 1
+
+
+def test_runner_failures_are_retried(runner, model):
+    assert ask(model, composition="crashed").status_code == 400
+    assert ask(model, composition="crashed").status_code == 400
     assert len(runner) == 2
 
 
