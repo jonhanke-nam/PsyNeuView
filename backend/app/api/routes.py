@@ -1885,11 +1885,19 @@ def show_graph(request: ShowGraphRequest):
     Returns the graph as an SVG string. This is a dev/debug endpoint for
     comparing PsyNeuLink's native visualization with the React Flow graph.
     """
+    from app.services import show_graph_cache
     from app.services.sandbox import run_in_sandbox
 
     path = Path(request.file_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"File not found: {path}")
+
+    # An unchanged model gives the same answer; skip reloading it (#22).
+    key = show_graph_cache.cache_key(
+        request.file_path, request.composition_name, request.options, request.format,
+    )
+    if key is not None and (cached := show_graph_cache.get(key)) is not None:
+        return cached
 
     result = run_in_sandbox("show_graph", {
         "file_path": request.file_path,
@@ -1899,6 +1907,8 @@ def show_graph(request: ShowGraphRequest):
     })
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
+    if key is not None:
+        show_graph_cache.put(key, result)
     return result
 
 

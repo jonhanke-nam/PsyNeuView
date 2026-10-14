@@ -284,6 +284,11 @@ def restart_warm_worker() -> bool:
     before restarting so waiting out an in-flight task does not also block
     `_get_warm_worker()`.
     """
+    # A restart is how a different PsyNeuLink takes effect, and show_graph's
+    # answers may differ under it (#22).
+    from app.services import show_graph_cache
+    show_graph_cache.clear()
+
     with _warm_worker_lock:
         worker = _warm_worker
     if worker is None:
