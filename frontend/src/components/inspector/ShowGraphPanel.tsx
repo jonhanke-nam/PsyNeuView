@@ -46,7 +46,12 @@ const OPTION_LABELS: Record<keyof ShowGraphOptions, string> = {
 // PyTorch view is only meaningful for AutodiffComposition subclasses.
 const AUTODIFF_ONLY_OPTIONS: Set<keyof ShowGraphOptions> = new Set(["show_pytorch"]);
 
-export function ShowGraphPanel() {
+interface ShowGraphPanelProps {
+  /** Whether the tab is showing. The panel stays mounted while hidden. */
+  active: boolean;
+}
+
+export function ShowGraphPanel({ active }: ShowGraphPanelProps) {
   const filePath = useModelStore((s) => s.filePath);
   // #1029: run what the user is looking at. While the buffer has unsaved
   // edits this is the preview file, not the model on disk.
@@ -119,9 +124,21 @@ export function ShowGraphPanel() {
     }
   }, [filePath, compositionName, options, activeIsAutodiff]);
 
+  // Fetch only while the tab is showing (#22). The panel stays mounted when
+  // hidden, and each fetch reloads the model in the model runner, which
+  // handles one request at a time: a hidden fetch on every model open made
+  // the "Like show_graph" layout wait about 2 s behind it. Opening the tab
+  // fetches once, if anything changed since the picture it already has.
+  // A model change that adds or removes boxes needs a new picture too.
+  const nodeCount = nodes.length;
+  const fetchedFor = useRef<{ fetch: typeof fetchShowGraph; nodeCount: number } | null>(null);
   useEffect(() => {
+    if (!active) return;
+    const last = fetchedFor.current;
+    if (last && last.fetch === fetchShowGraph && last.nodeCount === nodeCount) return;
+    fetchedFor.current = { fetch: fetchShowGraph, nodeCount };
     fetchShowGraph();
-  }, [fetchShowGraph, nodes.length]);
+  }, [active, fetchShowGraph, nodeCount]);
 
   // Live zoom/pan for the imperative wheel/drag handlers (avoids stale
   // closures). Pan is a translate offset applied with the scale transform —
