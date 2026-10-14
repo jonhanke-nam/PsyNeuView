@@ -4,6 +4,7 @@
 
 import { create } from "zustand";
 import { RENDERING_DEFAULTS } from "@/config/renderingDefaults";
+import { loadLayoutDefault } from "@/stores/graphLayoutDefaultStore";
 
 export type GraphDirection = "TB" | "BT" | "LR" | "RL";
 
@@ -162,7 +163,8 @@ export const useGraphSettings = create<GraphSettings>((set, get) => ({
   pytorch: false,
   showExecutionOrder: false,
   direction: "BT",
-  layoutStyle: "layered",
+  // Settings ▸ Appearance ▸ Automatic layout (#19).
+  layoutStyle: loadLayoutDefault(),
   expandedNodes: new Set<string>(),
   collapsedCompositions: new Set<string>(),
   insetCompositions: new Set<string>(),

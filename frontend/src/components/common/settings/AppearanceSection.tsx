@@ -7,10 +7,21 @@
  * size, since the real pointer is only seen over the canvas; hovering the
  * preview shows the real thing too. Look-and-feel settings belong here
  * (docs/settings-etiquette.md §1). The graph legend's opening state (#7)
- * is here too: collapsed by default.
+ * is here too: collapsed by default. So is the automatic layout the graph
+ * view opens with (#19): Layered by default, or Like show_graph.
  */
 
 import { LEGEND_STARTS, isLegendStart, useGraphLegendStore } from "@/stores/graphLegendStore";
+import {
+  DEFAULT_LAYOUT_STYLE,
+  LAYOUT_STYLES,
+  isLayoutStyle,
+  useGraphLayoutDefaultStore,
+} from "@/stores/graphLayoutDefaultStore";
+import { useGraphSettings } from "@/stores/graphSettingsStore";
+import { useModelStore } from "@/stores/modelStore";
+import { applyLayout } from "@/utils/layout";
+import { applyShowGraphLayoutNow } from "@/hooks/useShowGraphLayout";
 import { useGraphPointerStore } from "@/stores/graphPointerStore";
 import {
   GRAPH_POINTERS,
@@ -31,10 +42,64 @@ export function AppearanceSection() {
           <PointerSizeRow />
         </div>
       </Group>
+      <Group id="automatic-layout" title="Automatic layout">
+        <AutomaticLayoutRow />
+      </Group>
       <Group id="graph-legend" title="Graph legend">
         <GraphLegendRow />
       </Group>
     </>
+  );
+}
+
+// Switching the setting also re-arranges the model you have open, if its
+// layout is automatic; a custom layout you arranged yourself is left alone.
+function applyToOpenModel(style: (typeof LAYOUT_STYLES)[number]["id"]) {
+  useGraphSettings.getState().setLayoutStyle(style);
+  if (!useModelStore.getState().autoLayout) return;
+  if (style === "showgraph") {
+    // show_graph flows bottom-to-top; turn the ports to match.
+    useGraphSettings.getState().setDirection("BT");
+    void applyShowGraphLayoutNow();
+    return;
+  }
+  const { nodes, edges, setNodes } = useModelStore.getState();
+  const { direction } = useGraphSettings.getState();
+  setNodes(applyLayout(style, nodes, edges, { direction }));
+}
+
+function AutomaticLayoutRow() {
+  const style = useGraphLayoutDefaultStore((s) => s.style);
+  const setStyle = useGraphLayoutDefaultStore((s) => s.setStyle);
+  const hint = LAYOUT_STYLES.find((o) => o.id === style)?.hint;
+  return (
+    <div style={{ fontSize: 13 }}>
+      <SettingLabel title="How models are arranged" htmlFor="setting-graph-layout-default">
+        The arrangement a model gets when you open it without a layout of your
+        own. Like show_graph places every node where PsyNeuLink's show_graph()
+        draws it, enlarged to fit PsyNeuView's boxes. The layout menu on the
+        graph toolbar switches the model you have open without changing this.
+      </SettingLabel>
+      <select
+        id="setting-graph-layout-default"
+        data-testid="setting-graph-layout-default"
+        value={style}
+        onChange={(e) => {
+          if (!isLayoutStyle(e.target.value)) return;
+          setStyle(e.target.value);
+          applyToOpenModel(e.target.value);
+        }}
+        style={selectStyle}
+      >
+        {LAYOUT_STYLES.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+            {o.id === DEFAULT_LAYOUT_STYLE ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+      {hint && <div style={{ ...mutedStyle, marginTop: 4 }}>{hint}</div>}
+    </div>
   );
 }
 

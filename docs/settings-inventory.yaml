@@ -290,6 +290,20 @@ settings:
       load. Applies to the arrow; the hand is the system's own. Window zoom
       doesn't scale cursors, so this is the one control for the size.
 
+  - id: graph-layout-default
+    label: Appearance ▸ Automatic layout ▸ How models are arranged
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.layoutDefault); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-graph-layout-default
+    notes: >-
+      Layered (default), Like show_graph, Radial or Force (#19). The
+      arrangement a model gets when it has no layout of your own; changing
+      it re-arranges the open model too if its layout is automatic. Like
+      show_graph places each node where PsyNeuLink's show_graph() draws it
+      (Graphviz in the page, so nothing to install). The layout menu on the
+      graph toolbar switches the open model without changing this setting.
+
   - id: graph-legend-start
     label: Appearance ▸ Graph legend ▸ How the legend opens
     home: settings

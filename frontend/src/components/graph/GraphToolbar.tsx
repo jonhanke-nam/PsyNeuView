@@ -14,6 +14,7 @@ import { EDGE_ROUTING_OPTIONS, useGraphSettings } from "@/stores/graphSettingsSt
 import { usePaletteStore } from "@/stores/paletteStore";
 import { applyLayout } from "@/utils/layout";
 import { applyShowGraphLayoutNow } from "@/hooks/useShowGraphLayout";
+import { LAYOUT_STYLES } from "@/stores/graphLayoutDefaultStore";
 import { useDismiss } from "@/components/common/dialog/useDismiss";
 import { MENU_ROW_HOVER, menuRowColours, toggleColours } from "@/components/common/toolbarStyles";
 
@@ -391,10 +392,11 @@ export function GraphToolbar() {
         }}
         title="Auto-layout engine (Layered = Dagre DAG; Radial/Force ignore direction; Like show_graph = PsyNeuLink's show_graph arrangement)"
       >
-        <option value="layered">Layered</option>
-        <option value="radial">Radial</option>
-        <option value="force">Force</option>
-        <option value="showgraph">Like show_graph</option>
+        {LAYOUT_STYLES.map((o) => (
+          <option key={o.id} value={o.id} title={o.hint}>
+            {o.label}
+          </option>
+        ))}
       </select>
 
       <select
