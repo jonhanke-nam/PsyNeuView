@@ -19,25 +19,25 @@ describe("Appearance ▸ Automatic layout (#19)", () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it("falls back to Layered when storage is blocked", () => {
+  it("falls back to the default when storage is blocked", () => {
     vi.stubGlobal("localStorage", undefined);
-    expect(loadLayoutDefault()).toBe("layered");
-  });
-
-  it("defaults to Layered", () => {
-    expect(DEFAULT_LAYOUT_STYLE).toBe("layered");
-    expect(loadLayoutDefault()).toBe("layered");
-  });
-
-  it("remembers Like show_graph", () => {
-    useGraphLayoutDefaultStore.getState().setStyle("showgraph");
-    expect(localStorage.getItem(LAYOUT_DEFAULT_KEY)).toBe("showgraph");
     expect(loadLayoutDefault()).toBe("showgraph");
+  });
+
+  it("defaults to Like show_graph (#24)", () => {
+    expect(DEFAULT_LAYOUT_STYLE).toBe("showgraph");
+    expect(loadLayoutDefault()).toBe("showgraph");
+  });
+
+  it("remembers a choice of Layered", () => {
+    useGraphLayoutDefaultStore.getState().setStyle("layered");
+    expect(localStorage.getItem(LAYOUT_DEFAULT_KEY)).toBe("layered");
+    expect(loadLayoutDefault()).toBe("layered");
   });
 
   it("ignores a value it doesn't know", () => {
     localStorage.setItem(LAYOUT_DEFAULT_KEY, "spiral");
-    expect(loadLayoutDefault()).toBe("layered");
+    expect(loadLayoutDefault()).toBe("showgraph");
     expect(isLayoutStyle("spiral")).toBe(false);
   });
 });
