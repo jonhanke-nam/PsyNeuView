@@ -469,7 +469,14 @@ export function sampleCourse(spline: Point[], tip?: Point): Point[] {
 }
 
 type Box = { x: number; y: number; w: number; h: number };
-const inside = (p: Point, b: Box) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
+// Mechanisms are drawn as the oval that fills their box, so a course is
+// trimmed at the oval, not the box's corners.
+const inside = (p: Point, b: Box) => {
+  const rx = b.w / 2, ry = b.h / 2;
+  if (rx <= 0 || ry <= 0) return false;
+  const dx = (p.x - (b.x + rx)) / rx, dy = (p.y - (b.y + ry)) / ry;
+  return dx * dx + dy * dy <= 1;
+};
 
 // Where the segment from `a` (inside the box) to `b` (outside) leaves it.
 function exitPoint(a: Point, b: Point, box: Box): Point {
@@ -484,8 +491,8 @@ function exitPoint(a: Point, b: Point, box: Box): Point {
 }
 
 /**
- * Fit a course to run from the edge of the source box to the edge of the
- * target box. Enlarged, show_graph's ovals and PsyNeuView's boxes differ: a
+ * Fit a course to run from the edge of the source oval to the edge of the
+ * target oval (each filling its node's box). Enlarged, show_graph's ovals and PsyNeuView's boxes differ: a
  * course that starts inside a box is trimmed where it leaves it, and one that
  * starts short of it (an oval taller than the box) gets a short straight
  * lead-in from the box's edge. Null when nothing is left outside both boxes

@@ -150,7 +150,7 @@ describe("Like show_graph edges (#23)", () => {
     }
   });
 
-  it("gives every matched edge a course from its source box's edge to its target box's edge", async () => {
+  it("gives every matched edge a course from its source oval to its target oval", async () => {
     const nodes = NAMES.map((n) => mech(n));
     const edges = edgesOf(STROOP_EDGES);
     const placed = applyShowGraphPlacementWithCurves(nodes, edges, await stroopPlacement(nodes))!;
@@ -158,9 +158,12 @@ describe("Like show_graph edges (#23)", () => {
       const n = placed.nodes.find((x) => x.id === id)!;
       return { x: n.position.x, y: n.position.y, w: 190, h: 70 };
     };
-    const onEdge = (p: { x: number; y: number }, b: { x: number; y: number; w: number; h: number }) =>
-      p.x >= b.x - 0.5 && p.x <= b.x + b.w + 0.5 && p.y >= b.y - 0.5 && p.y <= b.y + b.h + 0.5 &&
-      Math.min(Math.abs(p.x - b.x), Math.abs(p.x - b.x - b.w), Math.abs(p.y - b.y), Math.abs(p.y - b.y - b.h)) < 0.5;
+    // On the oval that fills the box: (dx/rx)² + (dy/ry)² ≈ 1.
+    const onEdge = (p: { x: number; y: number }, b: { x: number; y: number; w: number; h: number }) => {
+      const rx = b.w / 2, ry = b.h / 2;
+      const dx = (p.x - b.x - rx) / rx, dy = (p.y - b.y - ry) / ry;
+      return Math.abs(dx * dx + dy * dy - 1) < 0.02;
+    };
     for (const e of edges) {
       const c = placed.curves[e.id];
       expect(c, e.id).toBeDefined();
