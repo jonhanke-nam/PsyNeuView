@@ -591,6 +591,8 @@ export function ProjectionEdge({
       <BaseEdge
         id={id}
         path={edgePath}
+        // #23: marks an edge drawn along show_graph's own course.
+        className={curve ? "pnv-edge-showgraph" : undefined}
         interactionWidth={0}
         style={{
           // Spread per-type style first (color, dasharray, base width), then
