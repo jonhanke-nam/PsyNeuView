@@ -33,6 +33,8 @@ test("a first run opens models Like show_graph, the default in Settings @ci", as
   // and show_graph was asked for its arrangement.
   await expect(page.locator('select:has(option[value="showgraph"])')).toHaveValue("showgraph");
   await expect.poll(() => asked.length, { timeout: 30000 }).toBeGreaterThan(0);
+  // …and its edges follow show_graph's own courses (#23).
+  await expect(page.locator(".react-flow__edge path.pnv-edge-showgraph").first()).toBeVisible({ timeout: 30000 });
 
   // Settings says it's the default.
   await page.getByTestId("settings-button").click();
