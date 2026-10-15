@@ -155,10 +155,23 @@ export function applyDagreLayout(
         feedback: Boolean((e.data as { feedback?: boolean } | undefined)?.feedback),
       })),
   );
+  // #25: an open (nested) composition is a cluster in Dagre's compound graph,
+  // and Dagre can't rank an edge that ends on a cluster with members — it
+  // throws, and the caller's fallback stacked the members in one tall column.
+  // So for ranking, an edge into an open frame goes to the frame's entry
+  // members and an edge out of it leaves from its exit members. The edges
+  // still draw to the frame; only the ranking sees them this way.
+  const ends = openFrameEnds(nodes.filter((n) => g.hasNode(n.id)), rankable);
+  const seen = new Set<string>();
   for (const edge of rankable) {
-    // Only add edge if both nodes exist in the graph
-    if (g.hasNode(edge.source) && g.hasNode(edge.target)) {
-      g.setEdge(edge.source, edge.target);
+    for (const source of ends.exits(edge.source)) {
+      for (const target of ends.entries(edge.target)) {
+        const key = `${source}\u0000${target}`;
+        if (source === target || seen.has(key)) continue;
+        if (!g.hasNode(source) || !g.hasNode(target)) continue;
+        seen.add(key);
+        g.setEdge(source, target);
+      }
     }
   }
 
@@ -220,15 +233,24 @@ export function applyDagreLayout(
   // along its layout axis to absorb label-width growth.
   const isVertical = direction === "TB" || direction === "BT";
 
+  // Top-left corners, absolute. An open frame is a cluster: Dagre sizes it to
+  // its members, so use that size rather than the default group box (#25).
+  const isCluster = (id: string) => (g.children(id) as string[] | undefined)?.length ?? 0;
+  const topLeft = new Map<string, { x: number; y: number }>();
+  for (const node of nodes) {
+    const d = g.node(node.id);
+    if (!d) continue;
+    const isGroup = node.type === "compositionNode";
+    const insetSize = insetSizes?.get(node.id);
+    const w = isCluster(node.id) ? d.width : insetSize ? insetSize.width : isGroup ? 300 : nodeWidth;
+    const h = isCluster(node.id) ? d.height : insetSize ? insetSize.height : isGroup ? 200 : nodeHeight;
+    topLeft.set(node.id, { x: d.x - w / 2, y: d.y - h / 2 });
+  }
+
   // Apply computed positions back to nodes
   return nodes.map((node) => {
     const dagreNode = g.node(node.id);
     if (!dagreNode) return node;
-
-    const isGroup = node.type === "compositionNode";
-    const insetSize = insetSizes?.get(node.id);
-    const w = insetSize ? insetSize.width : isGroup ? 300 : nodeWidth;
-    const h = insetSize ? insetSize.height : isGroup ? 200 : nodeHeight;
 
     const rankCoord = isVertical ? dagreNode.y : dagreNode.x;
     const layoutRank = Math.round(rankCoord / 10);
@@ -239,12 +261,58 @@ export function applyDagreLayout(
         ...(node.data as object),
         layoutRank,
       },
-      position: {
-        x: dagreNode.x - w / 2,
-        y: dagreNode.y - h / 2,
-      },
+      // A member of an open frame is positioned relative to it, as React
+      // Flow expects (#25): Dagre gives absolute positions for both.
+      position: (() => {
+        const abs = topLeft.get(node.id)!;
+        const parent = node.parentId ? topLeft.get(node.parentId) : undefined;
+        return parent ? { x: abs.x - parent.x, y: abs.y - parent.y + OPEN_FRAME_HEADER } : abs;
+      })(),
     };
   });
+}
+
+// Room at the top of an open frame for its label (#25).
+const OPEN_FRAME_HEADER = 30;
+
+/**
+ * Where edges enter and leave each open frame (a composition shown with its
+ * members), for ranking (#25). Entry members are the frame's INPUT nodes, or
+ * if none, those with nothing feeding them inside the frame; exit members
+ * likewise with OUTPUT. A member that is itself an open frame is resolved the
+ * same way, so nesting goes all the way down. Any other node is its own
+ * entry and exit.
+ */
+export function openFrameEnds(
+  nodes: Node[],
+  edges: { source: string; target: string }[],
+): { entries: (id: string) => string[]; exits: (id: string) => string[] } {
+  const members = new Map<string, Node[]>();
+  for (const n of nodes) {
+    if (n.parentId) (members.get(n.parentId) ?? members.set(n.parentId, []).get(n.parentId)!).push(n);
+  }
+  const rolesOf = (n: Node) => ((n.data as { roles?: string[] } | undefined)?.roles) || [];
+  const pick = (frame: string, role: "INPUT" | "OUTPUT"): Node[] => {
+    const inside = members.get(frame)!;
+    const ids = new Set(inside.map((m) => m.id));
+    const byRole = inside.filter((m) => rolesOf(m).includes(role));
+    if (byRole.length) return byRole;
+    const internal = edges.filter((e) => ids.has(e.source) && ids.has(e.target));
+    const free = inside.filter((m) =>
+      role === "INPUT"
+        ? !internal.some((e) => e.target === m.id)
+        : !internal.some((e) => e.source === m.id),
+    );
+    return free.length ? free : inside;
+  };
+  const resolve = (id: string, role: "INPUT" | "OUTPUT", depth = 0): string[] => {
+    if (!members.has(id) || depth > 20) return [id];
+    return pick(id, role).flatMap((m) => resolve(m.id, role, depth + 1));
+  };
+  return {
+    entries: (id) => resolve(id, "INPUT"),
+    exits: (id) => resolve(id, "OUTPUT"),
+  };
 }
 
 // --- Alternative engines (#415) ------------------------------------------
