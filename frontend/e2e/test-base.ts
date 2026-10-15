@@ -31,6 +31,13 @@ const DEV_SECTIONS = ["examples", "references", "demos"];
 const ORIENTATION_OFFER_KEY = "psyneuview.orientation.offer";
 /** Folded Tutorials-menu sections (#8). Kept literal, like the keys above. */
 const TUTORIALS_FOLDED_KEY = "psyneuview.tutorials.foldedSections";
+/**
+ * Automatic layout (#24). Models now open "Like show_graph"; the suite was
+ * written against Layered (positions, the tutorials' screenshots), so it keeps
+ * Layered unless a spec asks otherwise. A spec about the default clears the key
+ * in its own `addInitScript`.
+ */
+const LAYOUT_DEFAULT_KEY = "psyneuview.graph.layoutDefault";
 
 /**
  * Start with the Open menu's catalog sections expanded.
@@ -77,6 +84,10 @@ async function expandOpenMenuSections(page: import("@playwright/test").Page) {
   await page.addInitScript((key) => {
     if (localStorage.getItem(key) === null) localStorage.setItem(key, "never");
   }, ORIENTATION_OFFER_KEY);
+  // #24: the suite's layouts are Layered unless a spec chooses (see above).
+  await page.addInitScript((key) => {
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, "layered");
+  }, LAYOUT_DEFAULT_KEY);
 }
 
 export const readOnlyTest = base.extend({

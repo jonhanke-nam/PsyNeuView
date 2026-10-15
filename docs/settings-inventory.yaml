@@ -297,7 +297,7 @@ settings:
     storage: browser localStorage (psyneuview.graph.layoutDefault); inside the Mac app, the app keeps it (PagePreferences, #218)
     control: setting-graph-layout-default
     notes: >-
-      Layered (default), Like show_graph, Radial or Force (#19). The
+      Like show_graph (default, #24), Layered, Radial or Force (#19). The
       arrangement a model gets when it has no layout of your own; changing
       it re-arranges the open model too if its layout is automatic. Like
       show_graph places each node where PsyNeuLink's show_graph() draws it

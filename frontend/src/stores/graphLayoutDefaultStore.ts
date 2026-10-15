@@ -2,8 +2,10 @@
  * Which automatic layout the graph view opens with: Settings ▸ Appearance ▸
  * Automatic layout (#19).
  *
- * Layered (Dagre) is the default; "Like show_graph" arranges every model the
- * way PsyNeuLink's show_graph() draws it. The layout menu on the graph
+ * "Like show_graph" is the default (#24): every model is arranged the way
+ * PsyNeuLink's show_graph() draws it, edges included. Layered (Dagre) is the
+ * fallback while show_graph's answer is on its way, and the one to pick for
+ * rows strictly by role. The layout menu on the graph
  * toolbar switches the model you have open, without changing this setting
  * (one control per setting, like the legend's own Show/Hide). Remembered per
  * browser; inside the Mac app the app keeps `psyneuview.` keys across
@@ -16,7 +18,7 @@ import type { LayoutStyle } from "@/stores/graphSettingsStore";
 import { recordSettingChanged } from "@/utils/activityLog";
 
 export const LAYOUT_DEFAULT_KEY = "psyneuview.graph.layoutDefault";
-export const DEFAULT_LAYOUT_STYLE: LayoutStyle = "layered";
+export const DEFAULT_LAYOUT_STYLE: LayoutStyle = "showgraph";
 
 export const LAYOUT_STYLES: { id: LayoutStyle; label: string; hint: string }[] = [
   { id: "layered", label: "Layered", hint: "Rows from inputs at the bottom to outputs at the top" },

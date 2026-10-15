@@ -8,7 +8,7 @@
  * preview shows the real thing too. Look-and-feel settings belong here
  * (docs/settings-etiquette.md §1). The graph legend's opening state (#7)
  * is here too: collapsed by default. So is the automatic layout the graph
- * view opens with (#19): Layered by default, or Like show_graph.
+ * view opens with (#19): Like show_graph by default (#24), or Layered.
  */
 
 import { LEGEND_STARTS, isLegendStart, useGraphLegendStore } from "@/stores/graphLegendStore";
