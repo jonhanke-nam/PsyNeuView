@@ -51,6 +51,7 @@ run-record-yaml.spec.ts
 run-set-survives-edit.spec.ts
 settings-panel.spec.ts
 shape-mismatch-explained.spec.ts
+show-graph-edge-courses.spec.ts
 show-graph-tab-fetch.spec.ts
 sidecar-placement.spec.ts
 spline-straightness.spec.ts

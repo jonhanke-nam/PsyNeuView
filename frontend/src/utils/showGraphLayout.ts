@@ -20,7 +20,8 @@
  * placement for the current graph exists, the Layered layout stands in.
  */
 
-import type { Node } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
+import type { Point, ShowGraphCurve } from "@/stores/showGraphCurvesStore";
 
 // Never shrink show_graph's picture, and cap the enlargement so one node with
 // a very short name (a narrow oval) doesn't spread the whole graph out.
@@ -36,6 +37,12 @@ export interface ShowGraphPlacement {
   nodes: Map<string, { x: number; y: number; w: number; h: number }>;
   /** show_graph's cluster boxes (top-left + size), keyed by composition name. */
   clusters: Map<string, { x: number; y: number; w: number; h: number }>;
+  /**
+   * show_graph's drawn edges, in its order (#23): the nodes each joins and its
+   * course as a cubic Bézier chain (3n+1 points), plus the arrow's tip when
+   * Graphviz drew one. Points in the same orientation as `nodes`.
+   */
+  edges: { tail: string; head: string; spline: Point[]; tip?: Point }[];
 }
 
 let current: ShowGraphPlacement | null = null;
@@ -102,9 +109,16 @@ interface GvObject {
   bb?: string;
   nodes?: number[];
 }
+interface GvEdge {
+  tail: number;
+  head: number;
+  pos?: string;
+  style?: string;
+}
 interface GvJson {
   bb: string;
-  objects?: GvObject[];
+  objects?: (GvObject & { _gvid?: number })[];
+  edges?: GvEdge[];
 }
 
 type GraphvizInstance = { layout: (dot: string, format: "json", engine: "dot") => string };
@@ -157,7 +171,30 @@ export function placementFromGraphviz(json: GvJson, signature: string): ShowGrap
       });
     }
   }
-  return { signature, nodes, clusters };
+  // Edges: only the drawn ones. show_graph adds many invisible edges just to
+  // steer the layout (style=invis); those aren't projections.
+  const names = new Map<number, string>();
+  (json.objects ?? []).forEach((o, i) => names.set(o._gvid ?? i, o.name));
+  const edges: ShowGraphPlacement["edges"] = [];
+  for (const e of json.edges ?? []) {
+    if (e.style === "invis" || !e.pos) continue;
+    const tail = names.get(e.tail);
+    const head = names.get(e.head);
+    if (!tail || !head) continue;
+    const spline: Point[] = [];
+    let tip: Point | undefined;
+    for (const tok of e.pos.trim().split(/\s+/)) {
+      if (tok.startsWith("e,")) {
+        const [x, y] = parsePair(tok.slice(2));
+        tip = { x, y: bbH - y };
+      } else if (!tok.startsWith("s,")) {
+        const [x, y] = parsePair(tok);
+        spline.push({ x, y: bbH - y });
+      }
+    }
+    if (spline.length >= 4) edges.push({ tail, head, spline, ...(tip ? { tip } : {}) });
+  }
+  return { signature, nodes, clusters, edges };
 }
 
 /** Identifies a layout: the graph's nodes and the show_graph options used. */
@@ -286,6 +323,15 @@ export function scaleFor(
   return { sx: scale, sy: scale };
 }
 
+/** Nodes placed like show_graph, and how a show_graph point maps onto them. */
+interface Placed {
+  nodes: Node[];
+  /** show_graph point -> flow coordinates, as the nodes were moved. */
+  toFlow: (p: Point) => Point;
+  /** Each placed node's box in flow coordinates (absolute top-left + size). */
+  boxes: Map<string, { x: number; y: number; w: number; h: number }>;
+}
+
 /**
  * Move nodes to their show_graph positions, enlarged by `scaleFor`. Frames
  * take their cluster's box; a frame's members are positioned relative to it
@@ -297,6 +343,25 @@ export function applyShowGraphPlacement(
   nodes: Node[],
   placement: ShowGraphPlacement | null = current,
 ): Node[] | null {
+  return place(nodes, placement)?.nodes ?? null;
+}
+
+/**
+ * The placement and, for each edge show_graph draws, its course on the canvas
+ * (#23). Edges show_graph doesn't draw, or that can't be matched, get none and
+ * route as usual.
+ */
+export function applyShowGraphPlacementWithCurves(
+  nodes: Node[],
+  edges: Edge[],
+  placement: ShowGraphPlacement | null = current,
+): { nodes: Node[]; curves: Record<string, ShowGraphCurve> } | null {
+  const placed = place(nodes, placement);
+  if (!placed || !placement) return null;
+  return { nodes: placed.nodes, curves: edgeCurves(edges, placement, placed) };
+}
+
+function place(nodes: Node[], placement: ShowGraphPlacement | null): Placed | null {
   if (!placement) return null;
   const mechs = nodes.filter((n) => n.type === "mechanismNode");
   const matched = mechs.filter((n) => placement.nodes.has(n.id));
@@ -348,8 +413,16 @@ export function applyShowGraphPlacement(
     shiftX = Math.min(shiftX, p.x);
     shiftY = Math.min(shiftY, p.y);
   }
+  const toFlow = (p: Point): Point => ({ x: p.x * sx - shiftX + PAD, y: p.y * sy - shiftY + PAD });
 
-  return nodes.map((n) => {
+  const boxes = new Map<string, { x: number; y: number; w: number; h: number }>();
+  for (const [id, p] of absTopLeft) {
+    const n = byId.get(id)!;
+    const { w, h } = frameSize.get(id) ?? nodeSize(n);
+    boxes.set(id, { x: p.x - shiftX + PAD, y: p.y - shiftY + PAD, w, h });
+  }
+
+  const placedNodes = nodes.map((n) => {
     let abs = absTopLeft.get(n.id);
     if (!abs) {
       // Members of a frame keep the position they were given; only loose
@@ -371,4 +444,161 @@ export function applyShowGraphPlacement(
       ...(size ? { style: { ...n.style, width: size.w, height: size.h } } : {}),
     };
   });
+  return { nodes: placedNodes, toFlow, boxes };
+}
+
+// Points sampled along each Bézier segment of show_graph's course.
+const SAMPLES_PER_SEGMENT = 12;
+
+function bezierPoint(p0: Point, p1: Point, p2: Point, p3: Point, t: number): Point {
+  const u = 1 - t;
+  const a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+  return { x: a * p0.x + b * p1.x + c * p2.x + d * p3.x, y: a * p0.y + b * p1.y + c * p2.y + d * p3.y };
+}
+
+/** show_graph's course as a polyline: the Bézier chain sampled, then the arrow tip. */
+export function sampleCourse(spline: Point[], tip?: Point): Point[] {
+  const out: Point[] = [spline[0]];
+  for (let i = 0; i + 3 < spline.length; i += 3) {
+    for (let k = 1; k <= SAMPLES_PER_SEGMENT; k++) {
+      out.push(bezierPoint(spline[i], spline[i + 1], spline[i + 2], spline[i + 3], k / SAMPLES_PER_SEGMENT));
+    }
+  }
+  if (tip) out.push(tip);
+  return out;
+}
+
+type Box = { x: number; y: number; w: number; h: number };
+// Mechanisms are drawn as the oval that fills their box, so a course is
+// trimmed at the oval, not the box's corners.
+const inside = (p: Point, b: Box) => {
+  const rx = b.w / 2, ry = b.h / 2;
+  if (rx <= 0 || ry <= 0) return false;
+  const dx = (p.x - (b.x + rx)) / rx, dy = (p.y - (b.y + ry)) / ry;
+  return dx * dx + dy * dy <= 1;
+};
+
+// Where the segment from `a` (inside the box) to `b` (outside) leaves it.
+function exitPoint(a: Point, b: Point, box: Box): Point {
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 20; i++) {
+    const mid = (lo + hi) / 2;
+    const p = { x: a.x + (b.x - a.x) * mid, y: a.y + (b.y - a.y) * mid };
+    if (inside(p, box)) lo = mid;
+    else hi = mid;
+  }
+  return { x: a.x + (b.x - a.x) * hi, y: a.y + (b.y - a.y) * hi };
+}
+
+/**
+ * Fit a course to run from the edge of the source oval to the edge of the
+ * target oval (each filling its node's box). Enlarged, show_graph's ovals and PsyNeuView's boxes differ: a
+ * course that starts inside a box is trimmed where it leaves it, and one that
+ * starts short of it (an oval taller than the box) gets a short straight
+ * lead-in from the box's edge. Null when nothing is left outside both boxes
+ * (the nodes overlap, or the course never leaves one).
+ */
+export function trimToBoxes(points: Point[], source: Box, target: Box): Point[] | null {
+  let first = 0;
+  while (first < points.length && inside(points[first], source)) first++;
+  let last = points.length - 1;
+  while (last >= 0 && inside(points[last], target)) last--;
+  if (first >= points.length || last < 0 || first > last) return null;
+  const out = points.slice(first, last + 1);
+  const center = (b: Box): Point => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
+  out.unshift(exitPoint(first > 0 ? points[first - 1] : center(source), points[first], source));
+  out.push(exitPoint(last < points.length - 1 ? points[last + 1] : center(target), points[last], target));
+  return out;
+}
+
+/** Drop points that add nothing to the shape (Ramer–Douglas–Peucker). */
+export function simplify(points: Point[], tolerance = 1.5): Point[] {
+  if (points.length <= 2) return points;
+  const [a, b] = [points[0], points[points.length - 1]];
+  const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+  let worst = 0, at = 0;
+  for (let i = 1; i < points.length - 1; i++) {
+    const p = points[i];
+    const d = Math.abs((b.x - a.x) * (a.y - p.y) - (a.x - p.x) * (b.y - a.y)) / len;
+    if (d > worst) { worst = d; at = i; }
+  }
+  if (worst <= tolerance) return [a, b];
+  return [...simplify(points.slice(0, at + 1), tolerance).slice(0, -1), ...simplify(points.slice(at), tolerance)];
+}
+
+/**
+ * Match show_graph's drawn edges to PsyNeuView's by the nodes they join, in
+ * order (several projections between the same pair), and put each course on
+ * the canvas.
+ */
+function edgeCurves(edges: Edge[], placement: ShowGraphPlacement, placed: Placed): Record<string, ShowGraphCurve> {
+  const pending = new Map<string, ShowGraphPlacement["edges"]>();
+  for (const e of placement.edges) {
+    const key = `${e.tail}\u0000${e.head}`;
+    (pending.get(key) ?? pending.set(key, []).get(key)!).push(e);
+  }
+  const curves: Record<string, ShowGraphCurve> = {};
+  for (const edge of edges) {
+    if (edge.source === edge.target) continue;
+    const queue = pending.get(`${edge.source}\u0000${edge.target}`);
+    const course = queue?.shift();
+    const sBox = placed.boxes.get(edge.source);
+    const tBox = placed.boxes.get(edge.target);
+    if (!course || !sBox || !tBox) continue;
+    const onCanvas = sampleCourse(course.spline, course.tip).map(placed.toFlow);
+    const trimmed = trimToBoxes(onCanvas, sBox, tBox);
+    if (!trimmed) continue;
+    curves[edge.id] = {
+      points: simplify(trimmed),
+      source: { x: sBox.x, y: sBox.y },
+      target: { x: tBox.x, y: tBox.y },
+    };
+  }
+  return curves;
+}
+
+/** A smooth SVG path through the points (Catmull–Rom, as cubic Béziers). */
+export function curvePath(points: Point[]): string {
+  if (points.length < 2) return "";
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] ?? points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] ?? p2;
+    const c1 = { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 };
+    const c2 = { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 };
+    d += ` C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
+
+/** The point `fraction` of the way along the polyline, by length. */
+export function pointAlong(points: Point[], fraction: number): Point {
+  const lens: number[] = [];
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const l = Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+    lens.push(l);
+    total += l;
+  }
+  let want = total * Math.min(1, Math.max(0, fraction));
+  for (let i = 0; i < lens.length; i++) {
+    if (want <= lens[i] || i === lens.length - 1) {
+      const t = lens[i] ? want / lens[i] : 0;
+      return { x: points[i].x + (points[i + 1].x - points[i].x) * t, y: points[i].y + (points[i + 1].y - points[i].y) * t };
+    }
+    want -= lens[i];
+  }
+  return points[0];
+}
+
+/**
+ * A few editable bends that keep a curve's shape, for when it is grabbed:
+ * its main turning points, or its middle if it is nearly straight.
+ */
+export function curveBends(points: Point[]): Point[] {
+  const corners = simplify(points, 8).slice(1, -1);
+  if (corners.length === 0) return [pointAlong(points, 0.5)];
+  return corners.slice(0, 4);
 }

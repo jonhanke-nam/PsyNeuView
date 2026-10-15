@@ -22,6 +22,8 @@ import {
   type EdgeProps,
 } from "@xyflow/react";
 import { routeAroundObstacles, renderStyledPathSafe, routeWaypoints, expandedCorners, type Rect } from "@/utils/edgeRouter";
+import { useShowGraphCurves, curveFits } from "@/stores/showGraphCurvesStore";
+import { curvePath, curveBends, pointAlong } from "@/utils/showGraphLayout";
 import {
   ovalOf, ovalBoundaryPoint, ellipsePoint, fanAttachPoint, laneOffsetFor, offsetAttach,
 } from "@/utils/edgeLanes";
@@ -252,8 +254,31 @@ export function ProjectionEdge({
   };
 
   const manual = !!(waypoints && waypoints.length > 0);
+  // #23: in the "Like show_graph" layout, follow show_graph's own course for
+  // this edge — while both nodes are where that layout put them. Moving one
+  // hands the edge back to normal routing; a hand-shaped edge stays manual.
+  const sgCurve = useShowGraphCurves((st) => st.curves[id]);
+  const posOf = (nid: string) => {
+    const n = nodeLookup.get(nid) as any;
+    return n?.internals?.positionAbsolute ?? n?.position;
+  };
+  const curve = !manual && sgCurve && curveFits(sgCurve, posOf(source), posOf(target)) ? sgCurve : null;
+  if (curve) {
+    // Attach where the course meets each box, so the dots, label and arrow
+    // sit on the drawn line.
+    const [first, last] = [curve.points[0], curve.points[curve.points.length - 1]];
+    sx = first.x; sy = first.y; tx = last.x; ty = last.y;
+  }
+  // Editable bends that keep the current shape when the edge is grabbed: the
+  // curve's turning points, or the auto-route's corners.
+  const autoBends = () =>
+    curve
+      ? curveBends(curve.points)
+      : routeWaypoints({ x: sx, y: sy }, { x: tx, y: ty }, collectObstacles(), { lateralOffset: bowOffset, margin: edgeNodeClearance });
   let edgePath: string;
-  if (manual) {
+  if (curve) {
+    edgePath = curvePath(curve.points);
+  } else if (manual) {
     // #963: honor the user's bends but obstacle-avoid between them so no leg
     // passes behind a node.
     edgePath = renderStyledPathSafe(
@@ -304,7 +329,7 @@ export function ProjectionEdge({
   // their fannedBezierPath; fan-out lanes (1a) route through here so their
   // de-crowded launch points still avoid every node (1c — never pass behind a
   // node). Returns null when the straight line is already clear.
-  if (avoidNodes && bundleSize <= 1 && !manual) {
+  if (avoidNodes && bundleSize <= 1 && !manual && !curve) {
     const obstacles: Rect[] = [];
     nodeLookup.forEach((n, nid) => {
       if (nid === source || nid === target) return;
@@ -334,8 +359,9 @@ export function ProjectionEdge({
   // Label sits at the staggered offset along the straight source→target
   // line (matches existing behavior; not strictly on-curve, but close
   // enough for the bow magnitudes in play).
-  const labelX = sx + (tx - sx) * labelOffset;
-  const labelY = sy + (ty - sy) * labelOffset;
+  const onCurve = curve ? pointAlong(curve.points, labelOffset) : null;
+  const labelX = onCurve ? onCurve.x : sx + (tx - sx) * labelOffset;
+  const labelY = onCurve ? onCurve.y : sy + (ty - sy) * labelOffset;
 
   const tooltip = (data as any)?.tooltip as string | undefined;
 
@@ -462,8 +488,8 @@ export function ProjectionEdge({
         // auto-routed around nodes, materialize those auto corners as editable
         // waypoints first — preserving the shape and making every corner behave
         // the same as a user bend.
-        if (wps.length === 0 && avoidNodes && bundleSize <= 1) {
-          const auto = routeWaypoints({ x: sx, y: sy }, { x: tx, y: ty }, collectObstacles(), { lateralOffset: bowOffset, margin: edgeNodeClearance });
+        if (wps.length === 0 && (curve || (avoidNodes && bundleSize <= 1))) {
+          const auto = autoBends();
           if (auto.length) {
             useEdgeAttach.getState().setWaypoints(id, auto);
             wps = auto;
@@ -503,7 +529,7 @@ export function ProjectionEdge({
   // is preserved and the index lines up.
   const promoteIfNeeded = () => {
     if (!(useEdgeAttach.getState().waypoints[id]?.length)) {
-      const auto = routeWaypoints({ x: sx, y: sy }, { x: tx, y: ty }, collectObstacles(), { lateralOffset: bowOffset, margin: edgeNodeClearance });
+      const auto = autoBends();
       if (auto.length) useEdgeAttach.getState().setWaypoints(id, auto);
     }
   };
@@ -540,9 +566,8 @@ export function ProjectionEdge({
         [{ x: sx, y: sy }, ...(waypoints as { x: number; y: number }[]), { x: tx, y: ty }],
         collectObstacles(),
       )
-    : (handlesActive && avoidNodes && bundleSize <= 1
-        ? routeWaypoints({ x: sx, y: sy }, { x: tx, y: ty }, collectObstacles(), { lateralOffset: bowOffset, margin: edgeNodeClearance })
-            .map((p) => ({ x: p.x, y: p.y, forced: true }))
+    : (handlesActive && (curve || (avoidNodes && bundleSize <= 1))
+        ? autoBends().map((p) => ({ x: p.x, y: p.y, forced: true }))
         : []);
 
   const effectiveStroke = isSelected
@@ -566,6 +591,8 @@ export function ProjectionEdge({
       <BaseEdge
         id={id}
         path={edgePath}
+        // #23: marks an edge drawn along show_graph's own course.
+        className={curve ? "pnv-edge-showgraph" : undefined}
         interactionWidth={0}
         style={{
           // Spread per-type style first (color, dasharray, base width), then
