@@ -326,7 +326,12 @@ export function openFrameEnds(
 // (#288) becomes a no-op — correct, since rank stretching is a layered idea.
 
 function nodeSize(node: Node): { w: number; h: number } {
-  if (node.type === "compositionNode") return { w: 300, h: 200 };
+  if (node.type === "compositionNode") {
+    // A frame's real size when it has one (an inset frame is sized to its
+    // members before Radial and Force run); else the default group box (#35).
+    const w = node.style?.width, h = node.style?.height;
+    return typeof w === "number" && typeof h === "number" ? { w, h } : { w: 300, h: 200 };
+  }
   if (node.type === "cimNode") return { w: 110, h: 30 };
   return { w: 180, h: 60 };
 }
@@ -362,6 +367,35 @@ function repositionTopLevel(
 // Radial / tree: rank top-level nodes by BFS distance from the source nodes
 // (no incoming edges) and place each rank on a concentric ring. Good for
 // clearly hierarchical pipelines.
+/**
+ * The edges between top-level nodes that Radial and Force arrange (#35). A
+ * frame's members keep their places inside it, so an edge to or from a member
+ * counts as one to or from its outermost frame. Without this a frame whose
+ * edges all end on its members looked unconnected: Force pushed it away with
+ * nothing pulling it back (EGO flattened: thousands of pixels off, beyond the
+ * furthest zoom), and Radial left it on the outer ring.
+ */
+export function topLevelEdges(nodes: Node[], edges: Edge[]): { source: string; target: string }[] {
+  const parentOf = new Map(nodes.map((n) => [n.id, n.parentId]));
+  const top = (id: string) => {
+    let cur = id;
+    for (let i = 0; i < 50 && parentOf.get(cur); i++) cur = parentOf.get(cur)!;
+    return cur;
+  };
+  const seen = new Set<string>();
+  const out: { source: string; target: string }[] = [];
+  for (const e of edges) {
+    if (!parentOf.has(e.source) || !parentOf.has(e.target)) continue;
+    const source = top(e.source);
+    const target = top(e.target);
+    const key = `${source}\u0000${target}`;
+    if (source === target || seen.has(key)) continue;
+    seen.add(key);
+    out.push({ source, target });
+  }
+  return out;
+}
+
 export function applyRadialLayout(nodes: Node[], edges: Edge[]): Node[] {
   const top = nodes.filter((n) => !n.parentId);
   if (top.length === 0) return nodes;
@@ -373,8 +407,8 @@ export function applyRadialLayout(nodes: Node[], edges: Edge[]): Node[] {
     adj.set(n.id, []);
     indeg.set(n.id, 0);
   }
-  for (const e of edges) {
-    if (!ids.has(e.source) || !ids.has(e.target) || e.source === e.target) continue;
+  for (const e of topLevelEdges(nodes, edges)) {
+    if (!ids.has(e.source) || !ids.has(e.target)) continue;
     adj.get(e.source)!.push(e.target);
     adj.get(e.target)!.push(e.source);
     indeg.set(e.target, (indeg.get(e.target) ?? 0) + 1);
@@ -444,7 +478,7 @@ export function applyForceLayout(nodes: Node[], edges: Edge[]): Node[] {
     pos.set(node.id, { x: seedX, y: seedY });
   });
 
-  const eList = edges.filter((e) => ids.has(e.source) && ids.has(e.target) && e.source !== e.target);
+  const eList = topLevelEdges(nodes, edges).filter((e) => ids.has(e.source) && ids.has(e.target));
   const k = Math.sqrt((900 * 900) / n); // ideal edge length
   let temp = 320;
   const ITERS = 250;
@@ -500,7 +534,39 @@ export function applyForceLayout(nodes: Node[], edges: Edge[]): Node[] {
     }
     temp *= 0.96;
   }
+  separateBoxes(top, pos);
   return repositionTopLevel(nodes, pos);
+}
+
+/**
+ * Push overlapping top-level boxes apart (#35). Force treats nodes as points,
+ * so a node could land on top of a big frame (EGO flattened: STATE and
+ * PREDICTION inside EM's box). Each overlapping pair is separated along the
+ * axis that needs the smaller move, and the smaller box moves, so a frame stays
+ * where the simulation put it.
+ */
+function separateBoxes(top: Node[], centers: Map<string, { x: number; y: number }>) {
+  const GAP = 30;
+  const size = new Map(top.map((n) => [n.id, nodeSize(n)]));
+  for (let pass = 0; pass < 60; pass++) {
+    let moved = false;
+    for (let i = 0; i < top.length; i++) {
+      for (let j = i + 1; j < top.length; j++) {
+        const [a, b] = [top[i].id, top[j].id];
+        const pa = centers.get(a)!, pb = centers.get(b)!;
+        const sa = size.get(a)!, sb = size.get(b)!;
+        const ox = (sa.w + sb.w) / 2 + GAP - Math.abs(pa.x - pb.x);
+        const oy = (sa.h + sb.h) / 2 + GAP - Math.abs(pa.y - pb.y);
+        if (ox <= 0 || oy <= 0) continue;
+        const mover = sa.w * sa.h <= sb.w * sb.h ? pa : pb;
+        const other = mover === pa ? pb : pa;
+        if (ox < oy) mover.x += (mover.x >= other.x ? 1 : -1) * ox;
+        else mover.y += (mover.y >= other.y ? 1 : -1) * oy;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
 }
 
 // --- INSET nested-composition mode (#427) --------------------------------
