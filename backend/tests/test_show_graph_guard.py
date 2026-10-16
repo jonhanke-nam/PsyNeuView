@@ -100,7 +100,7 @@ class TestAgainstRealPsyNeuLink:
         restore = suppress_show_graph(pnl.Composition)
         try:
             # AutodiffComposition is the class that defines the shadowing
-            # override; EMComposition is what Samuel's model builds.
+            # override; EMComposition is what a tester's model builds.
             assert pnl.AutodiffComposition.show_graph.__name__ == "noop"
             assert pnl.EMComposition.show_graph.__name__ == "noop"
             assert pnl.Composition.show_graph.__name__ == "noop"

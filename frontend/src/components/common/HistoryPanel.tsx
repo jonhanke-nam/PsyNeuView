@@ -4,7 +4,7 @@
  *
  * #1093: each entry expands to show how that action changed the .py source.
  * A graph edit rewrites the file, but the user never saw what it wrote — which
- * is a trust problem and, as Samuel put it, a learning one: doing something
+ * is a trust problem and, as a tester put it, a learning one: doing something
  * visually and reading back the code is how you find out how to do it
  * programmatically. Snapshots already carry `source`, so the diff is derived
  * from state that was there all along.
