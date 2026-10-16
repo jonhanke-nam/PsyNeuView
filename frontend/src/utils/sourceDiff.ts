@@ -2,7 +2,7 @@
  * Line diff between two versions of a model's source. (#1093)
  *
  * A graph edit rewrites the .py file, but the user never sees what it wrote.
- * Samuel's point was that this is not only a trust problem — it is a learning
+ * A tester's point was that this is not only a trust problem — it is a learning
  * one: "some of the graphical things I can do I am not sure how to do
  * programmatically". Showing the lines an edit added and removed turns the
  * graph into a way of reading the API.

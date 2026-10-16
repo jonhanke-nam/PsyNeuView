@@ -24,7 +24,7 @@ def _hosted(monkeypatch):
 
 
 def test_reads_the_proxy_header():
-    assert presence.identity_from_headers({"x-forwarded-user": "lance"}) == "lance"
+    assert presence.identity_from_headers({"x-forwarded-user": "alex"}) == "alex"
 
 
 def test_accepts_the_other_header_spellings():
@@ -38,7 +38,7 @@ def test_accepts_the_other_header_spellings():
         "x-remote-user",
         "remote-user",
     ):
-        assert presence.identity_from_headers({header: "lance"}) == "lance"
+        assert presence.identity_from_headers({header: "alex"}) == "alex"
 
 
 def test_no_proxy_means_no_identity():
@@ -59,33 +59,33 @@ def test_email_is_shown_as_its_local_part():
 def test_one_person_with_two_tabs_is_one_peer():
     """The mistake this module exists to avoid."""
     r = Registry()
-    r.register("tab-1", "lance")
-    r.register("tab-2", "lance")
-    assert [p.identity for p in r.peers()] == ["lance"]
-    assert r.connection_count("lance") == 2
+    r.register("tab-1", "alex")
+    r.register("tab-2", "alex")
+    assert [p.identity for p in r.peers()] == ["alex"]
+    assert r.connection_count("alex") == 2
 
 
 def test_your_own_second_tab_is_not_company():
     r = Registry()
-    r.register("tab-1", "lance")
-    r.register("tab-2", "lance")
+    r.register("tab-1", "alex")
+    r.register("tab-2", "alex")
     assert r.others("tab-1") == []
 
 
 def test_someone_else_is_company():
     r = Registry()
     r.register("mine", "jonhanke-nam")
-    r.register("theirs", "lance")
-    assert [p.label for p in r.others("mine")] == ["lance"]
+    r.register("theirs", "alex")
+    assert [p.label for p in r.others("mine")] == ["alex"]
 
 
 def test_closing_one_tab_does_not_remove_the_person():
     r = Registry()
-    r.register("tab-1", "lance")
-    r.register("tab-2", "lance")
-    r.register("mine", "jon")
+    r.register("tab-1", "alex")
+    r.register("tab-2", "alex")
+    r.register("mine", "casey")
     r.unregister("tab-1")
-    assert [p.label for p in r.others("mine")] == ["lance"]
+    assert [p.label for p in r.others("mine")] == ["alex"]
     r.unregister("tab-2")
     assert r.others("mine") == []
 
@@ -123,9 +123,9 @@ def test_alone_and_cannot_tell_are_different_answers(monkeypatch):
 
 
 def test_snapshot_names_the_others():
-    presence.registry.register("mine", "jon")
-    presence.registry.register("theirs", "lance")
-    assert presence.snapshot_for("mine")["others"] == ["lance"]
+    presence.registry.register("mine", "casey")
+    presence.registry.register("theirs", "alex")
+    assert presence.snapshot_for("mine")["others"] == ["alex"]
 
 
 @pytest.mark.parametrize("mode,expected", [
@@ -146,12 +146,12 @@ def test_two_people_see_each_other_over_the_socket(monkeypatch):
     from app.main import app
 
     client = TestClient(app)
-    with client.websocket_connect("/ws", headers={"x-forwarded-user": "jon"}) as a:
+    with client.websocket_connect("/ws", headers={"x-forwarded-user": "casey"}) as a:
         assert a.receive_json() == {"type": "presence", "available": True, "others": []}
-        with client.websocket_connect("/ws", headers={"x-forwarded-user": "lance"}) as b:
+        with client.websocket_connect("/ws", headers={"x-forwarded-user": "alex"}) as b:
             # Arrival is announced to both, each from their own point of view.
-            assert b.receive_json()["others"] == ["jon"]
-            assert a.receive_json()["others"] == ["lance"]
+            assert b.receive_json()["others"] == ["casey"]
+            assert a.receive_json()["others"] == ["alex"]
 
 
 def test_a_second_tab_does_not_look_like_a_colleague(monkeypatch):
@@ -160,9 +160,9 @@ def test_a_second_tab_does_not_look_like_a_colleague(monkeypatch):
     from app.main import app
 
     client = TestClient(app)
-    with client.websocket_connect("/ws", headers={"x-forwarded-user": "jon"}) as a:
+    with client.websocket_connect("/ws", headers={"x-forwarded-user": "casey"}) as a:
         a.receive_json()
-        with client.websocket_connect("/ws", headers={"x-forwarded-user": "jon"}) as b:
+        with client.websocket_connect("/ws", headers={"x-forwarded-user": "casey"}) as b:
             assert b.receive_json()["others"] == []
             assert a.receive_json()["others"] == []
 

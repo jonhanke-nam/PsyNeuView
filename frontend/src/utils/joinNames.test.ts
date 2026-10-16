@@ -11,8 +11,8 @@ function joinNames(names: string[]): string {
 describe("name list phrasing", () => {
   it("reads the way a person would say it", () => {
     expect(joinNames([])).toBe("");
-    expect(joinNames(["lance"])).toBe("lance");
-    expect(joinNames(["lance", "jdc"])).toBe("lance and jdc");
-    expect(joinNames(["lance", "jdc", "jon"])).toBe("lance, jdc and jon");
+    expect(joinNames(["alex"])).toBe("alex");
+    expect(joinNames(["alex", "blake"])).toBe("alex and blake");
+    expect(joinNames(["alex", "blake", "casey"])).toBe("alex, blake and casey");
   });
 });

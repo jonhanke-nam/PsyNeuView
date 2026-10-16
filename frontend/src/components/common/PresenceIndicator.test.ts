@@ -15,8 +15,8 @@ describe("presence store", () => {
   });
 
   it("records who else is connected", () => {
-    usePresenceStore.getState().setPresence(true, ["lance"]);
-    expect(usePresenceStore.getState().others).toEqual(["lance"]);
+    usePresenceStore.getState().setPresence(true, ["alex"]);
+    expect(usePresenceStore.getState().others).toEqual(["alex"]);
     expect(usePresenceStore.getState().available).toBe(true);
   });
 
@@ -30,7 +30,7 @@ describe("presence store", () => {
 
   it("stops claiming to know when the socket drops", () => {
     // Losing the connection makes the answer unknown, not "nobody".
-    usePresenceStore.getState().setPresence(true, ["lance"]);
+    usePresenceStore.getState().setPresence(true, ["alex"]);
     usePresenceStore.getState().reset();
     expect(usePresenceStore.getState().available).toBe(false);
     expect(usePresenceStore.getState().others).toEqual([]);
