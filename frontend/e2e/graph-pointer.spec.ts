@@ -181,12 +181,13 @@ test.describe("the pointer in the graph view (#1301)", { tag: "@ci" }, () => {
     await loadModel(page);
     expect(await computedCursor(page, ".react-flow__pane")).toBe(xlarge);
 
-    // Hand: React Flow's own cursors, grab on the pane and the edge's hit path.
+    // Hand: React Flow's own cursors, grab on the pane. The model is in Auto,
+    // where an edge can be selected but not shaped (#41): a pointer, not a hand.
     await openAppearance(page);
     await page.getByTestId("setting-graph-pointer").selectOption("hand");
     await page.keyboard.press("Escape");
     expect(await computedCursor(page, ".react-flow__pane")).toBe("grab");
-    expect(await computedCursor(page, ".projection-edge-hit")).toBe("grab");
+    expect(await computedCursor(page, ".projection-edge-hit")).toBe("pointer");
     await loadModel(page);
     expect(await computedCursor(page, ".react-flow__pane")).toBe("grab");
   });
