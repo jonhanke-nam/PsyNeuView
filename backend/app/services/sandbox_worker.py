@@ -2934,10 +2934,15 @@ def _flatten_graph(comp, line_map, proj_name_lookup, name_to_var):
             if receiver is None:
                 continue
             if is_cim(receiver):
-                if id(receiver) in visited_cims:
+                # #33: follow only the CIM port this projection arrives on. A
+                # CIM's input port i relays to its output port i, so walking
+                # every efferent of the CIM would join each outer node to
+                # every inner node behind the interface.
+                port = proj.receiver
+                if id(port) in visited_cims:
                     continue
-                visited_cims.add(id(receiver))
-                for nxt in efferent.get(id(receiver), []):
+                visited_cims.add(id(port))
+                for nxt in _cim_relay(receiver, port, efferent):
                     stack.append((nxt, chain + [nxt]))
                 continue
             if id(receiver) not in real_ids:
@@ -2951,6 +2956,25 @@ def _flatten_graph(comp, line_map, proj_name_lookup, name_to_var):
             )
 
     return flat_nodes, flat_projections
+
+
+def _cim_relay(cim, in_port, efferent):
+    """Projections leaving ``cim`` from the output port paired with ``in_port``.
+
+    A CompositionInterfaceMechanism pairs its input and output ports by
+    position. When that pairing can't be read (a port the CIM doesn't list,
+    or uneven port counts), fall back to every efferent of the CIM.
+    """
+    everything = efferent.get(id(cim), [])
+    try:
+        inputs = list(cim.input_ports)
+        outputs = list(cim.output_ports)
+        if len(inputs) != len(outputs):
+            return everything
+        out_port = outputs[inputs.index(in_port)]
+    except (ValueError, AttributeError, TypeError):
+        return everything
+    return [p for p in everything if getattr(p, "sender", None) is out_port]
 
 
 def _pytorch_flatten(comp, line_map, proj_name_lookup, name_to_var):
@@ -3415,6 +3439,13 @@ def serialize_composition(var_name, comp, line_map, proj_name_lookup=None, name_
         # not at all), which nodes take targets, and what each epoch reports.
         "learningProfile": _learning_profile(comp, is_autodiff),
         "flattened": flat or pytorch_applied,
+        # #48: the compositions nested directly inside this one, by name. The
+        # flat view inlines them out of `nodes`, so this is how the frontend
+        # still knows the nesting (which composition is outermost, and whether
+        # there is anything to flatten).
+        "childCompositions": [
+            n.name for n in comp.nodes if isinstance(n, pnl.Composition)
+        ],
         "pytorchView": pytorch_applied,
         "nodes": nodes,
         "projections": projections,

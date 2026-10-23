@@ -139,3 +139,36 @@ def test_flat_em_baseline_node_count_and_edges():
 
     # Nodes pulled out of the EM sub-composition carry it in their path.
     assert any(n.get("compPath") for n in flat["nodes"])
+
+
+def test_flat_em_crossings_follow_their_own_port():
+    """#33: an edge that crosses EM's interface joins only the node behind the
+    port it arrives on, as show_graph draws it — not every node behind the
+    interface. Each edge name is unique, so the canvas gets one edge per id."""
+    model = REFERENCE_MODELS / "Giallanza2024_ego_study2.py"
+    if not model.exists():
+        pytest.skip("EGO reference model not present")
+    comp, _ = _load_comp(model, "EGO_comp")
+    flat = _serialize(comp, "EGO_comp", flat=True)
+
+    crossings = {
+        (clean_name(e["sender"]["mechanism"]), clean_name(e["receiver"]["mechanism"]))
+        for e in flat["projections"]
+        if "CIM" in e["name"]
+    }
+    assert crossings == {
+        ("STATE", "STATE [VALUE]"),
+        ("PREVIOUS STATE", "PREVIOUS STATE [QUERY]"),
+        ("CONTEXT [NORMALIZED]", "CONTEXT [QUERY]"),
+        ("STATE [RETRIEVED]", "PREDICTION"),
+    }
+    names = [e["name"] for e in flat["projections"]]
+    assert len(names) == len(set(names))
+
+
+def test_child_compositions_listed_in_every_view(nested):
+    """#48: the flat view inlines nested compositions out of `nodes`, so each
+    composition also names its direct children for the frontend."""
+    for flat in (False, True):
+        out = _serialize(nested, "outer_comp", flat=flat)
+        assert [clean_name(c) for c in out["childCompositions"]] == ["inner_comp"]
