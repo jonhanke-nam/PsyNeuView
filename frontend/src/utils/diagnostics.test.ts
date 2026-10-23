@@ -86,7 +86,7 @@ describe("collectDiagnostics", () => {
     expect(snap.state.ui.openMenu).toEqual({ order: expect.any(Array), shownDevSections: [], collapsed: [] });
     expect(snap.state.ui.layout.visiblePanes).toEqual(expect.arrayContaining(["graph"]));
     expect(snap.state.ui.graph).toEqual(
-      expect.objectContaining({ edgeStyle: expect.any(String), pointer: "arrow", pointerSize: expect.any(String), view: "nested" }),
+      expect.objectContaining({ edgeStyle: expect.any(String), pointer: "arrow", pointerSize: expect.any(String), view: "flat" }),
     );
     expect(snap.state.ui.keyboardOverrides).toEqual({ count: 0, ids: [] });
     expect(snap.state.ui.walkthrough).toBeNull();
