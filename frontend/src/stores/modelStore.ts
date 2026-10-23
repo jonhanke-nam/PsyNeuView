@@ -620,6 +620,11 @@ interface ModelState {
 // mode from the model's saved sidecar. Reloads/toggles keep filePath stable, so
 // they leave this false and preserve the current Auto/Custom choice.
 let pendingFreshOpenLayout = false;
+// #47: which set of saved positions the last build read — the nested view's
+// or the flat/PyTorch view's. Switching between them re-picks Auto/Custom
+// like a fresh open: a view with nothing saved has no custom layout to keep,
+// and staying in Custom there would hide the automatic layout (#33).
+let lastPositionsView: "nested" | "flat" | null = null;
 // The last model error put in the activity log (#1287): a file under edit
 // reports the same error on every keystroke, and once is enough.
 let lastRecordedModelError: string | null = null;
@@ -987,7 +992,10 @@ export const useModelStore = create<ModelState>((set, get) => ({
     // fires for new-file opens (flagged in setFilePath); reloads, source edits,
     // and Auto/Custom toggles keep filePath stable and preserve the current
     // mode, so this never fights the toggle.
-    if (pendingFreshOpenLayout) {
+    const positionsView = isFlatView ? "flat" : "nested";
+    const viewChanged = lastPositionsView !== null && lastPositionsView !== positionsView;
+    lastPositionsView = positionsView;
+    if (pendingFreshOpenLayout || viewChanged) {
       pendingFreshOpenLayout = false;
       set({ autoLayout: Object.keys(savedPositions).length === 0 });
     }
