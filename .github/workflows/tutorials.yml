@@ -181,12 +181,24 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
 
+      # #59: the packages install-deps downloads are kept between runs, so a
+      # slow Ubuntu mirror costs nothing on a cache hit. apt writes them to a
+      # folder the cache action can read (the default is root-only).
+      - name: Restore apt package cache
+        id: apt-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/apt-archives
+          key: apt-archives-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
       - name: Install Playwright system deps (bounded, retried)
         working-directory: frontend
         timeout-minutes: 12
         run: |
-          # #59: apt waits up to 60 s for the dpkg lock instead of failing at once.
-          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nDPkg::Lock::Timeout "60";\n' \
+          # #59: apt waits up to 60 s for the dpkg lock instead of failing at
+          # once, and keeps downloaded packages in the cached folder.
+          mkdir -p "$HOME/.cache/apt-archives/partial"
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nDPkg::Lock::Timeout "60";\nDir::Cache::Archives "%s/.cache/apt-archives/";\n' "$HOME" \
             | sudo tee /etc/apt/apt.conf.d/99-ci-network-timeouts
           for attempt in 1 2; do
             timeout --kill-after=15 300 npx playwright install-deps chromium && exit 0
@@ -199,6 +211,20 @@ jobs:
             sudo dpkg --configure -a || true
           done
           exit 1
+
+      # Saved even when the install failed: each attempt's downloads still
+      # count, so the next run starts further along. apt wrote them as root;
+      # hand them back so the cache action can read them.
+      - name: Make apt's downloads readable for the cache
+        if: always() && steps.apt-cache.outputs.cache-hit != 'true'
+        run: sudo chown -R "$(id -u):$(id -g)" "$HOME/.cache/apt-archives" || true
+
+      - name: Save apt package cache
+        if: always() && steps.apt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/apt-archives
+          key: apt-archives-${{ runner.os }}-${{ steps.pw.outputs.version }}
 
       - name: Download Playwright browsers (bounded, retried)
         if: steps.pw-cache.outputs.cache-hit != 'true'
