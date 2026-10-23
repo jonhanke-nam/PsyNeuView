@@ -38,10 +38,19 @@ test("switching to a view with nothing saved goes back to Auto (#47)", { tag: "@
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(model);
   await prompt.press("Enter");
-  await expect(page.getByText(/^Layout: Custom$/)).toBeVisible({ timeout: 30000 });
+  // Opens flattened (#48), where nothing is saved: Auto.
+  const canvas = page.getByTestId("graph-canvas");
+  await expect(canvas.getByText("inner_a", { exact: true })).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText(/^Layout: Auto$/)).toBeVisible({ timeout: 15000 });
 
+  // The nested view has saved positions: Custom.
+  await viewSelect(page).selectOption("nested_minimal");
+  await expect(canvas.getByText("inner_comp").first()).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText(/^Layout: Custom$/)).toBeVisible({ timeout: 15000 });
+
+  // And back: the flat view still has nothing saved, so Auto again.
   await viewSelect(page).selectOption("__flat__");
-  await expect(page.getByTestId("graph-canvas").getByText("inner_a", { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(canvas.getByText("inner_a", { exact: true })).toBeVisible({ timeout: 15000 });
   await expect(
     page.getByText(/^Layout: Auto$/),
     "the flat view has no saved positions, so it should use the automatic layout",

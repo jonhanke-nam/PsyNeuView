@@ -37,6 +37,21 @@ test.describe("nested-composition CIM edges (#644)", { tag: "@ci" }, () => {
       page.getByText("Giallanza2024_ego_study2.py").first(),
     ).toBeVisible({ timeout: 30000 });
 
+    // CIM edges belong to the nested view; models open flattened (#48).
+    const viewSelect = page
+      .locator("select")
+      .filter({ has: page.locator("option", { hasText: "Flatten (all compositions)" }) })
+      .first();
+    await expect(viewSelect).toBeVisible({ timeout: 30000 });
+    const values = await viewSelect.locator("option").evaluateAll((os) =>
+      os.map((o) => (o as HTMLOptionElement).value),
+    );
+    const outer = values.find((v) => !v.startsWith("__"))!;
+    await Promise.all([
+      page.waitForResponse((r) => r.url().includes("/api/model/load") && r.request().method() === "POST"),
+      viewSelect.selectOption(outer),
+    ]);
+
     // Graph rendered at all.
     await expect(page.locator(".react-flow__edge").first()).toBeVisible({
       timeout: 30000,

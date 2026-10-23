@@ -625,6 +625,15 @@ let pendingFreshOpenLayout = false;
 // like a fresh open: a view with nothing saved has no custom layout to keep,
 // and staying in Custom there would hide the automatic layout (#33).
 let lastPositionsView: "nested" | "flat" | null = null;
+// #48: whether the loaded model nests a composition. Flattening a model that
+// doesn't changes nothing, so it keeps the nested view's saved positions.
+let loadedModelHasNesting = false;
+
+/** Whether saved positions and edge routes go in the flat/PyTorch namespace (#719). */
+export function usesFlatPositions(): boolean {
+  const gs = useGraphSettings.getState();
+  return (gs.flat && loadedModelHasNesting) || gs.pytorch;
+}
 // The last model error put in the activity log (#1287): a file under edit
 // reports the same error on every keystroke, and once is enough.
 let lastRecordedModelError: string | null = null;
@@ -984,7 +993,10 @@ export const useModelStore = create<ModelState>((set, get) => ({
     // #719: the flat / PyTorch (clustered) view stores its positions in a
     // separate namespace (frame-relative coords) so they don't collide with the
     // nested view's. Read whichever matches the active view.
-    const isFlatView = useGraphSettings.getState().flat || useGraphSettings.getState().pytorch;
+    loadedModelHasNesting = (modelData.compositions || []).some(
+      (c: any) => (c.childCompositions || []).length > 0,
+    );
+    const isFlatView = usesFlatPositions();
     const savedPositions = (isFlatView ? layout?.flatPositions : layout?.positions) || {};
 
     // #614: on a genuinely fresh open, restore the model's saved layout —
@@ -1044,6 +1056,12 @@ export const useModelStore = create<ModelState>((set, get) => ({
           nestedCompLabels.push(cleanN(node.name));
         }
       }
+      // #48: the flat view inlines nested compositions out of `nodes`; the
+      // backend still names them, so the outermost one is found either way.
+      for (const child of comp.childCompositions || []) {
+        nestedNames.add(child);
+        nestedNames.add(cleanN(child));
+      }
     }
     // Collapse nested compositions on first sight so big models (e.g. EGO's
     // EMComposition) open as a single super-node instead of an exploded
@@ -1075,7 +1093,14 @@ export const useModelStore = create<ModelState>((set, get) => ({
           depth,
           nested: isNestedNode,
         });
-        walkOptions((c.nodes || []).filter((n: any) => n.kind === "composition"), depth + 1);
+        const inline = (c.nodes || []).filter((n: any) => n.kind === "composition");
+        // #48: flattened, the children are only named; use their own entries.
+        const children = inline.length
+          ? inline
+          : (c.childCompositions || [])
+              .map((nm: string) => allComps.find((x: any) => x.name === nm || cleanN(x.name || "") === cleanN(nm)))
+              .filter(Boolean);
+        walkOptions(children, depth + 1);
       }
     };
     walkOptions(allComps, 0);
@@ -2081,7 +2106,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     // name, so a renamed projection keeps its shape; edges whose key more than
     // one edge claims are skipped rather than guessed at.
     const savedRoutes = (layout as any)?.[
-      useGraphSettings.getState().flat || useGraphSettings.getState().pytorch
+      usesFlatPositions()
         ? "flatEdgeRoutes"
         : "edgeRoutes"
     ] as EdgeRouteMap | undefined;

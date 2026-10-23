@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useModelStore } from "@/stores/modelStore";
+import { useModelStore, usesFlatPositions } from "@/stores/modelStore";
 import { EDGE_ROUTING_OPTIONS, useGraphSettings } from "@/stores/graphSettingsStore";
 import { usePaletteStore } from "@/stores/paletteStore";
 import { applyLayout } from "@/utils/layout";
@@ -85,8 +85,7 @@ export function GraphToolbar() {
       // nested) doesn't drop the other view's unique node positions.
       const merged = { ...useModelStore.getState().lastLayoutPositions, ...positions };
       // #719: flat / PyTorch view positions go to their own namespace.
-      const gs = useGraphSettings.getState();
-      const body = gs.flat || gs.pytorch
+      const body = usesFlatPositions()
         ? { file_path: filePath, flatPositions: merged }
         : { file_path: filePath, positions: merged };
       fetch("/api/model/save-layout", {
