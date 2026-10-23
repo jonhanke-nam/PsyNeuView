@@ -121,7 +121,15 @@ function AutosaveRows() {
             max={AUTOSAVE_MAX_SECONDS}
             step={1}
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              // Kept as typed (#37): closing Settings with Escape or ✕ unmounts
+              // the field without a blur, so waiting for blur or Enter lost it.
+              // An out-of-range value waits for blur/Enter to be clamped.
+              const n = Number(e.target.value);
+              if (e.target.value !== "" && Number.isInteger(n) && n === clampAutosaveSeconds(n) && n !== seconds)
+                void change({ seconds: n });
+            }}
             onBlur={commitSeconds}
             onKeyDown={(e) => {
               if (e.key === "Enter") commitSeconds();
