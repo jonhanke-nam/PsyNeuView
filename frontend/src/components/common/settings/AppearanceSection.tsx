@@ -9,6 +9,8 @@
  * (docs/settings-etiquette.md §1). The graph legend's opening state (#7)
  * is here too: collapsed by default. So is the automatic layout the graph
  * view opens with (#19): Like show_graph by default (#24), or Layered.
+ * And how heavy node outlines are (#42): one width, remembered per browser
+ * (stores/nodeOutlineStore.ts), that the heavier outlines follow.
  */
 
 import { LEGEND_STARTS, isLegendStart, useGraphLegendStore } from "@/stores/graphLegendStore";
@@ -23,6 +25,13 @@ import { useModelStore } from "@/stores/modelStore";
 import { applyLayout } from "@/utils/layout";
 import { applyShowGraphLayoutNow } from "@/hooks/useShowGraphLayout";
 import { useGraphPointerStore } from "@/stores/graphPointerStore";
+import {
+  NODE_OUTLINE_EMPHASIS_EXTRA,
+  NODE_OUTLINE_SELECTED_EXTRA,
+  NODE_OUTLINE_WIDTHS,
+  useNodeOutlineStore,
+  useNodeOutlineWidth,
+} from "@/stores/nodeOutlineStore";
 import {
   GRAPH_POINTERS,
   POINTER_SIZES,
@@ -41,6 +50,9 @@ export function AppearanceSection() {
         <div style={{ marginTop: 14 }}>
           <PointerSizeRow />
         </div>
+      </Group>
+      <Group id="node-outlines" title="Node outlines">
+        <NodeOutlineRow />
       </Group>
       <Group id="automatic-layout" title="Automatic layout">
         <AutomaticLayoutRow />
@@ -212,6 +224,35 @@ function PointerSizeRow() {
           <span style={mutedStyle}>{image.px} px</span>
         </div>
       </div>
+    </div>
+  );
+}
+
+function NodeOutlineRow() {
+  const width = useNodeOutlineWidth();
+  const defaultWidth = useNodeOutlineStore((s) => s.defaultWidth);
+  const setWidth = useNodeOutlineStore((s) => s.setWidth);
+  return (
+    <div style={{ fontSize: 13 }}>
+      <SettingLabel title="Outline width" htmlFor="setting-node-outline">
+        How heavy a node's outline is in the graph view. INPUT, OUTPUT and
+        CONTROL nodes are drawn {NODE_OUTLINE_EMPHASIS_EXTRA} px heavier, and a
+        selected or running node {NODE_OUTLINE_SELECTED_EXTRA} px heavier
+        again, so they stand out at every width.
+      </SettingLabel>
+      <select
+        id="setting-node-outline"
+        data-testid="setting-node-outline"
+        value={String(width)}
+        onChange={(e) => setWidth(Number(e.target.value))}
+        style={selectStyle}
+      >
+        {NODE_OUTLINE_WIDTHS.map((w) => (
+          <option key={w} value={String(w)}>
+            {w} px{w === defaultWidth ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
