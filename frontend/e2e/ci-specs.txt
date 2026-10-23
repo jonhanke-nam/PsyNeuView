@@ -8,6 +8,7 @@ dialog-sweep.spec.ts
 edge-routing-no-crossings.spec.ts
 edge-shaping-auto-layout.spec.ts
 external-edit-sync.spec.ts
+fit-frames-edges.spec.ts
 flat-layout-namespace.spec.ts
 flat-view.spec.ts
 github-file-loader.spec.ts
