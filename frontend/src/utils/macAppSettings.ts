@@ -70,6 +70,8 @@ export interface MacAppUpdate {
   /** The waiting version, as people read it; present when available. */
   version?: string;
   releaseNotesURL?: string | null;
+  /** When it was released, an ISO time (#15); null or absent when unknown. */
+  releasedAt?: string | null;
 }
 
 export type ReportSendWith = "ask" | "mail" | "outlook" | "gmail";

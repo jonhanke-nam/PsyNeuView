@@ -5,6 +5,8 @@
 
 import { useState } from "react";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
+import { Button } from "@/components/common/Button";
+import { openSettings } from "@/components/common/settings/sections";
 import { ROLE_TOKENS } from "@/constants/pnlTypes";
 import { paletteHex } from "@/utils/paletteColor";
 
@@ -44,7 +46,6 @@ export function GraphStylePanel() {
   const arrowheadSize = useGraphSettings((s) => s.arrowheadSize);
   const arrowheadPosition = useGraphSettings((s) => s.arrowheadPosition);
   // #912: node oval border width (emphasis roles — the visible one).
-  const nodeBorderWidthEmphasis = useGraphSettings((s) => s.nodeBorderWidthEmphasis);
   // #955/#956: edge spacing knobs, applied live.
   const edgeLaneGap = useGraphSettings((s) => s.edgeLaneGap);
   const edgeNodeClearance = useGraphSettings((s) => s.edgeNodeClearance);
@@ -168,18 +169,11 @@ export function GraphStylePanel() {
       <div style={{ fontWeight: 600, color: "var(--pnv-text-body)", marginBottom: 8, marginTop: 12, borderBottom: "1px solid var(--pnv-border-faint)", paddingBottom: 4 }}>
         Nodes
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-        <span style={{ minWidth: 110 }}>Border width</span>
-        <input
-          type="range"
-          min={1}
-          max={6}
-          step={0.5}
-          value={nodeBorderWidthEmphasis}
-          onChange={(e) => useGraphSettings.getState().setNodeBorderWidthEmphasis(Number(e.target.value))}
-          style={{ flex: 1 }}
-        />
-        <span style={{ fontFamily: "monospace", minWidth: 28, textAlign: "right" }}>{nodeBorderWidthEmphasis}</span>
+      {/* One control per setting (#42): the outline widths live in Settings. */}
+      <div style={{ marginBottom: 6 }}>
+        <Button kind="link" data-testid="style-node-outlines-link" onClick={() => openSettings("appearance")}>
+          Outline width: Settings ▸ Appearance ▸ Node outlines
+        </Button>
       </div>
 
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>

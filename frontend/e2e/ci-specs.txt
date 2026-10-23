@@ -30,6 +30,7 @@ modulatory-param-edges.spec.ts
 narration-voice-setting.spec.ts
 nested-cluster-frames.spec.ts
 node-name-special-characters.spec.ts
+node-outlines.spec.ts
 occlusion-audit.spec.ts
 open-menu-custom-catalogs.spec.ts
 open-menu-dev-catalogs.spec.ts

@@ -18,7 +18,7 @@ import {
   onMacAppSettingsChanged,
   type MacAppUpdate,
 } from "@/utils/macAppSettings";
-import { loadDismissal, saveDismissal, shouldShowUpdateNotice, type Dismissal } from "@/utils/appUpdateNotice";
+import { loadDismissal, releasedPhrase, saveDismissal, shouldShowUpdateNotice, type Dismissal } from "@/utils/appUpdateNotice";
 
 export function AppUpdateNotice() {
   const [update, setUpdate] = useState<MacAppUpdate | null>(null);
@@ -40,6 +40,7 @@ export function AppUpdateNotice() {
 
   if (!shouldShowUpdateNotice(update, dismissal, Date.now())) return null;
   const version = update!.version!;
+  const released = releasedPhrase(update!.releasedAt);
 
   return (
     <div
@@ -59,7 +60,12 @@ export function AppUpdateNotice() {
         whiteSpace: "nowrap",
       }}
     >
-      <span>PsyNeuView {version} is available</span>
+      <span
+        data-testid="app-update-text"
+        title={update!.releasedAt ? `Released ${new Date(update!.releasedAt).toLocaleString()}` : undefined}
+      >
+        PsyNeuView {version} is available{released ? `, ${released}` : ""}
+      </span>
       <Button
         kind="small"
         data-testid="app-update-install"
