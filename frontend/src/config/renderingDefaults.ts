@@ -23,7 +23,10 @@ export interface RenderingDefaults {
   arrowheadPosition: number;
   /** Node oval border width for ordinary (non-emphasis) roles, px. */
   nodeBorderWidth: number;
-  /** Node oval border width for emphasis roles (INPUT/OUTPUT/CONTROL…), px. */
+  /**
+   * Node oval border width for emphasis roles (INPUT/OUTPUT/CONTROL…), px.
+   * Since #42 nodes draw this as nodeBorderWidth + 2 (stores/nodeOutlineStore.ts).
+   */
   nodeBorderWidthEmphasis: number;
 }
 
@@ -33,7 +36,7 @@ export const RENDERING_DEFAULTS: RenderingDefaults = {
   arrowheadSize: 7, // larger, more show_graph-like chevron
   arrowheadPosition: 0.5,
   nodeBorderWidth: 2, // ordinary roles (#42: was 1, too light to read)
-  nodeBorderWidthEmphasis: 3.5, // INPUT/OUTPUT/CONTROL… (#42: was 3)
+  nodeBorderWidthEmphasis: 4, // INPUT/OUTPUT/CONTROL…: the outline + 2 px since #42; not read for nodes
 };
 
 /**

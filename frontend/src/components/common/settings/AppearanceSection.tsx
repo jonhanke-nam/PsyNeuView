@@ -9,8 +9,8 @@
  * (docs/settings-etiquette.md §1). The graph legend's opening state (#7)
  * is here too: collapsed by default. So is the automatic layout the graph
  * view opens with (#19): Like show_graph by default (#24), or Layered.
- * And how heavy node outlines are (#42), remembered per browser too
- * (stores/nodeOutlineStore.ts).
+ * And how heavy node outlines are (#42): one width, remembered per browser
+ * (stores/nodeOutlineStore.ts), that the heavier outlines follow.
  */
 
 import { LEGEND_STARTS, isLegendStart, useGraphLegendStore } from "@/stores/graphLegendStore";
@@ -26,8 +26,9 @@ import { applyLayout } from "@/utils/layout";
 import { applyShowGraphLayoutNow } from "@/hooks/useShowGraphLayout";
 import { useGraphPointerStore } from "@/stores/graphPointerStore";
 import {
+  NODE_OUTLINE_EMPHASIS_EXTRA,
+  NODE_OUTLINE_SELECTED_EXTRA,
   NODE_OUTLINE_WIDTHS,
-  useNodeOutlineEmphasis,
   useNodeOutlineStore,
   useNodeOutlineWidth,
 } from "@/stores/nodeOutlineStore";
@@ -51,7 +52,7 @@ export function AppearanceSection() {
         </div>
       </Group>
       <Group id="node-outlines" title="Node outlines">
-        <NodeOutlineRows />
+        <NodeOutlineRow />
       </Group>
       <Group id="automatic-layout" title="Automatic layout">
         <AutomaticLayoutRow />
@@ -227,27 +228,17 @@ function PointerSizeRow() {
   );
 }
 
-// The widths offered, with the default marked.
-function outlineOptions(fallback: number) {
-  return NODE_OUTLINE_WIDTHS.map((w) => (
-    <option key={w} value={String(w)}>
-      {w} px{w === fallback ? " (default)" : ""}
-    </option>
-  ));
-}
-
-function NodeOutlineRows() {
+function NodeOutlineRow() {
   const width = useNodeOutlineWidth();
-  const emphasis = useNodeOutlineEmphasis();
   const defaultWidth = useNodeOutlineStore((s) => s.defaultWidth);
-  const defaultEmphasis = useNodeOutlineStore((s) => s.defaultEmphasis);
   const setWidth = useNodeOutlineStore((s) => s.setWidth);
-  const setEmphasis = useNodeOutlineStore((s) => s.setEmphasis);
   return (
     <div style={{ fontSize: 13 }}>
-      <SettingLabel title="Outline" htmlFor="setting-node-outline">
-        How heavy the outline of an ordinary node is in the graph view. A
-        selected or running node is always drawn heavier than this.
+      <SettingLabel title="Outline width" htmlFor="setting-node-outline">
+        How heavy a node's outline is in the graph view. INPUT, OUTPUT and
+        CONTROL nodes are drawn {NODE_OUTLINE_EMPHASIS_EXTRA} px heavier, and a
+        selected or running node {NODE_OUTLINE_SELECTED_EXTRA} px heavier
+        again, so they stand out at every width.
       </SettingLabel>
       <select
         id="setting-node-outline"
@@ -256,23 +247,12 @@ function NodeOutlineRows() {
         onChange={(e) => setWidth(Number(e.target.value))}
         style={selectStyle}
       >
-        {outlineOptions(defaultWidth)}
+        {NODE_OUTLINE_WIDTHS.map((w) => (
+          <option key={w} value={String(w)}>
+            {w} px{w === defaultWidth ? " (default)" : ""}
+          </option>
+        ))}
       </select>
-      <div style={{ marginTop: 14 }}>
-        <SettingLabel title="Emphasised outline" htmlFor="setting-node-outline-emphasis">
-          The outline of INPUT, OUTPUT and CONTROL nodes, when nodes are
-          coloured by role.
-        </SettingLabel>
-        <select
-          id="setting-node-outline-emphasis"
-          data-testid="setting-node-outline-emphasis"
-          value={String(emphasis)}
-          onChange={(e) => setEmphasis(Number(e.target.value))}
-          style={selectStyle}
-        >
-          {outlineOptions(defaultEmphasis)}
-        </select>
-      </div>
     </div>
   );
 }

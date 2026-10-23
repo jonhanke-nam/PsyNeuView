@@ -172,7 +172,7 @@ export function GraphStylePanel() {
       {/* One control per setting (#42): the outline widths live in Settings. */}
       <div style={{ marginBottom: 6 }}>
         <Button kind="link" data-testid="style-node-outlines-link" onClick={() => openSettings("appearance")}>
-          Outline widths: Settings ▸ Appearance ▸ Node outlines
+          Outline width: Settings ▸ Appearance ▸ Node outlines
         </Button>
       </div>
 

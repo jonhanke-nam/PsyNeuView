@@ -291,27 +291,18 @@ settings:
       doesn't scale cursors, so this is the one control for the size.
 
   - id: node-outline
-    label: Appearance ▸ Node outlines ▸ Outline
+    label: Appearance ▸ Node outlines ▸ Outline width
     home: settings
     section: appearance
     storage: browser localStorage (psyneuview.graph.nodeOutline)
     control: setting-node-outline
     notes: >-
-      Ordinary nodes' outline, 0.5–6 px in half pixels; 2 px by default
-      (#42, was 1). /rendering-defaults.json can retune the default; a width
-      chosen here wins. A selected or running node is drawn 1.5 px heavier.
-      The Style tab links here rather than keeping a control of its own.
-
-  - id: node-outline-emphasis
-    label: Appearance ▸ Node outlines ▸ Emphasised outline
-    home: settings
-    section: appearance
-    storage: browser localStorage (psyneuview.graph.nodeOutlineEmphasis)
-    control: setting-node-outline-emphasis
-    notes: >-
-      INPUT, OUTPUT and CONTROL nodes' outline when nodes are coloured by
-      role; 3.5 px by default (#42, was 3). Moved here from the Style tab's
-      Border width slider.
+      An ordinary node's outline, 1–6 px in whole pixels (Chrome draws
+      borders at whole pixels); 2 px by default (#42, was 1). The heavier
+      outlines follow it: INPUT, OUTPUT and CONTROL nodes + 2 px (replacing
+      the Style tab's Border width slider, which set them alone), a selected
+      or running node + 2 px more. /rendering-defaults.json can retune the
+      default; a width chosen here wins. The Style tab links here.
 
   - id: graph-layout-default
     label: Appearance ▸ Automatic layout ▸ How models are arranged

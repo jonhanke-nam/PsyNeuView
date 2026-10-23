@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// #42: node outline widths, remembered per browser. The suite runs on node,
+// #42: the node outline width, remembered per browser. The suite runs on node,
 // not jsdom (vitest.config.ts): stub localStorage, as graphLegendStore.test.ts does.
 const stored = new Map<string, string>();
 Object.defineProperty(globalThis, "localStorage", {
@@ -18,29 +18,32 @@ async function freshStore() {
   return import("./nodeOutlineStore");
 }
 
-describe("node outline widths", () => {
+const width = (m: Awaited<ReturnType<typeof freshStore>>) => {
+  const s = m.useNodeOutlineStore.getState();
+  return s.chosen ?? s.defaultWidth;
+};
+
+describe("node outline width", () => {
   beforeEach(() => localStorage.clear());
 
-  it("defaults to 2 px and 3.5 px", async () => {
-    const { useNodeOutlineStore } = await freshStore();
-    const s = useNodeOutlineStore.getState();
-    expect(s.chosen ?? s.defaultWidth).toBe(2);
-    expect(s.chosenEmphasis ?? s.defaultEmphasis).toBe(3.5);
+  it("defaults to 2 px, with emphasis and selection 2 px heavier", async () => {
+    const m = await freshStore();
+    expect(width(m)).toBe(2);
+    expect(m.NODE_OUTLINE_EMPHASIS_EXTRA).toBe(2);
+    expect(m.NODE_OUTLINE_SELECTED_EXTRA).toBe(2);
   });
 
   it("remembers a chosen width across page loads", async () => {
     let m = await freshStore();
     m.useNodeOutlineStore.getState().setWidth(3);
-    m.useNodeOutlineStore.getState().setEmphasis(5);
     m = await freshStore();
-    expect(m.useNodeOutlineStore.getState().chosen).toBe(3);
-    expect(m.useNodeOutlineStore.getState().chosenEmphasis).toBe(5);
+    expect(width(m)).toBe(3);
   });
 
-  it("keeps widths on the half-pixel grid inside the range", async () => {
+  it("keeps widths whole and inside the range", async () => {
     const { toOutlineWidth } = await freshStore();
-    expect(toOutlineWidth(2.3)).toBe(2.5);
-    expect(toOutlineWidth(0)).toBe(0.5);
+    expect(toOutlineWidth(2.4)).toBe(2);
+    expect(toOutlineWidth(0)).toBe(1);
     expect(toOutlineWidth(99)).toBe(6);
     expect(toOutlineWidth("nonsense")).toBeNull();
     expect(toOutlineWidth(null)).toBeNull();
@@ -48,18 +51,16 @@ describe("node outline widths", () => {
 
   it("ignores a stored value that isn't a width", async () => {
     localStorage.setItem("psyneuview.graph.nodeOutline", "heavy");
-    const { useNodeOutlineStore } = await freshStore();
-    expect(useNodeOutlineStore.getState().chosen).toBeNull();
+    const m = await freshStore();
+    expect(m.useNodeOutlineStore.getState().chosen).toBeNull();
   });
 
-  it("lets the startup override retune the defaults, never a chosen width", async () => {
-    const { useNodeOutlineStore } = await freshStore();
-    useNodeOutlineStore.getState().setDefaults({ width: 1.5, emphasis: 4 });
-    expect(useNodeOutlineStore.getState().defaultWidth).toBe(1.5);
-    useNodeOutlineStore.getState().setWidth(3);
-    useNodeOutlineStore.getState().setDefaults({ width: 1 });
-    const s = useNodeOutlineStore.getState();
-    expect(s.chosen ?? s.defaultWidth).toBe(3);
-    expect(s.defaultEmphasis).toBe(4);
+  it("lets the startup override retune the default, never a chosen width", async () => {
+    const m = await freshStore();
+    m.useNodeOutlineStore.getState().setDefault(3);
+    expect(width(m)).toBe(3);
+    m.useNodeOutlineStore.getState().setWidth(5);
+    m.useNodeOutlineStore.getState().setDefault(1);
+    expect(width(m)).toBe(5);
   });
 });

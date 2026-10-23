@@ -84,8 +84,8 @@ export default function App() {
       if (typeof o.arrowLineThickness === "number") s.setArrowLineThickness(o.arrowLineThickness);
       if (typeof o.arrowheadSize === "number") s.setArrowheadSize(o.arrowheadSize);
       if (typeof o.arrowheadPosition === "number") s.setArrowheadPosition(o.arrowheadPosition);
-      // Node outlines retune only the defaults: a width chosen in Settings wins (#42).
-      useNodeOutlineStore.getState().setDefaults({ width: o.nodeBorderWidth, emphasis: o.nodeBorderWidthEmphasis });
+      // The node outline retunes only the default: a width chosen in Settings wins (#42).
+      useNodeOutlineStore.getState().setDefault(o.nodeBorderWidth);
     });
   }, []);
 

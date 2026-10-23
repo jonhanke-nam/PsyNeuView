@@ -15,7 +15,7 @@ import { toggleCompositionCollapse } from "@/utils/nodeActions";
 import { formatTraceValue } from "@/utils/traceValues";
 import { ValueGrid, poolValues, useNodeGrid } from "@/components/common/ValueGrid";
 import { useValueViews, valueViewFor } from "@/stores/valueViewStore";
-import { NODE_OUTLINE_SELECTED_EXTRA, useNodeOutlineEmphasis, useNodeOutlineWidth } from "@/stores/nodeOutlineStore";
+import { NODE_OUTLINE_EMPHASIS_EXTRA, NODE_OUTLINE_SELECTED_EXTRA, useNodeOutlineWidth } from "@/stores/nodeOutlineStore";
 import {
   resolveOutputLabels,
   formatLabeledValue,
@@ -148,7 +148,7 @@ export const MechanismNode = memo(function MechanismNode({
   const direction = useGraphSettings((s) => s.direction);
   // Settings ▸ Appearance ▸ Node outlines (#42).
   const nodeBorderWidth = useNodeOutlineWidth();
-  const nodeBorderWidthEmphasis = useNodeOutlineEmphasis();
+  const nodeBorderWidthEmphasis = nodeBorderWidth + NODE_OUTLINE_EMPHASIS_EXTRA;
   const expanded = useGraphSettings((s) => s.expandedNodes.has(d.label || ""));
 
   // #282: draggable ports. `portOverrides` holds this node's per-port angular
