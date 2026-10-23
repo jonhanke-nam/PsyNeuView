@@ -51,7 +51,13 @@ test("flat-view save keeps a separate namespace, not clobbering nested (#719)", 
       page.getByRole("button", { name: "Reset Custom Layout" }).click(),
     ]);
 
-  // Nested view: save → writes `positions` (incl. the inner_comp group node).
+  // Nested view (models open flattened, #48): save → writes `positions`
+  // (incl. the inner_comp group node).
+  await Promise.all([
+    page.waitForResponse((r: any) => r.url().includes("/api/model/load") && r.request().method() === "POST"),
+    viewSelect(page).selectOption({ label: "nested_minimal" }),
+  ]);
+  await expect(page.getByTestId("graph-canvas").getByText("inner_a", { exact: true })).toHaveCount(0, { timeout: 15000 });
   await saveLayout();
   let sc = readSidecar();
   expect(Object.keys(sc.positions)).toContain("inner_comp");

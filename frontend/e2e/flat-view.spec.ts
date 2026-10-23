@@ -39,7 +39,8 @@ test.describe("flat view", { tag: "@ci" }, () => {
     await openNested(page);
     const canvas = page.getByTestId("graph-canvas");
 
-    // Nested (default): inner_comp auto-collapses, hiding its children.
+    // Opens flattened (#48); the nested view folds inner_comp, hiding its children.
+    await setNestedView(page);
     await expect(canvas.getByText("inner_comp", { exact: true })).toBeVisible();
     await expect(canvas.getByText("inner_a", { exact: true })).toHaveCount(0);
 

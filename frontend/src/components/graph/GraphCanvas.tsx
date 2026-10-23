@@ -20,7 +20,7 @@ import {
 } from "@xyflow/react";
 import { computeShiftTable, shiftPosition, unshiftPosition } from "@/utils/viewTransform";
 
-import { useModelStore, type MechanismData, autoSizeGroups } from "@/stores/modelStore";
+import { useModelStore, type MechanismData, autoSizeGroups, usesFlatPositions } from "@/stores/modelStore";
 import { recordAction } from "@/utils/history";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useStatusStore } from "@/stores/statusStore";
@@ -100,7 +100,6 @@ function saveLayoutDebounced(filePath: string, nodes: any[]) {
     useModelStore.setState({ lastLayoutPositions: merged });
     // #719: flat / PyTorch view positions go to their own namespace so their
     // frame-relative coords never clobber the nested view's.
-    const gs = useGraphSettings.getState();
     // #1162: hand-shaped edges ride along with the positions save. Keyed by
     // endpoint rather than projection name, and only edges the user actually
     // shaped are written — grabbing a handle materialises the router's own
@@ -112,7 +111,7 @@ function saveLayoutDebounced(filePath: string, nodes: any[]) {
       ea.waypoints,
       ea.overrides,
     );
-    const body = gs.flat || gs.pytorch
+    const body = usesFlatPositions()
       ? { file_path: filePath, flatPositions: merged, flatEdgeRoutes: routes }
       : { file_path: filePath, positions: merged, edgeRoutes: routes };
     fetch("/api/model/save-layout", {

@@ -18,6 +18,7 @@ gsc-row-selects-edge.spec.ts
 harness.spec.ts
 inspector-condition-undo.spec.ts
 layout-default-show-graph.spec.ts
+layout-mode-per-view.spec.ts
 learn-pathway.spec.ts
 learning-nodes-run-inspector.spec.ts
 lock-in-checkout.spec.ts
