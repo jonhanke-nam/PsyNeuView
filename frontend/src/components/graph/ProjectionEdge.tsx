@@ -175,6 +175,11 @@ export function ProjectionEdge({
   // you reach for it. The connection dots already avoid this by setting
   // `hovered` themselves (see their onMouseEnter below).
   const handlesActive = isSelected || hovered || hoveredWp !== null || hoveredEnd !== null;
+  // #41: shaping an edge belongs to a custom layout, like moving a node — in
+  // Auto, nodes aren't draggable and edges aren't shapeable either. A press
+  // still selects the edge; bends, handles and endpoint drags wait for Custom.
+  const autoLayout = useModelStore((s) => s.autoLayout);
+  const shapeable = !autoLayout;
   const isCursorHighlighted = !isSelected && cursorHighlightedEdgeId === id;
   const showLabel = isSelected || hovered || alwaysVisible || isCursorHighlighted;
 
@@ -476,6 +481,11 @@ export function ProjectionEdge({
   // just selects the edge. stopPropagation keeps React Flow from panning.
   const startEdgeShape = (e: React.PointerEvent) => {
     if (e.altKey) return;
+    if (!shapeable) {
+      // Select, and leave the drag to React Flow (it pans).
+      setSelectedEdgeId(id);
+      return;
+    }
     e.stopPropagation();
     const startX = e.clientX, startY = e.clientY;
     let idx = -1;
@@ -616,13 +626,17 @@ export function ProjectionEdge({
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         onPointerDown={startEdgeShape}
-        onDoubleClick={() => { if (waypoints && waypoints.length) useEdgeAttach.getState().clearWaypoints(id); }}
+        onDoubleClick={() => { if (shapeable && waypoints && waypoints.length) useEdgeAttach.getState().clearWaypoints(id); }}
         // The cursor comes from index.css (#1301): the arrow under the
-        // arrow setting, a grab hand under "hand".
-        className="projection-edge-hit"
+        // arrow setting, a grab hand under "hand". Not a hand in Auto (#41):
+        // there is nothing to grab.
+        className={shapeable ? "projection-edge-hit" : "projection-edge-hit projection-edge-hit-auto"}
+        data-shapeable={shapeable ? "true" : "false"}
         style={{ pointerEvents: "stroke" }}
       >
-        <title>{`${tooltip ? tooltip + "\n" : ""}drag: bend · double-click: reset route`}</title>
+        <title>{`${tooltip ? tooltip + "\n" : ""}${shapeable
+          ? "drag: bend · double-click: reset route"
+          : "Layout: Auto. Switch to Custom (graph toolbar) to reshape edges"}`}</title>
       </path>
       {/* Hidden measurement path — same geometry as the visible edge,
           referenced for getPointAtLength to position the chevron. */}
@@ -655,8 +669,10 @@ export function ProjectionEdge({
               <div key={d.end} style={{ position: "absolute", transform: `translate(${d.x}px, ${d.y}px)`, pointerEvents: "none" }}>
                 <div
                   className="nodrag nopan" // #975 — same d3-zoom handoff as the bend handles
-                  title={`${d.label}\ndrag: move this edge · Option-drag: move the whole port`}
-                  onPointerDown={startDotDrag(d.end)}
+                  title={shapeable
+                    ? `${d.label}\ndrag: move this edge · Option-drag: move the whole port`
+                    : d.label}
+                  onPointerDown={shapeable ? startDotDrag(d.end) : undefined}
                   onMouseEnter={() => {
                     setHovered(true);
                     setHoveredEnd(d.end);
@@ -665,7 +681,7 @@ export function ProjectionEdge({
                     setHovered(false);
                     setHoveredEnd(null);
                   }}
-                  style={{ position: "absolute", left: -8, top: -8, width: 16, height: 16, borderRadius: "50%", cursor: "grab", pointerEvents: "all" }}
+                  style={{ position: "absolute", left: -8, top: -8, width: 16, height: 16, borderRadius: "50%", cursor: shapeable ? "grab" : "default", pointerEvents: "all" }}
                 >
                   <div style={{ position: "absolute", left: 8 - r, top: 8 - r, width: 2 * r, height: 2 * r, borderRadius: "50%", background: d.color, border: `${hot ? 1.5 : 1}px solid var(--pnv-surface)`, boxSizing: "border-box", pointerEvents: "none" }} />
                 </div>
@@ -679,7 +695,7 @@ export function ProjectionEdge({
           Forced/geometry bends = a distinct dashed-grey ring (auto separation);
           drag to take manual control (promotes), but not double-click-deletable
           (it's rule-driven). Above nodes via ViewportPortal. */}
-      {handlesActive && cornerPts.length > 0 && (
+      {shapeable && handlesActive && cornerPts.length > 0 && (
         <ViewportPortal>
           {cornerPts.map((wp, i) => {
             const hot = hoveredWp === i; // #960: this handle is hovered

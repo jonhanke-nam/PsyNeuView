@@ -96,6 +96,11 @@ button:hover {
   cursor: grab;
 }
 
+/* #41: in an automatic layout an edge can be selected but not shaped. */
+.graph-pointer-hand .projection-edge-hit.projection-edge-hit-auto {
+  cursor: pointer;
+}
+
 /* Allotment sash styling */
 .sash {
   background: var(--pnv-border-faint) !important;

@@ -140,7 +140,9 @@ export const useGraphSettings = create<GraphSettings>((set, get) => ({
   showArrowheads: true,
   showNodeNames: true,
   showNodeElements: true,
-  edgeRouting: "straight",
+  // #41: smooth curves by default, matching the default Like show_graph
+  // layout's drawing. Node avoidance (`avoidNodes`) works in every style.
+  edgeRouting: "spline",
   avoidNodes: true,
   floatingPorts: true,
   bundleEdges: true,
@@ -199,7 +201,9 @@ export const useGraphSettings = create<GraphSettings>((set, get) => ({
   setPytorch: (v) => set({ pytorch: v }),
   setShowExecutionOrder: (v) => set({ showExecutionOrder: v }),
   setDirection: (v) => set({ direction: v }),
-  setLayoutStyle: (v) => set({ layoutStyle: v }),
+  // #41: Like show_graph draws curves, so choosing it switches edges to
+  // Smooth. Other layouts leave the edge style as it is.
+  setLayoutStyle: (v) => set(v === "showgraph" ? { layoutStyle: v, edgeRouting: "spline" } : { layoutStyle: v }),
   toggleExpandedNode: (id) => {
     const next = new Set(get().expandedNodes);
     if (next.has(id)) next.delete(id); else next.add(id);
