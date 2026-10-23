@@ -10,11 +10,12 @@
  */
 
 import { useReactFlow, useStore } from "@xyflow/react";
+import { useFitGraph } from "@/hooks/useFitGraph";
 
 import { offscreenNodeIds, type NodeBox } from "@/utils/offscreenNodes";
 
 export function OffscreenNodesIndicator() {
-  const { fitView } = useReactFlow();
+  const fitGraph = useFitGraph();
 
   // A count, not a list — a primitive keeps this from re-rendering on every
   // frame of a pan, where the set of ids churns but the number rarely does.
@@ -46,7 +47,7 @@ export function OffscreenNodesIndicator() {
     <button
       type="button"
       data-testid="offscreen-nodes-indicator"
-      onClick={() => fitView({ padding: 0.2 })}
+      onClick={fitGraph}
       title="Fit the whole graph into view"
       aria-label={`${label}. Fit the whole graph into view.`}
       style={{

@@ -164,3 +164,8 @@ button:hover {
 .app-toolbar [role="dialog"] {
   white-space: normal;
 }
+
+/* #52: the Fit button is ours (passed as a child, so React Flow puts it after
+   the lock); keep it where React Flow's own sat, between zoom-out and lock. */
+.react-flow__controls .pnv-controls-fit { order: 1; }
+.react-flow__controls .react-flow__controls-interactive { order: 2; }
