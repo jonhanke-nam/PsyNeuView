@@ -8,10 +8,12 @@
  * preview shows the real thing too. Look-and-feel settings belong here
  * (docs/settings-etiquette.md §1). The graph legend's opening state (#7)
  * is here too: collapsed by default. So is the automatic layout the graph
- * view opens with (#19): Like show_graph by default (#24), or Layered.
+ * view opens with (#19): Like show_graph by default (#24), or Layered. And
+ * whether scheduling-condition arrows are drawn (#53): shown by default.
  */
 
 import { LEGEND_STARTS, isLegendStart, useGraphLegendStore } from "@/stores/graphLegendStore";
+import { SCHEDULING_ARROWS, isSchedulingArrows, useSchedulingArrowsStore } from "@/stores/schedulingArrowsStore";
 import {
   DEFAULT_LAYOUT_STYLE,
   LAYOUT_STYLES,
@@ -47,6 +49,9 @@ export function AppearanceSection() {
       </Group>
       <Group id="graph-legend" title="Graph legend">
         <GraphLegendRow />
+      </Group>
+      <Group id="scheduling-arrows" title="Scheduling arrows">
+        <SchedulingArrowsRow />
       </Group>
     </>
   );
@@ -125,6 +130,35 @@ function GraphLegendRow() {
           <option key={o.id} value={o.id}>
             {o.label}
             {o.id === "collapsed" ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function SchedulingArrowsRow() {
+  const arrows = useSchedulingArrowsStore((s) => s.arrows);
+  const setArrows = useSchedulingArrowsStore((s) => s.setArrows);
+  return (
+    <div style={{ fontSize: 13 }}>
+      <SettingLabel title="Scheduling-condition arrows" htmlFor="setting-graph-scheduling-arrows">
+        The dashed arrows on the canvas show a model's graph-structure
+        conditions (before, after and the like). PsyNeuLink's show_graph
+        doesn't draw them, so hide them to match its picture. The Scheduler
+        panel lists the conditions either way.
+      </SettingLabel>
+      <select
+        id="setting-graph-scheduling-arrows"
+        data-testid="setting-graph-scheduling-arrows"
+        value={arrows}
+        onChange={(e) => isSchedulingArrows(e.target.value) && setArrows(e.target.value)}
+        style={selectStyle}
+      >
+        {SCHEDULING_ARROWS.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+            {o.id === "shown" ? " (default)" : ""}
           </option>
         ))}
       </select>

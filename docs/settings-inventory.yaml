@@ -317,6 +317,18 @@ settings:
       this setting; only the legend's position is remembered by the legend
       (psynewview-gsc-legend).
 
+  - id: graph-scheduling-arrows
+    label: Appearance ▸ Scheduling arrows ▸ Scheduling-condition arrows
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.schedulingArrows); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-graph-scheduling-arrows
+    notes: >-
+      Shown (default) or Hidden, as in show_graph (#53). Whether the graph
+      view draws the dashed graph-structure-condition arrows; hidden, the
+      graph legend is hidden too. PsyNeuLink's show_graph() doesn't draw
+      them. The Scheduler panel lists the conditions either way.
+
   - id: catalogs
     label: Folders ▸ Your catalogs (add, rename, remove)
     home: settings
