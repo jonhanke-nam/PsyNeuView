@@ -770,7 +770,9 @@ export function GraphCanvas() {
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               nodesDraggable={!autoLayout}
-              minZoom={0.15}
+              // #62: low enough that Fit always shows the whole graph; at 0.15
+              // a large model (EGO) didn't fit a normal-size canvas.
+              minZoom={0.02}
               fitView
             >
               <Background />

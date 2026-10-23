@@ -557,17 +557,46 @@ function edgeCurves(edges: Edge[], placement: ShowGraphPlacement, placed: Placed
   return curves;
 }
 
-/** A smooth SVG path through the points (Catmull–Rom, as cubic Béziers). */
+/**
+ * A smooth SVG path through the points: a centripetal Catmull–Rom curve, as
+ * cubic Béziers (#63). The points are unevenly spaced (a course thinned out
+ * by `simplify` keeps many near its bends and few along a straight run), and
+ * the uniform curve, which assumes even spacing, overshoots there into
+ * spikes. The centripetal one weighs each step by its length and can't form
+ * cusps or loops.
+ */
 export function curvePath(points: Point[]): string {
   if (points.length < 2) return "";
+  // Step weights: the square root of each step's length (alpha = 0.5).
+  const w = (a: Point, b: Point) => Math.sqrt(Math.hypot(b.x - a.x, b.y - a.y));
   let d = `M ${points[0].x} ${points[0].y}`;
   for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[i - 1] ?? points[i];
     const p1 = points[i];
     const p2 = points[i + 1];
-    const p3 = points[i + 2] ?? p2;
-    const c1 = { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 };
-    const c2 = { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 };
+    const p0 = points[i - 1];
+    const p3 = points[i + 2];
+    const d2 = w(p1, p2);
+    let c1 = p1;
+    let c2 = p2;
+    if (d2 > 0) {
+      const d1 = p0 ? w(p0, p1) : 0;
+      const d3 = p3 ? w(p2, p3) : 0;
+      // At an end (no neighbour beyond it) the tangent runs along the step.
+      c1 =
+        d1 > 0
+          ? {
+              x: (d1 * d1 * p2.x - d2 * d2 * p0!.x + (2 * d1 * d1 + 3 * d1 * d2 + d2 * d2) * p1.x) / (3 * d1 * (d1 + d2)),
+              y: (d1 * d1 * p2.y - d2 * d2 * p0!.y + (2 * d1 * d1 + 3 * d1 * d2 + d2 * d2) * p1.y) / (3 * d1 * (d1 + d2)),
+            }
+          : { x: p1.x + (p2.x - p1.x) / 3, y: p1.y + (p2.y - p1.y) / 3 };
+      c2 =
+        d3 > 0
+          ? {
+              x: (d3 * d3 * p1.x - d2 * d2 * p3!.x + (2 * d3 * d3 + 3 * d3 * d2 + d2 * d2) * p2.x) / (3 * d3 * (d3 + d2)),
+              y: (d3 * d3 * p1.y - d2 * d2 * p3!.y + (2 * d3 * d3 + 3 * d3 * d2 + d2 * d2) * p2.y) / (3 * d3 * (d3 + d2)),
+            }
+          : { x: p2.x - (p2.x - p1.x) / 3, y: p2.y - (p2.y - p1.y) / 3 };
+    }
     d += ` C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${p2.x} ${p2.y}`;
   }
   return d;
