@@ -161,7 +161,9 @@ export const useGraphSettings = create<GraphSettings>((set, get) => ({
   showCIMs: false,
   showFullTypes: false,
   showPortDots: true,
-  flat: false,
+  // #48: open in Flatten (all compositions), like show_graph draws nested
+  // compositions in place by default.
+  flat: true,
   pytorch: false,
   showExecutionOrder: false,
   direction: "BT",

@@ -31,7 +31,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { useReactFlow } from "@xyflow/react";
+import { useFitGraph } from "@/hooks/useFitGraph";
 
 import { useTourProgress } from "@/hooks/useTourProgress";
 import { useCatalogOpener } from "@/stores/catalogOpenerStore";
@@ -70,7 +70,7 @@ export function TourBar() {
   const pointerArrived = useTourStore((s) => s.pointerArrived);
   const narration = useTourStore((s) => s.narration);
   const setNarration = useTourStore((s) => s.setNarration);
-  const { fitView } = useReactFlow();
+  const fitGraph = useFitGraph();
   const startCount = useTourStore((s) => s.startCount);
   const nodes = useModelStore((s) => s.nodes);
   const openCatalogModel = useCatalogOpener((s) => s.open);
@@ -333,7 +333,7 @@ export function TourBar() {
         <button
           type="button"
           data-testid="tour-fit"
-          onClick={() => fitView({ padding: 0.2 })}
+          onClick={fitGraph}
           style={barButton}
         >
           That node is off-screen — fit the graph

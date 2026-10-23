@@ -9,6 +9,7 @@ import {
   ReactFlow,
   Background,
   Controls,
+  ControlButton,
   useNodesState,
   useEdgesState,
   useReactFlow,
@@ -18,9 +19,10 @@ import {
   type NodeChange,
   addEdge,
 } from "@xyflow/react";
+import { useFitGraph } from "@/hooks/useFitGraph";
 import { computeShiftTable, shiftPosition, unshiftPosition } from "@/utils/viewTransform";
 
-import { useModelStore, type MechanismData, autoSizeGroups } from "@/stores/modelStore";
+import { useModelStore, type MechanismData, autoSizeGroups, usesFlatPositions } from "@/stores/modelStore";
 import { recordAction } from "@/utils/history";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useStatusStore } from "@/stores/statusStore";
@@ -101,7 +103,6 @@ function saveLayoutDebounced(filePath: string, nodes: any[]) {
     useModelStore.setState({ lastLayoutPositions: merged });
     // #719: flat / PyTorch view positions go to their own namespace so their
     // frame-relative coords never clobber the nested view's.
-    const gs = useGraphSettings.getState();
     // #1162: hand-shaped edges ride along with the positions save. Keyed by
     // endpoint rather than projection name, and only edges the user actually
     // shaped are written — grabbing a handle materialises the router's own
@@ -113,7 +114,7 @@ function saveLayoutDebounced(filePath: string, nodes: any[]) {
       ea.waypoints,
       ea.overrides,
     );
-    const body = gs.flat || gs.pytorch
+    const body = usesFlatPositions()
       ? { file_path: filePath, flatPositions: merged, flatEdgeRoutes: routes }
       : { file_path: filePath, positions: merged, edgeRoutes: routes };
     fetch("/api/model/save-layout", {
@@ -305,7 +306,8 @@ export function GraphCanvas() {
 
   const [nodes, setNodes, onNodesChangeRaw] = useNodesState(storeNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(storeEdges);
-  const { fitView, screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition } = useReactFlow();
+  const fitGraph = useFitGraph();
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
 
@@ -324,9 +326,9 @@ export function GraphCanvas() {
     }
     if (!graphVisible) return;
     // Wait for the Allotment reflow to settle before measuring.
-    const t = setTimeout(() => fitView({ padding: 0.2 }), 120);
+    const t = setTimeout(fitGraph, 120);
     return () => clearTimeout(t);
-  }, [codeVisible, graphVisible, bottomVisible, fitView]);
+  }, [codeVisible, graphVisible, bottomVisible, fitGraph]);
 
   // Per-node shift table for the current view state (refs #288). The
   // table is rebuilt whenever the node set or a label-affecting toggle
@@ -393,8 +395,8 @@ export function GraphCanvas() {
       };
     });
     setEdges(displayEdges);
-    setTimeout(() => fitView({ padding: 0.2 }), 50);
-  }, [storeNodes, storeEdges, setNodes, setEdges, fitView, showProjectionLabels, showDimensions, schedulingArrows]);
+    setTimeout(fitGraph, 50);
+  }, [storeNodes, storeEdges, setNodes, setEdges, fitGraph, showProjectionLabels, showDimensions, schedulingArrows]);
 
   // When user draws a connection between nodes → create a projection
   const onConnect: OnConnect = useCallback(
@@ -779,7 +781,21 @@ export function GraphCanvas() {
               fitView
             >
               <Background />
-              <Controls />
+              {/* #52: our own Fit, framing edges too. The built-in one queues a
+                  node-only fit that would land after ours, so it is hidden;
+                  CSS keeps this button in its place above the lock. */}
+              <Controls showFitView={false}>
+                <ControlButton
+                  className="react-flow__controls-fitview pnv-controls-fit"
+                  onClick={fitGraph}
+                  title="Fit view"
+                  aria-label="Fit view"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 30">
+                    <path d="M3.692 4.63c0-.53.4-.938.939-.938h5.215V0H4.708C2.13 0 0 2.054 0 4.63v5.216h3.692V4.631zM27.354 0h-5.2v3.692h5.17c.53 0 .984.4.984.939v5.215H32V4.631A4.624 4.624 0 0027.354 0zm.954 24.83c0 .532-.4.94-.939.94h-5.215v3.768h5.215c2.577 0 4.631-2.13 4.631-4.707v-5.139h-3.692v5.139zm-23.677.94c-.531 0-.939-.4-.939-.94v-5.138H0v5.139c0 2.577 2.13 4.707 4.708 4.707h5.138V25.77H4.631z" />
+                  </svg>
+                </ControlButton>
+              </Controls>
               {/* TODO: Re-add MiniMap as a toggleable overlay with repositioning support */}
             </ReactFlow>
           )}

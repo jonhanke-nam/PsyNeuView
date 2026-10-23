@@ -8,6 +8,7 @@ dialog-sweep.spec.ts
 edge-routing-no-crossings.spec.ts
 edge-shaping-auto-layout.spec.ts
 external-edit-sync.spec.ts
+fit-frames-edges.spec.ts
 flat-layout-namespace.spec.ts
 flat-view.spec.ts
 github-file-loader.spec.ts
@@ -18,6 +19,7 @@ gsc-row-selects-edge.spec.ts
 harness.spec.ts
 inspector-condition-undo.spec.ts
 layout-default-show-graph.spec.ts
+layout-mode-per-view.spec.ts
 learn-pathway.spec.ts
 learning-nodes-run-inspector.spec.ts
 lock-in-checkout.spec.ts
