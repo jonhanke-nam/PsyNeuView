@@ -177,11 +177,17 @@ jobs:
         working-directory: frontend
         timeout-minutes: 12
         run: |
-          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' \
+          # #59: apt waits up to 60 s for the dpkg lock instead of failing at once.
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nDPkg::Lock::Timeout "60";\n' \
             | sudo tee /etc/apt/apt.conf.d/99-ci-network-timeouts
           for attempt in 1 2; do
             timeout --kill-after=15 300 npx playwright install-deps chromium && exit 0
             echo "::warning::Playwright install-deps attempt $attempt failed or timed out"
+            # #59: timeout stops npx, but the apt-get it started under sudo
+            # keeps running and holds the dpkg lock, so the retry could never
+            # install. Stop it before retrying.
+            sudo pkill -TERM -x apt-get || true
+            sudo pkill -TERM -x dpkg || true
             sudo dpkg --configure -a || true
           done
           exit 1
