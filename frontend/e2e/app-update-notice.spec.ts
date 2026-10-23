@@ -42,6 +42,20 @@ test.describe("App update notice (PsyNeuView-MacApp#6)", { tag: "@ci" }, () => {
     expect(ops).toContain("installUpdate");
   });
 
+  test("says when the update was released, and nothing extra without a date (#15)", async ({ page }) => {
+    const twoHoursAgo = new Date(Date.now() - 2 * 3600_000).toISOString();
+    await stubMacApp(page, { available: true, version: "0.6.0", releaseNotesURL: null, releasedAt: twoHoursAgo });
+    await page.goto("/");
+    await expect(page.getByTestId("app-update-text")).toHaveText(
+      /^PsyNeuView 0\.6\.0 is available, released \w{3} \d{1,2}, \d{1,2}:\d{2}\s[AP]M \(2 hours ago\)$/,
+    );
+    await expect(page.getByTestId("app-update-text")).toHaveAttribute("title", /^Released /);
+    // An app from before #15 sends no date: just the version, as before.
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("pnv:mac-settings-changed", {
+      detail: { appUpdate: { available: true, version: "0.6.1", releaseNotesURL: null } } })));
+    await expect(page.getByTestId("app-update-text")).toHaveText("PsyNeuView 0.6.1 is available");
+  });
+
   test("Later hides it, and a newer version shows again", async ({ page }) => {
     await stubMacApp(page, { available: true, version: "0.6.0", releaseNotesURL: null });
     await page.goto("/");
