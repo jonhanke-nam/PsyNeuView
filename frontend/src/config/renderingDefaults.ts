@@ -32,8 +32,8 @@ export const RENDERING_DEFAULTS: RenderingDefaults = {
   arrowLineThickness: 3, // ≈ 1.5× thicker edges
   arrowheadSize: 7, // larger, more show_graph-like chevron
   arrowheadPosition: 0.5,
-  nodeBorderWidth: 1, // ordinary roles (unchanged)
-  nodeBorderWidthEmphasis: 3, // INPUT/OUTPUT/CONTROL… (unchanged)
+  nodeBorderWidth: 2, // ordinary roles (#42: was 1, too light to read)
+  nodeBorderWidthEmphasis: 3.5, // INPUT/OUTPUT/CONTROL… (#42: was 3)
 };
 
 /**

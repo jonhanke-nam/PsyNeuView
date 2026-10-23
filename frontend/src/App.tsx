@@ -5,6 +5,7 @@ import "allotment/dist/style.css";
 import "@xyflow/react/dist/style.css";
 
 import { useGraphSettings } from "./stores/graphSettingsStore";
+import { useNodeOutlineStore } from "./stores/nodeOutlineStore";
 import { loadRuntimeRenderingDefaults } from "./config/renderingDefaults";
 import { GraphCanvas } from "./components/graph/GraphCanvas";
 import { CodeEditor } from "./components/editor/CodeEditor";
@@ -83,8 +84,8 @@ export default function App() {
       if (typeof o.arrowLineThickness === "number") s.setArrowLineThickness(o.arrowLineThickness);
       if (typeof o.arrowheadSize === "number") s.setArrowheadSize(o.arrowheadSize);
       if (typeof o.arrowheadPosition === "number") s.setArrowheadPosition(o.arrowheadPosition);
-      if (typeof o.nodeBorderWidth === "number") s.setNodeBorderWidth(o.nodeBorderWidth);
-      if (typeof o.nodeBorderWidthEmphasis === "number") s.setNodeBorderWidthEmphasis(o.nodeBorderWidthEmphasis);
+      // Node outlines retune only the defaults: a width chosen in Settings wins (#42).
+      useNodeOutlineStore.getState().setDefaults({ width: o.nodeBorderWidth, emphasis: o.nodeBorderWidthEmphasis });
     });
   }, []);
 

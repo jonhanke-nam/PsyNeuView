@@ -15,6 +15,7 @@ import { toggleCompositionCollapse } from "@/utils/nodeActions";
 import { formatTraceValue } from "@/utils/traceValues";
 import { ValueGrid, poolValues, useNodeGrid } from "@/components/common/ValueGrid";
 import { useValueViews, valueViewFor } from "@/stores/valueViewStore";
+import { NODE_OUTLINE_SELECTED_EXTRA, useNodeOutlineEmphasis, useNodeOutlineWidth } from "@/stores/nodeOutlineStore";
 import {
   resolveOutputLabels,
   formatLabeledValue,
@@ -145,8 +146,9 @@ export const MechanismNode = memo(function MechanismNode({
   const showNodeElements = useGraphSettings((s) => s.showNodeElements);
   const showExecutionOrder = useGraphSettings((s) => s.showExecutionOrder);
   const direction = useGraphSettings((s) => s.direction);
-  const nodeBorderWidth = useGraphSettings((s) => s.nodeBorderWidth);
-  const nodeBorderWidthEmphasis = useGraphSettings((s) => s.nodeBorderWidthEmphasis);
+  // Settings ▸ Appearance ▸ Node outlines (#42).
+  const nodeBorderWidth = useNodeOutlineWidth();
+  const nodeBorderWidthEmphasis = useNodeOutlineEmphasis();
   const expanded = useGraphSettings((s) => s.expandedNodes.has(d.label || ""));
 
   // #282: draggable ports. `portOverrides` holds this node's per-port angular
@@ -357,7 +359,8 @@ export const MechanismNode = memo(function MechanismNode({
   // top border to min 3px (and a different color), which read as a thicker
   // top/bottom edge on the oval — a user flagged it as a rendering bug.
   const ovalBorderColor = isActiveStep ? "var(--pnv-trace-active)" : selected ? accentColor : (colorByRole ? accentColor : "var(--pnv-node-border)");
-  const ovalBorderWidth = isActiveStep || selected ? 2 : borderWidth;
+  // Heavier than its own outline at any width, so selection always shows (#42).
+  const ovalBorderWidth = isActiveStep || selected ? borderWidth + NODE_OUTLINE_SELECTED_EXTRA : borderWidth;
   const ovalBorderStyle = isActiveStep || selected ? "solid" : borderStyle;
 
   return (

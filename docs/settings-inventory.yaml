@@ -290,6 +290,29 @@ settings:
       load. Applies to the arrow; the hand is the system's own. Window zoom
       doesn't scale cursors, so this is the one control for the size.
 
+  - id: node-outline
+    label: Appearance ▸ Node outlines ▸ Outline
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.nodeOutline)
+    control: setting-node-outline
+    notes: >-
+      Ordinary nodes' outline, 0.5–6 px in half pixels; 2 px by default
+      (#42, was 1). /rendering-defaults.json can retune the default; a width
+      chosen here wins. A selected or running node is drawn 1.5 px heavier.
+      The Style tab links here rather than keeping a control of its own.
+
+  - id: node-outline-emphasis
+    label: Appearance ▸ Node outlines ▸ Emphasised outline
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.nodeOutlineEmphasis)
+    control: setting-node-outline-emphasis
+    notes: >-
+      INPUT, OUTPUT and CONTROL nodes' outline when nodes are coloured by
+      role; 3.5 px by default (#42, was 3). Moved here from the Style tab's
+      Border width slider.
+
   - id: graph-layout-default
     label: Appearance ▸ Automatic layout ▸ How models are arranged
     home: settings
