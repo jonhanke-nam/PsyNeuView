@@ -3,6 +3,7 @@ import {
   UPDATE_NOTICE_DISMISS_KEY,
   UPDATE_NOTICE_SNOOZE_MS,
   loadDismissal,
+  releasedPhrase,
   saveDismissal,
   shouldShowUpdateNotice,
 } from "./appUpdateNotice";
@@ -54,5 +55,28 @@ describe("dismissal storage", () => {
     };
     expect(loadDismissal(throwing)).toBeNull();
     expect(saveDismissal("0.6.0", NOW, throwing)).toEqual({ version: "0.6.0", at: NOW });
+  });
+});
+
+describe("when the waiting update was released (#15)", () => {
+  // Built in local time, so the test holds in any time zone. ICU may put a
+  // narrow no-break space before "PM"; compare with plain spaces.
+  const plain = (t: string | null) => t?.replace(/\s/g, " ") ?? null;
+  const now = new Date(2026, 9, 15, 16, 40);
+
+  it("gives the date, the time and how long ago", () => {
+    const iso = new Date(2026, 9, 15, 14, 33).toISOString();
+    expect(plain(releasedPhrase(iso, now))).toBe("released Oct 15, 2:33 PM (2 hours ago)");
+  });
+
+  it("adds the year only for another year", () => {
+    const iso = new Date(2025, 11, 30, 9, 5).toISOString();
+    expect(plain(releasedPhrase(iso, now))).toMatch(/^released Dec 30, 2025, 9:05 AM \(\d+ days ago\)$/);
+  });
+
+  it("says nothing when the date is unknown or unreadable", () => {
+    expect(releasedPhrase(null, now)).toBeNull();
+    expect(releasedPhrase(undefined, now)).toBeNull();
+    expect(releasedPhrase("not a date", now)).toBeNull();
   });
 });

@@ -6,6 +6,7 @@
 // browser there is no app and no notice.
 
 import type { MacAppUpdate } from "./macAppSettings";
+import { ago } from "./runningFrom";
 
 export const UPDATE_NOTICE_DISMISS_KEY = "psyneuview.appUpdate.dismissed";
 export const UPDATE_NOTICE_SNOOZE_MS = 24 * 60 * 60 * 1000;
@@ -60,4 +61,23 @@ export function saveDismissal(
     // Storage blocked: "Later" lasts until the page reloads. Nothing else to do.
   }
   return d;
+}
+
+/**
+ * "released Oct 15, 2:33 PM (2 hours ago)" (#15), in the viewer's time zone,
+ * with the year only when it isn't this year; null when the date is unknown.
+ */
+export function releasedPhrase(iso: string | null | undefined, now: Date = new Date()): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const when = d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(d.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const since = ago(iso, now);
+  return `released ${when}${since ? ` (${since})` : ""}`;
 }
