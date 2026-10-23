@@ -35,6 +35,17 @@ export interface MacAppInstall {
   includedVersion: string | null;
   /** Checkouts used before, most recent first. */
   recentCheckouts: string[];
+  /** When the included version was released, an ISO time (#15); absent or null when unknown. */
+  includedReleasedAt?: string | null;
+}
+
+/** The Mac app itself (#15); absent from app builds before it. */
+export interface MacAppInfo {
+  name: string;
+  version: string | null;
+  build: string | null;
+  /** When this app was built, an ISO time; null for a build with no stamp. */
+  builtAt: string | null;
 }
 
 export interface MacAppSettings {
@@ -57,6 +68,7 @@ export interface MacAppSettings {
    * builds before it, which the page treats as "none waiting".
    */
   appUpdate?: MacAppUpdate;
+  app?: MacAppInfo;
   /**
    * The app's record of where PsyNeuLink comes from (PsyNeuView-MacApp#9):
    * "github:<branch>", "pypi" or "local:<path>". It decides what a later

@@ -4,8 +4,9 @@
  * First in the sidebar, because it is what a new user and a problem report
  * both need: which PsyNeuView and PsyNeuLink this is, in one line each. The
  * PsyNeuLink details (repo, branch, commit, freshness, debugging support)
- * are Developer's, and the other folders are Folders'. The Mac app's bridge
- * has no app version of its own, so none is shown.
+ * are Developer's, and the other folders are Folders'. Inside the Mac app,
+ * the app's own version and when it was built, and when the included
+ * PsyNeuView was released (#15), from the app's settings bridge.
  *
  * And what PsyNeuView is running, and from where (#1356): the Mac app's
  * included copy or your checkout (the one path shown here, since which
@@ -16,7 +17,13 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { downloadDiagnostics } from "@/utils/diagnostics";
-import { hasSettingsBridge } from "@/utils/macAppSettings";
+import { macAppLine, psyneuviewVersionLine } from "@/utils/appUpdateNotice";
+import {
+  getMacAppSettings,
+  hasSettingsBridge,
+  onMacAppSettingsChanged,
+  type MacAppSettings,
+} from "@/utils/macAppSettings";
 import { pnlSourceLabel, type PsyNeuLinkInfo } from "@/utils/pnlSources";
 import {
   checkRunningNow,
@@ -36,6 +43,7 @@ import { Button } from "../Button";
 
 export function AboutSection({ info, loadError }: { info: SettingsInfo | null; loadError: string | null }) {
   const running = useRunning();
+  const mac = useMacApp();
   const page = pageBuild();
   const dev = isDevServer(page);
   const warning = running.info ? mismatch(running.info, page, dev) : null;
@@ -46,7 +54,14 @@ export function AboutSection({ info, loadError }: { info: SettingsInfo | null; l
       {!loadError && !info && <div style={mutedStyle}>Loading…</div>}
       {info && (
         <div style={{ fontSize: 13 }}>
-          <Row label="PsyNeuView version" value={info.psyneuview.version} />
+          <div data-testid="about-psyneuview-version">
+            <Row label="PsyNeuView version" value={psyneuviewVersionLine(info.psyneuview.version, mac)} />
+          </div>
+          {macAppLine(mac?.app) && (
+            <div data-testid="about-mac-app">
+              <Row label="Mac app" value={macAppLine(mac?.app)!} />
+            </div>
+          )}
           <RunningFrom {...running} />
           <Row label="Server commit" value={running.info?.started_commit ?? info.psyneuview.commit} mono />
           <div data-testid="about-page-build">
@@ -109,6 +124,24 @@ function useRunning() {
   }, []);
 
   return { info, error, busy, checkError, checkNow };
+}
+
+/** The Mac app's settings, kept current; null in a browser or while loading. */
+function useMacApp(): MacAppSettings | null {
+  const [mac, setMac] = useState<MacAppSettings | null>(null);
+  useEffect(() => {
+    if (!hasSettingsBridge()) return;
+    let live = true;
+    getMacAppSettings()
+      .then((s) => live && setMac(s))
+      .catch(() => {});
+    const off = onMacAppSettingsChanged((s) => setMac((prev) => ({ ...(prev ?? {}), ...s }) as MacAppSettings));
+    return () => {
+      live = false;
+      off();
+    };
+  }, []);
+  return mac;
 }
 
 /** A label and anything under it, laid out as `Row` lays out a label and its value. */
