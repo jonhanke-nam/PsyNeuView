@@ -12,6 +12,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useSchedulingArrowsStore } from "@/stores/schedulingArrowsStore";
 import { useGraphLegendStore } from "@/stores/graphLegendStore";
 import { useReactFlow, useStore } from "@xyflow/react";
 import { useModelStore } from "@/stores/modelStore";
@@ -86,6 +87,7 @@ function savePosition(pos: LegendPosition) {
 
 export function GSCLegend() {
   const gscConditions = useModelStore((s) => s.gscConditions);
+  const schedulingArrows = useSchedulingArrowsStore((s) => s.arrows);
   const hasModel = useModelStore((s) => s.filePath) !== null;
   const filePath = useModelStore((s) => s.filePath);
   const legendStart = useGraphLegendStore((s) => s.start);
@@ -187,8 +189,9 @@ export function GSCLegend() {
     setPos((p) => ({ ...p, visible: !p.visible }));
   }, []);
 
-  // Don't render if no model is loaded or no GSC conditions exist
-  if (!hasModel || gscConditions.length === 0) return null;
+  // Don't render if no model is loaded, no GSC conditions exist, or their
+  // arrows are hidden (#53): the legend explains only those arrows.
+  if (!hasModel || gscConditions.length === 0 || schedulingArrows === "hidden") return null;
 
   // Toggle button (always visible)
   if (!pos.visible) {

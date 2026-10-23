@@ -36,6 +36,7 @@ import { DanglingNode } from "./DanglingNode";
 import { GSCEdge } from "./GSCEdge";
 import { ProjectionEdge } from "./ProjectionEdge";
 import { GSCLegend } from "./GSCLegend";
+import { useSchedulingArrowsStore } from "@/stores/schedulingArrowsStore";
 import { TraceControls } from "./TraceControls";
 import { ValidationPanel } from "./ValidationPanel";
 import { FocusBreadcrumb } from "./FocusBreadcrumb";
@@ -364,10 +365,16 @@ export function GraphCanvas() {
     [onNodesChangeRaw, shiftTable],
   );
 
+  // #53: Settings ▸ Appearance can hide scheduling-condition arrows, as
+  // show_graph draws none. Filtered here, so switching needs no reload.
+  const schedulingArrows = useSchedulingArrowsStore((s) => s.arrows);
+
   useEffect(() => {
     setNodes(storeNodes);
     // Apply label visibility and dimension annotations to edges
-    const displayEdges = storeEdges.map((e) => {
+    const shownEdges =
+      schedulingArrows === "hidden" ? storeEdges.filter((e) => e.type !== "gscEdge") : storeEdges;
+    const displayEdges = shownEdges.map((e) => {
       const d = e.data as any;
       let label: string | undefined;
       if (showProjectionLabels) {
@@ -389,7 +396,7 @@ export function GraphCanvas() {
     });
     setEdges(displayEdges);
     setTimeout(fitGraph, 50);
-  }, [storeNodes, storeEdges, setNodes, setEdges, fitGraph, showProjectionLabels, showDimensions]);
+  }, [storeNodes, storeEdges, setNodes, setEdges, fitGraph, showProjectionLabels, showDimensions, schedulingArrows]);
 
   // When user draws a connection between nodes → create a projection
   const onConnect: OnConnect = useCallback(
