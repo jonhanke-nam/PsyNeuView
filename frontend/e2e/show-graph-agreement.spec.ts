@@ -46,8 +46,13 @@ interface ViewResult extends Omit<Agreement, "overlaps"> {
   model: string;
   view: string;
   overlaps: string[];
-  /** Edges show_graph draws between canvas nodes, and how many follow its course. */
-  courses: { drawn: number; showGraph: number };
+  /**
+   * Edges show_graph draws between two different canvas nodes, and how many of
+   * them the canvas draws along its course; the rest by name. Self-loops are
+   * counted apart: PsyNeuView marks a recurrent node with a CYCLE badge
+   * instead of drawing its loop.
+   */
+  courses: { drawn: number; showGraph: number; missing: string[]; selfLoops: number };
   cutOff: string[];
   /** The view opened in Custom, on positions saved for it. */
   savedLayout: boolean;
@@ -85,7 +90,14 @@ async function openModel(page: Page, file: string) {
   await page.getByRole("button", { name: "Open from path..." }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(path.join(MODELS_DIR, file));
-  await prompt.press("Enter");
+  // The previous model stays drawn until this one's load returns.
+  await Promise.all([
+    page.waitForResponse(
+      (r) => r.url().includes("/api/model/load") && (r.request().postData() ?? "").includes(file),
+      { timeout: 60000 },
+    ),
+    prompt.press("Enter"),
+  ]);
   await expect(page.getByTestId("graph-canvas").locator(".react-flow__node").first()).toBeVisible({ timeout: 60000 });
   // The view menu appears once the load has finished drawing.
   await settledBoxes(page);
@@ -193,15 +205,28 @@ async function measureView(
   const reference = best?.placement.nodes ?? new Map();
   const agreement = measureAgreement(drawn, reference);
   const names = new Set(drawn.keys());
-  const showGraphEdges = (best?.placement.edges ?? []).filter((e) => names.has(e.tail) && names.has(e.head)).length;
-  const curved = await page.getByTestId("graph-canvas").locator(".react-flow__edge path.pnv-edge-showgraph").count();
+  const between = (best?.placement.edges ?? []).filter((e) => names.has(e.tail) && names.has(e.head));
+  const selfLoops = between.filter((e) => e.tail === e.head).length;
+  // React Flow labels each edge "Edge from <source> to <target>".
+  const curved = await page
+    .getByTestId("graph-canvas")
+    .locator(".react-flow__edge:has(path.pnv-edge-showgraph)")
+    .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label") ?? ""));
+  const unclaimed = [...curved];
+  const missing: string[] = [];
+  for (const e of between) {
+    if (e.tail === e.head) continue;
+    const i = unclaimed.indexOf(`Edge from ${e.tail} to ${e.head}`);
+    if (i >= 0) unclaimed.splice(i, 1);
+    else missing.push(`${e.tail} → ${e.head}`);
+  }
 
   const result: ViewResult = {
     model,
     view: view.label,
     ...agreement,
     overlaps: agreement.overlaps.map(([a, b]) => `${a} / ${b}`),
-    courses: { drawn: curved, showGraph: showGraphEdges },
+    courses: { drawn: between.length - selfLoops - missing.length, showGraph: between.length - selfLoops, missing, selfLoops },
     cutOff: await cutOffAfterFit(page),
     savedLayout,
     ...(best ? {} : { error: "no show_graph description fetched" }),
@@ -216,7 +241,10 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 function summaryLine(r: ViewResult): string {
   return (
     `nodes ${r.matched}/${r.nodes} · rows ${pct(share(r.rows))} · order ${pct(share(r.order))} · ` +
-    `courses ${r.courses.drawn}/${r.courses.showGraph} · overlaps ${r.overlaps.length} · cut off ${r.cutOff.length}` +
+    `courses ${r.courses.drawn}/${r.courses.showGraph}` +
+    (r.courses.selfLoops ? ` (+${r.courses.selfLoops} self-loops)` : "") +
+    (r.courses.missing.length ? ` — not drawn: ${r.courses.missing.join(", ")}` : "") +
+    ` · overlaps ${r.overlaps.length} · cut off ${r.cutOff.length}` +
     (r.savedLayout ? " · had a saved layout" : "") +
     (r.error ? ` · ${r.error}` : "")
   );
@@ -247,9 +275,27 @@ async function runBatch(page: Page, models: string[], sheets: boolean): Promise<
     const since = captured.all.length;
     await openModel(page, model);
     for (const view of await views(page)) {
-      const { result, canvasPng, svg } = await measureView(page, gv, captured, model, view, since);
-      results.push(result);
-      if (sheets) await writeSheet(page, results.length, result, canvasPng, svg);
+      try {
+        const { result, canvasPng, svg } = await measureView(page, gv, captured, model, view, since);
+        results.push(result);
+        if (sheets) await writeSheet(page, results.length, result, canvasPng, svg);
+      } catch (e) {
+        // One view that can't be measured shouldn't hide the rest.
+        results.push({
+          model,
+          view: view.label,
+          nodes: 0,
+          matched: 0,
+          unmatched: [],
+          rows: { agree: 0, pairs: 0 },
+          order: { agree: 0, pairs: 0 },
+          overlaps: [],
+          courses: { drawn: 0, showGraph: 0, missing: [], selfLoops: 0 },
+          cutOff: [],
+          savedLayout: false,
+          error: String(e).split("\n")[0],
+        });
+      }
     }
   }
   return results;
@@ -260,13 +306,14 @@ function writeReport(results: ViewResult[]) {
   const rows = results.map(
     (r, i) =>
       `| ${i + 1} | ${r.model.replace(/\.py$/, "")} | ${r.view} | ${r.matched}/${r.nodes} | ${pct(share(r.rows))} | ` +
-      `${pct(share(r.order))} | ${r.courses.drawn}/${r.courses.showGraph} | ${r.overlaps.length} | ${r.cutOff.length} |`,
+      `${pct(share(r.order))} | ${r.courses.drawn}/${r.courses.showGraph} | ${r.courses.selfLoops} | ${r.overlaps.length} | ${r.cutOff.length} | ` +
+      `${[...r.courses.missing.map((m) => `not drawn: ${m}`), ...(r.savedLayout ? ["had a saved layout"] : []), ...(r.error ? [r.error] : [])].join("; ")} |`,
   );
   writeFileSync(
     path.join(OUT_DIR, "agreement.md"),
     [
-      "| # | Model | View | Nodes | Rows | Order | Courses | Overlaps | Cut off |",
-      "|---|---|---|---|---|---|---|---|---|",
+      "| # | Model | View | Nodes | Rows | Order | Courses | Self-loops | Overlaps | Cut off | Notes |",
+      "|---|---|---|---|---|---|---|---|---|---|---|",
       ...rows,
       "",
     ].join("\n"),
@@ -282,4 +329,38 @@ test("every reference model, every view: agreement with show_graph", async ({ pa
   const results = await runBatch(page, only?.length ? only : ALL_MODELS, true);
   writeReport(results);
   for (const r of results) console.log(`${r.model} — ${r.view}: ${summaryLine(r)}`);
+});
+
+// Representative models, held to thresholds in CI: the basic Stroop, EGO in
+// each of its views (nested, flattened, PyTorch), and a learning model.
+const REPRESENTATIVE = ["stroop_reference_basic.py", "Giallanza2024_ego_study2.py", "MontagueDayanSejnowski96.py"];
+
+// Edges show_graph draws that the canvas doesn't yet, each with its issue.
+// Listed exactly, so a fix shows up here as well as a new gap.
+const KNOWN_MISSING: Record<string, string[]> = {
+  // #NN: the flattened graph leaves out COMBINED SCORES' second projection to
+  // each field (to its MIN NORM INDEX port).
+  "Giallanza2024_ego_study2.py — Flatten (all compositions)": [
+    "COMBINED SCORES → STATE [FIELD_MEMORY]",
+    "COMBINED SCORES → PREVIOUS STATE [FIELD_MEMORY]",
+    "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
+  ],
+};
+KNOWN_MISSING["Giallanza2024_ego_study2.py — PyTorch view"] =
+  KNOWN_MISSING["Giallanza2024_ego_study2.py — Flatten (all compositions)"];
+
+test("representative models agree with show_graph in every view", { tag: "@ci" }, async ({ page }) => {
+  test.setTimeout(5 * 60_000);
+  const results = await runBatch(page, REPRESENTATIVE, false);
+  expect(results.length, "views measured").toBeGreaterThanOrEqual(REPRESENTATIVE.length + 2);
+  for (const r of results) {
+    const where = `${r.model} — ${r.view}`;
+    expect(r.error, where).toBeUndefined();
+    expect(r.unmatched, `${where}: nodes show_graph doesn't draw`).toEqual([]);
+    expect(share(r.rows), `${where}: rows`).toBe(1);
+    expect(share(r.order), `${where}: left-to-right order`).toBe(1);
+    expect(r.overlaps, `${where}: overlapping boxes`).toEqual([]);
+    expect(r.cutOff, `${where}: cut off after Fit`).toEqual([]);
+    expect(r.courses.missing, `${where}: show_graph edges not drawn on its course`).toEqual(KNOWN_MISSING[where] ?? []);
+  }
 });
