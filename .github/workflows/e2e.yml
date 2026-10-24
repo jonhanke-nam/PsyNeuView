@@ -106,7 +106,10 @@ jobs:
     # the merge, where a skipped one silently satisfies branch protection.
     if: ${{ !cancelled() && needs.changes.outputs.run != 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The @ci suite alone had grown to about 29 minutes of a 30-minute job
+    # (devel, 2026-10-24), so the next spec added tipped it over (#34). 45
+    # leaves room; splitting the suite across runners is the longer answer.
+    timeout-minutes: 45
     permissions:
       contents: read
 
