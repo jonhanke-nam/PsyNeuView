@@ -3,6 +3,8 @@ import {
   UPDATE_NOTICE_DISMISS_KEY,
   UPDATE_NOTICE_SNOOZE_MS,
   loadDismissal,
+  macAppLine,
+  psyneuviewVersionLine,
   releasedPhrase,
   saveDismissal,
   shouldShowUpdateNotice,
@@ -78,5 +80,34 @@ describe("when the waiting update was released (#15)", () => {
     expect(releasedPhrase(null, now)).toBeNull();
     expect(releasedPhrase(undefined, now)).toBeNull();
     expect(releasedPhrase("not a date", now)).toBeNull();
+  });
+});
+
+describe("Settings ▸ About dates (#15)", () => {
+  const plain = (t: string | null) => t?.replace(/\s/g, " ") ?? null;
+  const now = new Date(2026, 9, 15, 16, 40);
+  const built = new Date(2026, 9, 15, 14, 33).toISOString();
+  const install = (o: object = {}) => ({
+    install: {
+      running: "", choice: "bundled" as const, checkoutPath: null, includedVersion: "0.6.2",
+      recentCheckouts: [], includedReleasedAt: built, ...o,
+    },
+  });
+
+  it("names the Mac app's version and when it was built", () => {
+    expect(plain(macAppLine({ name: "PsyNeuView", version: "0.6.2", build: "0.6.2", builtAt: built }, now)))
+      .toBe("0.6.2, built Oct 15, 2:33 PM (2 hours ago)");
+    expect(macAppLine({ name: "PsyNeuView", version: "0.6.2", build: "142", builtAt: null }, now))
+      .toBe("0.6.2 (build 142)");
+    expect(macAppLine(undefined, now)).toBeNull();
+  });
+
+  it("adds the release date only for the copy included with the app", () => {
+    expect(plain(psyneuviewVersionLine("0.6.2", install(), now))).toBe("0.6.2, released Oct 15, 2:33 PM (2 hours ago)");
+    // A checkout, another version, no date, or no app: the version alone.
+    expect(psyneuviewVersionLine("0.6.2", install({ choice: "checkout" }), now)).toBe("0.6.2");
+    expect(psyneuviewVersionLine("0.6.3", install(), now)).toBe("0.6.3");
+    expect(psyneuviewVersionLine("0.6.2", install({ includedReleasedAt: null }), now)).toBe("0.6.2");
+    expect(psyneuviewVersionLine("0.6.2", null, now)).toBe("0.6.2");
   });
 });

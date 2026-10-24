@@ -1,3 +1,4 @@
+about-release-dates.spec.ts
 app-shell.spec.ts
 app-update-notice.spec.ts
 composition-cim-edges.spec.ts

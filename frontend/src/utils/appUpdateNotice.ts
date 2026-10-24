@@ -5,7 +5,7 @@
 // for that version for a day; a newer version shows again at once. In a
 // browser there is no app and no notice.
 
-import type { MacAppUpdate } from "./macAppSettings";
+import type { MacAppInfo, MacAppSettings, MacAppUpdate } from "./macAppSettings";
 import { ago } from "./runningFrom";
 
 export const UPDATE_NOTICE_DISMISS_KEY = "psyneuview.appUpdate.dismissed";
@@ -64,10 +64,10 @@ export function saveDismissal(
 }
 
 /**
- * "released Oct 15, 2:33 PM (2 hours ago)" (#15), in the viewer's time zone,
- * with the year only when it isn't this year; null when the date is unknown.
+ * "Oct 15, 2:33 PM (2 hours ago)" (#15), in the viewer's time zone, with the
+ * year only when it isn't this year; null when the date is unknown.
  */
-export function releasedPhrase(iso: string | null | undefined, now: Date = new Date()): string | null {
+export function datePhrase(iso: string | null | undefined, now: Date = new Date()): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
@@ -79,5 +79,39 @@ export function releasedPhrase(iso: string | null | undefined, now: Date = new D
     minute: "2-digit",
   });
   const since = ago(iso, now);
-  return `released ${when}${since ? ` (${since})` : ""}`;
+  return `${when}${since ? ` (${since})` : ""}`;
+}
+
+/** "released Oct 15, 2:33 PM (2 hours ago)", or null when the date is unknown. */
+export function releasedPhrase(iso: string | null | undefined, now: Date = new Date()): string | null {
+  const when = datePhrase(iso, now);
+  return when ? `released ${when}` : null;
+}
+
+/**
+ * Settings ▸ About's "Mac app" row (#15): "0.6.2, built Oct 15, 6:33 PM
+ * (2 hours ago)", with the build number when it differs. Null for an app
+ * from before #15, which says nothing about itself.
+ */
+export function macAppLine(app: MacAppInfo | null | undefined, now: Date = new Date()): string | null {
+  if (!app?.version) return null;
+  let line = app.version;
+  if (app.build && app.build !== app.version) line += ` (build ${app.build})`;
+  const built = datePhrase(app.builtAt, now);
+  return built ? `${line}, built ${built}` : line;
+}
+
+/**
+ * The PsyNeuView version, with when it was released (#15) when what runs is
+ * the copy included with the Mac app and the app knows that copy's date.
+ */
+export function psyneuviewVersionLine(
+  version: string,
+  mac: Pick<MacAppSettings, "install"> | null | undefined,
+  now: Date = new Date(),
+): string {
+  const install = mac?.install;
+  if (install?.choice !== "bundled" || install.includedVersion !== version) return version;
+  const released = releasedPhrase(install.includedReleasedAt, now);
+  return released ? `${version}, ${released}` : version;
 }
