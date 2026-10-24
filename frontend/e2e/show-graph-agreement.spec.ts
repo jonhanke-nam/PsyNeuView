@@ -1,8 +1,10 @@
 /**
  * Like show_graph agrees with show_graph, in every view (#34).
  *
- * Opens each reference model in each view the view menu offers (flattened,
- * every composition, PyTorch), lays it out Like show_graph, and compares the
+ * Opens each bundled model (reference models and demos) in each view the
+ * view menu offers (flattened, every composition, PyTorch), and in the full
+ * batch also with its compositions folded and with each of show_graph's
+ * options (Controller, Learning, CIMs) flipped; lays it out Like show_graph, and compares the
  * canvas with show_graph's own picture: the description the app fetched,
  * laid out here by the same Graphviz. It scores
  *   - nodes show_graph draws (matched / total),
@@ -26,10 +28,12 @@ import { placementFromGraphviz } from "../src/utils/showGraphLayout";
 import { measureAgreement, share, type Agreement, type Box } from "../src/utils/layoutAgreement";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const MODELS_DIR = path.resolve(__dirname, "..", "..", "backend", "reference_models");
+const BACKEND_DIR = path.resolve(__dirname, "..", "..", "backend");
 const OUT_DIR = path.resolve(__dirname, "..", "test-results", "show-graph-agreement");
 
-const ALL_MODELS = [
+// Every bundled model: the reference models and the demos (29), relative to
+// backend/. Results name a model by its file name.
+const REFERENCE_MODELS = [
   "Botvinick_conflict_monitoring_model.py",
   "Cohen_Huston1994_horse_race.py",
   "Cohen_Huston1994.py",
@@ -40,7 +44,29 @@ const ALL_MODELS = [
   "Nieuwenhuis2005Model.py",
   "stroop_reference_basic.py",
   "stroop_reference_with_lc.py",
-];
+].map((f) => `reference_models/${f}`);
+const DEMOS = [
+  "autodiff_feedforward.py",
+  "bistable_attractor.py",
+  "conflict_monitoring.py",
+  "ego_coffee_shop.py",
+  "episodic_memory.py",
+  "feedforward_network.py",
+  "hebbian_learning.py",
+  "hopfield_network.py",
+  "iscci_model.py",
+  "logic_gate_network.py",
+  "nested_compositions.py",
+  "neural_network_with_ddm.py",
+  "rumelhart_semantic_network.py",
+  "scheduling_demo.py",
+  "simple_stroop_learn.py",
+  "simple_stroop.py",
+  "stroop_basic.py",
+  "td_learning.py",
+  "vectors_and_matrices.py",
+].map((f) => `demos/${f}`);
+const ALL_MODELS = [...REFERENCE_MODELS, ...DEMOS];
 
 interface ViewResult extends Omit<Agreement, "overlaps"> {
   model: string;
@@ -56,28 +82,40 @@ interface ViewResult extends Omit<Agreement, "overlaps"> {
   cutOff: string[];
   /** The view opened in Custom, on positions saved for it. */
   savedLayout: boolean;
+  /** Anything else found on the way, e.g. a control a node covers. */
+  notes?: string[];
   /** Why there is nothing to compare, when there isn't. */
   error?: string;
 }
 
 type Captured = { dot: string };
 
-/** Every show_graph description the page fetches, as it arrives. */
-function captureShowGraph(page: Page): { all: Captured[]; settle: () => Promise<void> } {
+/**
+ * Every show_graph description the page fetches, as it arrives, and every
+ * refusal (with its message), each tagged with how many descriptions had
+ * arrived before it.
+ */
+function captureShowGraph(page: Page): {
+  all: Captured[];
+  refused: { at: number; detail: string }[];
+  settle: () => Promise<void>;
+} {
   const all: Captured[] = [];
+  const refused: { at: number; detail: string }[] = [];
   const pending: Promise<void>[] = [];
   page.on("response", (r: Response) => {
-    if (!r.url().includes("/api/model/show-graph") || r.request().method() !== "POST" || !r.ok()) return;
+    if (!r.url().includes("/api/model/show-graph") || r.request().method() !== "POST") return;
     pending.push(
       r
         .json()
-        .then((b: { dot?: string }) => {
-          if (b.dot) all.push({ dot: b.dot });
+        .then((b: { dot?: string; detail?: string }) => {
+          if (r.ok() && b.dot) all.push({ dot: b.dot });
+          else if (!r.ok()) refused.push({ at: all.length, detail: `${r.status()} ${b.detail ?? ""}`.trim() });
         })
         .catch(() => {}),
     );
   });
-  return { all, settle: () => Promise.all(pending).then(() => {}) };
+  return { all, refused, settle: () => Promise.all(pending).then(() => {}) };
 }
 
 const layoutSelect = (page: Page) =>
@@ -85,11 +123,12 @@ const layoutSelect = (page: Page) =>
 const viewSelect = (page: Page) =>
   page.locator("select").filter({ has: page.locator("option", { hasText: "Flatten (all compositions)" }) }).first();
 
-async function openModel(page: Page, file: string) {
+async function openModel(page: Page, model: string) {
+  const file = path.basename(model);
   await page.getByRole("button", { name: /Open/ }).first().click();
   await page.getByRole("button", { name: "Open from path..." }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
-  await prompt.fill(path.join(MODELS_DIR, file));
+  await prompt.fill(path.join(BACKEND_DIR, model));
   // The previous model stays drawn until this one's load returns.
   await Promise.all([
     page.waitForResponse(
@@ -148,21 +187,14 @@ async function cutOffAfterFit(page: Page): Promise<string[]> {
     .map((r) => r.id);
 }
 
-async function measureView(
-  page: Page,
-  gv: Graphviz,
-  captured: ReturnType<typeof captureShowGraph>,
-  model: string,
-  view: { value: string; label: string },
-  since: number,
-): Promise<{ result: ViewResult; canvasPng: Buffer; svg: string }> {
-  const from = captured.all.length;
+const loaded = (page: Page) =>
+  page.waitForResponse((r) => r.url().includes("/api/model/load") && r.ok(), { timeout: 60000 });
+
+/** Switch to a view; returns whether it opened on saved positions. */
+async function enterView(page: Page, view: { value: string; label: string }): Promise<boolean> {
   const select = viewSelect(page);
   if (view.value && (await select.inputValue()) !== view.value) {
-    await Promise.all([
-      page.waitForResponse((r) => r.url().includes("/api/model/load") && r.ok(), { timeout: 60000 }),
-      select.selectOption(view.value),
-    ]);
+    await Promise.all([loaded(page), select.selectOption(view.value)]);
   }
   await settledBoxes(page);
   // A view with saved positions opens in Custom; what's measured here is the
@@ -171,12 +203,65 @@ async function measureView(
   const savedLayout = await custom.isVisible().catch(() => false);
   if (savedLayout) {
     // Switching mode reloads the view.
-    await Promise.all([
-      page.waitForResponse((r) => r.url().includes("/api/model/load") && r.ok(), { timeout: 60000 }),
-      custom.click(),
-    ]);
+    await Promise.all([loaded(page), custom.click()]);
     await settledBoxes(page);
   }
+  return savedLayout;
+}
+
+/** Flip one of the graph's More ▸ show_graph options (Controller, Learning, CIMs). */
+async function toggleOption(page: Page, label: string) {
+  await page.getByTestId("graph-more-button").click();
+  const item = page.getByTestId("graph-more-menu").getByRole("button").filter({ hasText: new RegExp(`^${label}`) });
+  await Promise.all([loaded(page), item.click()]);
+  await page.keyboard.press("Escape");
+  await settledBoxes(page);
+}
+
+/**
+ * Fold every open composition (`fold`), or open every folded one. Returns how
+ * many it changed, and each button a node covered: a person couldn't press
+ * it, so that is a finding, but it is pressed anyway to carry on measuring.
+ */
+async function setFolded(page: Page, fold: boolean): Promise<{ changed: number; covered: string[] }> {
+  const name = fold ? /^Collapse composition / : /^Expand composition /;
+  const covered: string[] = [];
+  let changed = 0;
+  // Folding an outer composition hides its inner ones' buttons; opening it
+  // shows them again, still in the state they were left in.
+  for (; changed < 12; changed++) {
+    const button = page.getByTestId("graph-canvas").getByRole("button", { name }).first();
+    if (!(await button.isVisible().catch(() => false))) break;
+    const label = (await button.getAttribute("aria-label")) ?? "";
+    const pressed = Promise.all([loaded(page), button.click({ timeout: 3000 })]);
+    try {
+      await pressed;
+    } catch {
+      // Where the click would land, what's on top?
+      const onTop = await button.evaluate((b) => {
+        const r = b.getBoundingClientRect();
+        const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return el?.closest("[data-id]")?.getAttribute("data-id") ?? el?.tagName ?? "?";
+      });
+      covered.push(`${label} is covered by ${onTop}`);
+      await Promise.all([loaded(page), button.dispatchEvent("click")]);
+    }
+    await settledBoxes(page);
+  }
+  return { changed, covered };
+}
+
+/** Lay the canvas out like show_graph as it stands, and score it. */
+async function measureCurrent(
+  page: Page,
+  gv: Graphviz,
+  captured: ReturnType<typeof captureShowGraph>,
+  model: string,
+  label: string,
+  since: number,
+  from: number,
+  savedLayout: boolean,
+): Promise<{ result: ViewResult; canvasPng: Buffer; svg: string }> {
   const layout = layoutSelect(page);
   if ((await layout.inputValue()) !== "showgraph") await layout.selectOption("showgraph");
   // show_graph's description arrives, then the relayout lands. A view that
@@ -195,8 +280,11 @@ async function measureView(
   // The app keeps whichever description drew more of its nodes (it asks again
   // with learning shown when show_graph missed some); so does this, among
   // those fetched since the model opened, the latest winning a tie.
+  // A refusal since this view was entered: the app shows the Layered
+  // stand-in, with a notice, so there is nothing of show_graph's to compare.
+  const refusal = captured.refused.find((x) => x.at >= from);
   let best: { placement: ReturnType<typeof placementFromGraphviz>; dot: string } | null = null;
-  for (const { dot } of captured.all.slice(since).reverse()) {
+  for (const { dot } of refusal ? [] : captured.all.slice(since).reverse()) {
     const placement = placementFromGraphviz(JSON.parse(gv.layout(dot, "json", "dot")), "");
     const hits = [...drawn.keys()].filter((n) => placement.nodes.has(n)).length;
     const bestHits = best ? [...drawn.keys()].filter((n) => best!.placement.nodes.has(n)).length : -1;
@@ -222,14 +310,15 @@ async function measureView(
   }
 
   const result: ViewResult = {
-    model,
-    view: view.label,
+    model: path.basename(model),
+    view: label,
     ...agreement,
     overlaps: agreement.overlaps.map(([a, b]) => `${a} / ${b}`),
     courses: { drawn: between.length - selfLoops - missing.length, showGraph: between.length - selfLoops, missing, selfLoops },
     cutOff: await cutOffAfterFit(page),
     savedLayout,
-    ...(best ? {} : { error: "no show_graph description fetched" }),
+    ...(refusal ? { error: `show_graph refused: ${refusal.detail.slice(0, 200)}` } : {}),
+    ...(!best && !refusal ? { error: "no show_graph description fetched" } : {}),
   };
   const canvasPng = await page.getByTestId("graph-canvas").locator(".react-flow").screenshot();
   const svg = best ? gv.layout(best.dot, "svg", "dot") : "<p>No show_graph description.</p>";
@@ -246,6 +335,7 @@ function summaryLine(r: ViewResult): string {
     (r.courses.missing.length ? ` — not drawn: ${r.courses.missing.join(", ")}` : "") +
     ` · overlaps ${r.overlaps.length} · cut off ${r.cutOff.length}` +
     (r.savedLayout ? " · had a saved layout" : "") +
+    (r.notes?.length ? ` · ${r.notes.join("; ")}` : "") +
     (r.error ? ` · ${r.error}` : "")
   );
 }
@@ -264,37 +354,110 @@ async function writeSheet(page: Page, n: number, r: ViewResult, canvasPng: Buffe
   await sheet.close();
 }
 
-async function runBatch(page: Page, models: string[], sheets: boolean): Promise<ViewResult[]> {
+const failed = (model: string, view: string, e: unknown): ViewResult => ({
+  model: path.basename(model),
+  view,
+  nodes: 0,
+  matched: 0,
+  unmatched: [],
+  rows: { agree: 0, pairs: 0 },
+  order: { agree: 0, pairs: 0 },
+  overlaps: [],
+  courses: { drawn: 0, showGraph: 0, missing: [], selfLoops: 0 },
+  cutOff: [],
+  savedLayout: false,
+  error: String(e).split("\n")[0],
+});
+
+// show_graph's options, each measured flipped from its default on a model's
+// first view, then flipped back.
+const OPTIONS = [
+  { label: "Controller", variant: "Controller hidden" },
+  { label: "Learning", variant: "Learning shown" },
+  { label: "CIMs", variant: "CIMs shown" },
+];
+
+/**
+ * Measure each model in each view. With `variants`, also with its open
+ * compositions folded, and with each show_graph option flipped.
+ */
+async function runBatch(
+  page: Page,
+  models: string[],
+  { sheets, variants }: { sheets: boolean; variants: boolean },
+): Promise<ViewResult[]> {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/");
   await closePalette(page);
   const gv = await Graphviz.load();
   const captured = captureShowGraph(page);
   const results: ViewResult[] = [];
+  const record = async (
+    model: string,
+    label: string,
+    measure: () => Promise<{ result: ViewResult; canvasPng: Buffer; svg: string }>,
+  ) => {
+    try {
+      const { result, canvasPng, svg } = await measure();
+      results.push(result);
+      if (sheets) await writeSheet(page, results.length, result, canvasPng, svg);
+    } catch (e) {
+      // One view that can't be measured shouldn't hide the rest.
+      results.push(failed(model, label, e));
+    }
+  };
   for (const model of models) {
     const since = captured.all.length;
-    await openModel(page, model);
-    for (const view of await views(page)) {
+    try {
+      await openModel(page, model);
+    } catch (e) {
+      results.push(failed(model, "opening", e));
+      continue;
+    }
+    const all = await views(page);
+    for (const [i, view] of all.entries()) {
+      let savedLayout = false;
+      const from = captured.all.length;
       try {
-        const { result, canvasPng, svg } = await measureView(page, gv, captured, model, view, since);
-        results.push(result);
-        if (sheets) await writeSheet(page, results.length, result, canvasPng, svg);
+        savedLayout = await enterView(page, view);
       } catch (e) {
-        // One view that can't be measured shouldn't hide the rest.
-        results.push({
-          model,
-          view: view.label,
-          nodes: 0,
-          matched: 0,
-          unmatched: [],
-          rows: { agree: 0, pairs: 0 },
-          order: { agree: 0, pairs: 0 },
-          overlaps: [],
-          courses: { drawn: 0, showGraph: 0, missing: [], selfLoops: 0 },
-          cutOff: [],
-          savedLayout: false,
-          error: String(e).split("\n")[0],
-        });
+        results.push(failed(model, view.label, e));
+        continue;
+      }
+      await record(model, view.label, () =>
+        measureCurrent(page, gv, captured, model, view.label, since, from, savedLayout),
+      );
+      if (!variants) continue;
+
+      const folded = `${view.label} · compositions folded`;
+      try {
+        const before = captured.all.length;
+        const { changed, covered } = await setFolded(page, true);
+        if (changed > 0) {
+          await record(model, folded, async () => {
+            const m = await measureCurrent(page, gv, captured, model, folded, since, before, false);
+            if (covered.length) m.result.notes = [...(m.result.notes ?? []), ...covered];
+            return m;
+          });
+          await setFolded(page, false);
+        }
+      } catch (e) {
+        results.push(failed(model, folded, e));
+      }
+
+      if (i > 0) continue;
+      for (const option of OPTIONS) {
+        const label = `${view.label} · ${option.variant}`;
+        try {
+          const before = captured.all.length;
+          await toggleOption(page, option.label);
+          await record(model, label, () =>
+            measureCurrent(page, gv, captured, model, label, since, before, false),
+          );
+          await toggleOption(page, option.label);
+        } catch (e) {
+          results.push(failed(model, label, e));
+        }
       }
     }
   }
@@ -307,7 +470,7 @@ function writeReport(results: ViewResult[]) {
     (r, i) =>
       `| ${i + 1} | ${r.model.replace(/\.py$/, "")} | ${r.view} | ${r.matched}/${r.nodes} | ${pct(share(r.rows))} | ` +
       `${pct(share(r.order))} | ${r.courses.drawn}/${r.courses.showGraph} | ${r.courses.selfLoops} | ${r.overlaps.length} | ${r.cutOff.length} | ` +
-      `${[...r.courses.missing.map((m) => `not drawn: ${m}`), ...(r.savedLayout ? ["had a saved layout"] : []), ...(r.error ? [r.error] : [])].join("; ")} |`,
+      `${[...r.courses.missing.map((m) => `not drawn: ${m}`), ...(r.savedLayout ? ["had a saved layout"] : []), ...(r.notes ?? []), ...(r.error ? [r.error] : [])].join("; ")} |`,
   );
   writeFileSync(
     path.join(OUT_DIR, "agreement.md"),
@@ -321,19 +484,22 @@ function writeReport(results: ViewResult[]) {
 }
 
 // The whole matrix, with review sheets: before a release.
-test("every reference model, every view: agreement with show_graph", async ({ page }) => {
-  test.setTimeout(30 * 60_000);
+test("every bundled model, every view: agreement with show_graph", async ({ page }) => {
+  test.setTimeout(90 * 60_000);
   mkdirSync(OUT_DIR, { recursive: true });
-  // PNV_AGREEMENT_MODELS=a.py,b.py narrows the batch while working on a gap.
+  // PNV_AGREEMENT_MODELS=demos/a.py,reference_models/b.py narrows the batch
+  // while working on a gap.
   const only = process.env.PNV_AGREEMENT_MODELS?.split(",").filter(Boolean);
-  const results = await runBatch(page, only?.length ? only : ALL_MODELS, true);
+  const results = await runBatch(page, only?.length ? only : ALL_MODELS, { sheets: true, variants: true });
   writeReport(results);
   for (const r of results) console.log(`${r.model} — ${r.view}: ${summaryLine(r)}`);
 });
 
 // Representative models, held to thresholds in CI: the basic Stroop, EGO in
 // each of its views (nested, flattened, PyTorch), and a learning model.
-const REPRESENTATIVE = ["stroop_reference_basic.py", "Giallanza2024_ego_study2.py", "MontagueDayanSejnowski96.py"];
+const REPRESENTATIVE = ["stroop_reference_basic.py", "Giallanza2024_ego_study2.py", "MontagueDayanSejnowski96.py"].map(
+  (f) => `reference_models/${f}`,
+);
 
 // Edges show_graph draws that the canvas doesn't yet, each with its issue.
 // Listed exactly, so a fix shows up here as well as a new gap.
@@ -351,7 +517,7 @@ KNOWN_MISSING["Giallanza2024_ego_study2.py — PyTorch view"] =
 
 test("representative models agree with show_graph in every view", { tag: "@ci" }, async ({ page }) => {
   test.setTimeout(5 * 60_000);
-  const results = await runBatch(page, REPRESENTATIVE, false);
+  const results = await runBatch(page, REPRESENTATIVE, { sheets: false, variants: false });
   expect(results.length, "views measured").toBeGreaterThanOrEqual(REPRESENTATIVE.length + 2);
   for (const r of results) {
     const where = `${r.model} — ${r.view}`;
