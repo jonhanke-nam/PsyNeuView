@@ -24,7 +24,7 @@ steps:
     anchor:
       testid: open-menu
     instruct: >-
-      Start a new model: Open ▾ → + New Model…, and call it ddm_demo.
+      Start a new model: Open ▸ New Model…, and call it ddm_demo.
       PsyNeuView scaffolds a runnable two-node starter for you.
     say: >-
       Start a new model to build on.
