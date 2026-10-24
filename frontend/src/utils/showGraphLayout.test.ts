@@ -116,6 +116,41 @@ describe("Like show_graph layout (#19)", () => {
     }
   });
 
+  it("keeps a frame's header clear of its members, and of the row above (#71)", () => {
+    // show_graph: `top` above cluster EM, which holds `a` over `b`. Its
+    // cluster box is snug around the ovals, so the enlarged boxes reach
+    // past it.
+    const nodes: Node[] = [
+      mech("top"),
+      { id: "EM", type: "compositionNode", position: { x: 0, y: 0 }, data: { label: "EM" } },
+      { ...mech("a"), parentId: "EM" },
+      { ...mech("b"), parentId: "EM" },
+    ];
+    const placement = {
+      signature: graphSignature(nodes),
+      nodes: new Map([
+        ["top", { x: 100, y: 20, w: 60, h: 36 }],
+        ["a", { x: 100, y: 100, w: 60, h: 36 }],
+        ["b", { x: 100, y: 180, w: 60, h: 36 }],
+      ]),
+      clusters: new Map([["EM", { x: 62, y: 74, w: 76, h: 132 }]]),
+      edges: [],
+    };
+    const laid = applyShowGraphPlacement(nodes, placement)!;
+    const get = (id: string) => laid.find((n) => n.id === id)!;
+    const frame = get("EM");
+    const fw = frame.style!.width as number;
+    const fh = frame.style!.height as number;
+    for (const id of ["a", "b"]) {
+      const { x, y } = get(id).position; // relative to the frame
+      expect(y, `${id} reaches into the header`).toBeGreaterThanOrEqual(30);
+      expect(x).toBeGreaterThanOrEqual(10);
+      expect(x + 190).toBeLessThanOrEqual(fw - 10);
+      expect(y + 70).toBeLessThanOrEqual(fh - 10);
+    }
+    expect(get("top").position.y + 70).toBeLessThanOrEqual(frame.position.y);
+  });
+
   it("declines a layout computed for a different graph", async () => {
     const placement = await stroopPlacement(NAMES.map((n) => mech(n)));
     const other = ["a", "b", "c"].map((n) => mech(n));
