@@ -23,6 +23,8 @@ steps:
     anchor:
       testid: palette-sidebar
     instruct: Search the palette for TransferMechanism and click it to add one.
+    say: >-
+      Find TransferMechanism in the palette, and click it to add one.
     done:
       # The #181 default name for a newly added component.
       nodeExists: New_TransferMechanism_1
@@ -33,6 +35,8 @@ steps:
     anchor:
       node: New_TransferMechanism_1
     instruct: Select New_TransferMechanism_1, the component you just added, to see its parameters.
+    say: >-
+      Select the new node to see its parameters.
     done:
       selectedNode: New_TransferMechanism_1
     act:

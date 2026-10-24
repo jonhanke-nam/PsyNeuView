@@ -28,6 +28,8 @@ steps:
     anchor:
       node: color_hidden
     instruct: Select color_hidden (ringed in blue) to see its parameters in the Inspector.
+    say: >-
+      Select color_hidden. The Inspector shows its parameters.
     # How the app knows the learner did it — read from app state, never the DOM.
     done:
       selectedNode: color_hidden
@@ -40,6 +42,8 @@ steps:
     anchor:
       node: word_hidden
     instruct: Now select word_hidden, the other hidden layer, on the word-reading pathway.
+    say: >-
+      Now word_hidden, the hidden layer for reading the word.
     done:
       selectedNode: word_hidden
     act:

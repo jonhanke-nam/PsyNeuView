@@ -81,7 +81,8 @@ steps:
       After a run, a trace bar appears under the canvas. Press its ▶ to move one
       step forward. As you step, each node shows the value it had at that step.
     say: >-
-      The trace bar steps through the run, and the canvas shows each node's value as it goes.
+      The trace bar steps through the run, and the canvas shows each
+      node's value as it goes.
     done:
       traceStepAtLeast: 1
     act:

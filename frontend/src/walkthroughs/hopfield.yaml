@@ -69,7 +69,8 @@ steps:
       Logistic stretched from -1 to +1 and so steep (gain 1000) that it is a
       step: a unit with positive input becomes +1, negative, -1.
     say: >-
-      Units that agree in a letter are wired together. Each unit is a step, plus or minus one.
+      Units that agree in a letter are wired together. Each unit is a
+      step, plus or minus one.
     done:
       selectedNode: hopfield
     act:
@@ -141,7 +142,8 @@ steps:
       Trials 3 to 6 list nothing, and their grids are the same Z: it doesn't
       change. It is a stable state, an attractor.
     say: >-
-      All four wrong pixels flipped at once, and then nothing changes. Z is an attractor.
+      All four wrong pixels flipped at once, and then nothing changes. Z
+      is an attractor.
     done:
       visible: run-trial-delta
     act:
@@ -210,7 +212,8 @@ steps:
       letters that share pixels: their weights interfere, and the memories
       run into each other.
     say: >-
-      With four letters stored, the noisy Z settles on X. The memories interfere.
+      With four letters stored, the noisy Z settles on X. The memories
+      interfere.
     done:
       next: true
     act:
@@ -227,7 +230,8 @@ steps:
       numbers. For the exercise, see the notebook, 2_hopfield_networks, in
       the course's 1_dynamics_in_perception.
     say: >-
-      This is the PsyNeuLink side of a numpy lesson. The exercise is in the notebook.
+      This is the PsyNeuLink side of a numpy lesson. The exercise is in
+      the notebook.
     done:
       next: true
     act:

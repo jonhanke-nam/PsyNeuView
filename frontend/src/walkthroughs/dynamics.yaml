@@ -15,6 +15,8 @@ steps:
       testid: open-menu
     instruct: >-
       Open the Bistable Attractor demo: two nodes, each inhibiting the other.
+    say: >-
+      Open the Bistable Attractor: two nodes, each holding the other down.
     done:
       nodeExists: node_attract1
     act:
@@ -27,6 +29,8 @@ steps:
       Select node_attract1. It integrates over time (integration_rate 0.5) and
       feeds node_attract2 through a weight of -1. node_attract2 does the same
       back, so each holds the other down.
+    say: >-
+      Each node integrates over time, and inhibits the other.
     done:
       selectedNode: node_attract1
     act:
@@ -39,6 +43,8 @@ steps:
       Open the Run tab. The demo declares the course's experiment as kick, so
       its inputs are already filled in: 2 and 6 on the first of ten trials,
       then nothing. Run it.
+    say: >-
+      Run the kick: one push at the start, then nothing.
     done:
       lastRunInputs:
         node_attract1: [2, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -54,6 +60,9 @@ steps:
       both sit near 0.40. That resting point is an attractor: once the kick is
       gone, the mutual inhibition decides where the system ends up. Select
       node_attract2 to carry on.
+    say: >-
+      They pull together and settle near 0.4. That resting point is an
+      attractor.
     done:
       selectedNode: node_attract2
     act:
@@ -67,6 +76,9 @@ steps:
       and 1 to node_attract2 on every trial) and run again. This time
       they pull apart. node_attract2 wins, and the gap is still widening at
       the tenth trial.
+    say: >-
+      Now a steady difference. This time they pull apart, and
+      node_attract2 wins.
     done:
       lastRunInputs:
         node_attract1: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]

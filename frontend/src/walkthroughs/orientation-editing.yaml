@@ -42,7 +42,8 @@ steps:
       to pnl.Logistic(). A moment after you stop typing, the canvas rebuilds
       from the new code. Nothing is written to the file until you Save.
     say: >-
-      Edit the code, and the canvas follows. The file is not written until you save.
+      Edit the code, and the canvas follows. The file is not written
+      until you save.
     done:
       functionIs:
         node: output_node
@@ -128,7 +129,8 @@ steps:
       notices. With nothing unsaved here, it loads the new version. With unsaved
       edits here, it asks which version you want, and never guesses.
     say: >-
-      Edits made outside PsyNeuView are noticed too. If both sides changed, you choose.
+      Edits made outside PsyNeuView are noticed too. If both sides
+      changed, you choose.
     done:
       next: true
     act:
