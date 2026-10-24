@@ -19,6 +19,8 @@ steps:
     instruct: >-
       Open the Logic Gate Network demo: three inputs feeding one Logistic
       output, trained by backpropagation.
+    say: >-
+      Open the Logic Gate Network: three inputs feeding one output.
     done:
       nodeExists: out_layer
     act:
@@ -31,6 +33,9 @@ steps:
       Select out_layer, a single Logistic unit. in_layer has three inputs: A,
       B, and a constant 1 that works as a bias the network can learn, since
       its weight trains like any other.
+    say: >-
+      One Logistic unit. The third input is a constant 1, a bias the
+      network can learn.
     done:
       selectedNode: out_layer
     act:
@@ -44,6 +49,8 @@ steps:
       sets, and and_gate is already filled in (the four patterns, targets 0, 0,
       0, 1, 50 epochs). Start learning. The loss falls from about 0.32 to under
       0.001: it has learned AND.
+    say: >-
+      Train it on AND. The loss falls almost to zero: it has learned AND.
     done:
       lastTraining:
         targets:
@@ -63,6 +70,9 @@ steps:
       stalls near 0.25, which is the loss of answering 0.5 to everything. One
       layer of weights draws one straight line, and no straight line separates
       XOR's two 1s from its two 0s.
+    say: >-
+      Now XOR. The loss stalls near 0.25, because no straight line
+      separates XOR's answers.
     done:
       lastTraining:
         targets:

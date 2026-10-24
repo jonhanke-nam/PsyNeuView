@@ -20,6 +20,8 @@ steps:
     anchor:
       testid: tab-run
     instruct: Open the Run tab and press Run Model to execute the model.
+    say: >-
+      Open the Run tab, and run the model.
     done:
       trialsAtLeast: 1
     act:

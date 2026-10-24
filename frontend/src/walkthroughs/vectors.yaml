@@ -48,7 +48,8 @@ steps:
       are vectors of three numbers. Its function is Linear with slope 1:
       the output is the input, unchanged.
     say: >-
-      vector b: three units, so its input and output are vectors of three numbers.
+      vector b: three units, so its input and output are vectors of
+      three numbers.
     done:
       selectedNode: vector_b
     act:
@@ -97,7 +98,8 @@ steps:
       + 5 × 8 + 6 × 9 = 28 + 40 + 54 = 122. Each output unit is one dot
       product, a weighted sum of the input.
     say: >-
-      Each output is a dot product: 1 times 7, plus 2 times 8, plus 3 times 9, is 50.
+      Each output is a dot product: 1 times 7, plus 2 times 8, plus 3
+      times 9, is 50.
     done:
       next: true
     act:
@@ -238,7 +240,8 @@ steps:
       a mismatched-size error aren't shown. For those, and the exercises, see
       the notebook, 1_scalars_vectors_and_matrices, in the course's 0_primer.
     say: >-
-      This is the PsyNeuLink side of a numpy lesson. The exercises are in the notebook.
+      This is the PsyNeuLink side of a numpy lesson. The exercises are
+      in the notebook.
     done:
       next: true
     act:

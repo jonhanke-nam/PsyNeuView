@@ -64,7 +64,8 @@ steps:
       version, up to date or how many commits behind, and when that was last
       checked. Check now asks again.
     say: >-
-      The status line says whether the installed PsyNeuLink is up to date, and when that was checked.
+      The status line says whether the installed PsyNeuLink is up to
+      date, and when that was checked.
     done:
       next: true
     act:
@@ -108,7 +109,8 @@ steps:
       My Project Folder and your catalogs stay as they are. Next: running a
       model.
     say: >-
-      Switching PsyNeuLink changes the Library, not your own models. Next: running.
+      Switching PsyNeuLink changes the Library, not your own models.
+      Next: running.
     done:
       hidden: settings-panel
     act:

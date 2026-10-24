@@ -82,7 +82,8 @@ steps:
       and this section lists that PsyNeuLink's models instead; My Project Folder
       stays the same.
     say: >-
-      The Library comes with the PsyNeuLink you have selected, and changes with it.
+      The Library comes with the PsyNeuLink you have selected, and
+      changes with it.
     done:
       next: true
     act:
