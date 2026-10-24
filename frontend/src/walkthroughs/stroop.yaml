@@ -30,6 +30,8 @@ steps:
     instruct: >-
       Open the Stroop — Basic model. Unlike the DDM, this one is bundled —
       seven mechanisms already wired together.
+    say: >-
+      Open the Stroop model: seven mechanisms, already wired together.
     done:
       nodeExists: color_hidden
     act:
@@ -41,6 +43,9 @@ steps:
     instruct: >-
       Select color_hidden — the colour-naming pathway. Its Logistic gain is the
       parameter that makes this pathway weak relative to word reading.
+    say: >-
+      This is the colour-naming pathway. Its gain keeps it weaker than
+      word reading.
     done:
       selectedNode: color_hidden
     act:
@@ -52,6 +57,8 @@ steps:
     instruct: >-
       Now word_hidden, the word-reading pathway. Same structure, stronger
       weights — the asymmetry is the whole Stroop effect.
+    say: >-
+      And the word-reading pathway: the same shape, with stronger weights.
     done:
       selectedNode: word_hidden
     act:
@@ -62,6 +69,8 @@ steps:
       testid: tab-run
     instruct: >-
       Run the model and watch both pathways feed one decision.
+    say: >-
+      Run it, and watch both pathways feed one decision.
     done:
       trialsAtLeast: 1
     act:
@@ -73,6 +82,8 @@ steps:
     instruct: >-
       Select decision. It is a DDM — the same mechanism you built in the Drift
       Diffusion walkthrough, here accumulating evidence from both pathways.
+    say: >-
+      The decision is a DDM, weighing evidence from both pathways.
     done:
       selectedNode: decision
     act:
@@ -87,6 +98,8 @@ steps:
     instruct: >-
       Raise color_hidden's gain to 2.5. You are making colour naming compete
       harder against word reading.
+    say: >-
+      Raise colour naming's gain to 2.5, so it competes harder.
     done:
       paramEquals:
         node: color_hidden
@@ -104,6 +117,8 @@ steps:
     instruct: >-
       Run it again and compare the decision. Same model, one parameter changed
       — this is the experiment, not the interface.
+    say: >-
+      Run it again, and compare the decision.
     done:
       # Not trialsAtLeast: a second run produces the same trial count as the
       # first, so only a run COUNT can tell them apart.

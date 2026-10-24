@@ -29,7 +29,8 @@ steps:
       the toolbar, and everything the mode adds carries the same badge. Click
       the badge for a menu: turn the mode off, or open its settings.
     say: >-
-      Developer mode is on. The badge in the toolbar says so, and marks everything it adds.
+      Developer mode is on. The badge in the toolbar says so, and marks
+      everything it adds.
     done:
       next: true
     act:
@@ -115,7 +116,8 @@ steps:
       the branch has moved on, and Debugging support, which says whether this
       build has the debugger hook that run stepping needs.
     say: >-
-      The details of the PsyNeuLink in use, including whether it supports stepping.
+      The details of the PsyNeuLink in use, including whether it
+      supports stepping.
     done:
       next: true
     act:
@@ -202,7 +204,8 @@ steps:
       edits. PsyNeuView remembers this per checkout. To keep just one model
       from changing, lock it instead: Layout ▸ Lock this model (view only).
     say: >-
-      Library files are read only from a managed PsyNeuLink, and editable from your own checkout.
+      Library files are read only from a managed PsyNeuLink, and
+      editable from your own checkout.
     done:
       next: true
     act:
@@ -217,7 +220,8 @@ steps:
       test build is tried. Help ▸ Report a Problem… adds Open as GitHub issue
       while developer mode is on. Press Next to finish the orientation.
     say: >-
-      In the Mac app, Developer also chooses which PsyNeuView runs. That is the end of the orientation.
+      In the Mac app, Developer also chooses which PsyNeuView runs. That
+      is the end of the orientation.
     done:
       next: true
     act:

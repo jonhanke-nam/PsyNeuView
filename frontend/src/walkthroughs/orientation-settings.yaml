@@ -35,7 +35,8 @@ steps:
       the PsyNeuLink version and its updates (part 5), autosave, and where a
       new model's layout and label files go.
     say: >-
-      About lists versions. General holds the PsyNeuLink version and the few everyday choices.
+      About lists versions. General holds the PsyNeuLink version and the
+      few everyday choices.
     done:
       visible: settings-content-general
     act:
@@ -45,11 +46,13 @@ steps:
     anchor:
       testid: settings-section-appearance
     instruct: >-
-      Click Appearance: how the app looks and feels, remembered in this
-      browser: the pointer in the graph view, an arrow or a hand, and its
-      size, with a preview; and whether the graph legend opens collapsed.
+      Click Appearance: how the graph looks, remembered in this browser. The
+      pointer, an arrow or a hand, and its size; how thick node outlines are;
+      how a model is arranged when it opens; whether the legend opens
+      collapsed; and whether scheduling-condition arrows are drawn.
     say: >-
-      Appearance is how the app looks: the graph pointer, and the legend.
+      Appearance is how the graph looks: the pointer, outlines, layout, legend
+      and arrows.
     done:
       visible: settings-content-appearance
     act:
@@ -63,7 +66,8 @@ steps:
       fast, with a sample to listen to and where to get better voices; and
       whether PsyNeuView reminds you about these First Steps.
     say: >-
-      Tutorials and Voice is how narration sounds, and the walkthrough reminders.
+      Tutorials and Voice is how narration sounds, and the walkthrough
+      reminders.
     done:
       visible: settings-content-tutorials-voice
     act:
@@ -133,7 +137,8 @@ steps:
       gathers a screenshot, the versions and the last log lines into one folder
       for the PsyNeuView team, and shows you each item before saving it.
     say: >-
-      In the Mac app, Help, Report a Problem, gathers what the team needs into one folder.
+      In the Mac app, Help, Report a Problem, gathers what the team
+      needs into one folder.
     done:
       next: true
     act:

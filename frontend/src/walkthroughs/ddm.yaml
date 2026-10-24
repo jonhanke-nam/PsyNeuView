@@ -24,8 +24,10 @@ steps:
     anchor:
       testid: open-menu
     instruct: >-
-      Start a new model: Open ▾ → + New Model…, and call it ddm_demo.
+      Start a new model: Open ▸ New Model…, and call it ddm_demo.
       PsyNeuView scaffolds a runnable two-node starter for you.
+    say: >-
+      Start a new model to build on.
     done:
       # The starter model's input node — proof the scaffold landed.
       nodeExists: input_node
@@ -38,6 +40,8 @@ steps:
     instruct: >-
       Search the palette for DDM and click it. This is the mechanism that
       accumulates noisy evidence until it crosses a threshold.
+    say: >-
+      Add a DDM: it gathers noisy evidence until it crosses a threshold.
     done:
       nodeExists: New_DDM_1
     act:
@@ -48,6 +52,8 @@ steps:
       testid: tab-run
     instruct: >-
       Open the Run tab and press Run Model. The DDM decides on every trial.
+    say: >-
+      Run the model. The DDM makes a decision on every trial.
     done:
       trialsAtLeast: 1
     act:
@@ -59,6 +65,9 @@ steps:
     instruct: >-
       Select the DDM to see its parameters — drift rate, threshold and noise
       are the ones chapter 2 varies.
+    say: >-
+      Select the DDM. Drift rate, threshold and noise are what chapter 2
+      varies.
     done:
       selectedNode: New_DDM_1
     act:

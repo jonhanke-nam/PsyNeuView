@@ -76,7 +76,8 @@ steps:
       second output port, DECISION ENERGY, is the conflict monitor. It is the
       energy of the two units together, highest when both are active at once.
     say: >-
-      The response layer has a second output: decision energy, the conflict monitor.
+      The response layer has a second output: decision energy, the
+      conflict monitor.
     done:
       selectedNode: RESPONSE
     act:

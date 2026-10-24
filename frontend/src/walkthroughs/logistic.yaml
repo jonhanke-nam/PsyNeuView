@@ -20,8 +20,10 @@ steps:
     anchor:
       testid: open-menu
     instruct: >-
-      Start a new model: Open ▾ → + New Model…, and call it logistic_demo.
+      Start a new model: Open ▸ New Model…, and call it logistic_demo.
       It comes with two nodes, input_node feeding output_node.
+    say: >-
+      Start a new model. It comes with an input node feeding an output node.
     done:
       nodeExists: output_node
     act:
@@ -33,6 +35,8 @@ steps:
     instruct: >-
       Select output_node. Its function is Linear, so for now it passes its
       input straight through.
+    say: >-
+      Select the output node. For now it passes its input straight through.
     done:
       selectedNode: output_node
     act:
@@ -44,6 +48,8 @@ steps:
     instruct: >-
       In the Inspector, change output_node's Function from Linear to Logistic:
       an S-shaped curve that squashes any input into the range 0 to 1.
+    say: >-
+      Make its function Logistic: an S-shaped curve between 0 and 1.
     done:
       functionIs:
         node: output_node
@@ -60,6 +66,8 @@ steps:
       Run it with the default inputs (1 on every trial). The Logistic turns an
       input of 1 into about 0.73: past the curve's midpoint of 0.5, but short
       of its ceiling.
+    say: >-
+      Run it. An input of 1 gives about 0.73.
     done:
       trialsAtLeast: 1
     act:
@@ -73,6 +81,8 @@ steps:
       First move the curve's midpoint right to 1 by setting x_0 to 1. (The
       course notebook uses bias for this, but PsyNeuLink adds bias to the
       input, so x_0 is the shift.)
+    say: >-
+      To make the output 1, first move the curve's midpoint to 1.
     done:
       paramEquals:
         node: output_node
@@ -90,6 +100,8 @@ steps:
     instruct: >-
       An input of 1 now sits at the midpoint and gives 0.5. Lift the whole
       curve by setting offset to 0.5.
+    say: >-
+      Now lift the whole curve by setting offset to 0.5.
     done:
       paramEquals:
         node: output_node
@@ -105,6 +117,8 @@ steps:
     anchor:
       testid: tab-run
     instruct: >-
+      Run it again. The output is now exactly 1.
+    say: >-
       Run it again. The output is now exactly 1.
     done:
       runsAtLeast: 2

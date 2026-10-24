@@ -40,7 +40,8 @@ steps:
       Save writes your changes back to that file, then reloads the model. It is
       greyed out until there is something unsaved: the orange dot by the name.
     say: >-
-      Save writes to the file you opened. Greyed out means nothing has changed.
+      Save writes to the file you opened. Greyed out means nothing has
+      changed.
     done:
       next: true
     act:
@@ -55,7 +56,8 @@ steps:
       .pnlproject bundle, or MDF. A .py copy becomes the open file. It is also
       the way to keep your own version of a model you cannot edit in place.
     say: >-
-      Save a copy makes a new file elsewhere, and a Python copy becomes the open one.
+      Save a copy makes a new file elsewhere, and a Python copy becomes
+      the open one.
     done:
       next: true
     act:
@@ -151,7 +153,8 @@ steps:
       Save a copy as… gives you an unlocked copy. The lock is kept in the
       model's layout file, so it travels with the model.
     say: >-
-      Locked, the model can't be changed: not on the graph, in the Inspector, or in the code.
+      Locked, the model can't be changed: not on the graph, in the
+      Inspector, or in the code.
     done:
       visible: edit-mode-badge
     act:

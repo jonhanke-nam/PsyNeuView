@@ -210,7 +210,8 @@ steps:
       PsyNeuView doesn't yet carry learned weights into a run, so the trained
       network can't be asked about the owl and the falcon.
     say: >-
-      Making the training data, and running the trained network, happen outside the app.
+      Making the training data, and running the trained network, happen
+      outside the app.
     done:
       next: true
     act:

@@ -61,7 +61,8 @@ steps:
       properties get similar patterns here. The app can't plot those patterns
       yet, but this is where they live.
     say: >-
-      The representation layer. Similar nouns end up with similar patterns here.
+      The representation layer. Similar nouns end up with similar
+      patterns here.
     done:
       selectedNode: hidden_nouns
     act:
