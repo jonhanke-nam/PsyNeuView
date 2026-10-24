@@ -9,7 +9,9 @@
  * **Tweakable without a rebuild:** a deployer (or a modeler tuning the look)
  * can serve a `rendering-defaults.json` at the app root with any subset of
  * these keys to override the built-ins at startup — no code change, no rebuild.
- * See `public/rendering-defaults.example.json`. This is the first slice of the
+ * See `public/rendering-defaults.example.json`. The app ships an empty one
+ * (`{}`), so a plain install finds the file instead of logging a 404 at
+ * every start; overriding means replacing it. This is the first slice of the
  * broader "parameterize every visual choice" goal; more constants (node border
  * widths, spacing, colors) migrate here over time.
  */
