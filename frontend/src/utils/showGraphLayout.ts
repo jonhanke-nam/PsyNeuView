@@ -30,6 +30,11 @@ const MAX_SCALE = 3;
 
 const DEFAULT_SIZE = { w: 180, h: 60 };
 
+// An open frame's header row, as in layout.ts, and the least room between a
+// member and the frame's other edges.
+const FRAME_HEADER = 30;
+const FRAME_MARGIN = 10;
+
 export interface ShowGraphPlacement {
   /** Which graph and options this was computed for (see `placementKey`). */
   signature: string;
@@ -392,6 +397,33 @@ function place(nodes: Node[], placement: ShowGraphPlacement | null): Placed | nu
     if (cx !== undefined && cy !== undefined) {
       absTopLeft.set(n.id, { x: cx * sx - w / 2, y: cy * sy - h / 2 });
     }
+  }
+
+  // A frame's header (its name and buttons) runs along its top edge, but
+  // show_graph's cluster has nothing there, and boxes enlarged from its ovals
+  // can reach up into it (#71). Grow each frame, innermost first, until its
+  // members sit below the header and inside its other edges. Rows are at
+  // least GAP_Y apart, so the header still clears the row above.
+  const depth = (n: Node): number => {
+    const parent = n.parentId ? byId.get(n.parentId) : undefined;
+    return parent ? 1 + depth(parent) : 0;
+  };
+  const frames = nodes.filter((n) => frameSize.has(n.id)).sort((a, b) => depth(b) - depth(a));
+  for (const f of frames) {
+    const p = absTopLeft.get(f.id)!;
+    const s = frameSize.get(f.id)!;
+    let [left, top, right, bottom] = [p.x, p.y, p.x + s.w, p.y + s.h];
+    for (const m of nodes) {
+      const mp = m.parentId === f.id ? absTopLeft.get(m.id) : undefined;
+      if (!mp) continue;
+      const ms = frameSize.get(m.id) ?? nodeSize(m);
+      left = Math.min(left, mp.x - FRAME_MARGIN);
+      right = Math.max(right, mp.x + ms.w + FRAME_MARGIN);
+      top = Math.min(top, mp.y - FRAME_HEADER);
+      bottom = Math.max(bottom, mp.y + ms.h + FRAME_MARGIN);
+    }
+    absTopLeft.set(f.id, { x: left, y: top });
+    frameSize.set(f.id, { w: right - left, h: bottom - top });
   }
 
   // Unplaced top-level nodes: a column to the right of everything placed.
