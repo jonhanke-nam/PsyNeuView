@@ -2972,7 +2972,12 @@ def _flatten_graph(comp, line_map, proj_name_lookup, name_to_var):
                 continue
             if id(receiver) not in real_ids:
                 continue
-            edge_key = (id(sender), id(receiver))
+            # #66: one edge per pair of real ports, not per pair of nodes. A
+            # node can send two projections to one receiver, on different
+            # ports (EGO's COMBINED SCORES to each FIELD_MEMORY), and
+            # show_graph draws both; the same projection reached twice
+            # through the interfaces is still one edge.
+            edge_key = (id(start.sender), id(proj.receiver))
             if edge_key in seen_edges or id(sender) == id(receiver):
                 continue
             seen_edges.add(edge_key)
@@ -3085,16 +3090,17 @@ def _pytorch_flatten(comp, line_map, proj_name_lookup, name_to_var):
     def resolve_cim_endpoint(cim, port, as_sender):
         # as_sender: the CIM is the projection's sender, so `port` is one of its
         # output ports (pair[1]); else it's the receiver and `port` is an input
-        # port (pair[0]). The port_map key is the real inner mechanism's port.
+        # port (pair[0]). The port_map key is the real inner mechanism's port,
+        # returned with its owner.
         idx = 1 if as_sender else 0
         port_map = getattr(cim, "port_map", None) or {}
         for inner_port, pair in port_map.items():
             try:
                 if pair[idx] is port:
-                    return getattr(inner_port, "owner", None)
+                    return getattr(inner_port, "owner", None), inner_port
             except (IndexError, TypeError):
                 continue
-        return None
+        return None, None
 
     projections = []
     seen_edges = set()
@@ -3111,14 +3117,17 @@ def _pytorch_flatten(comp, line_map, proj_name_lookup, name_to_var):
 
         via_cim = is_cim(sender) or is_cim(receiver)
         if is_cim(sender):
-            sender = resolve_cim_endpoint(sender, s_port, as_sender=True)
+            sender, s_port = resolve_cim_endpoint(sender, s_port, as_sender=True)
         if is_cim(receiver):
-            receiver = resolve_cim_endpoint(receiver, r_port, as_sender=False)
+            receiver, r_port = resolve_cim_endpoint(receiver, r_port, as_sender=False)
         if sender is None or receiver is None:
             continue
         if id(sender) not in node_ids or id(receiver) not in node_ids:
             continue
-        edge_key = (id(sender), id(receiver))
+        # #66: one edge per pair of real ports (see _flatten_graph). Through
+        # a CIM, the port is the real inner one it stands for, so the
+        # projections on either side of an interface are still one edge.
+        edge_key = (id(s_port), id(r_port))
         if edge_key in seen_edges or id(sender) == id(receiver):
             continue
         seen_edges.add(edge_key)
@@ -3194,8 +3203,10 @@ def serialize_composition(var_name, comp, line_map, proj_name_lookup=None, name_
         if sender_name == receiver_name:
             continue
 
-        # Deduplicate (multiple CIM projections can resolve to the same edge)
-        edge_key = (sender_name, receiver_name)
+        # Deduplicate (multiple CIM projections can resolve to the same edge),
+        # by port as well (#66): two projections between the same two nodes
+        # on different ports are two edges, drawn to two handles.
+        edge_key = (sender_name, id(proj_sender), receiver_name, id(proj_receiver))
         if edge_key in seen_edges:
             continue
         seen_edges.add(edge_key)

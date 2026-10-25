@@ -113,10 +113,30 @@ def test_pytorch_edge_count_matches_show_pytorch_baseline(ego):
     # (CIM endpoints resolved, none dropped). The 0.19 EMComposition restructure
     # inlines more of EM, so the EGO/EM baseline is 28 (was 23) — verified correct:
     # every edge lands on a real node and none is isolated (sibling tests guard
-    # this), and 28 = the wrapper's 31 projections after CIM-endpoint resolution
-    # (4 CIM-involving). Re-baselined for 0.19 (#805).
+    # this). Re-baselined for 0.19 (#805). 31 since #66: COMBINED SCORES sends
+    # each FIELD_MEMORY two projections, on different ports, and show_graph
+    # draws all 31.
     res = serialize_composition("EGO_comp", ego, {}, {}, {}, pytorch=True)
-    assert len(res["projections"]) == 28
+    assert len(res["projections"]) == 31
+
+
+@pytest.mark.parametrize("view", ["pytorch", "flat"])
+def test_parallel_projections_on_different_ports_are_kept(ego, view):
+    # #66: COMBINED SCORES projects to each FIELD_MEMORY twice, to two
+    # different ports. Both are drawn, and nothing else is doubled.
+    from collections import Counter
+
+    res = serialize_composition("EGO_comp", ego, {}, {}, {}, **{view: True})
+    pairs = Counter(
+        (clean_name(e["sender"]["mechanism"]), clean_name(e["receiver"]["mechanism"]))
+        for e in res["projections"]
+    )
+    doubled = sorted(pair for pair, n in pairs.items() if n > 1)
+    assert doubled == [
+        ("COMBINED SCORES", f"{field} [FIELD_MEMORY]")
+        for field in ("CONTEXT", "PREVIOUS STATE", "STATE")
+    ]
+    assert all(n <= 2 for n in pairs.values())
 
 
 # ─────────────────────────── non-autodiff fallback ─────────────────────────
