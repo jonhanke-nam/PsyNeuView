@@ -316,16 +316,17 @@ async function measureCurrent(
   const names = new Set(drawn.keys());
   const between = (best?.placement.edges ?? []).filter((e) => names.has(e.tail) && names.has(e.head));
   const selfLoops = between.filter((e) => e.tail === e.head).length;
-  // React Flow labels each edge "Edge from <source> to <target>".
+  // Each edge drawn on show_graph's course names that edge's ends; for an
+  // edge into an open frame, the member inside (#73).
   const curved = await page
     .getByTestId("graph-canvas")
-    .locator(".react-flow__edge:has(path.pnv-edge-showgraph)")
-    .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label") ?? ""));
+    .locator("path.pnv-edge-showgraph")
+    .evaluateAll((els) => els.map((el) => el.getAttribute("data-showgraph-ends") ?? ""));
   const unclaimed = [...curved];
   const missing: string[] = [];
   for (const e of between) {
     if (e.tail === e.head) continue;
-    const i = unclaimed.indexOf(`Edge from ${e.tail} to ${e.head}`);
+    const i = unclaimed.indexOf(`${e.tail}\u0000${e.head}`);
     if (i >= 0) unclaimed.splice(i, 1);
     else missing.push(`${e.tail} → ${e.head}`);
   }
@@ -451,6 +452,23 @@ async function runBatch(
       await record(model, view.label, () =>
         measureCurrent(page, gv, captured, model, view.label, since, from, savedLayout),
       );
+
+      // A view that opens with compositions folded: open them too, so the
+      // edges that cross a frame are measured (#73). They stay open.
+      const opened = `${view.label} · compositions open`;
+      try {
+        const before = captured.all.length;
+        const { changed, covered } = await setFolded(page, false);
+        if (changed > 0) {
+          await record(model, opened, async () => {
+            const m = await measureCurrent(page, gv, captured, model, opened, since, before, false);
+            if (covered.length) m.result.notes = [...(m.result.notes ?? []), ...covered];
+            return m;
+          });
+        }
+      } catch (e) {
+        results.push(failed(model, opened, e));
+      }
       if (!variants) continue;
 
       const folded = `${view.label} · compositions folded`;
@@ -520,10 +538,14 @@ test("every bundled model, every view: agreement with show_graph", async ({ page
 });
 
 // Representative models, held to thresholds in CI: the basic Stroop, EGO in
-// each of its views (nested, flattened, PyTorch), and a learning model.
-const REPRESENTATIVE = ["stroop_reference_basic.py", "Giallanza2024_ego_study2.py", "MontagueDayanSejnowski96.py"].map(
-  (f) => `reference_models/${f}`,
-);
+// each of its views (nested, flattened, PyTorch), a learning model, and a
+// composition open inside another, with edges crossing its frame (#73).
+const REPRESENTATIVE = [
+  ...["stroop_reference_basic.py", "Giallanza2024_ego_study2.py", "MontagueDayanSejnowski96.py"].map(
+    (f) => `reference_models/${f}`,
+  ),
+  "demos/nested_compositions.py",
+];
 
 // Edges show_graph draws that the canvas doesn't yet, each with its issue.
 // Listed exactly, so a fix shows up here as well as a new gap.
@@ -536,12 +558,16 @@ const KNOWN_MISSING: Record<string, string[]> = {
     "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
   ],
 };
-KNOWN_MISSING["Giallanza2024_ego_study2.py — PyTorch view"] =
-  KNOWN_MISSING["Giallanza2024_ego_study2.py — Flatten (all compositions)"];
+// The nested view with EM open draws the same projections.
+for (const view of ["PyTorch view", "EGO · compositions open"]) {
+  KNOWN_MISSING[`Giallanza2024_ego_study2.py — ${view}`] =
+    KNOWN_MISSING["Giallanza2024_ego_study2.py — Flatten (all compositions)"];
+}
 
 test("representative models agree with show_graph in every view", { tag: "@ci" }, async ({ page }) => {
   test.setTimeout(5 * 60_000);
   const results = await runBatch(page, REPRESENTATIVE, { sheets: false, variants: false });
+  for (const r of results) console.log(`${r.model} — ${r.view}: ${summaryLine(r)}`);
   expect(results.length, "views measured").toBeGreaterThanOrEqual(REPRESENTATIVE.length + 2);
   for (const r of results) {
     const where = `${r.model} — ${r.view}`;

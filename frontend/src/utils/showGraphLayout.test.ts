@@ -8,6 +8,7 @@ import {
   curveBends,
   curvePath,
   graphSignature,
+  memberAtPort,
   placementFromGraphviz,
   scaleFor,
   simplify,
@@ -305,5 +306,72 @@ describe("Like show_graph with learning on a nested model (#72)", () => {
     const placement = await computeShowGraphPlacement(req, ["a", "x", "y"].map((n) => mech(n)));
     expect(placement.clusters.size).toBe(0);
     expect(placement.note).toMatch(/follows that picture/);
+  });
+});
+
+describe("Like show_graph edges into an open frame (#73)", () => {
+  // nested_compositions: outer_a -> [inner_comp: inner_x -> inner_y] -> outer_b.
+  // show_graph draws the two outer projections to and from the members.
+  const DOT = `digraph outer_comp {
+    graph [rankdir=BT]
+    outer_a [shape=oval] outer_b [shape=oval]
+    subgraph cluster_inner_comp { graph [label=inner_comp] inner_x [shape=oval] inner_y [shape=oval] inner_x -> inner_y }
+    outer_a -> inner_x
+    inner_y -> outer_b
+  }`;
+  const nodes: Node[] = [
+    mech("outer_a"),
+    mech("outer_b"),
+    { id: "inner_comp", type: "compositionNode", position: { x: 0, y: 0 }, data: { label: "inner_comp" } },
+    { ...mech("inner_x"), parentId: "inner_comp" },
+    { ...mech("inner_y"), parentId: "inner_comp" },
+  ];
+  // PsyNeuView ends the outer projections at the frame's interface ports.
+  const edges: Edge[] = [
+    { id: "in", source: "outer_a", target: "inner_comp", targetHandle: "INPUT_CIM_inner_x_InputPort-0" },
+    { id: "inner", source: "inner_x", target: "inner_y" },
+    { id: "out", source: "inner_comp", sourceHandle: "OUTPUT_CIM_inner_y_RESULT", target: "outer_b" },
+  ];
+
+  it("names the member a frame's port carries to or from, however deep", () => {
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    expect(memberAtPort("inner_comp", "INPUT_CIM_inner_x_InputPort-0", "INPUT_CIM_", byId, nodes)).toBe("inner_x");
+    expect(memberAtPort("inner_comp", "OUTPUT_CIM_inner_y_RESULT", "OUTPUT_CIM_", byId, nodes)).toBe("inner_y");
+    expect(memberAtPort("outer_a", "RESULT", "OUTPUT_CIM_", byId, nodes)).toBe("outer_a");
+    // PsyNeuLink names a port of a frame within a frame after the inner one's.
+    const deep: Node[] = [
+      { id: "mid", type: "compositionNode", position: { x: 0, y: 0 }, data: {} },
+      { id: "inner", type: "compositionNode", position: { x: 0, y: 0 }, data: {}, parentId: "mid" },
+      { ...mech("x"), parentId: "inner" },
+    ];
+    const deepById = new Map(deep.map((n) => [n.id, n]));
+    expect(memberAtPort("mid", "INPUT_CIM_inner_INPUT_CIM_x_InputPort-0", "INPUT_CIM_", deepById, deep)).toBe("x");
+  });
+
+  it("draws them along show_graph's course, to and from the member", async () => {
+    const gv = await Graphviz.load();
+    const placement = placementFromGraphviz(JSON.parse(gv.layout(DOT, "json", "dot")), graphSignature(nodes));
+    const { nodes: laid, curves } = applyShowGraphPlacementWithCurves(nodes, edges, placement)!;
+    expect(Object.keys(curves).sort()).toEqual(["in", "inner", "out"]);
+    expect(curves.in.ends).toEqual(["outer_a", "inner_x"]);
+    expect(curves.out.ends).toEqual(["inner_y", "outer_b"]);
+
+    // The course ends on inner_x's box, inside the frame, not at the frame's edge.
+    const frame = laid.find((n) => n.id === "inner_comp")!;
+    const x = laid.find((n) => n.id === "inner_x")!;
+    const xAbs = { x: frame.position.x + x.position.x, y: frame.position.y + x.position.y };
+    const end = curves.in.points[curves.in.points.length - 1];
+    expect(end.x).toBeGreaterThanOrEqual(xAbs.x - 1);
+    expect(end.x).toBeLessThanOrEqual(xAbs.x + 190 + 1);
+    expect(end.y).toBeGreaterThanOrEqual(xAbs.y - 1);
+    expect(end.y).toBeLessThanOrEqual(xAbs.y + 70 + 1);
+
+    // It holds while the member stays put, and lets go once it moves.
+    const at = (p: { x: number; y: number }) => p;
+    const pos = (id: string) => (id === "inner_x" ? xAbs : undefined);
+    const fPos = { x: frame.position.x, y: frame.position.y };
+    const aPos = at(laid.find((n) => n.id === "outer_a")!.position);
+    expect(curveFits(curves.in, aPos, fPos, pos)).toBe(true);
+    expect(curveFits(curves.in, aPos, fPos, () => ({ x: xAbs.x + 50, y: xAbs.y }))).toBe(false);
   });
 });

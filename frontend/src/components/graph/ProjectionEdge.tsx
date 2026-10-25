@@ -267,7 +267,7 @@ export function ProjectionEdge({
     const n = nodeLookup.get(nid) as any;
     return n?.internals?.positionAbsolute ?? n?.position;
   };
-  const curve = !manual && sgCurve && curveFits(sgCurve, posOf(source), posOf(target)) ? sgCurve : null;
+  const curve = !manual && sgCurve && curveFits(sgCurve, posOf(source), posOf(target), posOf) ? sgCurve : null;
   if (curve) {
     // Attach where the course meets each box, so the dots, label and arrow
     // sit on the drawn line.
@@ -603,6 +603,8 @@ export function ProjectionEdge({
         path={edgePath}
         // #23: marks an edge drawn along show_graph's own course.
         className={curve ? "pnv-edge-showgraph" : undefined}
+        // show_graph's edge it follows, by its ends' names (#73).
+        data-showgraph-ends={curve?.ends?.join("\u0000")}
         interactionWidth={0}
         style={{
           // Spread per-type style first (color, dasharray, base width), then
