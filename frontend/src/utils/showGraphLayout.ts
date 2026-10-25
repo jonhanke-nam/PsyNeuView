@@ -603,23 +603,58 @@ function edgeCurves(edges: Edge[], placement: ShowGraphPlacement, placed: Placed
     (pending.get(key) ?? pending.set(key, []).get(key)!).push(e);
   }
   const curves: Record<string, ShowGraphCurve> = {};
+  const byId = new Map(placed.nodes.map((n) => [n.id, n]));
   for (const edge of edges) {
     if (edge.source === edge.target) continue;
-    const queue = pending.get(`${edge.source}\u0000${edge.target}`);
+    const tail = memberAtPort(edge.source, edge.sourceHandle, "OUTPUT_CIM_", byId, placed.nodes);
+    const head = memberAtPort(edge.target, edge.targetHandle, "INPUT_CIM_", byId, placed.nodes);
+    if (tail === head) continue;
+    const queue = pending.get(`${tail}\u0000${head}`);
     const course = queue?.shift();
     const sBox = placed.boxes.get(edge.source);
     const tBox = placed.boxes.get(edge.target);
-    if (!course || !sBox || !tBox) continue;
+    const [tailBox, headBox] = [placed.boxes.get(tail), placed.boxes.get(head)];
+    if (!course || !sBox || !tBox || !tailBox || !headBox) continue;
     const onCanvas = sampleCourse(course.spline, course.tip).map(placed.toFlow);
-    const trimmed = trimToBoxes(onCanvas, sBox, tBox);
+    const trimmed = trimToBoxes(onCanvas, tailBox, headBox);
     if (!trimmed) continue;
+    const inner = [tail, head]
+      .filter((id) => id !== edge.source && id !== edge.target)
+      .map((id) => ({ id, at: { x: placed.boxes.get(id)!.x, y: placed.boxes.get(id)!.y } }));
     curves[edge.id] = {
       points: simplify(trimmed),
       source: { x: sBox.x, y: sBox.y },
       target: { x: tBox.x, y: tBox.y },
+      ends: [tail, head],
+      ...(inner.length ? { inner } : {}),
     };
   }
   return curves;
+}
+
+/**
+ * The node show_graph draws a projection to or from, for an edge that
+ * attaches to an open frame's port (#73). PsyNeuView ends such an edge at the
+ * frame, on the port of the composition's interface named for the member it
+ * carries to (`INPUT_CIM_<member>_<port>`) or from (`OUTPUT_CIM_<member>_<port>`);
+ * show_graph draws it straight to that member. A member that is itself an
+ * open frame is followed inward the same way. Any other node is itself.
+ */
+export function memberAtPort(
+  id: string,
+  handle: string | null | undefined,
+  prefix: "INPUT_CIM_" | "OUTPUT_CIM_",
+  byId: Map<string, Node>,
+  nodes: Node[],
+): string {
+  if (byId.get(id)?.type !== "compositionNode" || !handle?.startsWith(prefix)) return id;
+  const rest = handle.slice(prefix.length);
+  // The longest name that fits, so `a_b` wins over `a` for `a_b_InputPort-0`.
+  const member = nodes
+    .filter((n) => n.parentId === id && rest.startsWith(`${n.id}_`))
+    .sort((a, b) => b.id.length - a.id.length)[0];
+  if (!member) return id;
+  return memberAtPort(member.id, rest.slice(member.id.length + 1), prefix, byId, nodes);
 }
 
 /**
