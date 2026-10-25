@@ -80,6 +80,8 @@ interface ViewResult extends Omit<Agreement, "overlaps"> {
    */
   courses: { drawn: number; showGraph: number; missing: string[]; selfLoops: number };
   cutOff: string[];
+  /** A composition frame's buttons that something else sits on top of (#71). */
+  covered: string[];
   /** The view opened in Custom, on positions saved for it. */
   savedLayout: boolean;
   /** Anything else found on the way, e.g. a control a node covers. */
@@ -251,6 +253,25 @@ async function setFolded(page: Page, fold: boolean): Promise<{ changed: number; 
   return { changed, covered };
 }
 
+/**
+ * Each composition frame button (Focus, Inset, Collapse, Expand) that a press
+ * at its middle wouldn't reach, and what is on top of it (#71).
+ */
+async function coveredControls(page: Page): Promise<string[]> {
+  return page
+    .getByTestId("graph-canvas")
+    .getByRole("button", { name: / composition / })
+    .evaluateAll((buttons) =>
+      buttons.flatMap((b) => {
+        const r = b.getBoundingClientRect();
+        const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        if (el && b.contains(el)) return [];
+        const onTop = el?.closest("[data-id]")?.getAttribute("data-id") ?? el?.tagName ?? "?";
+        return [`${b.getAttribute("aria-label")} is covered by ${onTop}`];
+      }),
+    );
+}
+
 /** Lay the canvas out like show_graph as it stands, and score it. */
 async function measureCurrent(
   page: Page,
@@ -316,6 +337,7 @@ async function measureCurrent(
     overlaps: agreement.overlaps.map(([a, b]) => `${a} / ${b}`),
     courses: { drawn: between.length - selfLoops - missing.length, showGraph: between.length - selfLoops, missing, selfLoops },
     cutOff: await cutOffAfterFit(page),
+    covered: await coveredControls(page),
     savedLayout,
     ...(refusal ? { error: `show_graph refused: ${refusal.detail.slice(0, 200)}` } : {}),
     ...(!best && !refusal ? { error: "no show_graph description fetched" } : {}),
@@ -334,6 +356,7 @@ function summaryLine(r: ViewResult): string {
     (r.courses.selfLoops ? ` (+${r.courses.selfLoops} self-loops)` : "") +
     (r.courses.missing.length ? ` — not drawn: ${r.courses.missing.join(", ")}` : "") +
     ` · overlaps ${r.overlaps.length} · cut off ${r.cutOff.length}` +
+    (r.covered.length ? ` · ${r.covered.join("; ")}` : "") +
     (r.savedLayout ? " · had a saved layout" : "") +
     (r.notes?.length ? ` · ${r.notes.join("; ")}` : "") +
     (r.error ? ` · ${r.error}` : "")
@@ -365,6 +388,7 @@ const failed = (model: string, view: string, e: unknown): ViewResult => ({
   overlaps: [],
   courses: { drawn: 0, showGraph: 0, missing: [], selfLoops: 0 },
   cutOff: [],
+  covered: [],
   savedLayout: false,
   error: String(e).split("\n")[0],
 });
@@ -470,7 +494,7 @@ function writeReport(results: ViewResult[]) {
     (r, i) =>
       `| ${i + 1} | ${r.model.replace(/\.py$/, "")} | ${r.view} | ${r.matched}/${r.nodes} | ${pct(share(r.rows))} | ` +
       `${pct(share(r.order))} | ${r.courses.drawn}/${r.courses.showGraph} | ${r.courses.selfLoops} | ${r.overlaps.length} | ${r.cutOff.length} | ` +
-      `${[...r.courses.missing.map((m) => `not drawn: ${m}`), ...(r.savedLayout ? ["had a saved layout"] : []), ...(r.notes ?? []), ...(r.error ? [r.error] : [])].join("; ")} |`,
+      `${[...r.courses.missing.map((m) => `not drawn: ${m}`), ...r.covered, ...(r.savedLayout ? ["had a saved layout"] : []), ...(r.notes ?? []), ...(r.error ? [r.error] : [])].join("; ")} |`,
   );
   writeFileSync(
     path.join(OUT_DIR, "agreement.md"),
@@ -527,6 +551,7 @@ test("representative models agree with show_graph in every view", { tag: "@ci" }
     expect(share(r.order), `${where}: left-to-right order`).toBe(1);
     expect(r.overlaps, `${where}: overlapping boxes`).toEqual([]);
     expect(r.cutOff, `${where}: cut off after Fit`).toEqual([]);
+    expect(r.covered, `${where}: frame buttons something sits on`).toEqual([]);
     expect(r.courses.missing, `${where}: show_graph edges not drawn on its course`).toEqual(KNOWN_MISSING[where] ?? []);
   }
 });
