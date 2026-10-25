@@ -48,6 +48,11 @@ export interface ShowGraphPlacement {
    * Graphviz drew one. Points in the same orientation as `nodes`.
    */
   edges: { tail: string; head: string; spline: Point[]; tip?: Point }[];
+  /**
+   * Set when show_graph had to be asked differently to answer at all, e.g.
+   * for learning as its PyTorch picture (#72); the page says so.
+   */
+  note?: string;
 }
 
 let current: ShowGraphPlacement | null = null;
@@ -213,7 +218,8 @@ export interface ShowGraphRequest {
   options: Record<string, boolean | string>;
 }
 
-async function fetchDot(req: ShowGraphRequest): Promise<string> {
+/** show_graph's description, and a note when it was asked differently (#72). */
+async function fetchDot(req: ShowGraphRequest): Promise<{ dot: string; note?: string }> {
   const resp = await fetch("/api/model/show-graph", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -228,12 +234,18 @@ async function fetchDot(req: ShowGraphRequest): Promise<string> {
     const err = await resp.json().catch(() => ({}));
     throw new Error(err.detail || `show_graph request failed (${resp.status})`);
   }
-  return ((await resp.json()) as { dot: string }).dot;
+  return (await resp.json()) as { dot: string; note?: string };
 }
 
 /** How many of PsyNeuView's nodes show_graph drew. */
 function matchedCount(nodes: Node[], placement: ShowGraphPlacement): number {
   return nodes.filter((n) => n.type === "mechanismNode" && placement.nodes.has(n.id)).length;
+}
+
+/** How well a placement fits: the nodes it draws, and the open frames it has a box for. */
+function fit(nodes: Node[], placement: ShowGraphPlacement): number {
+  const frames = nodes.filter((n) => n.type === "compositionNode" && placement.clusters.has(clusterNameOf(n)));
+  return matchedCount(nodes, placement) + frames.length;
 }
 
 // The layout menu and the background watcher (useShowGraphLayout) can ask for
@@ -260,10 +272,12 @@ async function computeOnce(
   key: string,
 ): Promise<ShowGraphPlacement> {
   const gv = await loadGraphviz();
-  const layOut = async (r: ShowGraphRequest) =>
-    placementFromGraphviz(JSON.parse(gv.layout(await fetchDot(r), "json", "dot")) as GvJson, key);
+  const layOut = async (r: ShowGraphRequest) => {
+    const { dot, note } = await fetchDot(r);
+    return { placement: placementFromGraphviz(JSON.parse(gv.layout(dot, "json", "dot")) as GvJson, key), note };
+  };
 
-  let placement = await layOut(req);
+  let { placement, note } = await layOut(req);
   // PsyNeuView draws some models' learning parts (a TARGET, a prediction
   // error, the learning mechanism) as ordinary nodes, which show_graph hides
   // unless asked. If show_graph missed nodes, ask again with learning shown
@@ -272,11 +286,30 @@ async function computeOnce(
   if (matchedCount(nodes, placement) < mechs && !req.options.show_learning) {
     try {
       const withLearning = await layOut({ ...req, options: { ...req.options, show_learning: true } });
-      if (matchedCount(nodes, withLearning) > matchedCount(nodes, placement)) placement = withLearning;
+      if (matchedCount(nodes, withLearning.placement) > matchedCount(nodes, placement)) {
+        ({ placement, note } = withLearning);
+      }
     } catch {
       // Keep the first layout.
     }
   }
+  // That PyTorch picture has no box for the nested composition (#72). Where
+  // the canvas shows it open, or folded to one node, show_graph's picture
+  // without learning fits better: keep whichever fits.
+  if (note && req.options.show_learning) {
+    try {
+      const plain = await layOut({ ...req, options: { ...req.options, show_learning: false } });
+      if (fit(nodes, plain.placement) > fit(nodes, placement)) {
+        placement = plain.placement;
+        note = `${note} It has no box for the nested composition, so the layout follows show_graph without learning.`;
+      } else {
+        note = `${note} The layout follows that picture.`;
+      }
+    } catch {
+      // Keep the PyTorch picture.
+    }
+  }
+  if (note) placement.note = note;
   current = placement;
   return placement;
 }

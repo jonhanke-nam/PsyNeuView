@@ -1,9 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import type { Edge, Node } from "@xyflow/react";
 import { Graphviz } from "@hpcc-js/wasm-graphviz";
 import {
   applyShowGraphPlacement,
   applyShowGraphPlacementWithCurves,
+  computeShowGraphPlacement,
   curveBends,
   curvePath,
   graphSignature,
@@ -11,6 +12,7 @@ import {
   scaleFor,
   simplify,
   trimToBoxes,
+  type ShowGraphRequest,
 } from "./showGraphLayout";
 import { curveFits } from "@/stores/showGraphCurvesStore";
 
@@ -251,5 +253,57 @@ describe("Like show_graph edges (#23)", () => {
     const elbow = [{ x: 0, y: 0 }, { x: 50, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 50 }, { x: 100, y: 100 }];
     expect(curveBends(elbow)).toEqual([{ x: 100, y: 0 }]);
     expect(curveBends(straight)).toEqual([{ x: 20, y: 20 }]); // nearly straight: its middle
+  });
+});
+
+describe("Like show_graph with learning on a nested model (#72)", () => {
+  // show_graph's answers for a model `M` with a nested composition `EM`:
+  // without learning, EM as a box; with learning, only the PyTorch picture,
+  // flat, which the backend marks with a note.
+  const PLAIN = `digraph M {
+    graph [rankdir=BT]
+    a [shape=oval]
+    subgraph cluster_EM { graph [label=EM] x [shape=oval] y [shape=oval] x -> y }
+    a -> x
+  }`;
+  const PYTORCH = `digraph M {
+    graph [rankdir=BT]
+    a [shape=oval] x [shape=oval] y [shape=oval]
+    a -> x x -> y
+  }`;
+  const NOTE = "show_graph shows learning for 'M', which has a nested composition, only as its PyTorch picture.";
+
+  function answering() {
+    vi.stubGlobal("fetch", async (_url: string, init: { body: string }) => {
+      const learning = JSON.parse(init.body).options.show_learning;
+      return new Response(JSON.stringify(learning ? { dot: PYTORCH, note: NOTE } : { dot: PLAIN }));
+    });
+  }
+  afterEach(() => vi.unstubAllGlobals());
+
+  const req: ShowGraphRequest = {
+    filePath: "/m.py",
+    compositionName: "M",
+    options: { show_controller: true, show_learning: true, show_cim: false, show_nested: "nested" },
+  };
+
+  it("follows show_graph without learning when the canvas shows the nested composition open", async () => {
+    answering();
+    const nodes: Node[] = [
+      mech("a"),
+      { id: "EM", type: "compositionNode", position: { x: 0, y: 0 }, data: { label: "EM" } },
+      { ...mech("x"), parentId: "EM" },
+      { ...mech("y"), parentId: "EM" },
+    ];
+    const placement = await computeShowGraphPlacement(req, nodes);
+    expect(placement.clusters.has("EM")).toBe(true);
+    expect(placement.note).toMatch(/without learning/);
+  });
+
+  it("follows the PyTorch picture when the canvas has no frame to fit", async () => {
+    answering();
+    const placement = await computeShowGraphPlacement(req, ["a", "x", "y"].map((n) => mech(n)));
+    expect(placement.clusters.size).toBe(0);
+    expect(placement.note).toMatch(/follows that picture/);
   });
 });

@@ -1281,10 +1281,7 @@ def _show_graph_while_loaded(module, compositions, request, pnl):
                     "show_cim": False,
                     "show_nested": show_nested,
                 }
-                try:
-                    answer = {"dot": comp.show_graph(output_fmt='source', **options)}
-                except Exception as e:
-                    answer = {"error": f"show_graph failed: {e}"}
+                answer = _show_graph_source(pnl, comp, options)
                 answers.append({"composition": name, "options": options, "answer": answer})
     return answers
 
@@ -2111,6 +2108,34 @@ def task_get_input_nodes(params):
     return {"inputNodes": input_nodes}
 
 
+def _show_graph_source(pnl, comp, options):
+    """show_graph's description of ``comp``, as ``{"dot"}`` or ``{"error"}``.
+
+    show_graph refuses to show learning for an AutodiffComposition with a
+    nested composition (EGO) except as its PyTorch picture, and says to ask
+    with ``show_pytorch=True`` (#72). Then it is asked that way, and the
+    answer says so in ``note``.
+    """
+    try:
+        return {"dot": comp.show_graph(output_fmt='source', **options)}
+    except Exception as e:
+        refusal = e
+    if (options.get("show_learning") and not options.get("show_pytorch")
+            and isinstance(comp, pnl.AutodiffComposition)
+            and "show_pytorch=True" in str(refusal)):
+        try:
+            dot = comp.show_graph(output_fmt='source', **{**options, "show_pytorch": True})
+        except Exception:
+            pass
+        else:
+            return {
+                "dot": dot,
+                "note": (f"show_graph shows learning for '{comp.name}', which has a nested "
+                         "composition, only as its PyTorch picture."),
+            }
+    return {"error": f"show_graph failed: {refusal}"}
+
+
 def task_show_graph(params):
     """Render a composition's show_graph() output as SVG.
 
@@ -2141,12 +2166,12 @@ def task_show_graph(params):
 
     if params.get("format") == "dot":
         # The description only: no Graphviz programs needed, since the page
-        # runs the layout itself (#19).
-        try:
-            return {"dot": comp.show_graph(output_fmt='source', **options)}
-        except Exception as e:
-            return {"error": f"show_graph failed: {e}"}
+        # runs the layout itself (#19). When show_graph refuses learning
+        # but offers show_pytorch=True, it is asked that way (#72).
+        return _show_graph_source(pnl, comp, options)
 
+    # The show_graph panel has its own show_pytorch checkbox, so it gets
+    # show_graph's refusal as it stands.
     try:
         import graphviz as gv
         # Use 'source' format to get the final DOT with all colors applied,

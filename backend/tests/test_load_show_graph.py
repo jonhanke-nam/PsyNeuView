@@ -118,3 +118,33 @@ def test_editing_after_the_load_asks_again(tmp_path, runner_calls):
     calls = runner_calls()
     assert layout_request(path, outermost(model)).status_code == 200
     assert calls == ["show_graph"]
+
+
+def test_learning_on_a_model_with_a_nested_composition(tmp_path, runner_calls):
+    """show_graph shows EGO's learning only as its PyTorch picture (#72).
+
+    Asked plainly it refuses ("use 'show_pytorch=True'"), which left the
+    Like show_graph layout with nothing to follow; it is asked that way
+    instead, and the answer says so. The load's own answer does the same,
+    so the layout still needn't reload the model.
+    """
+    path = copy_demo(tmp_path, "ego_coffee_shop.py")
+    model = client.post("/api/model/load", json={
+        "file_path": str(path),
+        "show_graph": {"show_controller": True, "show_learning": True},
+    }).json()["model"]
+    calls = runner_calls()
+    r = layout_request(path, outermost(model), show_learning=True)
+    assert r.status_code == 200, r.text
+    assert r.json()["dot"].startswith(("digraph", "graph", "strict"))
+    assert "PyTorch" in r.json()["note"]
+    assert calls == []
+
+    # Asked separately, the same answer.
+    show_graph_cache.clear()
+    r = layout_request(path, outermost(model), show_learning=True)
+    assert r.status_code == 200, r.text
+    assert "PyTorch" in r.json()["note"]
+    # Without learning nothing changes.
+    r = layout_request(path, outermost(model))
+    assert r.status_code == 200 and "note" not in r.json()
