@@ -549,20 +549,7 @@ const REPRESENTATIVE = [
 
 // Edges show_graph draws that the canvas doesn't yet, each with its issue.
 // Listed exactly, so a fix shows up here as well as a new gap.
-const KNOWN_MISSING: Record<string, string[]> = {
-  // #66: the flattened graph leaves out COMBINED SCORES' second projection to
-  // each field (to its MIN NORM INDEX port).
-  "Giallanza2024_ego_study2.py — Flatten (all compositions)": [
-    "COMBINED SCORES → STATE [FIELD_MEMORY]",
-    "COMBINED SCORES → PREVIOUS STATE [FIELD_MEMORY]",
-    "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
-  ],
-};
-// The nested view with EM open draws the same projections.
-for (const view of ["PyTorch view", "EGO · compositions open"]) {
-  KNOWN_MISSING[`Giallanza2024_ego_study2.py — ${view}`] =
-    KNOWN_MISSING["Giallanza2024_ego_study2.py — Flatten (all compositions)"];
-}
+const KNOWN_MISSING: Record<string, string[]> = {};
 
 test("representative models agree with show_graph in every view", { tag: "@ci" }, async ({ page }) => {
   test.setTimeout(5 * 60_000);
