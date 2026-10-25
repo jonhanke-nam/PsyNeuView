@@ -20,6 +20,7 @@ import {
   graphSignature,
   placementKey,
   sizeSignature,
+  type ShowGraphPlacement,
   type ShowGraphRequest,
 } from "@/utils/showGraphLayout";
 
@@ -56,6 +57,13 @@ function relayout() {
   setNodes(applyLayout("showgraph", nodes, edges, { direction }));
 }
 
+// show_graph answered, but not quite as asked (#72): say how.
+function reportNote(placement: ShowGraphPlacement) {
+  if (placement.note) {
+    useNotificationStore.getState().addNotification("info", placement.note, { key: "showgraph-layout" });
+  }
+}
+
 function reportFailure(e: unknown) {
   clearShowGraphPlacement();
   useNotificationStore.getState().addNotification(
@@ -74,7 +82,7 @@ export async function applyShowGraphLayoutNow(): Promise<void> {
   const { nodes } = useModelStore.getState();
   try {
     if (getShowGraphPlacement()?.signature !== placementKey(nodes, req)) {
-      await computeShowGraphPlacement(req, nodes);
+      reportNote(await computeShowGraphPlacement(req, nodes));
     }
   } catch (e) {
     reportFailure(e);
@@ -102,8 +110,10 @@ export function useShowGraphLayout() {
     if (getShowGraphPlacement()?.signature === placementKey(useModelStore.getState().nodes, req)) return;
     let cancelled = false;
     computeShowGraphPlacement(req, useModelStore.getState().nodes)
-      .then(() => {
-        if (!cancelled && useModelStore.getState().autoLayout) relayout();
+      .then((placement) => {
+        if (cancelled) return;
+        reportNote(placement);
+        if (useModelStore.getState().autoLayout) relayout();
       })
       .catch((e: unknown) => {
         if (!cancelled) reportFailure(e);
