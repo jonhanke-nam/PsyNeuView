@@ -399,12 +399,20 @@ export function applyShowGraphPlacementWithCurves(
   return { nodes: placed.nodes, curves: edgeCurves(edges, placement, placed) };
 }
 
-function place(nodes: Node[], placement: ShowGraphPlacement | null): Placed | null {
-  if (!placement) return null;
+/**
+ * Whether the placement is for this graph, so the Like show_graph layout
+ * places it rather than the Layered stand-in. Not when it was computed for
+ * some other graph (a different model, or before a reload).
+ */
+export function placementFits(nodes: Node[], placement: ShowGraphPlacement | null = current): boolean {
+  if (!placement) return false;
   const mechs = nodes.filter((n) => n.type === "mechanismNode");
   const matched = mechs.filter((n) => placement.nodes.has(n.id));
-  // Computed for some other graph (a different model, or before a reload).
-  if (mechs.length === 0 || matched.length < mechs.length / 2) return null;
+  return mechs.length > 0 && matched.length >= mechs.length / 2;
+}
+
+function place(nodes: Node[], placement: ShowGraphPlacement | null): Placed | null {
+  if (!placement || !placementFits(nodes, placement)) return null;
 
   const { sx, sy } = scaleFor(nodes, placement);
   const byId = new Map(nodes.map((n) => [n.id, n]));
