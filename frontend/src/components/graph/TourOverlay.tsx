@@ -271,6 +271,14 @@ export function TourOverlay() {
   if (!step || !rect) return null;
 
   const pad = 8;
+  // Kept inside the window: around something as wide as the window (the
+  // toolbar) the padded ring's top and sides fell outside it, and all that
+  // showed was a stray line along its bottom edge.
+  const edge = 2;
+  const ringLeft = Math.max(edge, rect.left - pad);
+  const ringTop = Math.max(edge, rect.top - pad);
+  const ringRight = Math.min(window.innerWidth - edge, rect.left + rect.width + pad);
+  const ringBottom = Math.min(window.innerHeight - edge, rect.top + rect.height + pad);
 
   return (
     <div
@@ -283,10 +291,11 @@ export function TourOverlay() {
         data-testid="tour-highlight"
         style={{
           position: "fixed",
-          left: rect.left - pad,
-          top: rect.top - pad,
-          width: rect.width + pad * 2,
-          height: rect.height + pad * 2,
+          left: ringLeft,
+          top: ringTop,
+          width: ringRight - ringLeft,
+          height: ringBottom - ringTop,
+          boxSizing: "border-box",
           border: `2px solid ${complete ? "var(--pnv-walkthrough-done)" : "var(--pnv-walkthrough-current)"}`,
           borderRadius: 12,
           transition: "border-color 120ms ease",
