@@ -1929,7 +1929,9 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
         let cimIdx = 0;
         for (const cimNode of comp.cim.nodes) {
-          const cimType = cimNode.cimType || "INPUT_CIM";
+          // The backend names them by attribute ("input_CIM"); everything here
+          // (placement, label, colour, Inspector) uses the role ("INPUT_CIM").
+          const cimType = (cimNode.cimType || "INPUT_CIM").toUpperCase();
           if (!connectedCIMs.has(cimNode.name)) continue;
 
           // Use saved position if available (from custom layout), else compute.
