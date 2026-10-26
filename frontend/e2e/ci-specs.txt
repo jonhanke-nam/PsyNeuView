@@ -29,6 +29,7 @@ mac-app-settings-section.spec.ts
 mdf-gap-warnings.spec.ts
 model-lock.spec.ts
 modulatory-param-edges.spec.ts
+narration-matches-bar.spec.ts
 narration-voice-setting.spec.ts
 nested-cluster-frames.spec.ts
 node-name-special-characters.spec.ts

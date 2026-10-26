@@ -231,7 +231,9 @@ export function TourBar() {
         zIndex: 10001,
       }}
     >
-      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--pnv-walkthrough-label)", whiteSpace: "nowrap" }}>
+      {/* The title may wrap (#84): kept on one line, a long one pushed the
+          buttons onto a row of their own in a narrow window. */}
+      <span data-testid="tour-title" style={{ flex: "0 1 auto", minWidth: 0, maxWidth: "40ch", fontSize: 13, fontWeight: 600, color: "var(--pnv-walkthrough-label)" }}>
         {walkthrough.title}
       </span>
 
@@ -300,10 +302,19 @@ export function TourBar() {
         {/* The caption: always shown for a step that has one (#1310). */}
         {step && step.say && !finished && !complete && !holdForPointer && (
           <span
-            data-testid="tour-caption"
+            data-testid="tour-caption-line"
+            data-spoken={narration ? "true" : "false"}
+            title={narration ? "Narration reads this line" : undefined}
             style={{ display: "block", fontSize: 14, color: "var(--pnv-walkthrough-caption)", marginTop: 2, fontStyle: "italic" }}
           >
-            {step.say}
+            {/* With narration on, a speaker marks the line being read (#86):
+                the caption, not the instruction above it. */}
+            {narration && (
+              <span data-testid="tour-caption-speaker" aria-label="Read aloud:" style={{ fontStyle: "normal", marginRight: 6 }}>
+                🔊
+              </span>
+            )}
+            <span data-testid="tour-caption">{step.say}</span>
           </span>
         )}
         {docs.length > 0 && (
