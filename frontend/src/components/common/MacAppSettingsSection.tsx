@@ -106,6 +106,49 @@ export function MacAppLaunchToggles() {
 }
 
 /**
+ * Developer ▸ Get release candidates: the app's own update notice also offers
+ * test versions before everyone gets them. The app keeps the setting and
+ * Sparkle reads it; an app that can't do this sends no value, and nothing
+ * shows.
+ */
+export function MacAppReleaseCandidates() {
+  const { settings, setSettings } = useMacAppSettings();
+  const [error, setError] = useState<string | null>(null);
+  if (typeof settings?.receiveReleaseCandidates !== "boolean") return null;
+
+  const toggle = async (value: boolean) => {
+    setError(null);
+    setSettings({ ...settings, receiveReleaseCandidates: value }); // optimistic
+    try {
+      setSettings(await setMacAppSetting("receiveReleaseCandidates", value));
+    } catch (e: any) {
+      setSettings({ ...settings });
+      setError(String(e?.message ?? e));
+    }
+  };
+
+  return (
+    <Group id="release-candidates" title="Release candidates" badge={<DeveloperBadge audience="developers" />}>
+      <div style={{ fontSize: 13 }}>
+        <label style={checkRow}>
+          <input
+            type="checkbox"
+            data-testid="setting-mac-release-candidates"
+            checked={settings.receiveReleaseCandidates}
+            onChange={(e) => toggle(e.target.checked)}
+          />
+          Get release candidates
+        </label>
+        <div style={{ fontSize: 12, color: "var(--pnv-text-hint)", marginLeft: 20 }}>
+          Your app's update notice also offers test versions before they are released to everyone.
+        </div>
+        {error && <div style={{ fontSize: 12, color: "var(--pnv-danger)", marginTop: 6 }}>{error}</div>}
+      </div>
+    </Group>
+  );
+}
+
+/**
  * Developer ▸ Which PsyNeuView runs: the copy included with the app, or a
  * checkout. Folded to "Running now: …" until opened — switching is rare.
  */

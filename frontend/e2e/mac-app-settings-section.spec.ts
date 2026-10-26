@@ -35,6 +35,7 @@ async function stubMacApp(page: Page, opts: { developerMode?: boolean; openSetti
       reportSendWith: "ask",
       reportSendTo: "",
       reportSendToDefault: "contact@example.org",
+      receiveReleaseCandidates: false,
     };
     w.__pnvMessages = [];
     const reply = (body: any) => {
@@ -91,6 +92,7 @@ test("in a browser, Settings has none of the Mac app's parts", { tag: "@ci" }, a
   await expect(page.getByTestId("setting-mac-auto-restart")).toHaveCount(0);
   await page.getByTestId("settings-section-developer").click();
   await expect(page.getByTestId("settings-group-mac-install")).toHaveCount(0);
+  await expect(page.getByTestId("setting-mac-release-candidates")).toHaveCount(0);
   await expect(page.getByTestId("settings-section-reports")).toHaveCount(0);
   await expect(page.getByTestId("settings-group-problem-reports")).toHaveCount(0);
 });
@@ -159,6 +161,21 @@ test("inside the Mac app, developer mode is the app's value, with one toggle", {
   await expect.poll(() => lastSet(page)).toEqual({
     op: "set", key: "developerMode", value: false,
   });
+});
+
+test("inside the Mac app, Developer has Get release candidates, set through the bridge", { tag: "@ci" }, async ({ page }) => {
+  await stubMacApp(page);
+  await page.goto("/");
+  await page.getByTestId("settings-button").click();
+  await page.getByTestId("settings-section-developer").click();
+  const candidates = page.getByTestId("setting-mac-release-candidates");
+  await expect(candidates).not.toBeChecked();
+  await expect(page.getByTestId("settings-group-release-candidates")).toContainText(
+    "Your app's update notice also offers test versions before they are released to everyone.",
+  );
+  await candidates.check();
+  await expect.poll(() => lastSet(page)).toEqual({ op: "set", key: "receiveReleaseCandidates", value: true });
+  await expect(candidates).toBeChecked();
 });
 
 test("the Mac app's Settings… (⌘,) opens this Settings, even before the page is ready", { tag: "@ci" }, async ({ page }) => {

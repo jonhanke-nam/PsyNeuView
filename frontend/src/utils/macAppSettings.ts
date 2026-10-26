@@ -11,6 +11,7 @@
 // Contract (the Mac app's half: Services/SettingsBridge.swift):
 //   postMessage({ op: "get" })                         -> MacAppSettings
 //   postMessage({ op: "set", key, value: boolean })    -> MacAppSettings
+//     (key: autoRestart | launchAtLogin | developerMode | receiveReleaseCandidates)
 //   postMessage({ op: "set", key: "reportSendWith" | "reportSendTo",
 //                 value: string })                    -> MacAppSettings
 //   postMessage({ op: "checkInstall",  choice, path? }) -> InstallVerdict
@@ -75,6 +76,12 @@ export interface MacAppSettings {
    * environment rebuild installs. Absent from app builds before it.
    */
   pnlRecord?: string;
+  /**
+   * Whether the app's update notice also offers release candidates
+   * (Settings ▸ Developer ▸ Get release candidates). Absent from app builds
+   * that can't, which hide the switch.
+   */
+  receiveReleaseCandidates?: boolean;
 }
 
 export interface MacAppUpdate {
@@ -84,11 +91,13 @@ export interface MacAppUpdate {
   releaseNotesURL?: string | null;
   /** When it was released, an ISO time (#15); null or absent when unknown. */
   releasedAt?: string | null;
+  /** True when the waiting version is a release candidate, a test version. */
+  candidate?: boolean;
 }
 
 export type ReportSendWith = "ask" | "mail" | "outlook" | "gmail";
 
-export type MacAppSwitchKey = "autoRestart" | "launchAtLogin";
+export type MacAppSwitchKey = "autoRestart" | "launchAtLogin" | "receiveReleaseCandidates";
 
 export interface InstallChoice {
   choice: "bundled" | "checkout";
@@ -120,6 +129,7 @@ export const getMacAppSettings = () => post<MacAppSettings>({ op: "get" });
 const MAC_SETTING_IDS: Record<MacAppSwitchKey, string> = {
   autoRestart: "mac-auto-restart",
   launchAtLogin: "mac-launch-at-login",
+  receiveReleaseCandidates: "mac-release-candidates",
 };
 
 export const setMacAppSetting = (key: MacAppSwitchKey | "developerMode", value: boolean) => {

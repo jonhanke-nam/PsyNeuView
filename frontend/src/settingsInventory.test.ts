@@ -136,6 +136,7 @@ describe("settings inventory (#1279)", () => {
       "autoRestart",
       "install",
       "launchAtLogin",
+      "receiveReleaseCandidates",
       "reportSendTo",
       "reportSendWith",
     ]);

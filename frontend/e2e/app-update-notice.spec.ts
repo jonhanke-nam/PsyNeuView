@@ -56,6 +56,12 @@ test.describe("App update notice (PsyNeuView-MacApp#6)", { tag: "@ci" }, () => {
     await expect(page.getByTestId("app-update-text")).toHaveText("PsyNeuView 0.6.1 is available");
   });
 
+  test("labels a release candidate as one", async ({ page }) => {
+    await stubMacApp(page, { available: true, version: "0.6.5-rc1", releaseNotesURL: null, candidate: true });
+    await page.goto("/");
+    await expect(page.getByTestId("app-update-text")).toHaveText("PsyNeuView 0.6.5-rc1 (release candidate) is available");
+  });
+
   test("Later hides it, and a newer version shows again", async ({ page }) => {
     await stubMacApp(page, { available: true, version: "0.6.0", releaseNotesURL: null });
     await page.goto("/");

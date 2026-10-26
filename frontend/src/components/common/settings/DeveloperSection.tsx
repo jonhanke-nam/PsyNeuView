@@ -12,7 +12,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { hasSettingsBridge } from "@/utils/macAppSettings";
 import type { PsyNeuLinkInfo } from "@/utils/pnlSources";
 import { DeveloperBadge } from "../DeveloperBadge";
-import { MacAppInstallSwitcher } from "../MacAppSettingsSection";
+import { MacAppInstallSwitcher, MacAppReleaseCandidates } from "../MacAppSettingsSection";
 import { CheckoutUpdates } from "./CheckoutUpdates";
 import { InstallControls } from "./InstallControls";
 import { PnlDetails } from "./PnlDetails";
@@ -44,6 +44,7 @@ export function DeveloperSection({
       </Group>
 
       {hasSettingsBridge() && <MacAppInstallSwitcher />}
+      {hasSettingsBridge() && <MacAppReleaseCandidates />}
 
       <Group id="pnl-install" title="Which PsyNeuLink is installed" badge={<DeveloperBadge audience="developers" />}>
         {loadError && <div style={errorStyle}>Failed to load: {loadError}</div>}
