@@ -77,8 +77,8 @@ steps:
       they pull apart. node_attract2 wins, and the gap is still widening at
       the tenth trial.
     say: >-
-      Now a steady difference. This time they pull apart, and
-      node_attract2 wins.
+      Now a steady difference. This time they pull apart, and the second node
+      wins.
     done:
       lastRunInputs:
         node_attract1: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]

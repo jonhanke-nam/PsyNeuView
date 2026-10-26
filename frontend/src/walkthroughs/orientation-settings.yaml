@@ -46,11 +46,13 @@ steps:
     anchor:
       testid: settings-section-appearance
     instruct: >-
-      Click Appearance: how the app looks and feels, remembered in this
-      browser: the pointer in the graph view, an arrow or a hand, and its
-      size, with a preview; and whether the graph legend opens collapsed.
+      Click Appearance: how the graph looks, remembered in this browser. The
+      pointer, an arrow or a hand, and its size; how thick node outlines are;
+      how a model is arranged when it opens; whether the legend opens
+      collapsed; and whether scheduling-condition arrows are drawn.
     say: >-
-      Appearance is how the app looks: the graph pointer, and the legend.
+      Appearance is how the graph looks: the pointer, outlines, layout, legend
+      and arrows.
     done:
       visible: settings-content-appearance
     act:
