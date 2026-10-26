@@ -6,6 +6,7 @@ import {
   OPEN_SETTINGS,
   onOpenSettingsRequest,
   setMacAppReportSetting,
+  setMacAppSetting,
   syncDeveloperModeWithMacApp,
 } from "./macAppSettings";
 
@@ -111,5 +112,12 @@ describe("Mac app settings bridge (PsyNeuView-MacApp#200)", () => {
     expect(reply.reportSendWith).toBe("gmail");
     await setMacAppReportSetting("reportSendTo", "help@example.org");
     expect(post).toHaveBeenLastCalledWith({ op: "set", key: "reportSendTo", value: "help@example.org" });
+  });
+
+  it("turns release candidates on through the app", async () => {
+    const post = installBridge((body) => ({ ...settings(false), [body.key]: body.value }));
+    const reply = await setMacAppSetting("receiveReleaseCandidates", true);
+    expect(post).toHaveBeenLastCalledWith({ op: "set", key: "receiveReleaseCandidates", value: true });
+    expect(reply.receiveReleaseCandidates).toBe(true);
   });
 });
