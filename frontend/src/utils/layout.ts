@@ -11,7 +11,7 @@ import Dagre from "@dagrejs/dagre";
 import type { Node, Edge } from "@xyflow/react";
 import type { LayoutStyle } from "@/stores/graphSettingsStore";
 import { acyclicEdges } from "./roleRanks";
-import { applyShowGraphPlacementWithCurves } from "./showGraphLayout";
+import { applyShowGraphPlacementWithCurves, knownSize } from "./showGraphLayout";
 import { useShowGraphCurves } from "@/stores/showGraphCurvesStore";
 
 interface LayoutOptions {
@@ -78,6 +78,19 @@ function computeMinRankSep(nodes: Node[], edges: Edge[], baseRankSep: number): n
   return Math.max(baseRankSep, needed);
 }
 
+/** The width the Layered layout assumes for a node it hasn't seen drawn. */
+export const LAYERED_NODE_WIDTH = 180;
+
+/**
+ * The width to lay a node out at: its drawn width, once it has been drawn,
+ * when that is wider than the width assumed for every node. A long name makes
+ * a wide box, and spacing it at the assumed width overlaps its neighbours
+ * (#72). Narrower boxes keep the assumed width, so their layout is unchanged.
+ */
+function boxWidth(node: Node, assumed: number): number {
+  return Math.max(assumed, knownSize(node).w ?? 0);
+}
+
 export function applyDagreLayout(
   nodes: Node[],
   edges: Edge[],
@@ -85,7 +98,7 @@ export function applyDagreLayout(
 ): Node[] {
   const {
     direction = "TB",
-    nodeWidth = 180,
+    nodeWidth = LAYERED_NODE_WIDTH,
     nodeHeight = 60,
     nodeSep = 60,
   } = options;
@@ -120,7 +133,7 @@ export function applyDagreLayout(
     const isCIM = node.type === "cimNode";
     const insetSize = insetSizes?.get(node.id);
     g.setNode(node.id, {
-      width: insetSize ? insetSize.width : isGroup ? 300 : isCIM ? 110 : nodeWidth,
+      width: insetSize ? insetSize.width : isGroup ? 300 : isCIM ? 110 : boxWidth(node, nodeWidth),
       height: insetSize ? insetSize.height : isGroup ? 200 : isCIM ? 30 : nodeHeight,
     });
 
@@ -242,7 +255,7 @@ export function applyDagreLayout(
     if (!d) continue;
     const isGroup = node.type === "compositionNode";
     const insetSize = insetSizes?.get(node.id);
-    const w = isCluster(node.id) ? d.width : insetSize ? insetSize.width : isGroup ? 300 : nodeWidth;
+    const w = isCluster(node.id) ? d.width : insetSize ? insetSize.width : isGroup ? 300 : boxWidth(node, nodeWidth);
     const h = isCluster(node.id) ? d.height : insetSize ? insetSize.height : isGroup ? 200 : nodeHeight;
     topLeft.set(node.id, { x: d.x - w / 2, y: d.y - h / 2 });
   }
@@ -643,7 +656,7 @@ export function layoutInsetInternals(
       // A nested frame's footprint is the size computed in an earlier (deeper)
       // iteration; otherwise the node's own width/height.
       const childSize = sizes.get(child.id);
-      const w = childSize?.width ?? (child.style?.width as number) ?? 180;
+      const w = childSize?.width ?? (child.style?.width as number) ?? boxWidth(child, 180);
       const h = childSize?.height ?? (child.style?.height as number) ?? 60;
       if (rx + w > maxX) maxX = rx + w;
       if (ry + h > maxY) maxY = ry + h;
