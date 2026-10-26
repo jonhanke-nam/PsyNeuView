@@ -24,6 +24,7 @@ import { OrientationOffer } from "./components/common/OrientationOffer";
 import { DiagnosticPanel } from "./components/common/DiagnosticPanel";
 import { useFileWatcher } from "./hooks/useFileWatcher";
 import { useShowGraphLayout } from "./hooks/useShowGraphLayout";
+import { useLayeredLayoutFit } from "./hooks/useLayeredLayoutFit";
 import { ExternalChangeModal } from "./components/common/ExternalChangeModal";
 import { ChangesSinceSaveDialog } from "./components/common/ChangesSinceSaveDialog";
 import { RevertToSaveDialog } from "./components/common/RevertToSaveDialog";
@@ -51,6 +52,7 @@ export default function App() {
   const toggleBottom = useLayoutStore((s) => s.toggleBottom);
   const { pendingChange, acceptPendingChange, dismissPendingChange } = useFileWatcher();
   useShowGraphLayout();
+  useLayeredLayoutFit();
   useAppShortcuts();
 
   // #1112: Cmd+I shows the Inspector, the Mac convention for Show Inspector.
