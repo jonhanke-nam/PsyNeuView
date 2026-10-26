@@ -6,6 +6,7 @@
 import { create } from "zustand";
 import { MarkerType, type Node, type Edge } from "@xyflow/react";
 import { applyLayout } from "@/utils/layout";
+import { placementFits } from "@/utils/showGraphLayout";
 import { useHistoryStore } from "./historyStore";
 import { recordAction } from "@/utils/history";
 import { usePortLayout } from "@/stores/portLayoutStore";
@@ -1887,8 +1888,14 @@ export const useModelStore = create<ModelState>((set, get) => ({
       }
     }
 
-    // Auto-size composition group nodes to fit their children
-    autoSizeGroups(layoutNodes);
+    // Auto-size composition group nodes to fit their children. Not when Like
+    // show_graph placed them: it sized each frame from show_graph's box, and
+    // refitting it here (to members of an assumed size) shrank it and pulled
+    // its outermost member in with it, off show_graph's spot (#34).
+    const { layoutStyle } = useGraphSettings.getState();
+    if (!(layoutStyle === "showgraph" && (autoLayout || !hasSavedPositions) && placementFits(layoutNodes))) {
+      autoSizeGroups(layoutNodes);
+    }
 
     // Add CIM nodes AFTER layout so the main graph stays connected.
     // CIM nodes are positioned between their connected nodes using
