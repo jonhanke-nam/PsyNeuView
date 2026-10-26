@@ -64,6 +64,17 @@ export function saveDismissal(
 }
 
 /**
+ * The notice's words: "PsyNeuView 0.6.5 is available, released …", and for a
+ * release candidate "PsyNeuView 0.6.5-rc1 (release candidate) is available",
+ * so a person who asked for candidates knows they're getting a test version.
+ */
+export function updateNoticeText(update: MacAppUpdate, now: Date = new Date()): string {
+  const released = releasedPhrase(update.releasedAt, now);
+  const what = update.candidate ? `${update.version} (release candidate)` : update.version;
+  return `PsyNeuView ${what} is available${released ? `, ${released}` : ""}`;
+}
+
+/**
  * "Oct 15, 2:33 PM (2 hours ago)" (#15), in the viewer's time zone, with the
  * year only when it isn't this year; null when the date is unknown.
  */

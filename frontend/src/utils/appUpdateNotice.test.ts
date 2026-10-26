@@ -8,6 +8,7 @@ import {
   releasedPhrase,
   saveDismissal,
   shouldShowUpdateNotice,
+  updateNoticeText,
 } from "./appUpdateNotice";
 
 const NOW = 1_800_000_000_000;
@@ -109,5 +110,17 @@ describe("Settings ▸ About dates (#15)", () => {
     expect(psyneuviewVersionLine("0.6.3", install(), now)).toBe("0.6.3");
     expect(psyneuviewVersionLine("0.6.2", install({ includedReleasedAt: null }), now)).toBe("0.6.2");
     expect(psyneuviewVersionLine("0.6.2", null, now)).toBe("0.6.2");
+  });
+});
+
+describe("the notice's words", () => {
+  it("names the waiting version", () => {
+    expect(updateNoticeText({ available: true, version: "0.6.5" })).toBe("PsyNeuView 0.6.5 is available");
+  });
+
+  it("says when the waiting version is a release candidate", () => {
+    expect(updateNoticeText({ available: true, version: "0.6.5-rc1", candidate: true })).toBe(
+      "PsyNeuView 0.6.5-rc1 (release candidate) is available",
+    );
   });
 });
