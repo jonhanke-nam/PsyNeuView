@@ -6,7 +6,7 @@
 import { create } from "zustand";
 import { MarkerType, type Node, type Edge } from "@xyflow/react";
 import { applyLayout } from "@/utils/layout";
-import { placementFits } from "@/utils/showGraphLayout";
+import { knownSize, placementFits } from "@/utils/showGraphLayout";
 import { useHistoryStore } from "./historyStore";
 import { recordAction } from "@/utils/history";
 import { usePortLayout } from "@/stores/portLayoutStore";
@@ -180,7 +180,8 @@ export function autoSizeGroups(nodes: Node[]) {
     for (const child of children) {
       const x = child.position.x;
       const y = child.position.y;
-      const w = (child.style?.width as number) || NODE_WIDTH;
+      // A drawn box wider than assumed: fit the frame to it (#72).
+      const w = (child.style?.width as number) || Math.max(NODE_WIDTH, knownSize(child).w ?? 0);
       const h = (child.style?.height as number) || NODE_HEIGHT;
       if (x + w > maxX) maxX = x + w;
       if (y + h > maxY) maxY = y + h;

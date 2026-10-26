@@ -73,12 +73,18 @@ function drawnSize(id: string): { w: number; h: number } | null {
   return el && el.offsetWidth > 0 ? { w: el.offsetWidth, h: el.offsetHeight } : null;
 }
 
-export function nodeSize(n: Node): { w: number; h: number } {
+/** A node's size, where it is known: set, measured, or drawn on the page. */
+export function knownSize(n: Node): { w?: number; h?: number } {
   const w = n.measured?.width ?? (n.style?.width as number | undefined) ?? n.width;
   const h = n.measured?.height ?? (n.style?.height as number | undefined) ?? n.height;
   if (w !== undefined && h !== undefined) return { w, h };
   const drawn = drawnSize(n.id);
-  return { w: w ?? drawn?.w ?? DEFAULT_SIZE.w, h: h ?? drawn?.h ?? DEFAULT_SIZE.h };
+  return { w: w ?? drawn?.w, h: h ?? drawn?.h };
+}
+
+export function nodeSize(n: Node): { w: number; h: number } {
+  const { w, h } = knownSize(n);
+  return { w: w ?? DEFAULT_SIZE.w, h: h ?? DEFAULT_SIZE.h };
 }
 
 /** The graph's node ids: a new show_graph layout is needed when they change. */
