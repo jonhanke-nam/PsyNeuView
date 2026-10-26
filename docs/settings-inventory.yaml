@@ -163,6 +163,20 @@ settings:
       choice would switch something (#1303); what runs now, or a refused
       folder, shows no button.
 
+  - id: mac-release-candidates
+    label: Developer ▸ Release candidates ▸ Get release candidates
+    home: settings:mac-app
+    section: developer
+    storage: Mac app UserDefaults (receiveReleaseCandidates); Sparkle reads it
+    control: setting-mac-release-candidates
+    bridge_key: receiveReleaseCandidates
+    developer_only: true
+    notes: >-
+      On, the app's update notice also offers release candidates (the appcast's
+      "candidates" channel), labelled "release candidate". Changing it asks for
+      updates again at once. Apps that can't send no value, and the switch is
+      hidden.
+
   - id: mac-auto-restart
     label: General ▸ Mac app ▸ Restart PsyNeuView if it crashes
     home: settings:mac-app
