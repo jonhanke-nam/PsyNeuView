@@ -404,12 +404,17 @@ const OPTIONS = [
 
 /**
  * Measure each model in each view. With `variants`, also with its open
- * compositions folded, and with each show_graph option flipped.
+ * compositions folded, and with each show_graph option flipped (or just
+ * those `options` gives for the model).
  */
 async function runBatch(
   page: Page,
   models: string[],
-  { sheets, variants }: { sheets: boolean; variants: boolean },
+  {
+    sheets,
+    variants,
+    options = () => (variants ? OPTIONS : []),
+  }: { sheets: boolean; variants: boolean; options?: (model: string) => typeof OPTIONS },
 ): Promise<ViewResult[]> {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/");
@@ -469,26 +474,26 @@ async function runBatch(
       } catch (e) {
         results.push(failed(model, opened, e));
       }
-      if (!variants) continue;
-
-      const folded = `${view.label} · compositions folded`;
-      try {
-        const before = captured.all.length;
-        const { changed, covered } = await setFolded(page, true);
-        if (changed > 0) {
-          await record(model, folded, async () => {
-            const m = await measureCurrent(page, gv, captured, model, folded, since, before, false);
-            if (covered.length) m.result.notes = [...(m.result.notes ?? []), ...covered];
-            return m;
-          });
-          await setFolded(page, false);
+      if (variants) {
+        const folded = `${view.label} · compositions folded`;
+        try {
+          const before = captured.all.length;
+          const { changed, covered } = await setFolded(page, true);
+          if (changed > 0) {
+            await record(model, folded, async () => {
+              const m = await measureCurrent(page, gv, captured, model, folded, since, before, false);
+              if (covered.length) m.result.notes = [...(m.result.notes ?? []), ...covered];
+              return m;
+            });
+            await setFolded(page, false);
+          }
+        } catch (e) {
+          results.push(failed(model, folded, e));
         }
-      } catch (e) {
-        results.push(failed(model, folded, e));
       }
 
       if (i > 0) continue;
-      for (const option of OPTIONS) {
+      for (const option of options(model)) {
         const label = `${view.label} · ${option.variant}`;
         try {
           const before = captured.all.length;
@@ -553,7 +558,13 @@ const KNOWN_MISSING: Record<string, string[]> = {};
 
 test("representative models agree with show_graph in every view", { tag: "@ci" }, async ({ page }) => {
   test.setTimeout(5 * 60_000);
-  const results = await runBatch(page, REPRESENTATIVE, { sheets: false, variants: false });
+  // EGO with CIMs shown: that reloads the same graph, so nothing fetches or
+  // re-applies the layout, and it has to survive the reload as it is (#34).
+  const results = await runBatch(page, REPRESENTATIVE, {
+    sheets: false,
+    variants: false,
+    options: (model) => (model.includes("ego_study2") ? OPTIONS.filter((o) => o.label === "CIMs") : []),
+  });
   for (const r of results) console.log(`${r.model} — ${r.view}: ${summaryLine(r)}`);
   expect(results.length, "views measured").toBeGreaterThanOrEqual(REPRESENTATIVE.length + 2);
   for (const r of results) {
