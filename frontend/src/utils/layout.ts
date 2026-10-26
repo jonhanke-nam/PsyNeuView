@@ -13,6 +13,7 @@ import type { LayoutStyle } from "@/stores/graphSettingsStore";
 import { acyclicEdges } from "./roleRanks";
 import { applyShowGraphPlacementWithCurves, knownSize } from "./showGraphLayout";
 import { useShowGraphCurves } from "@/stores/showGraphCurvesStore";
+import { placeCims } from "./cimPlacement";
 
 interface LayoutOptions {
   direction?: "TB" | "BT" | "LR" | "RL";
@@ -672,11 +673,31 @@ export function layoutInsetInternals(
 }
 
 // Dispatch to the engine for `style` (#415). Dagre is the default/fallback.
+// CIMs aren't laid out: they are placed on top of the layout, against a
+// composition frame (cimPlacement.ts), so lay out the rest and put them back.
+// Otherwise a layout run over the drawn graph moves them (#72).
 export function applyLayout(
   style: LayoutStyle,
   nodes: Node[],
   edges: Edge[],
   options: LayoutOptions = {},
+): Node[] {
+  const cims = new Set(nodes.filter((n) => n.type === "cimNode").map((n) => n.id));
+  if (cims.size === 0) return layOut(style, nodes, edges, options);
+  const laid = layOut(
+    style,
+    nodes.filter((n) => !cims.has(n.id)),
+    edges.filter((e) => !cims.has(e.source) && !cims.has(e.target)),
+    options,
+  );
+  return placeCims([...laid, ...nodes.filter((n) => cims.has(n.id))]);
+}
+
+function layOut(
+  style: LayoutStyle,
+  nodes: Node[],
+  edges: Edge[],
+  options: LayoutOptions,
 ): Node[] {
   // Independent sub-layout for any INSET frames first (#427); the returned
   // sizes let the parent pass treat each inset as one opaque node. This

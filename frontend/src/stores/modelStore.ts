@@ -7,6 +7,7 @@ import { create } from "zustand";
 import { MarkerType, type Node, type Edge } from "@xyflow/react";
 import { applyLayout } from "@/utils/layout";
 import { knownSize, placementFits } from "@/utils/showGraphLayout";
+import { cimAnchor, cimPosition } from "@/utils/cimPlacement";
 import { useHistoryStore } from "./historyStore";
 import { recordAction } from "@/utils/history";
 import { usePortLayout } from "@/stores/portLayoutStore";
@@ -1921,22 +1922,16 @@ export const useModelStore = create<ModelState>((set, get) => ({
         // Keep resolved cross-composition edges (solid) alongside CIM edges
         // (dashed) so the graph always looks connected.
 
-        // Position CIMs relative to the composition group node.
-        // Input CIM goes above the group, Output CIM below, so they
-        // sit naturally in the top-down data flow.
-        // Find the composition group node. For top-level compositions,
-        // use the first (or only) nested group as the anchor point.
-        const groupNode = layoutNodes.find(
-          (n) => n.type === "compositionNode"
-        );
-        const groupX = groupNode?.position.x ?? 0;
-        const groupY = groupNode?.position.y ?? 0;
-        const groupW = (groupNode?.style?.width as number) ?? 300;
-        const groupH = (groupNode?.style?.height as number) ?? 200;
+        // Position CIMs relative to the composition group node
+        // (cimPlacement.ts): Input CIM above the group, Output CIM below,
+        // so they sit naturally in the top-down data flow.
+        const anchor = cimAnchor(layoutNodes);
 
         let cimIdx = 0;
         for (const cimNode of comp.cim.nodes) {
-          const cimType = cimNode.cimType || "INPUT_CIM";
+          // The backend names them by attribute ("input_CIM"); everything here
+          // (placement, label, colour, Inspector) uses the role ("INPUT_CIM").
+          const cimType = (cimNode.cimType || "INPUT_CIM").toUpperCase();
           if (!connectedCIMs.has(cimNode.name)) continue;
 
           // Use saved position if available (from custom layout), else compute.
@@ -1944,17 +1939,11 @@ export const useModelStore = create<ModelState>((set, get) => ({
           // (e.g., "outer_comp-5 Input_CIM" vs "outer_comp-12 Input_CIM"),
           // so strip the suffix for a stable lookup key.
           const cimStableKey = cimNode.name.replace(/-\d+\s/, " ");
-          let pos: { x: number; y: number };
           const saved = savedPositions[cimNode.name] || savedPositions[cimStableKey];
-          if (saved && !autoLayout) {
-            pos = saved;
-          } else if (cimType === "INPUT_CIM") {
-            pos = { x: groupX + groupW / 2 - 50 + cimIdx * 140, y: groupY - 60 };
-          } else if (cimType === "OUTPUT_CIM") {
-            pos = { x: groupX + groupW / 2 - 50 + cimIdx * 140, y: groupY + groupH + 20 };
-          } else {
-            pos = { x: groupX + groupW + 40, y: groupY + cimIdx * 60 };
-          }
+          const fromSaved = !!saved && !autoLayout;
+          const pos = fromSaved ? saved : cimPosition(anchor, cimType, cimIdx);
+          // Kept so a later layout can put it back in its place (#72).
+          const cimIndex = fromSaved ? undefined : cimIdx;
           cimIdx++;
 
           layoutNodes.push({
@@ -1964,6 +1953,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
             data: {
               label: CIM_LABELS[cimType] || cimType.replace(/_/g, " "),
               cimType,
+              ...(cimIndex !== undefined ? { cimIndex } : {}),
               type: cimNode.type,
               roles: cimNode.roles || [],
               inputPorts: cimNode.inputPorts || [],
