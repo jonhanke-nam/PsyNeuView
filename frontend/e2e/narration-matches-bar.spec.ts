@@ -14,6 +14,7 @@ import { readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import yaml from "js-yaml";
+import type { Page } from "@playwright/test";
 import { mutatingTest as test, expect } from "./test-base";
 import { loadWalkthrough, runWalkthrough } from "./tourDriver";
 
@@ -31,26 +32,38 @@ function respelt(text: string): string {
     .reduce((out, w) => out.replace(new RegExp(`(?<![\\w-])${esc(w.word)}(?![\\w-])`, "g"), w.say), text);
 }
 
+/** Narration on, and the browser's voice replaced by a recorder of every call. */
+async function recordVoice(page: Page) {
+  await page.addInitScript((key) => {
+    localStorage.setItem(key, "on");
+    const spoken: string[] = [];
+    const calls: string[] = [];
+    (window as unknown as { __spoken: string[]; __calls: string[] }).__spoken = spoken;
+    (window as unknown as { __calls: string[] }).__calls = calls;
+    const engine = {
+      speaking: false,
+      speak: (u: SpeechSynthesisUtterance) => {
+        spoken.push(u.text);
+        calls.push(`speak:${u.text}`);
+      },
+      cancel: () => calls.push("cancel"),
+      pause: () => calls.push("pause"),
+      resume: () => calls.push("resume"),
+      getVoices: () => [],
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    };
+    Object.defineProperty(window, "speechSynthesis", { value: engine, configurable: true });
+  }, NARRATION_KEY);
+}
+
+const calls = (page: Page) => page.evaluate(() => (window as unknown as { __calls: string[] }).__calls.slice());
+
 test.describe("Narration matches the bar", { tag: "@ci" }, () => {
   test("every step reads its visible caption, marked and readable", async ({ page }) => {
     test.setTimeout(180_000);
     await page.setViewportSize({ width: 1000, height: 670 });
-    await page.addInitScript((key) => {
-      localStorage.setItem(key, "on");
-      const spoken: string[] = [];
-      (window as unknown as { __spoken: string[] }).__spoken = spoken;
-      const engine = {
-        speaking: false,
-        speak: (u: SpeechSynthesisUtterance) => spoken.push(u.text),
-        cancel: () => {},
-        pause: () => {},
-        resume: () => {},
-        getVoices: () => [],
-        addEventListener: () => {},
-        removeEventListener: () => {},
-      };
-      Object.defineProperty(window, "speechSynthesis", { value: engine, configurable: true });
-    }, NARRATION_KEY);
+    await recordVoice(page);
 
     const part = loadWalkthrough("orientation-window");
     await page.goto(`/?tour=${part.id}`);
@@ -76,5 +89,43 @@ test.describe("Narration matches the bar", { tag: "@ci" }, () => {
       expect(box!.y).toBeGreaterThanOrEqual(bar!.y);
       expect(box!.y + box!.height).toBeLessThanOrEqual(bar!.y + bar!.height + 1);
     });
+  });
+
+  test("the voice stops with the step, pauses with Pause, repeats on Replay and ends with End", async ({ page }) => {
+    await recordVoice(page);
+    const part = loadWalkthrough("orientation-window");
+    const [first, second] = part.steps;
+    await page.goto(`/?tour=${part.id}`);
+    await expect(page.getByTestId("tour-caption")).toHaveText(first.say ?? "", { timeout: 30_000 });
+    const firstSaid = `speak:${respelt(first.say ?? "")}`;
+    await expect.poll(async () => (await calls(page)).filter((c) => c === firstSaid).length).toBe(1);
+
+    // Pause pauses the voice, and pressing it again resumes it.
+    await page.getByTestId("tour-pause").click();
+    await expect.poll(async () => (await calls(page)).at(-1)).toBe("pause");
+    await page.getByTestId("tour-pause").click();
+    await expect.poll(async () => (await calls(page)).at(-1)).toBe("resume");
+
+    // Replay says the same line again.
+    await page.getByTestId("tour-replay").click();
+    await expect.poll(async () => (await calls(page)).filter((c) => c === firstSaid).length).toBe(2);
+
+    // Next: the old line is cut off before the new one starts, and not said again.
+    const before = (await calls(page)).length;
+    await page.getByTestId("tour-next").click();
+    await expect(page.getByTestId("tour-caption")).toHaveText(second.say ?? "", { timeout: 15_000 });
+    const secondSaid = `speak:${respelt(second.say ?? "")}`;
+    await expect.poll(async () => (await calls(page)).slice(before)).toContain(secondSaid);
+    const afterNext = (await calls(page)).slice(before);
+    expect(afterNext.slice(0, afterNext.indexOf(secondSaid))).toContain("cancel");
+    expect(afterNext).not.toContain(firstSaid);
+
+    // End: the voice is cut off and nothing more is said.
+    await page.getByTestId("tour-dismiss").click();
+    await expect(page.getByTestId("tour-bar")).toHaveCount(0);
+    const atEnd = await calls(page);
+    expect(atEnd.at(-1)).toBe("cancel");
+    await page.waitForTimeout(500);
+    expect((await calls(page)).length).toBe(atEnd.length);
   });
 });
