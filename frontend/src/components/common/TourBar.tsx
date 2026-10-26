@@ -213,6 +213,9 @@ export function TourBar() {
       style={{
         flexShrink: 0,
         display: "flex",
+        // The step's text takes a full row of its own above the title, dots
+        // and buttons; sharing one row squeezed it into a column a word wide.
+        flexWrap: "wrap",
         alignItems: "center",
         gap: 12,
         padding: "8px 12px",
@@ -252,7 +255,7 @@ export function TourBar() {
       </span>
 
       {/* A long instruction scrolls inside the bar rather than pushing the canvas away (#5). */}
-      <span data-testid="tour-text" style={{ flex: 1, minWidth: 0, maxHeight: "30vh", overflowY: "auto" }}>
+      <span data-testid="tour-text" style={{ order: -1, flexBasis: "100%", minWidth: 0, maxHeight: "30vh", overflowY: "auto" }}>
         <span data-testid="tour-instruction" style={{ display: "block" }}>
           {instruction}
           {/* #1393: a boxed, red warning with a sign, so it doesn't read as
