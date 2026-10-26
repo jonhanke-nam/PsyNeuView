@@ -4,10 +4,18 @@ import { mkdtempSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
 import { fileURLToPath } from "url";
+import { staleDistReason } from "./e2e/distFreshness";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const isDev = !!process.env.PW_DEV;
+
+// Production mode serves frontend/dist as built. Refuse one older than the
+// source, rather than test (and screenshot) the app as it was.
+if (!isDev && !process.env.PW_ALLOW_STALE_DIST) {
+  const why = staleDistReason(__dirname);
+  if (why) throw new Error(`playwright.config: ${why}`);
+}
 
 // Production mode: allocate a free port at config-load time so parallel
 // test runs or a concurrent dev server don't collide (#147). Dev mode
