@@ -251,6 +251,7 @@ export function speakCaption(
   makeUtterance: (text: string) => SpeechSynthesisUtterance = (t) => new SpeechSynthesisUtterance(t),
   chosenVoice: string | null = loadNarrationVoice(),
   rate: number = loadNarrationRate(),
+  events: { onStart?: () => void; onEnd?: () => void } = {},
 ): boolean {
   if (!engine) return false;
   engine.cancel();
@@ -263,6 +264,12 @@ export function speakCaption(
     utterance.lang = voice.lang;
   }
   utterance.rate = rate;
+  // So the bar can light the line while it's being read (#86).
+  if (events.onStart) utterance.onstart = events.onStart;
+  if (events.onEnd) {
+    utterance.onend = events.onEnd;
+    utterance.onerror = events.onEnd;
+  }
   engine.speak(utterance);
   return true;
 }

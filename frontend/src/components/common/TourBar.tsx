@@ -171,15 +171,24 @@ export function TourBar() {
   // the walkthrough ends, or narration is switched off.
   const caption = step ? captionOf(step) : "";
   const stepKey = step ? `${tourKey}/${step.id}` : null;
+  // True while the voice is reading the caption, so the bar can light it (#86).
+  const [speaking, setSpeaking] = useState(false);
   useEffect(() => {
     const engine = speechEngine();
+    setSpeaking(false);
     if (!engine) return;
     if (!narration || !stepKey || complete || holdForPointer) {
       stopSpeaking(engine);
       return;
     }
-    speakCaption(caption, engine);
-    return () => stopSpeaking(engine);
+    speakCaption(caption, engine, undefined, undefined, undefined, {
+      onStart: () => setSpeaking(true),
+      onEnd: () => setSpeaking(false),
+    });
+    return () => {
+      stopSpeaking(engine);
+      setSpeaking(false);
+    };
     // replayCount is a trigger, not data.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [narration, stepKey, caption, complete, holdForPointer, replayCount]);
@@ -198,6 +207,8 @@ export function TourBar() {
   if (!walkthrough) return null;
 
   const docs = walkthrough.docs ?? [];
+  // Narration on and a caption to read: the caption leads the bar (#86).
+  const leads = narration && Boolean(step?.say) && !finished && !complete && !holdForPointer;
   const instruction = finished
     ? "✓ Walkthrough complete."
     : complete
@@ -257,8 +268,14 @@ export function TourBar() {
       </span>
 
       {/* A long instruction scrolls inside the bar rather than pushing the canvas away (#5). */}
-      <span data-testid="tour-text" style={{ order: -1, flexBasis: "100%", minWidth: 0, maxHeight: "30vh", overflowY: "auto" }}>
-        <span data-testid="tour-instruction" style={{ display: "block" }}>
+      <span data-testid="tour-text" style={{ order: -1, flexBasis: "100%", minWidth: 0, display: "flex", flexDirection: "column", maxHeight: "30vh", overflowY: "auto" }}>
+        {/* With narration on, the instruction is the details line under the
+            spoken caption: smaller, and never read aloud (#86). */}
+        <span
+          data-testid="tour-instruction"
+          data-role={leads ? "details" : "lead"}
+          style={{ display: "block", ...(leads ? { fontSize: 13, color: "var(--pnv-walkthrough-caption)", marginTop: 2 } : {}) }}
+        >
           {instruction}
           {/* #1393: a boxed, red warning with a sign, so it doesn't read as
               part of the instruction. Both messages share the one box. */}
@@ -305,12 +322,29 @@ export function TourBar() {
             data-testid="tour-caption-line"
             data-spoken={narration ? "true" : "false"}
             title={narration ? "Narration reads this line" : undefined}
-            style={{ display: "block", fontSize: 14, color: "var(--pnv-walkthrough-caption)", marginTop: 2, fontStyle: "italic" }}
+            data-speaking={speaking ? "true" : "false"}
+            style={
+              leads
+                ? {
+                    // Narration on (#86): the caption leads the bar, in plain
+                    // text, and is lit while the voice reads it.
+                    order: -1,
+                    display: "block",
+                    fontSize: 15,
+                    fontWeight: 500,
+                    color: "var(--pnv-walkthrough-text)",
+                    padding: "1px 6px",
+                    marginLeft: -6,
+                    borderRadius: 4,
+                    background: speaking ? "var(--pnv-primary-tint)" : "transparent",
+                    transition: "background 150ms ease",
+                  }
+                : { display: "block", fontSize: 14, color: "var(--pnv-walkthrough-caption)", marginTop: 2, fontStyle: "italic" }
+            }
           >
-            {/* With narration on, a speaker marks the line being read (#86):
-                the caption, not the instruction above it. */}
+            {/* With narration on, a speaker marks the line being read (#86). */}
             {narration && (
-              <span data-testid="tour-caption-speaker" aria-label="Read aloud:" style={{ fontStyle: "normal", marginRight: 6 }}>
+              <span data-testid="tour-caption-speaker" aria-label="Read aloud:" style={{ marginRight: 6 }}>
                 🔊
               </span>
             )}

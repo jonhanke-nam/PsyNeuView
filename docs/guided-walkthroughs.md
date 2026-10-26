@@ -58,9 +58,10 @@ steps:
   a number. Course walkthroughs appear under **Cognitive Neuroscience Course**
   in lesson order; `orientation:` walkthroughs under **PsyNeuView First
   Steps** in part order, first; the rest under **Getting started**.
-- `say:` is the caption. Without one, narration reads the instruction. The
-  orientation gives every step a caption; a short line reads better aloud than
-  an instruction with a test id's worth of nouns in it.
+- `say:` is the caption: **the one sentence you'd say aloud**. The
+  instruction is **what you'd point at**, with the exact control names. Every
+  step has a caption (a unit test fails otherwise), with no code names, and
+  any label it quotes is named in the instruction too (`narrationCaptions.test.ts`, #87).
 - `pointer: true` is for a step whose point is "look here": the pointer glides
   from where it last was to the anchor (700 ms), and only then does the bar
   show the instruction. The ring is drawn at once either way. Replay sends it
@@ -134,6 +135,16 @@ Voice ▸ Voice (`psyneuview.tour.narrationVoice`, `psyneuview.tour.narrationRat
 Automatic picks the best English voice installed (Premium/Enhanced first, then
 Karen, Daniel, …, never the novelty voices; `pickVoice` in
 `utils/narration.ts`), reading at 0.95. Never required: the caption is always on screen.
+
+**What narration reads, and how the bar shows it (#86).** Narration reads only
+the caption, never the instruction. Captions run about 11 words (a few
+seconds), instructions about 33 (up to 81), too long to hear on every step.
+With narration on, the caption leads the bar in plain text with 🔊 before it,
+lit while the voice is reading it, and the instruction sits under it as a
+smaller details line. With narration off, the instruction leads and the
+caption follows in italics. `e2e/narration-matches-bar.spec.ts` checks the
+voice gets the visible caption, that it leads and is lit while spoken, and
+the voice's timing with Pause, Replay, Next and End.
 
 **Pronunciation (#1407).** Voices spell out capitals ("E-G-O") and stumble
 over joined names. `src/walkthroughs/pronunciations.yaml` says how to say
