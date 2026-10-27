@@ -275,14 +275,18 @@ export function TourOverlay() {
   if (!step || !rect) return null;
 
   const pad = 8 + ringWidth(highlight.thickness) / 2;
+  // Each side sits just outside the anchor where there is room, and just
+  // inside its edge where the gap is taken by something else (#102): a panel's
+  // ring ran through the text above it and into the next panel.
+  const sides = ringSides(rect, pad, ringWidth(highlight.thickness));
   // Kept inside the window: around something as wide as the window (the
   // toolbar) the padded ring's top and sides fell outside it, and all that
   // showed was a stray line along its bottom edge.
   const edge = 2;
-  const ringLeft = Math.max(edge, rect.left - pad);
-  const ringTop = Math.max(edge, rect.top - pad);
-  const ringRight = Math.min(window.innerWidth - edge, rect.left + rect.width + pad);
-  const ringBottom = Math.min(window.innerHeight - edge, rect.top + rect.height + pad);
+  const ringLeft = Math.max(edge, rect.left - sides.left);
+  const ringTop = Math.max(edge, rect.top - sides.top);
+  const ringRight = Math.min(window.innerWidth - edge, rect.left + rect.width + sides.right);
+  const ringBottom = Math.min(window.innerHeight - edge, rect.top + rect.height + sides.bottom);
 
   return (
     <div
@@ -293,6 +297,7 @@ export function TourOverlay() {
     >
       <div
         data-testid="tour-highlight"
+        data-sides={(["top", "right", "bottom", "left"] as const).map((k) => (sides[k] > 0 ? "out" : "in")).join(" ")}
         data-pulse={complete ? "off" : highlight.pulse}
         className={!complete && highlight.pulse !== "off" ? `pnv-tour-ring-pulse-${highlight.pulse}` : undefined}
         style={{
@@ -332,3 +337,41 @@ export function TourOverlay() {
     </div>
   );
 }
+
+/**
+ * How far each side of the ring sits from the anchor (#102): `pad` outside it
+ * where the gap is clear, or just inside its edge where it isn't. "Clear" means
+ * that along the padded line, what's on top is a container round the whole
+ * anchor (the background it sits on), not text or a neighbouring panel.
+ */
+export function ringSides(
+  rect: Rect,
+  pad: number,
+  width: number,
+  topAt: (x: number, y: number) => Element | null = (x, y) => topElementAt(x, y),
+): Record<"top" | "right" | "bottom" | "left", number> {
+  const inside = -(width + 2);
+  const contains = (el: Element | null) => {
+    if (!el) return true; // off the page: nothing to cross
+    const b = el.getBoundingClientRect();
+    return b.left <= rect.left + 1 && b.top <= rect.top + 1 && b.right >= rect.left + rect.width - 1 && b.bottom >= rect.top + rect.height - 1;
+  };
+  const clear = (points: [number, number][]) => points.every(([x, y]) => contains(topAt(x, y)));
+  const along = (n: number, from: number, to: number) => Array.from({ length: n }, (_, i) => from + ((to - from) * (i + 0.5)) / n);
+  const xs = along(9, rect.left, rect.left + rect.width);
+  const ys = along(7, rect.top, rect.top + rect.height);
+  const l = rect.left - pad, r = rect.left + rect.width + pad, t = rect.top - pad, b = rect.top + rect.height + pad;
+  return {
+    top: clear(xs.map((x) => [x, t])) ? pad : inside,
+    bottom: clear(xs.map((x) => [x, b])) ? pad : inside,
+    left: clear(ys.map((y) => [l, y])) ? pad : inside,
+    right: clear(ys.map((y) => [r, y])) ? pad : inside,
+  };
+}
+
+/** The topmost element at a point, not counting the walkthrough's own overlay. */
+function topElementAt(x: number, y: number): Element | null {
+  if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) return null;
+  return document.elementsFromPoint(x, y).find((el) => !el.closest('[data-testid="tour-overlay"]')) ?? null;
+}
+

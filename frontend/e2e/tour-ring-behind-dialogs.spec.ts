@@ -31,13 +31,19 @@ test.describe("Walkthrough ring and dialogs", { tag: "@ci" }, () => {
     await expect(page.getByTestId("tour-bar")).toContainText("step 2 of", { timeout: 10_000 });
     const ring = page.getByTestId("tour-highlight");
     await expect(ring).toBeVisible();
-    // The ring sits 8px outside the anchor on every side.
+    // The ring hugs the anchor: a little outside where there's room, just
+    // inside where the neighbouring items are (#102). Never far off.
     await expect
       .poll(async () => {
         const r = (await ring.boundingBox())!;
         const g = (await general.boundingBox())!;
-        return Math.max(Math.abs(r.x + 8 - g.x), Math.abs(r.y + 8 - g.y));
+        return Math.max(
+          Math.abs(r.x - g.x),
+          Math.abs(r.y - g.y),
+          Math.abs(r.x + r.width - (g.x + g.width)),
+          Math.abs(r.y + r.height - (g.y + g.height)),
+        );
       })
-      .toBeLessThan(3);
+      .toBeLessThan(13);
   });
 });
