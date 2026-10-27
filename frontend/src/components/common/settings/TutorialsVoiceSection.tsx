@@ -15,6 +15,17 @@ import { useState } from "react";
 import { recordSettingChanged } from "@/utils/activityLog";
 import { NARRATION_RATES, loadNarrationRate, narrationAvailable, saveNarrationRate } from "@/utils/narration";
 import { readOfferChoice, writeOfferChoice, clearOfferChoice, type OfferChoice } from "@/utils/orientationOffer";
+import {
+  RING_COLORS,
+  RING_PULSES,
+  RING_THICKNESSES,
+  ringColor,
+  ringWidth,
+  useTourHighlightStore,
+  type RingColor,
+  type RingPulse,
+  type RingThickness,
+} from "@/stores/tourHighlightStore";
 import { NarrationVoiceSetting } from "./NarrationVoiceSetting";
 import { Group, SettingLabel, mutedStyle, selectStyle } from "./shared";
 
@@ -24,6 +35,9 @@ export function TutorialsVoiceSection() {
       <Group id="voice" title="Voice">
         <NarrationVoiceSetting />
         {narrationAvailable() && <NarrationRateSetting />}
+      </Group>
+      <Group id="highlight" title="Highlight">
+        <HighlightSettings />
       </Group>
       <Group id="tutorials" title="Tutorials">
         <OrientationReminderSetting />
@@ -102,3 +116,95 @@ function OrientationReminderSetting() {
     </div>
   );
 }
+
+/**
+ * How a walkthrough marks what a step points at (#100): the ring's thickness,
+ * pulse and colour, and whether the gliding arrow is shown. A sample ring
+ * shows the choice.
+ */
+function HighlightSettings() {
+  const h = useTourHighlightStore();
+  const row = { fontSize: 13, marginTop: 10 } as const;
+  return (
+    <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
+      <div style={{ flex: "1 1 280px" }}>
+        <SettingLabel title="Ring" htmlFor="setting-tour-ring-thickness">
+          The ring round what a walkthrough step points at.
+        </SettingLabel>
+        <div style={{ ...row, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <select
+            id="setting-tour-ring-thickness"
+            data-testid="setting-tour-ring-thickness"
+            aria-label="Ring thickness"
+            value={h.thickness}
+            onChange={(e) => h.setThickness(e.target.value as RingThickness)}
+            style={selectStyle}
+          >
+            {RING_THICKNESSES.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+          <select
+            data-testid="setting-tour-ring-pulse"
+            aria-label="Ring pulse"
+            value={h.pulse}
+            onChange={(e) => h.setPulse(e.target.value as RingPulse)}
+            style={selectStyle}
+          >
+            {RING_PULSES.map((p) => (
+              <option key={p.id} value={p.id}>
+                Pulse: {p.label}
+              </option>
+            ))}
+          </select>
+          <select
+            data-testid="setting-tour-ring-color"
+            aria-label="Ring colour"
+            value={h.color}
+            onChange={(e) => h.setColor(e.target.value as RingColor)}
+            style={selectStyle}
+          >
+            {RING_COLORS.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <label style={{ ...row, display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <input
+            type="checkbox"
+            data-testid="setting-tour-arrow"
+            checked={h.showArrow}
+            onChange={(e) => h.setShowArrow(e.target.checked)}
+            style={{ marginTop: 3 }}
+          />
+          <span>
+            Show the pointer arrow
+            <span style={{ ...mutedStyle, display: "block" }}>
+              An arrow that glides to each step. Off by default: it can be mistaken for your own pointer.
+            </span>
+          </span>
+        </label>
+      </div>
+      {/* A sample, so the choice can be seen without starting a walkthrough. */}
+      <div
+        data-testid="tour-ring-sample"
+        aria-hidden="true"
+        className={h.pulse !== "off" ? `pnv-tour-ring-pulse-${h.pulse}` : undefined}
+        style={{
+          width: 120,
+          height: 44,
+          marginTop: 6,
+          borderRadius: 12,
+          color: ringColor(h.color),
+          border: `${ringWidth(h.thickness)}px solid currentColor`,
+          boxSizing: "border-box",
+        }}
+      />
+    </div>
+  );
+}
+

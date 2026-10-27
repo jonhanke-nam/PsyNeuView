@@ -36,6 +36,7 @@ import { useFitGraph } from "@/hooks/useFitGraph";
 import { useTourProgress } from "@/hooks/useTourProgress";
 import { useCatalogOpener } from "@/stores/catalogOpenerStore";
 import { useModelStore } from "@/stores/modelStore";
+import { useTourHighlightStore } from "@/stores/tourHighlightStore";
 import { useTourStore } from "@/stores/tourStore";
 import { useUIStore } from "@/stores/uiStore";
 import { openSettings } from "./settings/sections";
@@ -165,7 +166,9 @@ export function TourBar() {
 
   // A pointer step holds its words until the pointer has arrived. The step's
   // ring is drawn at once; the overlay reports the arrival.
-  const holdForPointer = Boolean(step?.pointer) && !pointerArrived && !complete;
+  // Only while the arrow is shown (#100); without it the ring is drawn at once.
+  const showArrow = useTourHighlightStore((h) => h.showArrow);
+  const holdForPointer = Boolean(step?.pointer) && showArrow && !pointerArrived && !complete;
 
   // Narration (#1310): read the caption when a step shows, when it's replayed,
   // and when narration is switched on mid-step. Stop when the step is done,

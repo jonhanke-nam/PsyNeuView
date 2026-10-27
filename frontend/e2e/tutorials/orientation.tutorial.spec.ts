@@ -122,8 +122,8 @@ for (const part of PARTS as Walkthrough[]) {
       await runWalkthrough(page, part, async (step, index) => {
         // Captions are always on: every step of the orientation has one.
         if (step.say) await expect(page.getByTestId("tour-caption")).toHaveText(step.say);
-        // A pointer step sends the pointer to its anchor before the words.
-        if (step.pointer) await expect(page.getByTestId("tour-pointer")).toBeVisible();
+        // The arrow is off by default (#100): the ring alone marks the anchor.
+        await expect(page.getByTestId("tour-pointer")).toHaveCount(0);
         await page.waitForTimeout(250);
         await shot(page, `${part.id}-step-${index + 1}`);
       });

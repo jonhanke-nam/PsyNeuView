@@ -54,7 +54,7 @@ settings:
       there, and the app acts on it before the page loads (--reload, menus)
     control: setting-developer-mode
     notes: >-
-      The first item of Developer, which is always listed. Everything it shows
+      The last item of Developer (#95), which is always listed. Everything it shows
       is marked with the Developer badge (#1291; the list is in
       docs/settings-etiquette.md).
 
@@ -237,6 +237,42 @@ settings:
     section: general
     storage: backend
     control: setting-sidecar-placement
+
+  - id: tour-ring-thickness
+    label: Tutorials and Voice ▸ Highlight ▸ Ring thickness
+    home: settings
+    section: tutorials-voice
+    storage: browser localStorage (psyneuview.tour.ringThickness); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-tour-ring-thickness
+    notes: >-
+      Thin, Medium (default) or Thick: 2, 4 or 6 px (#100).
+
+  - id: tour-ring-pulse
+    label: Tutorials and Voice ▸ Highlight ▸ Ring pulse
+    home: settings
+    section: tutorials-voice
+    storage: browser localStorage (psyneuview.tour.ringPulse); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-tour-ring-pulse
+    notes: >-
+      Off, Gentle (default) or Strong. Never pulses when the system asks for reduced motion (#100).
+
+  - id: tour-ring-color
+    label: Tutorials and Voice ▸ Highlight ▸ Ring colour
+    home: settings
+    section: tutorials-voice
+    storage: browser localStorage (psyneuview.tour.ringColor); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-tour-ring-color
+    notes: >-
+      Blue (default), Orange, Purple or Magenta, all palette tokens. Never green, which marks a finished step (#100).
+
+  - id: tour-arrow
+    label: Tutorials and Voice ▸ Highlight ▸ Show the pointer arrow
+    home: settings
+    section: tutorials-voice
+    storage: browser localStorage (psyneuview.tour.showArrow); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-tour-arrow
+    notes: >-
+      Off by default: testers took the gliding arrow for their own pointer (#100). When off, pointer steps show their words at once.
 
   - id: narration-voice
     label: Tutorials and Voice ▸ Voice ▸ Narration voice

@@ -30,6 +30,7 @@ import { useStore } from "@xyflow/react";
 import { useTourProgress } from "@/hooks/useTourProgress";
 import { useCatalogOpener } from "@/stores/catalogOpenerStore";
 import { useModelStore } from "@/stores/modelStore";
+import { ringColor, ringWidth, useTourHighlightStore } from "@/stores/tourHighlightStore";
 import { tourIdFromUrl, useTourStore } from "@/stores/tourStore";
 import { isOnScreen, toScreenRect, type NodeBox } from "@/utils/offscreenNodes";
 import { cssEscape, nodeSelector } from "@/utils/nodeSelector";
@@ -228,7 +229,10 @@ export function TourOverlay() {
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
   const [pointerAt, setPointerAt] = useState<{ x: number; y: number } | null>(null);
   const [gliding, setGliding] = useState(false);
-  const wantsPointer = Boolean(step?.pointer) && !complete;
+  // The arrow is optional (#100): off by default, the ring alone marks the anchor.
+  const showArrow = useTourHighlightStore((h) => h.showArrow);
+  const highlight = useTourHighlightStore();
+  const wantsPointer = Boolean(step?.pointer) && showArrow && !complete;
   // One glide per (start, step, replay): the key says when to send it again.
   const glideKey = wantsPointer && rect ? `${startCount}/${stepIndex}/${replayCount}` : null;
   const target = rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null;
@@ -265,12 +269,12 @@ export function TourOverlay() {
 
   // A step without a pointer never waits for one.
   useEffect(() => {
-    if (step && !step.pointer) setPointerArrived(true);
-  }, [step, setPointerArrived]);
+    if (step && !(step.pointer && showArrow)) setPointerArrived(true);
+  }, [step, showArrow, setPointerArrived]);
 
   if (!step || !rect) return null;
 
-  const pad = 8;
+  const pad = 8 + ringWidth(highlight.thickness) / 2;
   // Kept inside the window: around something as wide as the window (the
   // toolbar) the padded ring's top and sides fell outside it, and all that
   // showed was a stray line along its bottom edge.
@@ -289,6 +293,8 @@ export function TourOverlay() {
     >
       <div
         data-testid="tour-highlight"
+        data-pulse={complete ? "off" : highlight.pulse}
+        className={!complete && highlight.pulse !== "off" ? `pnv-tour-ring-pulse-${highlight.pulse}` : undefined}
         style={{
           position: "fixed",
           left: ringLeft,
@@ -296,9 +302,12 @@ export function TourOverlay() {
           width: ringRight - ringLeft,
           height: ringBottom - ringTop,
           boxSizing: "border-box",
-          border: `2px solid ${complete ? "var(--pnv-walkthrough-done)" : "var(--pnv-walkthrough-current)"}`,
+          // Thickness, colour and pulse are the learner's (#100); a done step
+          // turns the done colour and stops pulsing.
+          color: complete ? "var(--pnv-walkthrough-done)" : ringColor(highlight.color),
+          border: `${ringWidth(highlight.thickness)}px solid currentColor`,
           borderRadius: 12,
-          transition: "border-color 120ms ease",
+          transition: "color 120ms ease",
         }}
       />
       {wantsPointer && pointerAt && (

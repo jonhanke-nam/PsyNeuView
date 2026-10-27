@@ -146,6 +146,8 @@ test.describe("The walkthrough bar's controls", () => {
   test("Pause holds a finished step; Resume lets it advance; Skip moves on; Replay sends the pointer again", async ({ page }) => {
     // Part 7 is all in Settings, which needs no model: quick to start.
     const part = loadWalkthrough("orientation-settings");
+    // The arrow is a setting, off by default (#100); this checks it when on.
+    await page.addInitScript(() => localStorage.setItem("psyneuview.tour.showArrow", "on"));
     await page.goto(`/?tour=${part.id}`);
     const instruction = page.getByTestId("tour-instruction");
     await expect(instruction).toHaveText(part.steps[0].instruct, { timeout: 15_000 });

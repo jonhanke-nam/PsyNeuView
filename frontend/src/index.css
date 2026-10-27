@@ -174,3 +174,19 @@ button:hover {
    the lock); keep it where React Flow's own sat, between zoom-out and lock. */
 .react-flow__controls .pnv-controls-fit { order: 1; }
 .react-flow__controls .react-flow__controls-interactive { order: 2; }
+
+/* The walkthrough ring's pulse (#100): a halo in the ring's own colour
+   (currentColor) that spreads and fades. Strong spreads further and faster.
+   Off for anyone whose system asks for reduced motion. */
+@keyframes pnv-tour-ring-pulse {
+  0% { box-shadow: 0 0 0 0 currentColor; }
+  70% { box-shadow: 0 0 0 var(--pnv-tour-pulse-spread, 8px) transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.pnv-tour-ring-pulse-gentle { animation: pnv-tour-ring-pulse 1.8s ease-out infinite; --pnv-tour-pulse-spread: 8px; }
+.pnv-tour-ring-pulse-strong { animation: pnv-tour-ring-pulse 1.1s ease-out infinite; --pnv-tour-pulse-spread: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  .pnv-tour-ring-pulse-gentle,
+  .pnv-tour-ring-pulse-strong { animation: none; }
+}
+
