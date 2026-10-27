@@ -484,10 +484,14 @@ export const MechanismNode = memo(function MechanismNode({
         </div>
       )}
 
-      {/* Type + Role badges */}
-      <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
+      {/* Type + Role badges. With Elements off (the default, #122) and no
+          other tag, the row is left out so the name sits centred in the oval,
+          as show_graph() draws it. */}
+      {(showNodeElements || isViewOnly || isCollapsedComposition) && (
+      <div data-testid="node-tags" style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
         {showNodeElements && (
           <span
+            data-testid="node-type-tag"
             style={{
               fontSize: 10,
               color: accentColor,
@@ -501,6 +505,7 @@ export const MechanismNode = memo(function MechanismNode({
         )}
         {showNodeElements && roleLabel && (
           <span
+            data-testid="node-role-tag"
             style={{
               fontSize: 9,
               color: "var(--pnv-on-primary)",
@@ -552,6 +557,7 @@ export const MechanismNode = memo(function MechanismNode({
           </button>
         )}
       </div>
+      )}
       {showNodeNames && (
         <div style={{ fontSize: 14, fontWeight: 600, color: "var(--pnv-text)" }}>
           {d.label}
@@ -559,6 +565,7 @@ export const MechanismNode = memo(function MechanismNode({
       )}
       {showNodeElements && d.function && (
         <div
+          data-testid="node-function-line"
           style={{
             fontSize: 10,
             color: "var(--pnv-text-hint)",

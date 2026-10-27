@@ -315,7 +315,7 @@ export function GraphToolbar() {
         label="Elements"
         active={showNodeElements}
         onClick={() => useGraphSettings.getState().setShowNodeElements(!showNodeElements)}
-        title="Show per-node element names (type/role badges, function name)"
+        title="Show each node's type and role tags and its function (off by default: just the name, as in show_graph)"
       />
       <ToggleButton
         label="Labels"
@@ -351,7 +351,7 @@ export function GraphToolbar() {
         label="Types"
         active={showFullTypes}
         onClick={() => useGraphSettings.getState().setShowFullTypes(!showFullTypes)}
-        title="Show full class names (e.g., TransferMechanism instead of Transfer)"
+        title="Show full class names in the type tag (e.g., TransferMechanism instead of Transfer); the tag shows with Elements on"
       />
       <ToggleButton
         label="Order"
