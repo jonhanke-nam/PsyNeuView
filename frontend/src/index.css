@@ -197,3 +197,20 @@ button:hover {
   .pnv-tour-ring-pulse-strong { animation: none; }
 }
 
+
+/* The spinning wheel of patience (#38, BusyIndicator): twelve spokes that
+   step round like the Mac's; still under reduced motion. While it shows, the
+   pointer says "working" everywhere. */
+.pnv-busy-wheel {
+  animation: pnv-busy-spin 0.9s steps(12) infinite;
+}
+@keyframes pnv-busy-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pnv-busy-wheel { animation: none; }
+}
+html.pnv-busy,
+html.pnv-busy * {
+  cursor: progress !important;
+}

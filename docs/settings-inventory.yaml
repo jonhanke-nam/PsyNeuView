@@ -238,6 +238,17 @@ settings:
     storage: backend
     control: setting-sidecar-placement
 
+  - id: busy-threshold
+    label: General ▸ Busy indicator ▸ Show the busy wheel
+    home: settings
+    section: general
+    storage: browser localStorage (psyneuview.busy.thresholdMs); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-busy-threshold
+    notes: >-
+      At once, 0.1 s, 0.2 s (default), 0.5 s or 1 s (#38). Anything the user
+      asks for that runs longer shows the spinning wheel in the toolbar and
+      over the graph, with a "progress" pointer.
+
   - id: tour-ring-thickness
     label: Tutorials and Voice ▸ Highlight ▸ Ring thickness
     home: settings

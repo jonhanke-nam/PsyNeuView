@@ -20,6 +20,7 @@
  * placement for the current graph exists, the Layered layout stands in.
  */
 
+import { withBusy } from "@/stores/busyStore";
 import type { Edge, Node } from "@xyflow/react";
 import type { Point, ShowGraphCurve } from "@/stores/showGraphCurvesStore";
 
@@ -266,7 +267,8 @@ export function computeShowGraphPlacement(
   const key = placementKey(nodes, req);
   let pending = inFlight.get(key);
   if (!pending) {
-    pending = computeOnce(req, nodes, key).finally(() => inFlight.delete(key));
+    // Graphviz runs in the page: the wheel shows while it lays out (#38).
+    pending = withBusy("show_graph layout", computeOnce(req, nodes, key)).finally(() => inFlight.delete(key));
     inFlight.set(key, pending);
   }
   return pending;

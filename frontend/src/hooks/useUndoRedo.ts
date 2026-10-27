@@ -8,6 +8,7 @@
  * with only the part that was ever specific to undo.
  */
 
+import { withBusy } from "@/stores/busyStore";
 import { useModelStore } from "@/stores/modelStore";
 import { useHistoryStore, type Snapshot } from "@/stores/historyStore";
 import { useNotificationStore } from "@/stores/notificationStore";
@@ -74,7 +75,12 @@ function showMoveNotice(b: Burst, single: string) {
  * for: a ⌘Z or toolbar step joins the burst in progress; a History jump or
  * a notice's button is one action of its own.
  */
-export async function moveInHistory(redo: boolean, steps: number, origin: HistoryMoveOrigin): Promise<void> {
+export function moveInHistory(redo: boolean, steps: number, origin: HistoryMoveOrigin): Promise<void> {
+  // The wheel of patience covers the whole step, backend and page (#38).
+  return withBusy(redo ? "redo" : "undo", moveInHistoryNow(redo, steps, origin));
+}
+
+async function moveInHistoryNow(redo: boolean, steps: number, origin: HistoryMoveOrigin): Promise<void> {
   const history = useHistoryStore.getState();
   const notifications = useNotificationStore.getState();
   const direction = redo ? "redo" : "undo";
