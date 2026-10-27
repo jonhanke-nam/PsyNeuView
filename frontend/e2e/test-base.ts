@@ -114,6 +114,19 @@ export const mutatingTest = base.extend({
   },
 });
 
+/**
+ * Scheduling-condition arrows start hidden (#123). A spec about those arrows,
+ * their badges or the legend that explains them shows them the way a user
+ * would choose to in Settings ▸ Appearance — only when unset, so a spec that
+ * hides them and reloads still sees its own choice.
+ */
+const SCHEDULING_ARROWS_KEY = "psyneuview.graph.schedulingArrows";
+export async function showSchedulingArrows(page: import("@playwright/test").Page) {
+  await page.addInitScript((key) => {
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, "shown");
+  }, SCHEDULING_ARROWS_KEY);
+}
+
 /** Exported so a spec about folding can opt out of the seeding above. */
 export { COLLAPSED_SECTIONS_KEY, SHOWN_DEV_SECTIONS_KEY, ORIENTATION_OFFER_KEY, TUTORIALS_FOLDED_KEY };
 

@@ -4,10 +4,11 @@
  *
  * The dashed arrows show graph-structure conditions (before, after, +edge…).
  * PsyNeuLink's show_graph() doesn't draw them, so a canvas without them
- * matches show_graph's picture; they stay shown by default. The Scheduler
- * panel lists the conditions either way. Remembered per browser, like the
- * legend (graphLegendStore); storage can be blocked, so every access is
- * wrapped and the default stands in.
+ * matches show_graph's picture. Hidden by default since #123 (the clean look,
+ * #109); a choice someone already stored wins, so "shown" stays shown. The
+ * Scheduler panel lists the conditions either way. Remembered per browser,
+ * like the legend (graphLegendStore); storage can be blocked, so every access
+ * is wrapped and the default stands in.
  */
 
 import { create } from "zustand";
@@ -16,7 +17,7 @@ import { recordSettingChanged } from "@/utils/activityLog";
 export type SchedulingArrows = "shown" | "hidden";
 
 export const SCHEDULING_ARROWS_KEY = "psyneuview.graph.schedulingArrows";
-export const DEFAULT_SCHEDULING_ARROWS: SchedulingArrows = "shown";
+export const DEFAULT_SCHEDULING_ARROWS: SchedulingArrows = "hidden";
 
 export const SCHEDULING_ARROWS: { id: SchedulingArrows; label: string }[] = [
   { id: "shown", label: "Shown" },

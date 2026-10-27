@@ -12,7 +12,7 @@
  * view opens with (#19): Like show_graph by default (#24), or Layered.
  * And how heavy node outlines are (#42): one width, remembered per browser
  * (stores/nodeOutlineStore.ts), that the heavier outlines follow. And
- * whether scheduling-condition arrows are drawn (#53): shown by default.
+ * whether scheduling-condition arrows are drawn (#53): hidden by default (#123).
  * And how the Components panel opens (#113): the word list by default, or
  * the icon strip; the panel's own ◀/▶ only changes it for the session.
  */
@@ -25,7 +25,12 @@ import {
   useComponentsStartStore,
 } from "@/stores/componentsPanelStartStore";
 import { usePaletteStore } from "@/stores/paletteStore";
-import { SCHEDULING_ARROWS, isSchedulingArrows, useSchedulingArrowsStore } from "@/stores/schedulingArrowsStore";
+import {
+  DEFAULT_SCHEDULING_ARROWS,
+  SCHEDULING_ARROWS,
+  isSchedulingArrows,
+  useSchedulingArrowsStore,
+} from "@/stores/schedulingArrowsStore";
 import {
   DEFAULT_LAYOUT_STYLE,
   LAYOUT_STYLES,
@@ -227,7 +232,7 @@ function SchedulingArrowsRow() {
         {SCHEDULING_ARROWS.map((o) => (
           <option key={o.id} value={o.id}>
             {o.label}
-            {o.id === "shown" ? " (default)" : ""}
+            {o.id === DEFAULT_SCHEDULING_ARROWS ? " (default)" : ""}
           </option>
         ))}
       </select>

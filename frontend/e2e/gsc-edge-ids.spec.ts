@@ -13,7 +13,7 @@
  * so the pattern no longer occurs there (#805). The fixture is a stable,
  * model-agnostic stand-in for exactly that condition.
  */
-import { mutatingTest as test, expect } from "./test-base";
+import { mutatingTest as test, expect, showSchedulingArrows } from "./test-base";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -21,6 +21,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MODEL = path.resolve(__dirname, "fixtures", "gsc_afternodes.py");
 
 test.describe("GSC scheduler-edge id uniqueness (#651/#699)", { tag: "@ci" }, () => {
+  // Scheduling arrows start hidden (#123); this spec is about them.
+  test.beforeEach(async ({ page }) => showSchedulingArrows(page));
+
   test("AfterNodes on a shared target renders one distinct edge per source", async ({ page }) => {
     await page.goto("/");
 

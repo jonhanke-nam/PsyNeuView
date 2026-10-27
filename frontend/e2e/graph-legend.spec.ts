@@ -5,7 +5,7 @@
  * as the small Legend button; "Starts expanded" opens it unfolded; and the
  * legend's own Show/Hide still folds it for the open model either way.
  */
-import { mutatingTest as test, expect } from "./test-base";
+import { mutatingTest as test, expect, showSchedulingArrows } from "./test-base";
 import { copyFileSync, mkdtempSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
@@ -44,6 +44,9 @@ async function chooseLegendStart(page: Page, value: "collapsed" | "expanded") {
 }
 
 test.describe("Graph legend opening state (#7)", { tag: "@ci" }, () => {
+  // Scheduling arrows start hidden (#123); this spec is about them.
+  test.beforeEach(async ({ page }) => showSchedulingArrows(page));
+
   test("opens collapsed by default, and Show/Hide still folds it", async ({ page }) => {
     await page.goto("/");
     await openModel(page, scratchModel());
