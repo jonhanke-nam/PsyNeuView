@@ -282,7 +282,7 @@ the mistake above. The user-facing rules are on
 
 Everything developer mode adds, so that a new developer-only feature has to
 be added here and marked ([#1291](https://github.com/jonhanke-nam/PsyNeuView/issues/1291)).
-The one control is **Settings ▸ Developer ▸ Developer mode**
+The one control is **Settings ▸ Developer ▸ Under development ▸ Show what's still under development** (developer mode; #95)
 (`useUIStore.developerMode`; inside the Mac app the app keeps the value,
 `developerMode` over the `pnvSettings` bridge).
 

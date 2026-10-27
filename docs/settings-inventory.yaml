@@ -45,7 +45,7 @@ sections:
 
 settings:
   - id: developer-mode
-    label: Developer ▸ Developer mode
+    label: Developer ▸ Under development ▸ Show what's still under development
     home: settings
     section: developer
     storage: >-

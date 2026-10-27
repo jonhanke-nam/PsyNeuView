@@ -58,21 +58,6 @@ steps:
     act:
       click: settings-section-developer
 
-  - id: the-switch
-    anchor:
-      testid: settings-group-developer-mode
-    pointer: true
-    instruct: >-
-      The developer-mode switch is the first item, and the only control for
-      it. In the Mac app, the app keeps its value, since the page's own storage
-      starts empty on every launch there.
-    say: >-
-      The one switch for developer mode.
-    done:
-      next: true
-    act:
-      next: true
-
   - id: which-psyneulink
     anchor:
       testid: settings-group-pnl-install
@@ -149,6 +134,21 @@ steps:
       says why. A checkout of your own is never updated any other way.
     say: >-
       Your checkouts update only on your say-so, and only by fast-forward.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: the-switch
+    anchor:
+      testid: settings-group-developer-mode
+    pointer: true
+    instruct: >-
+      Last in this section: Show what's still under development, the one
+      switch for developer mode. In the Mac app, the app keeps its value, since
+      the page's own storage starts empty on every launch there.
+    say: >-
+      Last, the one switch that shows what's still under development.
     done:
       next: true
     act:
