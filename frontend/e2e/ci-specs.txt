@@ -14,6 +14,7 @@ flat-layout-namespace.spec.ts
 flat-view.spec.ts
 github-file-loader.spec.ts
 graph-legend.spec.ts
+graph-pointer-precise.spec.ts
 graph-pointer.spec.ts
 gsc-edge-ids.spec.ts
 gsc-row-selects-edge.spec.ts

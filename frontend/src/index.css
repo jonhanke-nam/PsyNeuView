@@ -81,15 +81,22 @@ button:hover {
    node, a clickable edge label and a bend handle say pointer or grab
    themselves (docs/ui-interaction-conventions.md). Under "hand" nothing here
    applies and React Flow's cursors stand, with the edge hit path's grab. */
-.graph-pointer-arrow .react-flow__pane.draggable,
-.graph-pointer-arrow .react-flow__node.selectable,
-.graph-pointer-arrow .react-flow__node.draggable,
-.graph-pointer-arrow .react-flow__edge.selectable,
-.graph-pointer-arrow .react-flow__nodesselection-rect {
-  cursor: var(--graph-arrow-cursor, default);
+.graph-pointer-image .react-flow__pane.draggable,
+.graph-pointer-image .react-flow__node.selectable,
+.graph-pointer-image .react-flow__node.draggable,
+.graph-pointer-image .react-flow__edge.selectable,
+.graph-pointer-image .react-flow__nodesselection-rect {
+  cursor: var(--graph-pointer-cursor, default);
 }
-.graph-pointer-arrow .react-flow__pane.dragging,
-.graph-pointer-arrow .react-flow__node.draggable.dragging {
+/* #40: a held button over a node or edge shows the pressed variant (the
+   crosshair and ring draw heavier; the arrow's is the same arrow). */
+.graph-pointer-image .react-flow__node.selectable:active,
+.graph-pointer-image .react-flow__node.draggable:active,
+.graph-pointer-image .react-flow__edge.selectable:active {
+  cursor: var(--graph-pointer-pressed-cursor, var(--graph-pointer-cursor, default));
+}
+.graph-pointer-image .react-flow__pane.dragging,
+.graph-pointer-image .react-flow__node.draggable.dragging {
   cursor: grabbing;
 }
 .graph-pointer-hand .projection-edge-hit {
