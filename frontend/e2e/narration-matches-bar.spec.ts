@@ -45,6 +45,9 @@ async function recordVoice(page: Page) {
       speak: (u: SpeechSynthesisUtterance) => {
         spoken.push(u.text);
         calls.push(`speak:${u.text}`);
+        // The voice starts at once and finishes when the test says so.
+        u.onstart?.(new Event("start") as SpeechSynthesisEvent);
+        (window as unknown as { __finish: () => void }).__finish = () => u.onend?.(new Event("end") as SpeechSynthesisEvent);
       },
       cancel: () => calls.push("cancel"),
       pause: () => calls.push("pause"),
@@ -80,6 +83,18 @@ test.describe("Narration matches the bar", { tag: "@ci" }, () => {
           message: `step "${step.id}" should be read aloud`,
         })
         .toBe(respelt(step.say ?? ""));
+
+      // The caption leads (#86): above the instruction, which is the details line.
+      const line = page.getByTestId("tour-caption-line");
+      const lineBox = await line.boundingBox();
+      const instrBox = await page.getByTestId("tour-instruction").boundingBox();
+      expect(lineBox!.y, `step "${step.id}" caption sits above the instruction`).toBeLessThan(instrBox!.y);
+      await expect(page.getByTestId("tour-instruction")).toHaveAttribute("data-role", "details");
+
+      // Lit while the voice reads it, and not once it has finished.
+      await expect(line).toHaveAttribute("data-speaking", "true");
+      await page.evaluate(() => (window as unknown as { __finish: () => void }).__finish());
+      await expect(line).toHaveAttribute("data-speaking", "false");
 
       // Readable: inside the bar, and not squeezed into a narrow column.
       const box = await page.getByTestId("tour-caption-line").boundingBox();
