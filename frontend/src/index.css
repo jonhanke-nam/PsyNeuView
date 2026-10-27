@@ -139,7 +139,10 @@ button:hover {
 .placement-row:hover {
   background: var(--pnv-primary-tint);
 }
-.diagnostics-collapsed-bar:hover {
+/* Not while the pointer is on the file-watch status, which is its own control,
+   nor while its popover is open (#103): a filter makes the bar a stacking
+   context, which would draw the popover underneath the panes below. */
+.diagnostics-collapsed-bar:hover:not(:has(.sync-indicator-zone:hover)):not(:has([data-testid="sync-popover"])) {
   filter: brightness(0.97);
 }
 

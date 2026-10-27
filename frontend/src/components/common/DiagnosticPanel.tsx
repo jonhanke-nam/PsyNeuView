@@ -11,6 +11,7 @@ import { useLoadTimingStore } from "@/stores/loadTimingStore";
 import { DialogHeader } from "./dialog/DialogHeader";
 import { useDismiss } from "./dialog/useDismiss";
 import { Button } from "./Button";
+import { SyncIndicator } from "./SyncIndicator";
 
 /** Format a load-time total (ms) as seconds: "2.3s" (1 decimal under 10s). */
 function fmtLoadSeconds(ms: number): string {
@@ -110,6 +111,8 @@ export function DiagnosticPanel() {
           </span>
         )}
         <span style={{ marginLeft: "auto", color: "var(--pnv-text-faint)" }}>click to expand</span>
+        {/* #103: the file-watch status lives here, not in a row of its own. */}
+        <SyncIndicator />
       </div>
     );
   }
@@ -125,6 +128,9 @@ export function DiagnosticPanel() {
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
         <span style={{ fontWeight: 600, color: "var(--pnv-text-body)" }}>Model Diagnostics</span>
+        <span style={{ marginLeft: "auto" }}>
+          <SyncIndicator />
+        </span>
         <button
           onClick={() => setCollapsed(true)}
           style={{

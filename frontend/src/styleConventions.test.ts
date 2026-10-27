@@ -41,6 +41,7 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
   "components/common/HistoryPanel.tsx": { count: 2, what: "the History toggle in the editor header; a save marker row (#1349)" },
   "components/common/ValueGrid.tsx": { count: 1, what: "the list / grid segments beside a layer's values (#1387)" },
   "components/common/dialog/DialogHeader.tsx": { count: 2, what: "the × at its full/compact size, and inline" },
+  "components/common/SyncIndicator.tsx": { count: 1, what: "the file-watch status in the diagnostics bar, which opens its popover (#103)" },
   "components/layout/AutosaveStatus.tsx": { count: 1, what: "the autosave status beside the model name, which opens Settings" },
   "components/inspector/InspectorPanel.tsx": { count: 1, what: "the STANDARD / EXACT_TIME scheduler-mode badge, a toggle drawn as a pill" },
   "components/inspector/RunPanel.tsx": {
