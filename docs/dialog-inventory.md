@@ -85,6 +85,7 @@ needs a ×.
 | The GSC legend | `graph/GSCLegend.tsx` | canvas furniture with its own hide button and a remembered position |
 | The trace step strip | `graph/TraceControls.tsx` | a control strip; Escape inside its step field cancels the edit |
 | The dangling-projection notice | `graph/ValidationPanel.tsx` | folds, never closes: the problems are still there |
+| The busy wheel over the graph | `common/BusyIndicator.tsx` | status (#38); pointer-events none, and it goes when the work is done |
 | The focus breadcrumb and the off-screen nodes button | `graph/FocusBreadcrumb.tsx`, `graph/OffscreenNodesIndicator.tsx` | canvas furniture |
 | Port and value tooltips on a node | `graph/MechanismNode.tsx` | hover tooltips, pointer-events none |
 | Edge bend handles | `graph/ProjectionEdge.tsx` | parts of the edge |

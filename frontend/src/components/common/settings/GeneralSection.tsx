@@ -10,6 +10,7 @@
 
 import { useEffect, useState } from "react";
 import { useAutosaveStore } from "@/stores/autosaveStore";
+import { BUSY_THRESHOLDS, DEFAULT_BUSY_THRESHOLD_MS, useBusyStore } from "@/stores/busyStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { AUTOSAVE_MAX_SECONDS, AUTOSAVE_MIN_SECONDS, clampAutosaveSeconds } from "@/utils/autosave";
 import { hasSettingsBridge } from "@/utils/macAppSettings";
@@ -52,6 +53,9 @@ export function GeneralSection({
         <AutosaveRows />
         <SidecarPlacementDefaultRow />
         <div style={{ ...mutedStyle, marginTop: 10 }}>Where models are saved, and every other folder: Folders.</div>
+      </Group>
+      <Group id="busy-indicator" title="Busy indicator">
+        <BusyThresholdRow />
       </Group>
     </>
   );
@@ -192,6 +196,39 @@ function SidecarPlacementDefaultRow() {
         <option value="auto">Auto — dot-folder for new models</option>
         <option value="lateral">Beside the .py</option>
         <option value="dotfolder">Hidden .psyneuview/</option>
+      </select>
+    </div>
+  );
+}
+
+/**
+ * When the wheel of patience appears (#38): anything that takes longer than
+ * this shows it in the toolbar and where the result will appear.
+ */
+function BusyThresholdRow() {
+  const ms = useBusyStore((s) => s.thresholdMs);
+  const setMs = useBusyStore((s) => s.setThresholdMs);
+  return (
+    <div style={{ fontSize: 13 }}>
+      <SettingLabel title="Show the busy wheel" htmlFor="setting-busy-threshold">
+        When something takes a while (opening a model, saving, undo, a layout,
+        a run), a spinning wheel and Working… show in the toolbar and over the
+        graph, and the pointer shows it is busy. Anything quicker than this
+        shows nothing.
+      </SettingLabel>
+      <select
+        id="setting-busy-threshold"
+        data-testid="setting-busy-threshold"
+        value={ms}
+        onChange={(e) => setMs(Number(e.target.value))}
+        style={{ marginTop: 6, fontSize: 12, padding: "3px 6px" }}
+      >
+        {BUSY_THRESHOLDS.map((t) => (
+          <option key={t.ms} value={t.ms}>
+            {t.label}
+            {t.ms === DEFAULT_BUSY_THRESHOLD_MS ? " (default)" : ""}
+          </option>
+        ))}
       </select>
     </div>
   );

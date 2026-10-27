@@ -7,6 +7,11 @@ import "./styles/palette.css";
 import "./index.css";
 import { useUIStore } from "./stores/uiStore";
 import { syncDeveloperModeWithMacApp } from "./utils/macAppSettings";
+import { installBusyFetch } from "./stores/busyStore";
+
+// Every backend request the user causes shows the wheel of patience once it
+// runs past the threshold (#38).
+installBusyFetch();
 
 // Inside the Mac app, developer mode is kept by the app (PsyNeuView-MacApp#200);
 // in a browser this does nothing.
