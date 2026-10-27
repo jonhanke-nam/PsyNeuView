@@ -20,7 +20,7 @@ export const COMPONENTS_START_KEY = "psyneuview.components.start";
 export const DEFAULT_COMPONENTS_START: ComponentsStart = "open";
 
 export const COMPONENTS_STARTS: { id: ComponentsStart; label: string }[] = [
-  { id: "open", label: "Starts open (the word list)" },
+  { id: "open", label: "Starts open, as the word list" },
   { id: "strip", label: "Starts as the icon strip" },
 ];
 

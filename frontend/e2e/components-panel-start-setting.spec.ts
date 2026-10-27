@@ -1,7 +1,7 @@
 /**
  * How the Components panel opens is a setting: Settings ▸ Appearance (#113).
  *
- * "Starts open (the word list)" is the default; "Starts as the icon strip"
+ * "Starts open, as the word list" is the default; "Starts as the icon strip"
  * opens it as the narrow strip. The panel's own ◀/▶ button switches it for
  * the session only, so a reload comes back as the setting says.
  */
