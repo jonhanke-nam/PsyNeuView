@@ -21,6 +21,7 @@ import { registerCommand } from "@/shortcuts/commands";
 import { useModelStore } from "@/stores/modelStore";
 import { useExternalChangeStore } from "@/stores/externalChangeStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useTextScale } from "@/stores/textSizeStore";
 import type { MechanismData } from "@/stores/modelStore";
 import { recordAction, recordSave } from "@/utils/history";
 import { useNotificationStore } from "@/stores/notificationStore";
@@ -281,7 +282,9 @@ export function CodeEditor() {
   const editorFontScale = useUIStore((s) => s.editorFontScale);
   const editorZoomIn = useUIStore((s) => s.editorZoomIn);
   const editorZoomOut = useUIStore((s) => s.editorZoomOut);
-  const editorFontPx = Math.round(13 * editorFontScale);
+  // #111: and by the app's text size, so the editor rises in step.
+  const textScale = useTextScale();
+  const editorFontPx = Math.round(13 * editorFontScale * textScale);
   const setSidecarContent = useModelStore((s) => s.setSidecarContent);
   const setSidecarSavedContent = useModelStore((s) => s.setSidecarSavedContent);
   // #631: selection is addressed by composite id (kind + variant); resolve
@@ -789,7 +792,7 @@ export function CodeEditor() {
     [editorFontPx],
   );
   const editorZoomBtnStyle: CSSProperties = {
-    fontSize: 11,
+    fontSize: "var(--pnv-fs-11)",
     padding: "1px 5px",
     border: "1px solid var(--pnv-border)",
     borderRadius: 3,
@@ -800,7 +803,7 @@ export function CodeEditor() {
   // #630: borderless buttons inside the compact −A+ group (the group itself
   // carries the border, so the two buttons read as one control).
   const editorZoomCompactBtnStyle: CSSProperties = {
-    fontSize: 12,
+    fontSize: "var(--pnv-fs-12)",
     lineHeight: 1,
     padding: "1px 5px",
     border: "none",
@@ -975,7 +978,7 @@ export function CodeEditor() {
           padding: "4px 12px",
           background: "var(--pnv-surface-sunken)",
           borderBottom: "1px solid var(--pnv-border-faint)",
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           color: "var(--pnv-text-hint)",
           display: "flex",
           flexDirection: "column",
@@ -996,7 +999,7 @@ export function CodeEditor() {
                 value={selectedBundleKind}
                 onChange={(e) => setSelectedBundleKind(e.target.value)}
                 style={{
-                  fontSize: 11,
+                  fontSize: "var(--pnv-fs-11)",
                   fontFamily: "monospace",
                   padding: "2px 4px",
                   border: "1px solid var(--pnv-border)",
@@ -1004,6 +1007,10 @@ export function CodeEditor() {
                   background: "var(--pnv-surface)",
                   color: "var(--pnv-text-body)",
                   cursor: "pointer",
+                  // #111: in a narrow pane the file name gives way first, so
+                  // the counts and the A− A+ beside it never overlap.
+                  minWidth: 0,
+                  flexShrink: 1,
                 }}
                 title={filePath ? `Editing ${filePath} and its ${bundle.length - 1} associated file(s)` : "Switch between the model source and its sidecar files"}
               >
@@ -1022,7 +1029,7 @@ export function CodeEditor() {
                 </optgroup>
               </select>
               <span
-                style={{ color: "var(--pnv-text-faint)", fontSize: 10 }}
+                style={{ color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-10)", whiteSpace: "nowrap", flexShrink: 0 }}
                 title={`This model is one .py source plus ${bundle.length - 1} associated sidecar file(s)`}
               >
                 +{bundle.length - 1} file{bundle.length - 1 === 1 ? "" : "s"}
@@ -1046,20 +1053,20 @@ export function CodeEditor() {
             </>
           )}
           {isSourceView && source !== savedSource && filePath && (
-            <span style={{ color: "var(--pnv-unsaved)", fontSize: 16, lineHeight: 1 }} title="Unsaved changes">*</span>
+            <span style={{ color: "var(--pnv-unsaved)", fontSize: "var(--pnv-fs-16)", lineHeight: 1 }} title="Unsaved changes">*</span>
           )}
           {!isSourceView && sidecarContent !== null && sidecarContent !== sidecarSavedContent && (
-            <span style={{ color: "var(--pnv-unsaved)", fontSize: 16, lineHeight: 1 }} title="Unsaved changes">*</span>
+            <span style={{ color: "var(--pnv-unsaved)", fontSize: "var(--pnv-fs-16)", lineHeight: 1 }} title="Unsaved changes">*</span>
           )}
           {filePath && isSourceView && (
-            <span style={{ color: "var(--pnv-text-faint)", fontFamily: "monospace", fontSize: 10, whiteSpace: "nowrap" }}>
+            <span style={{ color: "var(--pnv-text-faint)", fontFamily: "monospace", fontSize: "var(--pnv-fs-10)", whiteSpace: "nowrap" }}>
               {headerCompact
                 ? `L${cursorInfo.line}·C${cursorInfo.col}${source ? ` · ${source.split("\n").length}L` : ""}`
                 : `Ln ${cursorInfo.line}, Col ${cursorInfo.col}${source ? ` / ${source.split("\n").length} lines` : ""}`}
             </span>
           )}
           {filePath && !isSourceView && sidecarContent !== null && (
-            <span style={{ color: "var(--pnv-text-faint)", fontFamily: "monospace", fontSize: 10, whiteSpace: "nowrap" }}>
+            <span style={{ color: "var(--pnv-text-faint)", fontFamily: "monospace", fontSize: "var(--pnv-fs-10)", whiteSpace: "nowrap" }}>
               {sidecarContent.split("\n").length}{headerCompact ? "L" : " lines · editable"}
             </span>
           )}
@@ -1083,7 +1090,7 @@ export function CodeEditor() {
                   title="Editor font size"
                 >
                   <button onClick={editorZoomOut} style={editorZoomCompactBtnStyle} title="Decrease editor font size">−</button>
-                  <span style={{ fontSize: 11, color: "var(--pnv-text-secondary)", padding: "0 1px" }}>A</span>
+                  <span style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-secondary)", padding: "0 1px" }}>A</span>
                   <button onClick={editorZoomIn} style={editorZoomCompactBtnStyle} title="Increase editor font size">+</button>
                 </span>
               ) : (
@@ -1107,7 +1114,7 @@ export function CodeEditor() {
               <SnippetDropdown editorRef={editorRef} compact={headerCompact} />
               {syncStatus !== "idle" && (
                 <span style={{
-                  fontSize: 10,
+                  fontSize: "var(--pnv-fs-10)",
                   color: syncStatus === "syncing" ? "var(--pnv-primary)" : syncStatus === "synced" ? "var(--pnv-success)" : "var(--pnv-danger)",
                   marginLeft: 4,
                 }}>
@@ -1441,7 +1448,7 @@ function SnippetDropdown({ editorRef, compact = false }: { editorRef: React.RefO
         data-testid="snippet-menu-button"
         onClick={() => setOpen(!open)}
         style={{
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           padding: compact ? "2px 6px" : "2px 8px",
           border: "1px solid var(--pnv-border)",
           borderRadius: 3,
@@ -1503,7 +1510,7 @@ function SnippetDropdown({ editorRef, compact = false }: { editorRef: React.RefO
                 border: "none",
                 background: "none",
                 cursor: "pointer",
-                fontSize: 12,
+                fontSize: "var(--pnv-fs-12)",
                 color: "var(--pnv-text-body)",
               }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "var(--pnv-primary-tint)")}
@@ -1553,7 +1560,7 @@ function PnlProtectedBanner() {
         padding: "6px 12px",
         background: "var(--pnv-warning-tint)",
         borderBottom: "2px solid var(--pnv-warning-tag-border)",
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
         color: "var(--pnv-warning-tag-text)",
         display: "flex",
         gap: 8,
@@ -1611,7 +1618,7 @@ function ViewOnlyBanner() {
         padding: "6px 12px",
         background: "var(--pnv-warning-tint)",
         borderBottom: "2px solid var(--pnv-warning-tag-border)",
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
         color: "var(--pnv-warning-tag-text)",
         display: "flex",
         gap: 8,
@@ -1683,7 +1690,7 @@ function ModelErrorBanner() {
         padding: "6px 12px",
         background: partialExecution ? "var(--pnv-warning-tint)" : "var(--pnv-danger-tint)",
         borderBottom: `2px solid ${partialExecution ? "var(--pnv-warning-tag-border)" : "var(--pnv-danger)"}`,
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
         color: partialExecution ? "var(--pnv-warning-tag-text)" : "var(--pnv-danger)",
         display: "flex",
         gap: 8,
@@ -1697,7 +1704,7 @@ function ModelErrorBanner() {
       </span>
       <span>{modelError}</span>
       {canJump && (
-        <span style={{ marginLeft: "auto", fontSize: 11, opacity: 0.75, whiteSpace: "nowrap" }}>
+        <span style={{ marginLeft: "auto", fontSize: "var(--pnv-fs-11)", opacity: 0.75, whiteSpace: "nowrap" }}>
           Go to line {modelErrorLine} →
         </span>
       )}

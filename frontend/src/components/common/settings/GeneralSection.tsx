@@ -95,7 +95,7 @@ function AutosaveRows() {
   };
 
   return (
-    <div style={{ fontSize: 13, marginBottom: 12 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)", marginBottom: 12 }}>
       <label style={{ display: "flex", alignItems: "flex-start", gap: 6, cursor: "pointer" }}>
         <input
           type="checkbox"
@@ -107,7 +107,7 @@ function AutosaveRows() {
         />
         <span>
           <span style={{ fontWeight: 500 }}>Autosave</span>
-          <span style={{ display: "block", fontSize: 12, color: "var(--pnv-text-muted)", marginTop: 2, maxWidth: 560 }}>
+          <span style={{ display: "block", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", marginTop: 2, maxWidth: 560 }}>
             Save the model's <code>.py</code> automatically after a pause in editing. Off, it changes only when you
             press Save, which is what you want if another editor (PyCharm) has the same file open. Autosave waits
             while the code has an error, and never saves when the file changed on disk, the model is locked, or it
@@ -116,7 +116,7 @@ function AutosaveRows() {
         </span>
       </label>
       {enabled && (
-        <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, marginLeft: 22, fontSize: 12 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, marginLeft: 22, fontSize: "var(--pnv-fs-12)" }}>
           after
           <input
             type="number"
@@ -138,7 +138,7 @@ function AutosaveRows() {
             onKeyDown={(e) => {
               if (e.key === "Enter") commitSeconds();
             }}
-            style={{ width: 60, fontSize: 12, padding: "2px 4px" }}
+            style={{ width: 60, fontSize: "var(--pnv-fs-12)", padding: "2px 4px" }}
           />
           seconds without activity
           <span style={{ color: "var(--pnv-text-hint)" }}>
@@ -178,7 +178,7 @@ function SidecarPlacementDefaultRow() {
   };
 
   return (
-    <div style={{ fontSize: 13 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="Sidecar files (new models)" htmlFor="setting-sidecar-placement">
         Where a new model's layout / label files go by default. Individual
         models can override this from the Layout menu. Existing files aren't
@@ -191,7 +191,7 @@ function SidecarPlacementDefaultRow() {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={!loaded}
-        style={{ marginTop: 6, fontSize: 12, padding: "3px 6px" }}
+        style={{ marginTop: 6, fontSize: "var(--pnv-fs-12)", padding: "3px 6px" }}
       >
         <option value="auto">Auto — dot-folder for new models</option>
         <option value="lateral">Beside the .py</option>
@@ -209,7 +209,7 @@ function BusyThresholdRow() {
   const ms = useBusyStore((s) => s.thresholdMs);
   const setMs = useBusyStore((s) => s.setThresholdMs);
   return (
-    <div style={{ fontSize: 13 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="Show the busy wheel" htmlFor="setting-busy-threshold">
         When something takes a while (opening a model, saving, undo, a layout,
         a run), a spinning wheel and Working… show in the toolbar and over the
@@ -221,7 +221,7 @@ function BusyThresholdRow() {
         data-testid="setting-busy-threshold"
         value={ms}
         onChange={(e) => setMs(Number(e.target.value))}
-        style={{ marginTop: 6, fontSize: 12, padding: "3px 6px" }}
+        style={{ marginTop: 6, fontSize: "var(--pnv-fs-12)", padding: "3px 6px" }}
       >
         {BUSY_THRESHOLDS.map((t) => (
           <option key={t.ms} value={t.ms}>

@@ -49,7 +49,7 @@ export const CIMNode = memo(function CIMNode({ data, selected }: NodeProps) {
         border: `2px solid ${color}`,
         // The role colour at 0x15/0xff opacity: a faint wash of it.
         background: `color-mix(in srgb, ${color} 8.2353%, transparent)`,
-        fontSize: 11,
+        fontSize: "var(--pnv-fs-11)",
         fontFamily: "monospace",
         color,
         fontWeight: 600,

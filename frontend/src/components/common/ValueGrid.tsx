@@ -125,7 +125,7 @@ export function GridLegend({ scale, testId }: { scale: GridScale; testId?: strin
     scale.kind === "diverging"
       ? "linear-gradient(to right, var(--pnv-grid-neg), var(--pnv-grid-mid), var(--pnv-grid-high))"
       : "linear-gradient(to right, var(--pnv-grid-low), var(--pnv-grid-high))";
-  const text: CSSProperties = { fontSize: 10, color: "var(--pnv-text-hint)", fontFamily: "monospace" };
+  const text: CSSProperties = { fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-hint)", fontFamily: "monospace" };
   return (
     <span
       data-testid={testId}
@@ -218,7 +218,7 @@ export function ValueViewToggle({
                 chooseValueView(node, o.key === "grid" ? { as: "grid", ...(view?.width ? { width: view.width } : {}) } : { as: "list", ...(view?.width ? { width: view.width } : {}) });
               }}
               style={{
-                fontSize: 10,
+                fontSize: "var(--pnv-fs-10)",
                 lineHeight: "12px",
                 padding: "0 5px",
                 border: "none",
@@ -237,7 +237,7 @@ export function ValueViewToggle({
       {asGrid && (
         <label
           title={`How many cells across. ${size} values${shape ? `, drawn ${shape.rows} by ${shape.cols}` : ""}`}
-          style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: 10, color: "var(--pnv-text-hint)" }}
+          style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-hint)" }}
         >
           width
           <input
@@ -254,7 +254,7 @@ export function ValueViewToggle({
               width: 34,
               height: 14,
               boxSizing: "border-box",
-              fontSize: 10,
+              fontSize: "var(--pnv-fs-10)",
               padding: "0 2px",
               border: "1px solid var(--pnv-border-light)",
               borderRadius: 2,

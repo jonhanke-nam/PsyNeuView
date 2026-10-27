@@ -142,7 +142,7 @@ export function GraphToolbar() {
       <button
         onClick={() => usePaletteStore.getState().toggleOpen()}
         style={{
-          fontSize: 13,
+          fontSize: "var(--pnv-fs-13)",
           padding: "3px 8px",
           ...toggleColours(paletteOpen),
           borderRadius: 4,
@@ -166,7 +166,7 @@ export function GraphToolbar() {
           reloadModel();
         }}
         style={{
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           padding: "3px 10px",
           ...toggleColours(autoLayout),
           borderRadius: 4,
@@ -191,7 +191,7 @@ export function GraphToolbar() {
           saveLayout(laid);
         }}
         style={{
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           padding: "3px 10px",
           border: "1px solid var(--pnv-border)",
           borderRadius: 4,
@@ -222,7 +222,7 @@ export function GraphToolbar() {
           setNodes(laid);
         }}
         style={{
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           padding: "2px 4px",
           border: "1px solid var(--pnv-border)",
           borderRadius: 4,

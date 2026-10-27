@@ -203,13 +203,13 @@ const itemStyle: React.CSSProperties = {
   border: "none",
   background: "none",
   cursor: "pointer",
-  fontSize: 13,
+  fontSize: "var(--pnv-fs-13)",
   borderBottom: "1px solid var(--pnv-surface-sunken)",
 };
 
 const sectionHeaderStyle: React.CSSProperties = {
   padding: "6px 12px",
-  fontSize: 11,
+  fontSize: "var(--pnv-fs-11)",
   color: "var(--pnv-text-secondary)",
   background: "var(--pnv-surface-sunken)",
   borderTop: "1px solid var(--pnv-border-light)",
@@ -222,7 +222,7 @@ const sectionHeaderStyle: React.CSSProperties = {
 // dominant over sectionHeaderStyle (the catalog sub-headers nested under it).
 const zoneHeaderStyle: React.CSSProperties = {
   padding: "8px 12px 6px",
-  fontSize: 10,
+  fontSize: "var(--pnv-fs-10)",
   letterSpacing: "0.08em",
   textTransform: "uppercase",
   color: "var(--pnv-text-body)",
@@ -542,7 +542,7 @@ export function Toolbar() {
           inside its em box, so bumping its size alone still left a speck —
           ▶/▼ fills the box and is legible at the same 11px.
         */}
-        <span aria-hidden="true" style={{ fontSize: 11, width: 13, color: "var(--pnv-text-hint)" }}>
+        <span aria-hidden="true" style={{ fontSize: "var(--pnv-fs-11)", width: 13, color: "var(--pnv-text-hint)" }}>
           {isSectionCollapsed(id) ? "▶" : "▼"}
         </span>
         <span>{label}</span>
@@ -552,7 +552,7 @@ export function Toolbar() {
             style={{
               marginLeft: "auto",
               paddingLeft: 10,
-              fontSize: 10,
+              fontSize: "var(--pnv-fs-10)",
               fontWeight: 400,
               color: "var(--pnv-text-faint)",
               textTransform: "none",
@@ -1550,7 +1550,7 @@ export function Toolbar() {
         position: "relative",
       }}
     >
-      <strong style={{ fontSize: 14, flexShrink: 0 }}>PsyNeuView</strong>
+      <strong style={{ fontSize: "var(--pnv-fs-14)", flexShrink: 0 }}>PsyNeuView</strong>
       <BusyIndicator placement="toolbar" />
 
       {/* Settings (gear icon) — opens sectioned settings panel (#119). Next to
@@ -1560,7 +1560,7 @@ export function Toolbar() {
         onClick={() => openSettingsAt(null)}
         data-testid="settings-button"
         style={{
-          fontSize: 14,
+          fontSize: "var(--pnv-fs-14)",
           padding: "2px 8px",
           border: "1px solid var(--pnv-border)",
           borderRadius: 4,
@@ -1599,7 +1599,7 @@ export function Toolbar() {
           // walkthroughs both start here, and "Open ▾" is free to be reworded.
           data-testid="open-menu"
           style={{
-            fontSize: 13,
+            fontSize: "var(--pnv-fs-13)",
             padding: "4px 12px",
             cursor: "pointer",
             background: "var(--pnv-surface)",
@@ -1746,7 +1746,7 @@ export function Toolbar() {
                 {pnlSectionSource && (
                   <span
                     data-testid="open-menu-section-source"
-                    style={{ marginLeft: 8, fontSize: 10, color: "var(--pnv-text-faint)", fontWeight: 400 }}
+                    style={{ marginLeft: 8, fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", fontWeight: 400 }}
                   >
                     {pnlSectionSource}
                   </span>
@@ -1766,7 +1766,7 @@ export function Toolbar() {
                   gap: 8,
                   margin: "4px 8px 6px",
                   padding: "5px 8px",
-                  fontSize: 11,
+                  fontSize: "var(--pnv-fs-11)",
                   color: "var(--pnv-primary-text-on-tint)",
                   background: "var(--pnv-primary-tint)",
                   border: "1px solid var(--pnv-primary-tint-border)",
@@ -1813,7 +1813,7 @@ export function Toolbar() {
                           background: "none",
                           cursor: "pointer",
                           color: "var(--pnv-primary-text-on-tint)",
-                          fontSize: 12,
+                          fontSize: "var(--pnv-fs-12)",
                           fontWeight: 700,
                           padding: "0 2px",
                           lineHeight: 1,
@@ -1909,7 +1909,7 @@ export function Toolbar() {
             {!isSectionCollapsed("demos") && (
               <>
                 {demos.length === 0 && (
-                  <div style={{ padding: "8px 12px", fontSize: 12, color: "var(--pnv-text-faint)" }}>No demos found</div>
+                  <div style={{ padding: "8px 12px", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-faint)" }}>No demos found</div>
                 )}
                 {demos.map((demo) => (
                   <button
@@ -2007,7 +2007,7 @@ export function Toolbar() {
                           style={{
                             marginLeft: "auto",
                             paddingLeft: 8,
-                            fontSize: 11,
+                            fontSize: "var(--pnv-fs-11)",
                             fontWeight: 600,
                             color:
                               status.load !== "ok"
@@ -2041,7 +2041,7 @@ export function Toolbar() {
             {!isSectionCollapsed("myModels") && (
               <>
             {userModels.length === 0 && (
-              <div style={{ padding: "8px 12px", fontSize: 12, color: "var(--pnv-text-faint)" }}>
+              <div style={{ padding: "8px 12px", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-faint)" }}>
                 No models yet — use Save As to create one
               </div>
             )}
@@ -2063,7 +2063,7 @@ export function Toolbar() {
                         border: "none",
                         background: "none",
                         cursor: "pointer",
-                        fontSize: 11,
+                        fontSize: "var(--pnv-fs-11)",
                         color: "var(--pnv-text-muted)",
                         fontWeight: 600,
                       }}
@@ -2073,7 +2073,7 @@ export function Toolbar() {
                         {isExpanded ? "▾" : "▸"}
                       </span>
                       <span>{folder}/</span>
-                      <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--pnv-text-faint)", fontWeight: 400 }}>
+                      <span style={{ marginLeft: "auto", fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", fontWeight: 400 }}>
                         {models.length}
                       </span>
                     </button>
@@ -2090,7 +2090,7 @@ export function Toolbar() {
                       title={m.path}
                     >
                       {m.label}
-                      <span style={{ fontSize: 10, color: "var(--pnv-text-faint)", marginLeft: 8 }}>{m.name}.py</span>
+                      <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", marginLeft: 8 }}>{m.name}.py</span>
                     </button>
                   ))}
                 </div>
@@ -2108,12 +2108,12 @@ export function Toolbar() {
                       {!isSectionCollapsed(sid) && (
                         <>
                           {!c.exists && (
-                            <div style={{ padding: "8px 12px", fontSize: 12, color: "var(--pnv-danger)" }}>
+                            <div style={{ padding: "8px 12px", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-danger)" }}>
                               Folder not found: {c.path}
                             </div>
                           )}
                           {c.exists && c.models.length === 0 && (
-                            <div style={{ padding: "8px 12px", fontSize: 12, color: "var(--pnv-text-faint)" }}>
+                            <div style={{ padding: "8px 12px", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-faint)" }}>
                               No models in this folder
                             </div>
                           )}
@@ -2129,7 +2129,7 @@ export function Toolbar() {
                               title={m.path}
                             >
                               {m.label}
-                              <span style={{ fontSize: 10, color: "var(--pnv-text-faint)", marginLeft: 8 }}>{m.relative}</span>
+                              <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", marginLeft: 8 }}>{m.relative}</span>
                             </button>
                           ))}
                         </>
@@ -2158,7 +2158,7 @@ export function Toolbar() {
                     }}
                     style={{
                       ...itemStyle,
-                      fontSize: 12,
+                      fontSize: "var(--pnv-fs-12)",
                       color: "var(--pnv-text-body)",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -2167,7 +2167,7 @@ export function Toolbar() {
                     title={path}
                   >
                     {path.split("/").pop()}
-                    <span style={{ fontSize: 10, color: "var(--pnv-text-faint)", marginLeft: 8 }}>
+                    <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", marginLeft: 8 }}>
                       {path.split("/").slice(-3, -1).join("/")}
                     </span>
                   </button>
@@ -2200,7 +2200,7 @@ export function Toolbar() {
           data-testid="toolbar-save"
           disabled={!filePath || source === savedSource}
           style={{
-            fontSize: 13,
+            fontSize: "var(--pnv-fs-13)",
             padding: "4px 12px",
             cursor: !filePath || source === savedSource ? "default" : "pointer",
             background: !filePath || source === savedSource ? "var(--pnv-surface-sunken)" : "var(--pnv-surface)",
@@ -2223,7 +2223,7 @@ export function Toolbar() {
           data-testid="toolbar-save-copy"
           disabled={!filePath}
           style={{
-            fontSize: 13,
+            fontSize: "var(--pnv-fs-13)",
             padding: "4px 12px",
             cursor: !filePath ? "default" : "pointer",
             background: !filePath ? "var(--pnv-surface-sunken)" : "var(--pnv-surface)",
@@ -2283,7 +2283,7 @@ export function Toolbar() {
           }}
           title="View a composition — nested ones open in focus mode"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pnv-fs-12)",
             padding: "3px 6px",
             border: "1px solid var(--pnv-border)",
             borderRadius: 4,
@@ -2320,7 +2320,7 @@ export function Toolbar() {
         <button
           onClick={resetCurrentDemo}
           style={{
-            fontSize: 11,
+            fontSize: "var(--pnv-fs-11)",
             padding: "3px 10px",
             border: "1px solid var(--pnv-warning-tag-border)",
             borderRadius: 4,
@@ -2347,7 +2347,7 @@ export function Toolbar() {
           }}
           data-testid="reference-reset"
           style={{
-            fontSize: 11,
+            fontSize: "var(--pnv-fs-11)",
             padding: "3px 10px",
             border: "1px solid var(--pnv-warning-tag-border)",
             borderRadius: 4,
@@ -2437,7 +2437,7 @@ export function Toolbar() {
             <DialogHeader title="Save a copy as…" titleId="save-copy-title" onClose={() => { if (!exporting) setSaveAsOpen(false); }} />
             <div style={{ padding: "16px 28px 24px" }}>
 
-            <label style={{ display: "block", fontSize: 12, color: "var(--pnv-text-secondary)", marginBottom: 4 }}>
+            <label style={{ display: "block", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", marginBottom: 4 }}>
               Where
             </label>
             <select
@@ -2447,7 +2447,7 @@ export function Toolbar() {
               style={{
                 width: "100%",
                 padding: "8px 12px",
-                fontSize: 14,
+                fontSize: "var(--pnv-fs-14)",
                 border: "1px solid var(--pnv-border)",
                 borderRadius: 6,
                 background: "var(--pnv-surface)",
@@ -2458,16 +2458,16 @@ export function Toolbar() {
               <option value="server">{dest.server.label}</option>
               <option value="download">{dest.download.label}</option>
             </select>
-            <div style={{ fontSize: 12, color: "var(--pnv-text-muted)", marginBottom: 16, lineHeight: 1.4 }}>
+            <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", marginBottom: 16, lineHeight: 1.4 }}>
               {toServer ? dest.server.hint : dest.download.hint}
             </div>
             {copyStartsUnprotected && saveAsFormat === "py" && (
-              <div data-testid="save-copy-unprotected-note" style={{ fontSize: 12, color: "var(--pnv-text-muted)", marginTop: -8, marginBottom: 16, lineHeight: 1.4 }}>
+              <div data-testid="save-copy-unprotected-note" style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", marginTop: -8, marginBottom: 16, lineHeight: 1.4 }}>
                 The copy starts unprotected: this model&rsquo;s &ldquo;# PsyNeuView: protected&rdquo; line stays with the original.
               </div>
             )}
 
-            <label style={{ display: "block", fontSize: 12, color: "var(--pnv-text-secondary)", marginBottom: 4 }}>
+            <label style={{ display: "block", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", marginBottom: 4 }}>
               Format
             </label>
             <select
@@ -2477,7 +2477,7 @@ export function Toolbar() {
               style={{
                 width: "100%",
                 padding: "8px 12px",
-                fontSize: 14,
+                fontSize: "var(--pnv-fs-14)",
                 border: "1px solid var(--pnv-border)",
                 borderRadius: 6,
                 background: "var(--pnv-surface)",
@@ -2496,7 +2496,7 @@ export function Toolbar() {
               <>
                 <div
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pnv-fs-12)",
                     color: "var(--pnv-text-hint)",
                     marginBottom: 12,
                     display: "flex",
@@ -2540,7 +2540,7 @@ export function Toolbar() {
                   style={{
                     width: "100%",
                     padding: "8px 12px",
-                    fontSize: 14,
+                    fontSize: "var(--pnv-fs-14)",
                     border: "1px solid var(--pnv-border)",
                     borderRadius: 6,
                     marginBottom: 16,
@@ -2551,7 +2551,7 @@ export function Toolbar() {
             ) : (
               <>
                 {format?.description && (
-                  <div style={{ fontSize: 12, color: "var(--pnv-text-muted)", marginBottom: 12, lineHeight: 1.4 }}>
+                  <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", marginBottom: 12, lineHeight: 1.4 }}>
                     {format.description}
                   </div>
                 )}
@@ -2563,7 +2563,7 @@ export function Toolbar() {
                       border: "1px solid var(--pnv-warning-border)",
                       background: "var(--pnv-warning-tint)",
                       borderRadius: 6,
-                      fontSize: 12,
+                      fontSize: "var(--pnv-fs-12)",
                       color: "var(--pnv-warning-text-on-tint)",
                       lineHeight: 1.45,
                     }}
@@ -2598,7 +2598,7 @@ export function Toolbar() {
                       border: "1px solid var(--pnv-warning-border)",
                       background: "var(--pnv-warning-tint)",
                       borderRadius: 6,
-                      fontSize: 12,
+                      fontSize: "var(--pnv-fs-12)",
                       color: "var(--pnv-warning-text-on-tint)",
                       lineHeight: 1.45,
                     }}
@@ -2642,7 +2642,7 @@ export function Toolbar() {
                         border: `1px solid ${info ? "var(--pnv-primary-tint-border)" : "var(--pnv-warning-border)"}`,
                         background: info ? "var(--pnv-primary-tint)" : "var(--pnv-warning-tint)",
                         borderRadius: 6,
-                        fontSize: 12,
+                        fontSize: "var(--pnv-fs-12)",
                         color: info ? "var(--pnv-primary-text-on-tint)" : "var(--pnv-warning-text-on-tint)",
                         lineHeight: 1.45,
                       }}
@@ -2668,7 +2668,7 @@ export function Toolbar() {
                     </div>
                   );
                 })}
-                <div style={{ fontSize: 12, color: "var(--pnv-text-secondary)", marginBottom: 16 }}>
+                <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", marginBottom: 16 }}>
                   {toServer ? "Writes: " : "Downloads: "}
                   <span style={{ fontFamily: "monospace", color: "var(--pnv-text)" }}>
                     {toServer ? `${saveAsDir || defaultSaveDir}/${exportFilename}` : exportFilename}
@@ -2758,7 +2758,7 @@ function FilePathChip({
     <span
       data-testid="model-name"
       style={{
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
         color: "var(--pnv-text-hint)",
         display: "flex",
         alignItems: "center",
@@ -2777,7 +2777,7 @@ function FilePathChip({
           data-testid="unsaved-dot"
           onClick={showChangesSinceSave}
           style={{
-            color: "var(--pnv-unsaved)", fontSize: 14, lineHeight: 1, flexShrink: 0,
+            color: "var(--pnv-unsaved)", fontSize: "var(--pnv-fs-14)", lineHeight: 1, flexShrink: 0,
             background: "none", border: "none", padding: "0 2px", cursor: "pointer",
           }}
           title="Unsaved changes: click to see them"
@@ -2790,7 +2790,7 @@ function FilePathChip({
         <span
           style={{
             flexShrink: 0,
-            fontSize: 10,
+            fontSize: "var(--pnv-fs-10)",
             fontWeight: 700,
             color: "var(--pnv-primary-text-on-tint)",
             background: "var(--pnv-primary-tint)",
@@ -2873,7 +2873,7 @@ function EditModeBadge() {
 
   const style: React.CSSProperties = {
     marginLeft: 6,
-    fontSize: 10,
+    fontSize: "var(--pnv-fs-10)",
     padding: "1px 6px",
     borderRadius: 3,
     border: "1px solid var(--pnv-warning-tag-border)",
@@ -2956,7 +2956,7 @@ function LockModelMenuItem({ onDone }: { onDone: () => void }) {
   if (!filePath || !mode || managed) return null;
 
   const heading = (
-    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--pnv-text-faint)", padding: "4px 8px 2px", textTransform: "uppercase", letterSpacing: 0.5 }}>
+    <div style={{ fontSize: "var(--pnv-fs-10)", fontWeight: 600, color: "var(--pnv-text-faint)", padding: "4px 8px 2px", textTransform: "uppercase", letterSpacing: 0.5 }}>
       This model
     </div>
   );
@@ -3058,7 +3058,7 @@ function PnlSourceBadge() {
 
   const style = (editable: boolean): React.CSSProperties => ({
     marginLeft: 6,
-    fontSize: 10,
+    fontSize: "var(--pnv-fs-10)",
     padding: "1px 6px",
     borderRadius: 3,
     border: `1px solid ${editable ? "var(--pnv-primary-tint-border)" : "var(--pnv-warning-tag-border)"}`,
@@ -3161,7 +3161,7 @@ function ManagedSourceBadge({ from, title, style }: { from: string; title?: stri
           }}
         >
           <DialogHeader title="Why this file is read only" titleId="pnl-read-only-note-title" onClose={() => setOpen(false)} compact />
-          <div style={{ padding: "10px 12px", fontSize: 12, lineHeight: 1.5, color: "var(--pnv-text)" }}>
+          <div style={{ padding: "10px 12px", fontSize: "var(--pnv-fs-12)", lineHeight: 1.5, color: "var(--pnv-text)" }}>
             <p style={{ margin: "0 0 8px" }}>
               This file is part of the PsyNeuLink that PsyNeuView installed from {from}. PsyNeuView keeps it read
               only, so it stays the same as where it came from and an update can replace it.
@@ -3196,7 +3196,7 @@ function FormatBadge() {
   return (
     <span
       style={{
-        fontSize: 9,
+        fontSize: "var(--pnv-fs-9)",
         fontWeight: 600,
         color,
         // The 7% wash and 27% edge the hex alphas 11 and 44 used to give.
@@ -3301,7 +3301,7 @@ function WalkthroughMenu() {
         data-testid="walkthrough-menu"
         data-reminder={remind ? "true" : undefined}
         style={{
-          fontSize: 13,
+          fontSize: "var(--pnv-fs-13)",
           padding: "4px 10px",
           cursor: "pointer",
           ...toggleColours(!!(open || activeTourId)),
@@ -3342,7 +3342,7 @@ function WalkthroughMenu() {
           {remind && firstPart && (
             <div
               data-testid="walkthrough-offer-reminder"
-              style={{ margin: 4, padding: "6px 8px", fontSize: 12, color: "var(--pnv-warning-text-on-tint)", background: "var(--pnv-warning-tint)", border: "1px solid var(--pnv-warning-border)", borderRadius: 5 }}
+              style={{ margin: 4, padding: "6px 8px", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-warning-text-on-tint)", background: "var(--pnv-warning-tint)", border: "1px solid var(--pnv-warning-border)", borderRadius: 5 }}
             >
               You put off the orientation. It's {orientationParts.length} short parts, about {orientationMinutes} minutes in all.{" "}
               <Button
@@ -3385,7 +3385,7 @@ function WalkthroughMenu() {
                   background: "none",
                   cursor: "pointer",
                   textAlign: "left",
-                  fontSize: 10,
+                  fontSize: "var(--pnv-fs-10)",
                   fontWeight: 600,
                   color: "var(--pnv-text-faint)",
                   padding: "4px 8px 2px",
@@ -3396,7 +3396,7 @@ function WalkthroughMenu() {
                 }}
               >
                 {/* Same fold glyph as the Open menu's section headings. */}
-                <span aria-hidden="true" style={{ fontSize: 9, width: 10, color: "var(--pnv-text-hint)" }}>
+                <span aria-hidden="true" style={{ fontSize: "var(--pnv-fs-9)", width: 10, color: "var(--pnv-text-hint)" }}>
                   {folded.has(group.id) ? "\u25b6" : "\u25bc"}
                 </span>
                 <span>{group.title}</span>
@@ -3434,7 +3434,7 @@ function WalkthroughMenu() {
                     {w.orientation !== undefined ? `${w.orientation}. ` : ""}
                     {w.title}
                   </span>
-                  <span style={{ fontSize: 10, color: "var(--pnv-text-faint)", whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", whiteSpace: "nowrap" }}>
                     {w.course ? `${w.course} · ` : ""}
                     {w.steps.length} step{w.steps.length === 1 ? "" : "s"}
                     {w.minutes !== undefined ? ` · ~${w.minutes} min` : ""}
@@ -3502,7 +3502,7 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
       <button
         onClick={() => setOpen((o) => !o)}
         style={{
-          fontSize: 13,
+          fontSize: "var(--pnv-fs-13)",
           padding: "4px 10px",
           cursor: "pointer",
           ...toggleColours(open),
@@ -3532,7 +3532,7 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
             padding: 4,
           }}
         >
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--pnv-text-faint)", padding: "4px 8px 2px", textTransform: "uppercase", letterSpacing: 0.5 }}>
+          <div style={{ fontSize: "var(--pnv-fs-10)", fontWeight: 600, color: "var(--pnv-text-faint)", padding: "4px 8px 2px", textTransform: "uppercase", letterSpacing: 0.5 }}>
             Presets
           </div>
           {LAYOUT_PRESETS.map((p) => (
@@ -3551,7 +3551,7 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
             </button>
           ))}
           <span style={{ display: "block", height: 1, background: "var(--pnv-border-faint)", margin: "4px 4px" }} />
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--pnv-text-faint)", padding: "4px 8px 2px", textTransform: "uppercase", letterSpacing: 0.5 }}>
+          <div style={{ fontSize: "var(--pnv-fs-10)", fontWeight: 600, color: "var(--pnv-text-faint)", padding: "4px 8px 2px", textTransform: "uppercase", letterSpacing: 0.5 }}>
             Panels
           </div>
           {panels.map((panel) => (
@@ -3604,7 +3604,7 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
 function menuRowStyle(active: boolean): React.CSSProperties {
   return {
     width: "100%",
-    fontSize: 12,
+    fontSize: "var(--pnv-fs-12)",
     textAlign: "left",
     padding: "5px 8px",
     border: "none",

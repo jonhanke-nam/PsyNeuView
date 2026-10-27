@@ -137,7 +137,7 @@ export function SwitchListbox({
         borderRadius: 4,
         boxShadow: "var(--pnv-shadow-popover)",
         zIndex: 20,
-        fontSize: 13,
+        fontSize: "var(--pnv-fs-13)",
       }}
     >
       {groups.map((g, gi) => {
@@ -175,13 +175,13 @@ export function SwitchListbox({
                   background: "var(--pnv-surface-muted)",
                   padding: "5px 8px",
                   font: "inherit",
-                  fontSize: 12,
+                  fontSize: "var(--pnv-fs-12)",
                   color: "var(--pnv-text-body)",
                   cursor: "pointer",
                   overflowWrap: "anywhere",
                 }}
               >
-                <span aria-hidden="true" style={{ fontSize: 9, width: 10, color: "var(--pnv-text-hint)", flexShrink: 0 }}>
+                <span aria-hidden="true" style={{ fontSize: "var(--pnv-fs-9)", width: 10, color: "var(--pnv-text-hint)", flexShrink: 0 }}>
                   {isOpen ? "▼" : "▶"}
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
@@ -226,7 +226,7 @@ export function SwitchListbox({
                 {g.kind === "other" && <span aria-hidden="true" style={{ color: "var(--pnv-primary)", fontWeight: 600, flexShrink: 0 }}>+</span>}
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontWeight: o.current ? 600 : 400 }}><BreakAfterSlashes text={o.name} /></span>
-                  {o.detail && <span style={{ display: "block", fontSize: 11, color: "var(--pnv-text-muted)" }}><BreakAfterSlashes text={o.detail} /></span>}
+                  {o.detail && <span style={{ display: "block", fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)" }}><BreakAfterSlashes text={o.detail} /></span>}
                 </span>
                 {o.current && <InUseBadge />}
               </button>
@@ -249,7 +249,7 @@ export function SwitchListbox({
                   background: "var(--pnv-surface)",
                   padding: "5px 8px 5px 24px",
                   font: "inherit",
-                  fontSize: 12,
+                  fontSize: "var(--pnv-fs-12)",
                   color: "var(--pnv-primary)",
                   cursor: "pointer",
                 }}
@@ -266,7 +266,7 @@ export function SwitchListbox({
 
 function InUseBadge() {
   return (
-    <span style={{ fontSize: 10, color: "var(--pnv-success)", border: "1px solid var(--pnv-success)", borderRadius: 3, padding: "0 4px", whiteSpace: "nowrap", flexShrink: 0 }}>
+    <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-success)", border: "1px solid var(--pnv-success)", borderRadius: 3, padding: "0 4px", whiteSpace: "nowrap", flexShrink: 0 }}>
       ✓ in use
     </span>
   );

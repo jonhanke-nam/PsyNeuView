@@ -76,7 +76,7 @@ export function DeveloperModeIndicator() {
             flexDirection: "column",
           }}
         >
-          <div style={{ fontSize: 11, color: "var(--pnv-text-hint)", padding: "4px 8px 6px" }}>
+          <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-hint)", padding: "4px 8px 6px" }}>
             Developer mode is on. Regular users don't see what it adds.
           </div>
           <button
@@ -111,7 +111,7 @@ export function DeveloperModeIndicator() {
 
 const menuItem: React.CSSProperties = {
   textAlign: "left",
-  fontSize: 13,
+  fontSize: "var(--pnv-fs-13)",
   padding: "6px 8px",
   border: "none",
   background: "none",

@@ -142,7 +142,7 @@ export function PaletteSidebar() {
         }}
       >
         {!isCompact && (
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--pnv-text-body)" }}>Components</span>
+          <span style={{ fontSize: "var(--pnv-fs-12)", fontWeight: 600, color: "var(--pnv-text-body)" }}>Components</span>
         )}
         <div style={{ display: "flex", gap: 2 }}>
           <IconButton
@@ -172,7 +172,7 @@ export function PaletteSidebar() {
             onChange={(e) => usePaletteStore.getState().setSearchQuery(e.target.value)}
             style={{
               width: "100%",
-              fontSize: 12,
+              fontSize: "var(--pnv-fs-12)",
               padding: "5px 8px",
               border: "1px solid var(--pnv-border)",
               borderRadius: 4,
@@ -193,7 +193,7 @@ export function PaletteSidebar() {
               <SectionHeader label={`Results (${filteredItems.length})`} />
             )}
             {filteredItems.length === 0 && !isCompact && (
-              <div style={{ fontSize: 11, color: "var(--pnv-text-faint)", padding: "8px 12px" }}>
+              <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", padding: "8px 12px" }}>
                 No matching components
               </div>
             )}
@@ -419,7 +419,7 @@ function TreeNode({
             transition: "transform 0.15s ease",
             // 8px read as a speck rather than a control, which matters more now
             // that it is the thing you click to open every category.
-            fontSize: 11,
+            fontSize: "var(--pnv-fs-11)",
             flexShrink: 0,
           }}
         >
@@ -427,7 +427,7 @@ function TreeNode({
         </span>
         {node.label}
         {!isTopLevel && node.children && (
-          <span style={{ fontSize: 9, color: "var(--pnv-text-faint)", marginLeft: 4 }}>
+          <span style={{ fontSize: "var(--pnv-fs-9)", color: "var(--pnv-text-faint)", marginLeft: 4 }}>
             ({countLeaves(node)})
           </span>
         )}
@@ -482,7 +482,7 @@ function PaletteLeaf({
           alignItems: "center",
           justifyContent: "center",
           cursor: "grab",
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           fontWeight: 700,
           color: item.color,
           userSelect: "none",
@@ -507,7 +507,7 @@ function PaletteLeaf({
         cursor: "grab",
         userSelect: "none",
         borderRadius: 4,
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLElement).style.background = "var(--pnv-primary-tint)";
@@ -531,7 +531,7 @@ function PaletteLeaf({
       <span style={{ flex: 1, color: "var(--pnv-text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {isDefault ? item.type : item.label}
         {isDefault && (
-          <span style={{ fontSize: 10, color: "var(--pnv-text-faint)", marginLeft: 6, fontWeight: 400 }}>
+          <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", marginLeft: 6, fontWeight: 400 }}>
             (base)
           </span>
         )}
@@ -543,7 +543,7 @@ function PaletteLeaf({
           onToggleFavorite();
         }}
         style={{
-          fontSize: 13,
+          fontSize: "var(--pnv-fs-13)",
           color: isFavorite ? "var(--pnv-favorite)" : "var(--pnv-text-faint)",
           cursor: "pointer",
           lineHeight: 1,
@@ -561,7 +561,7 @@ function SectionHeader({ label, icon }: { label: string; icon?: string }) {
   return (
     <div
       style={{
-        fontSize: 10,
+        fontSize: "var(--pnv-fs-10)",
         fontWeight: 600,
         color: "var(--pnv-text-hint)",
         padding: "4px 12px 2px",
@@ -615,7 +615,7 @@ function IconButton({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: 10,
+        fontSize: "var(--pnv-fs-10)",
         color: "var(--pnv-text-muted)",
         padding: 0,
         lineHeight: 1,
@@ -654,7 +654,7 @@ function CompactCategoryIcon({
         alignItems: "center",
         justifyContent: "center",
         cursor: "pointer",
-        fontSize: 14,
+        fontSize: "var(--pnv-fs-14)",
         fontWeight: 700,
         color: "var(--pnv-text-body)",
         userSelect: "none",
@@ -732,7 +732,7 @@ function CompactFlyout({
           gap: 4,
           padding: "8px 10px",
           borderBottom: "1px solid var(--pnv-border-faint)",
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           color: "var(--pnv-text-body)",
           flexShrink: 0,
         }}
@@ -749,7 +749,7 @@ function CompactFlyout({
                   background: "none",
                   padding: 0,
                   cursor: i === path.length - 1 ? "default" : "pointer",
-                  fontSize: 11,
+                  fontSize: "var(--pnv-fs-11)",
                   color: i === path.length - 1 ? "var(--pnv-text-body)" : "var(--pnv-primary)",
                   fontWeight: i === path.length - 1 ? 600 : 400,
                 }}
@@ -766,7 +766,7 @@ function CompactFlyout({
             border: "none",
             background: "none",
             cursor: "pointer",
-            fontSize: 13,
+            fontSize: "var(--pnv-fs-13)",
             color: "var(--pnv-text-hint)",
             padding: "0 2px",
             lineHeight: 1,
@@ -845,7 +845,7 @@ function CompactFlyout({
                 border: "none",
                 background: "none",
                 cursor: "pointer",
-                fontSize: 12,
+                fontSize: "var(--pnv-fs-12)",
                 color: "var(--pnv-text-body)",
                 textAlign: "left",
               }}
@@ -859,8 +859,8 @@ function CompactFlyout({
               <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {child.label}
               </span>
-              <span style={{ fontSize: 9, color: "var(--pnv-text-faint)" }}>({countLeaves(child)})</span>
-              <span style={{ color: "var(--pnv-text-hint)", fontSize: 10 }}>{"▸"}</span>
+              <span style={{ fontSize: "var(--pnv-fs-9)", color: "var(--pnv-text-faint)" }}>({countLeaves(child)})</span>
+              <span style={{ color: "var(--pnv-text-hint)", fontSize: "var(--pnv-fs-10)" }}>{"▸"}</span>
             </button>
           );
         })}

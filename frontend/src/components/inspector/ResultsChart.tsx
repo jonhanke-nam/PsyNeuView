@@ -98,7 +98,7 @@ export function ResultsChart({ results }: { results: RunResults }) {
     <div>
       <div
         style={{
-          fontSize: 12,
+          fontSize: "var(--pnv-fs-12)",
           fontWeight: 600,
           color: "var(--pnv-text-body)",
           marginBottom: 6,
@@ -124,7 +124,7 @@ export function ResultsChart({ results }: { results: RunResults }) {
 
       <div
         style={{
-          fontSize: 12,
+          fontSize: "var(--pnv-fs-12)",
           fontWeight: 600,
           color: "var(--pnv-text-body)",
           marginTop: 12,

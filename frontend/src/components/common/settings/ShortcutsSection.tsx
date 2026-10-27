@@ -69,10 +69,10 @@ function ShortcutRows({ deployment }: { deployment: "macApp" | "browser" }) {
     .filter((g) => g.items.length > 0);
 
   return (
-    <div style={{ fontSize: 13 }} data-testid="setting-keyboard-shortcuts">
+    <div style={{ fontSize: "var(--pnv-fs-13)" }} data-testid="setting-keyboard-shortcuts">
       {byGroup.map(({ group, items }) => (
         <div key={group} style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 11, color: "var(--pnv-text-faint)", marginBottom: 3 }}>{group}</div>
+          <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", marginBottom: 3 }}>{group}</div>
           {items.map((shortcut) => (
             <div
               key={shortcut.id}
@@ -91,7 +91,7 @@ function ShortcutRows({ deployment }: { deployment: "macApp" | "browser" }) {
                     kind="link"
                     onClick={() => setOverrides(setOverride(shortcut.id, null))}
                     title="Reset to the default"
-                    style={{ fontSize: 10 }}
+                    style={{ fontSize: "var(--pnv-fs-10)" }}
                   >
                     reset
                   </Button>
@@ -104,7 +104,7 @@ function ShortcutRows({ deployment }: { deployment: "macApp" | "browser" }) {
                   title="Click, then press the keys you want"
                   style={{
                     fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                    fontSize: 12,
+                    fontSize: "var(--pnv-fs-12)",
                     color: capturing === shortcut.id ? "var(--pnv-primary)" : "var(--pnv-text-body)",
                     background: capturing === shortcut.id ? "var(--pnv-primary-tint)" : "var(--pnv-surface-sunken)",
                     border: `1px solid ${capturing === shortcut.id ? "var(--pnv-primary)" : "var(--pnv-border-light)"}`,
@@ -126,10 +126,10 @@ function ShortcutRows({ deployment }: { deployment: "macApp" | "browser" }) {
       ))}
 
       {captureError && (
-        <div style={{ fontSize: 11, color: "var(--pnv-danger)", marginTop: 4 }}>{captureError}</div>
+        <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-danger)", marginTop: 4 }}>{captureError}</div>
       )}
       {capturing && !captureError && (
-        <div style={{ fontSize: 11, color: "var(--pnv-text-muted)", marginTop: 4 }}>
+        <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)", marginTop: 4 }}>
           Press the combination you want, or Escape to leave it alone.
         </div>
       )}
@@ -140,18 +140,18 @@ function ShortcutRows({ deployment }: { deployment: "macApp" | "browser" }) {
       )}
 
       {conflicts.length > 0 && (
-        <div style={{ fontSize: 11, color: "var(--pnv-danger)", marginTop: 6 }}>
+        <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-danger)", marginTop: 6 }}>
           Two shortcuts want the same key: {conflicts.join("; ")}
         </div>
       )}
       {errors.length > 0 && (
-        <div style={{ fontSize: 11, color: "var(--pnv-warning)", marginTop: 6 }}>
+        <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-warning)", marginTop: 6 }}>
           Some bindings could not be read and fell back to their defaults:{" "}
           {errors.join("; ")}
         </div>
       )}
 
-      <div style={{ fontSize: 11, color: "var(--pnv-text-faint)", marginTop: 8, lineHeight: 1.5 }}>
+      <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", marginTop: 8, lineHeight: 1.5 }}>
         Shortcuts do not fire while you are typing in a field. Undo, redo and
         save deliberately still work inside the code editor.
       </div>

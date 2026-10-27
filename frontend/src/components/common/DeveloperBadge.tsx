@@ -42,7 +42,7 @@ export function DeveloperBadge({
       title={TITLES[audience]}
       style={{
         display: "inline-block",
-        fontSize: 10,
+        fontSize: "var(--pnv-fs-10)",
         lineHeight: "14px",
         fontWeight: 600,
         letterSpacing: "0.02em",

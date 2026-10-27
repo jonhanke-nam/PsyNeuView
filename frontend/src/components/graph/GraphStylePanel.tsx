@@ -62,7 +62,7 @@ export function GraphStylePanel() {
   };
 
   return (
-    <div style={{ padding: "12px 16px", fontSize: 12, overflow: "auto", height: "100%" }}>
+    <div style={{ padding: "12px 16px", fontSize: "var(--pnv-fs-12)", overflow: "auto", height: "100%" }}>
       <div style={{ fontWeight: 600, color: "var(--pnv-text-body)", marginBottom: 8, borderBottom: "1px solid var(--pnv-border-faint)", paddingBottom: 4 }}>
         Node Role Colors
       </div>
@@ -74,7 +74,7 @@ export function GraphStylePanel() {
             onChange={(e) => setRoleColors((prev) => ({ ...prev, [role]: e.target.value }))}
             style={{ width: 24, height: 20, border: "1px solid var(--pnv-border-light)", borderRadius: 3, cursor: "pointer" }}
           />
-          <span style={{ fontFamily: "monospace", fontSize: 11, minWidth: 100 }}>{role}</span>
+          <span style={{ fontFamily: "monospace", fontSize: "var(--pnv-fs-11)", minWidth: 100 }}>{role}</span>
         </div>
       ))}
 
@@ -89,7 +89,7 @@ export function GraphStylePanel() {
             onChange={(e) => setEdgeColors((prev) => ({ ...prev, [type]: e.target.value }))}
             style={{ width: 24, height: 20, border: "1px solid var(--pnv-border-light)", borderRadius: 3, cursor: "pointer" }}
           />
-          <span style={{ fontFamily: "monospace", fontSize: 11, minWidth: 140 }}>{type.replace("Projection", "")}</span>
+          <span style={{ fontFamily: "monospace", fontSize: "var(--pnv-fs-11)", minWidth: 140 }}>{type.replace("Projection", "")}</span>
         </div>
       ))}
 
@@ -120,7 +120,7 @@ export function GraphStylePanel() {
         <select
           value={arrowheadPosition}
           onChange={(e) => useGraphSettings.getState().setArrowheadPosition(Number(e.target.value))}
-          style={{ flex: 1, fontSize: 12, padding: "2px 4px", border: "1px solid var(--pnv-border-light)", borderRadius: 3 }}
+          style={{ flex: 1, fontSize: "var(--pnv-fs-12)", padding: "2px 4px", border: "1px solid var(--pnv-border-light)", borderRadius: 3 }}
         >
           <option value={0.15}>Near source</option>
           <option value={0.5}>Middle</option>
@@ -179,7 +179,7 @@ export function GraphStylePanel() {
 
 const btnStyle: React.CSSProperties = {
   padding: "4px 14px",
-  fontSize: 12,
+  fontSize: "var(--pnv-fs-12)",
   border: "1px solid var(--pnv-border-light)",
   borderRadius: 4,
   background: "var(--pnv-primary-tint)",

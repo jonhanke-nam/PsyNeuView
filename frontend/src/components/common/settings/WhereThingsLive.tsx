@@ -87,7 +87,7 @@ export function RevealButton({ path, testId }: { path: string; testId?: string }
         {inApp ? "Show in Finder" : "Copy path"}
       </Button>
       {note && (
-        <span data-testid="reveal-note" style={{ ...(note.error ? errorStyle : mutedStyle), fontSize: 11 }}>
+        <span data-testid="reveal-note" style={{ ...(note.error ? errorStyle : mutedStyle), fontSize: "var(--pnv-fs-11)" }}>
           {note.text}
         </span>
       )}
@@ -106,7 +106,7 @@ function Ownership({ editable }: { editable: boolean }) {
           ? "Your folder: edit what's in it as you like"
           : "PsyNeuView keeps this one for you; changes here are overwritten"
       }
-      style={{ fontSize: 10, color, border: `1px solid ${color}`, borderRadius: 3, padding: "0 4px", whiteSpace: "nowrap" }}
+      style={{ fontSize: "var(--pnv-fs-10)", color, border: `1px solid ${color}`, borderRadius: 3, padding: "0 4px", whiteSpace: "nowrap" }}
     >
       {editable ? "yours to edit" : "managed for you"}
     </span>
@@ -207,7 +207,7 @@ function ManagedCopyRow({ copy, onRemove }: { copy: ManagedCopy; onRemove: (name
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span style={{ fontWeight: 500, fontFamily: "monospace" }}>{copy.repo ?? copy.name}</span>
         {copy.in_use && (
-          <span style={{ fontSize: 10, color: "var(--pnv-success)", border: "1px solid var(--pnv-success)", borderRadius: 3, padding: "0 4px" }}>
+          <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-success)", border: "1px solid var(--pnv-success)", borderRadius: 3, padding: "0 4px" }}>
             in use
           </span>
         )}
@@ -227,7 +227,7 @@ function ManagedCopyRow({ copy, onRemove }: { copy: ManagedCopy; onRemove: (name
         <RevealButton path={copy.path} />
       </div>
       {confirming && (
-        <div data-testid="managed-copy-confirm" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 4, fontSize: 12 }}>
+        <div data-testid="managed-copy-confirm" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 4, fontSize: "var(--pnv-fs-12)" }}>
           <span>
             Remove this copy? Only <code>{abbreviateHome(copy.path)}</code>, a folder PsyNeuView made, is deleted.
             Switching to it again clones it afresh.
@@ -265,7 +265,7 @@ export function InstallLocations({
       : `A copy of PsyNeuView ${pv.version}, without its git history.`;
   const pnl = locations.psyneulink;
   return (
-    <div data-testid="install-locations" style={{ fontSize: 13 }}>
+    <div data-testid="install-locations" style={{ fontSize: "var(--pnv-fs-13)" }}>
       <LocationRow id="psyneuview" name="PsyNeuView" path={pvPath} editable={pvEditable} detail={pvDetail} compact />
       <LocationRow
         id="psyneulink"
@@ -301,7 +301,7 @@ function KeptReleaseRow({ release, onRemove }: { release: KeptRelease; onRemove:
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span style={{ fontWeight: 500, fontFamily: "monospace" }}>PsyNeuLink {release.version}</span>
         {release.in_use && (
-          <span style={{ fontSize: 10, color: "var(--pnv-success)", border: "1px solid var(--pnv-success)", borderRadius: 3, padding: "0 4px" }}>in use</span>
+          <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-success)", border: "1px solid var(--pnv-success)", borderRadius: 3, padding: "0 4px" }}>in use</span>
         )}
         <span style={{ ...mutedStyle, marginLeft: "auto" }}>
           {formatBytes(release.size_bytes)} on disk · last used {formatLastUsed(release.last_used)}
@@ -319,7 +319,7 @@ function KeptReleaseRow({ release, onRemove }: { release: KeptRelease; onRemove:
         <RevealButton path={release.path} />
       </div>
       {confirming && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 4, fontSize: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 4, fontSize: "var(--pnv-fs-12)" }}>
           <span>Remove this file? Switching to {release.version} again downloads PsyNeuLink afresh.</span>
           <Button kind="danger" onClick={remove} disabled={busy} data-testid="kept-release-confirm-remove">
             {busy ? "Removing…" : "Remove"}
@@ -379,7 +379,7 @@ export function ManagedCopiesAndCheckouts({
       {error && <div style={errorStyle}>Couldn't list them: {error}</div>}
       {!error && !locations && <div style={mutedStyle}>Loading…</div>}
       {locations && (
-        <div style={{ fontSize: 13 }} data-testid="managed-copies">
+        <div style={{ fontSize: "var(--pnv-fs-13)" }} data-testid="managed-copies">
           <div style={{ ...mutedStyle, marginBottom: 4 }}>
             Switching to a GitHub source keeps a clone under <code>{abbreviateHome(locations.appData.sources)}</code>. Old ones
             pile up; one not in use can be removed here. Nothing outside that folder is ever touched.
@@ -389,7 +389,7 @@ export function ManagedCopiesAndCheckouts({
             <ManagedCopyRow key={c.name} copy={c} onRemove={onRemove} />
           ))}
 
-          <div style={{ fontWeight: 600, fontSize: 12, color: "var(--pnv-text-secondary)", margin: "12px 0 2px" }}>Kept official releases</div>
+          <div style={{ fontWeight: 600, fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", margin: "12px 0 2px" }}>Kept official releases</div>
           <div style={{ ...mutedStyle, marginBottom: 4 }}>
             Installing an official release keeps its file under <code>{abbreviateHome(locations.releasesDir ?? "~/.psyneuview/releases")}</code>.
             Switching back reuses the kept PsyNeuLink download; a release whose dependencies differ may still need the network.
@@ -399,7 +399,7 @@ export function ManagedCopiesAndCheckouts({
             <KeptReleaseRow key={k.version} release={k} onRemove={onRemoveRelease} />
           ))}
 
-          <div style={{ fontWeight: 600, fontSize: 12, color: "var(--pnv-text-secondary)", margin: "12px 0 2px" }}>Your checkouts</div>
+          <div style={{ fontWeight: 600, fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", margin: "12px 0 2px" }}>Your checkouts</div>
           {locations.checkouts.length === 0 && pvCheckouts.length === 0 && (
             <div style={mutedStyle}>None yet. A checkout appears here once Settings has switched to it.</div>
           )}

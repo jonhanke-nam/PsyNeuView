@@ -80,7 +80,7 @@ export function DiagnosticPanel() {
           padding: "3px 12px",
           background: hasIssues ? "var(--pnv-warning-tint)" : "var(--pnv-success-tint)",
           borderBottom: `1px solid ${hasIssues ? "var(--pnv-warning-border)" : "var(--pnv-success-border)"}`,
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           color: "var(--pnv-text-muted)",
           cursor: "pointer",
           display: "flex",
@@ -99,7 +99,7 @@ export function DiagnosticPanel() {
           <span style={{
             color: "var(--pnv-on-primary)",
             background: "var(--pnv-warning)",
-            fontSize: 10,
+            fontSize: "var(--pnv-fs-10)",
             fontWeight: 700,
             padding: "0 5px",
             borderRadius: 8,
@@ -123,7 +123,7 @@ export function DiagnosticPanel() {
         padding: "8px 12px",
         background: hasIssues ? "var(--pnv-warning-tint)" : "var(--pnv-success-tint)",
         borderBottom: `1px solid ${hasIssues ? "var(--pnv-warning-border)" : "var(--pnv-success-border)"}`,
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -134,7 +134,7 @@ export function DiagnosticPanel() {
         <button
           onClick={() => setCollapsed(true)}
           style={{
-            fontSize: 10, border: "none", background: "none",
+            fontSize: "var(--pnv-fs-10)", border: "none", background: "none",
             color: "var(--pnv-text-faint)", cursor: "pointer",
           }}
         >
@@ -143,7 +143,7 @@ export function DiagnosticPanel() {
       </div>
 
       {/* Summary */}
-      <div style={{ fontSize: 11, color: "var(--pnv-text-secondary)", marginBottom: 4 }}>
+      <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-secondary)", marginBottom: 4 }}>
         <span>
           {diagnostics.mechanismCount} mechanisms, {diagnostics.projectionCount} projections, {diagnostics.compositionCount} composition(s)
         </span>
@@ -154,7 +154,7 @@ export function DiagnosticPanel() {
           <span style={{ color: "var(--pnv-warning)" }}> — {diagnostics.readOnlyVars.length} view-only</span>
         )}
       </div>
-      <div style={{ fontSize: 10, color: "var(--pnv-text-faint)", marginBottom: 4, display: "flex", gap: 12 }}>
+      <div style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", marginBottom: 4, display: "flex", gap: 12 }}>
         {diagnostics.importStyle && (
           <span>Import: <strong>{diagnostics.importStyle}</strong></span>
         )}
@@ -166,7 +166,7 @@ export function DiagnosticPanel() {
       {/* Load time (#874): persistent record of how long this model took to
           open, with an expandable breakdown from the #867 timing instrumentation. */}
       {loadTiming && (
-        <div style={{ fontSize: 10, color: "var(--pnv-text-faint)", marginBottom: 4 }}>
+        <div style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", marginBottom: 4 }}>
           <span>
             Load time: <strong style={{ fontVariantNumeric: "tabular-nums" }}>{fmtLoadSeconds(loadTiming.total)}</strong>
           </span>
@@ -186,7 +186,7 @@ export function DiagnosticPanel() {
 
       {/* Star import conversion notice */}
       {starImportConverted && (
-        <div style={{ fontSize: 11, color: "var(--pnv-primary-deep)", marginBottom: 4, display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-primary-deep)", marginBottom: 4, display: "flex", gap: 8, alignItems: "center" }}>
           <span>Auto-converted: <code>from psyneulink import *</code> → <code>import psyneulink as pnl</code></span>
           <button
             onClick={async () => {
@@ -207,7 +207,7 @@ export function DiagnosticPanel() {
               } catch { /* ignore */ }
             }}
             style={{
-              fontSize: 10, padding: "1px 6px", border: "1px solid var(--pnv-primary-tint-border)",
+              fontSize: "var(--pnv-fs-10)", padding: "1px 6px", border: "1px solid var(--pnv-primary-tint-border)",
               borderRadius: 3, background: "var(--pnv-primary-tint)", color: "var(--pnv-primary-deep)",
               cursor: "pointer", flexShrink: 0,
             }}
@@ -224,7 +224,7 @@ export function DiagnosticPanel() {
             <div
               key={i}
               style={{
-                fontSize: 11, color: "var(--pnv-primary-deep)", paddingLeft: 4, marginBottom: 2,
+                fontSize: "var(--pnv-fs-11)", color: "var(--pnv-primary-deep)", paddingLeft: 4, marginBottom: 2,
                 display: "flex", gap: 6, alignItems: "baseline",
               }}
             >
@@ -248,7 +248,7 @@ export function DiagnosticPanel() {
               <div
                 key={i}
                 style={{
-                  fontSize: 11, color: "var(--pnv-warning)", paddingLeft: 4, marginBottom: 2,
+                  fontSize: "var(--pnv-fs-11)", color: "var(--pnv-warning)", paddingLeft: 4, marginBottom: 2,
                   cursor: jumpVar ? "pointer" : "default",
                 }}
                 onClick={
@@ -404,7 +404,7 @@ function ConvertButton({ filePath }: { filePath: string }) {
           >
             <DialogHeader title="Convert to Standard Format?" titleId="convert-confirm-title" onClose={() => setConfirmOpen(false)} />
             <div style={{ padding: "14px 28px 24px" }}>
-            <div style={{ fontSize: 13, color: "var(--pnv-text-secondary)", lineHeight: 1.6, marginBottom: 16 }}>
+            <div style={{ fontSize: "var(--pnv-fs-13)", color: "var(--pnv-text-secondary)", lineHeight: 1.6, marginBottom: 16 }}>
               This will restructure the file with section headers and clean formatting.
               Your original file will be backed up as <code>.original.py</code> and
               you can revert at any time using the "Revert to Original" button.

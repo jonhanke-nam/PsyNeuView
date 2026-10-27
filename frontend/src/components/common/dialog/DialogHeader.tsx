@@ -64,7 +64,7 @@ export function DialogCloseButton({
           border: "none",
           color,
           cursor: "pointer",
-          fontSize: 14,
+          fontSize: "var(--pnv-fs-14)",
           lineHeight: 1,
           padding: "0 4px",
           opacity,

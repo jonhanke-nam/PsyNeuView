@@ -48,12 +48,12 @@ export function Group({
           marginBottom: folded ? 4 : 8,
         }}
       >
-        <span aria-hidden="true" style={{ fontSize: 10, width: 12, color: "var(--pnv-text-hint)" }}>
+        <span aria-hidden="true" style={{ fontSize: "var(--pnv-fs-10)", width: 12, color: "var(--pnv-text-hint)" }}>
           {folded ? "▶" : "▼"}
         </span>
         <span
           style={{
-            fontSize: 12,
+            fontSize: "var(--pnv-fs-12)",
             fontWeight: 600,
             color: "var(--pnv-text-muted)",
             textTransform: "uppercase",
@@ -93,7 +93,7 @@ export const GROUP_INDENT = 16;
  */
 export function InUseNow({ children, testId }: { children: ReactNode; testId?: string }) {
   return (
-    <div data-testid={testId} style={{ fontSize: 12, color: "var(--pnv-success)" }}>
+    <div data-testid={testId} style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-success)" }}>
       ✓ In use now: {children}
     </div>
   );
@@ -134,10 +134,10 @@ export function PathBox({ path, label, testId }: { path: string; label?: string;
         background: "var(--pnv-surface-sunken)",
         border: "1px solid var(--pnv-border-faint)",
         borderRadius: 4,
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
       }}
     >
-      <span style={{ color: "var(--pnv-text-hint)", fontSize: 11, flexShrink: 0 }}>{label ?? "Full path"}</span>
+      <span style={{ color: "var(--pnv-text-hint)", fontSize: "var(--pnv-fs-11)", flexShrink: 0 }}>{label ?? "Full path"}</span>
       <code style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", color: "var(--pnv-text)", minWidth: 0, overflowWrap: "anywhere" }}>
         {parts.map((part, i) => (
           <span key={i}>
@@ -226,13 +226,13 @@ export function abbreviateHome(p: string): string {
 }
 
 export const mutedStyle: CSSProperties = {
-  fontSize: 12,
+  fontSize: "var(--pnv-fs-12)",
   color: "var(--pnv-text-muted)",
   lineHeight: 1.4,
 };
 
 export const errorStyle: CSSProperties = {
-  fontSize: 12,
+  fontSize: "var(--pnv-fs-12)",
   color: "var(--pnv-danger)",
 };
 
@@ -245,7 +245,7 @@ export const inputStyle: CSSProperties = {
   flex: 1,
   minWidth: 0,
   padding: "5px 8px",
-  fontSize: 13,
+  fontSize: "var(--pnv-fs-13)",
   border: "1px solid var(--pnv-border)",
   borderRadius: 4,
   background: "var(--pnv-surface)",
@@ -261,12 +261,12 @@ export function SettingLabel({ title, children, htmlFor }: { title: ReactNode; c
   const body = (
     <>
       <div style={{ fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}>{title}</div>
-      {children && <div style={{ fontSize: 12, color: "var(--pnv-text-muted)", marginTop: 2, maxWidth: 560 }}>{children}</div>}
+      {children && <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", marginTop: 2, maxWidth: 560 }}>{children}</div>}
     </>
   );
   return htmlFor ? (
-    <label htmlFor={htmlFor} style={{ fontSize: 13, cursor: "pointer" }}>{body}</label>
+    <label htmlFor={htmlFor} style={{ fontSize: "var(--pnv-fs-13)", cursor: "pointer" }}>{body}</label>
   ) : (
-    <div style={{ fontSize: 13 }}>{body}</div>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>{body}</div>
   );
 }

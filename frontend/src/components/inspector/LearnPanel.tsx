@@ -494,12 +494,12 @@ export function LearnPanel() {
   // ---- Render -------------------------------------------------------------
 
   if (!filePath) {
-    return <div style={{ padding: 16, color: "var(--pnv-text-hint)", fontSize: 13 }}>Load a model to configure learning.</div>;
+    return <div style={{ padding: 16, color: "var(--pnv-text-hint)", fontSize: "var(--pnv-fs-13)" }}>Load a model to configure learning.</div>;
   }
 
   if (learnableComps.length === 0) {
     return (
-      <div data-testid="learn-not-learnable" style={{ padding: 16, color: "var(--pnv-text-muted)", fontSize: 13, lineHeight: 1.6 }}>
+      <div data-testid="learn-not-learnable" style={{ padding: 16, color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-13)", lineHeight: 1.6 }}>
         <strong>No learning-capable composition in this model.</strong>
         <br />
         Training needs an <code>AutodiffComposition</code> (trains under PyTorch) or a{" "}
@@ -524,7 +524,7 @@ export function LearnPanel() {
   const selectedModeReason = executionModes.find((m) => m.id === executionMode)?.reason ?? null;
 
   return (
-    <div style={{ padding: 12, fontSize: 13, height: "100%", overflow: "auto" }}>
+    <div style={{ padding: 12, fontSize: "var(--pnv-fs-13)", height: "100%", overflow: "auto" }}>
       {/* Config row */}
       <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
         {learnableComps.length > 1 && (
@@ -687,12 +687,12 @@ export function LearnPanel() {
           <div
             data-testid="learn-metric-title"
             title={`${metric.description} (${metric.unit})`}
-            style={{ fontSize: 12, fontWeight: 600, color: "var(--pnv-text-body)", marginBottom: 4, borderBottom: "1px solid var(--pnv-border-faint)", paddingBottom: 3 }}
+            style={{ fontSize: "var(--pnv-fs-12)", fontWeight: 600, color: "var(--pnv-text-body)", marginBottom: 4, borderBottom: "1px solid var(--pnv-border-faint)", paddingBottom: 3 }}
           >
             {metric.label} by Epoch
           </div>
           {metric.id !== "loss" && (
-            <div data-testid="learn-metric-note" style={{ fontSize: 11, color: "var(--pnv-text-hint)", marginBottom: 4 }}>
+            <div data-testid="learn-metric-note" style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-hint)", marginBottom: 4 }}>
               {metric.description} Shown as {metric.unit}.
             </div>
           )}
@@ -735,10 +735,10 @@ export function LearnPanel() {
         />
         {learningProfile?.kind === "pathway" && targetNodes.length === 0 ? (
           <div data-testid="learn-no-targets" style={{ minWidth: 220, maxWidth: 360 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--pnv-text-body)", marginBottom: 6, borderBottom: "1px solid var(--pnv-border-faint)", paddingBottom: 3 }}>
+            <div style={{ fontSize: "var(--pnv-fs-12)", fontWeight: 600, color: "var(--pnv-text-body)", marginBottom: 6, borderBottom: "1px solid var(--pnv-border-faint)", paddingBottom: 3 }}>
               Targets
             </div>
-            <div style={{ color: "var(--pnv-text-muted)", fontSize: 12, lineHeight: 1.5 }}>
+            <div style={{ color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-12)", lineHeight: 1.5 }}>
               None. This model learns without a target (Hebbian learning), so there is no
               error and no loss. Training reports how much its weights change each epoch instead.
             </div>
@@ -791,14 +791,14 @@ function NodeGrid({
   if (nodes.length === 0) {
     return (
       <div style={{ minWidth: 220 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--pnv-text-body)", marginBottom: 6 }}>{title}</div>
-        <div style={{ color: "var(--pnv-text-faint)", fontSize: 12 }}>No {kind === "input" ? "input" : "output"} nodes found.</div>
+        <div style={{ fontSize: "var(--pnv-fs-12)", fontWeight: 600, color: "var(--pnv-text-body)", marginBottom: 6 }}>{title}</div>
+        <div style={{ color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-12)" }}>No {kind === "input" ? "input" : "output"} nodes found.</div>
       </div>
     );
   }
   return (
     <div style={{ minWidth: 220 }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--pnv-text-body)", marginBottom: 6, borderBottom: "1px solid var(--pnv-border-faint)", paddingBottom: 3 }}>
+      <div style={{ fontSize: "var(--pnv-fs-12)", fontWeight: 600, color: "var(--pnv-text-body)", marginBottom: 6, borderBottom: "1px solid var(--pnv-border-faint)", paddingBottom: 3 }}>
         {title}
       </div>
       {nodes.map((node) => {
@@ -806,20 +806,20 @@ function NodeGrid({
         const trials = cells[node.varName] || [];
         return (
           <div key={node.varName} style={{ marginBottom: 10 }}>
-            <div style={{ fontSize: 12, color: "var(--pnv-text-body)", marginBottom: 3 }}>{node.name}</div>
+            <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-body)", marginBottom: 3 }}>{node.name}</div>
             <table style={{ borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={{ fontSize: 10, color: "var(--pnv-text-faint)", padding: "0 4px" }}></th>
+                  <th style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", padding: "0 4px" }}></th>
                   {labels.map((l, i) => (
-                    <th key={i} style={{ fontSize: 10, color: "var(--pnv-text-faint)", fontWeight: 500, padding: "0 4px" }}>{l}</th>
+                    <th key={i} style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", fontWeight: 500, padding: "0 4px" }}>{l}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {trials.map((trial, t) => (
                   <tr key={t}>
-                    <td style={{ fontSize: 10, color: "var(--pnv-text-faint)", padding: "0 4px" }}>{t + 1}</td>
+                    <td style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", padding: "0 4px" }}>{t + 1}</td>
                     {trial.map((cell, i) => (
                       <td key={i} style={{ padding: 1 }}>
                         <input
@@ -839,7 +839,7 @@ function NodeGrid({
                           }}
                           style={{
                             width: 44,
-                            fontSize: 12,
+                            fontSize: "var(--pnv-fs-12)",
                             textAlign: "center",
                             border: `1px solid ${isValidCell(cell) ? "var(--pnv-border-light)" : "var(--pnv-danger)"}`,
                             borderRadius: 3,

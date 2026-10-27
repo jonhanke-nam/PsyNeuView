@@ -728,7 +728,7 @@ export function GraphCanvas() {
                 color: "var(--pnv-on-primary)",
                 padding: "6px 14px",
                 borderRadius: 6,
-                fontSize: 13,
+                fontSize: "var(--pnv-fs-13)",
                 boxShadow: "var(--pnv-shadow-banner)",
                 pointerEvents: "none",
               }}
@@ -749,7 +749,7 @@ export function GraphCanvas() {
                 color: "var(--pnv-on-primary)",
                 padding: "6px 14px",
                 borderRadius: 6,
-                fontSize: 13,
+                fontSize: "var(--pnv-fs-13)",
                 boxShadow: "var(--pnv-shadow-banner)",
                 pointerEvents: "none",
               }}
@@ -853,7 +853,7 @@ function StaleGraphBanner() {
         background: "var(--pnv-warning-tint)",
         border: "1px solid var(--pnv-warning-tag-border)",
         color: "var(--pnv-warning-text-on-tint)",
-        fontSize: 13,
+        fontSize: "var(--pnv-fs-13)",
         lineHeight: 1.5,
         boxShadow: "var(--pnv-shadow-frame)",
         pointerEvents: modelErrorLine ? "auto" : "none",
@@ -880,7 +880,7 @@ function StaleGraphBanner() {
           style={{
             marginTop: 6, border: "1px solid var(--pnv-warning-tag-border)", background: "var(--pnv-surface)",
             color: "var(--pnv-warning-text-on-tint)", borderRadius: 4, padding: "2px 8px",
-            cursor: "pointer", fontSize: 12, pointerEvents: "auto",
+            cursor: "pointer", fontSize: "var(--pnv-fs-12)", pointerEvents: "auto",
           }}
         >
           Compare with that version
@@ -907,7 +907,7 @@ function EmptyGraphMessage() {
         transform: "translate(-50%, -50%)",
         textAlign: "center",
         color: "var(--pnv-text-hint)",
-        fontSize: 14,
+        fontSize: "var(--pnv-fs-14)",
         zIndex: 5,
         maxWidth: 400,
         pointerEvents: "none",
@@ -938,14 +938,14 @@ function EmptyGraphMessage() {
             cursor: modelErrorLine ? "pointer" : undefined,
           }}
         >
-          <div style={{ fontSize: 16, fontWeight: 600, color: "var(--pnv-danger)", marginBottom: 8 }}>
+          <div style={{ fontSize: "var(--pnv-fs-16)", fontWeight: 600, color: "var(--pnv-danger)", marginBottom: 8 }}>
             Model Error
           </div>
-          <div style={{ fontSize: 13, color: "var(--pnv-text-muted)", lineHeight: 1.6 }}>
+          <div style={{ fontSize: "var(--pnv-fs-13)", color: "var(--pnv-text-muted)", lineHeight: 1.6 }}>
             {modelError}
           </div>
           {modelErrorLine && (
-            <div style={{ marginTop: 10, fontSize: 12, color: "var(--pnv-danger)", fontWeight: 600 }}>
+            <div style={{ marginTop: 10, fontSize: "var(--pnv-fs-12)", color: "var(--pnv-danger)", fontWeight: 600 }}>
               Go to line {modelErrorLine} →
             </div>
           )}
@@ -956,15 +956,15 @@ function EmptyGraphMessage() {
         </div>
       ) : (
         <div style={{ pointerEvents: "auto" }}>
-          <div style={{ fontSize: 18, fontWeight: 600, color: "var(--pnv-node-text-strong)", marginBottom: 16 }}>
+          <div style={{ fontSize: "var(--pnv-fs-18)", fontWeight: 600, color: "var(--pnv-node-text-strong)", marginBottom: 16 }}>
             PsyNeuView
           </div>
-          <div style={{ fontSize: 13, color: "var(--pnv-text-hint)", lineHeight: 2 }}>
+          <div style={{ fontSize: "var(--pnv-fs-13)", color: "var(--pnv-text-hint)", lineHeight: 2 }}>
             <div>Use <strong>Open</strong> in the toolbar to open a .py file</div>
             <div>or pick one from the <strong>PsyNeuLink Library</strong></div>
             <div>or click <strong>+ New Model</strong> to start from scratch</div>
           </div>
-          <div style={{ marginTop: 16, fontSize: 11, color: "var(--pnv-node-text-dim)" }}>
+          <div style={{ marginTop: 16, fontSize: "var(--pnv-fs-11)", color: "var(--pnv-node-text-dim)" }}>
             Supports any PsyNeuLink Python file
           </div>
         </div>

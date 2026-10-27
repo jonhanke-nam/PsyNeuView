@@ -65,7 +65,7 @@ export function PromptModal({ title, message, defaultValue = "", placeholder, on
       >
         <DialogHeader title={title} titleId="prompt-modal-title" onClose={onCancel} />
         <div style={{ padding: "16px 28px 24px" }}>
-          <div style={{ fontSize: 14, color: "var(--pnv-text-body)", marginBottom: 12 }}>
+          <div style={{ fontSize: "var(--pnv-fs-14)", color: "var(--pnv-text-body)", marginBottom: 12 }}>
             {message}
           </div>
           <input
@@ -79,7 +79,7 @@ export function PromptModal({ title, message, defaultValue = "", placeholder, on
             style={{
               width: "100%",
               padding: "8px 12px",
-              fontSize: 14,
+              fontSize: "var(--pnv-fs-14)",
               border: "1px solid var(--pnv-border)",
               borderRadius: 6,
               marginBottom: 16,

@@ -144,7 +144,7 @@ export function FileBrowserModal({ onSelect, onCancel }: Props) {
             onKeyDown={(e) => {
               if (e.key === "Enter" && typed.trim()) onSelect(typed.trim());
             }}
-            style={{ flex: 1, padding: "6px 8px", border: "1px solid var(--pnv-border)", borderRadius: 6, fontSize: 12 }}
+            style={{ flex: 1, padding: "6px 8px", border: "1px solid var(--pnv-border)", borderRadius: 6, fontSize: "var(--pnv-fs-12)" }}
           />
           <Button kind="primary" size="compact" onClick={() => typed.trim() && onSelect(typed.trim())} disabled={!typed.trim()}>
             Open
@@ -176,21 +176,21 @@ const LIST: React.CSSProperties = {
 };
 const ROW: React.CSSProperties = {
   display: "flex", alignItems: "center", gap: 6, padding: "5px 8px",
-  fontSize: 13, cursor: "pointer", borderRadius: 6, whiteSpace: "nowrap",
+  fontSize: "var(--pnv-fs-13)", cursor: "pointer", borderRadius: 6, whiteSpace: "nowrap",
   overflow: "hidden", textOverflow: "ellipsis",
 };
-const MUTED: React.CSSProperties = { padding: 12, color: "var(--pnv-text-faint)", fontSize: 12 };
+const MUTED: React.CSSProperties = { padding: 12, color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-12)" };
 const PATH_LABEL: React.CSSProperties = {
-  fontFamily: "monospace", fontSize: 11, color: "var(--pnv-text-muted)",
+  fontFamily: "monospace", fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)",
   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
 };
 const UP_BTN: React.CSSProperties = {
-  fontSize: 11, padding: "2px 8px", border: "1px solid var(--pnv-border)", borderRadius: 6,
+  fontSize: "var(--pnv-fs-11)", padding: "2px 8px", border: "1px solid var(--pnv-border)", borderRadius: 6,
   background: "var(--pnv-surface-sunken)", cursor: "pointer", flexShrink: 0,
 };
 function chipStyle(active: boolean, exists: boolean): React.CSSProperties {
   return {
-    fontSize: 11, padding: "2px 10px", borderRadius: 12,
+    fontSize: "var(--pnv-fs-11)", padding: "2px 10px", borderRadius: 12,
     border: active ? "1px solid var(--pnv-primary)" : "1px solid var(--pnv-border-light)",
     background: active ? "var(--pnv-primary-tint)" : "var(--pnv-surface-muted)",
     color: exists ? (active ? "var(--pnv-primary)" : "var(--pnv-text-body)") : "var(--pnv-text-faint)",

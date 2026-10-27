@@ -106,7 +106,7 @@ export function NodeContextMenu({ nodeId, nodeLabel, nodeType, x, y, onClose }: 
         zIndex: 10000,
         minWidth: 160,
         padding: "4px 0",
-        fontSize: 13,
+        fontSize: "var(--pnv-fs-13)",
       }}
     >
       {renaming ? (
@@ -119,7 +119,7 @@ export function NodeContextMenu({ nodeId, nodeLabel, nodeType, x, y, onClose }: 
               if (e.key === "Enter") void submitRename();
             }}
             placeholder="New name"
-            style={{ width: 160, fontSize: 13, padding: "3px 6px", border: "1px solid var(--pnv-primary)", borderRadius: 4 }}
+            style={{ width: 160, fontSize: "var(--pnv-fs-13)", padding: "3px 6px", border: "1px solid var(--pnv-primary)", borderRadius: 4 }}
           />
         </div>
       ) : (
@@ -167,7 +167,7 @@ function MenuItem({
         border: "none",
         background: "none",
         cursor: "pointer",
-        fontSize: 13,
+        fontSize: "var(--pnv-fs-13)",
         color: "var(--pnv-text-body)",
       }}
       onMouseEnter={(e) => (e.currentTarget.style.background = "var(--pnv-primary-tint)")}

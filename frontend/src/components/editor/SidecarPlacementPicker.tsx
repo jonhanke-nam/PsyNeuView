@@ -91,7 +91,7 @@ export function SidecarPlacementPicker() {
         onClick={() => setOpen((o) => !o)}
         title="Where this model's sidecar files (layouts, labels) are stored on disk"
         style={{
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           fontFamily: "monospace",
           padding: "2px 8px",
           border: "1px solid var(--pnv-border)",
@@ -106,8 +106,8 @@ export function SidecarPlacementPicker() {
       >
         <span style={{ color: "var(--pnv-text-faint)" }}>Files:</span>
         <span>{LOCATION_LABEL[placement.effective]}</span>
-        {inheriting && <span style={{ color: "var(--pnv-text-faint)", fontSize: 9 }}>(default)</span>}
-        <span style={{ color: "var(--pnv-text-faint)", fontSize: 9 }}>▾</span>
+        {inheriting && <span style={{ color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-9)" }}>(default)</span>}
+        <span style={{ color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-9)" }}>▾</span>
       </button>
       {open && (
         <div
@@ -130,7 +130,7 @@ export function SidecarPlacementPicker() {
           <div
             style={{
               padding: "3px 12px 5px",
-              fontSize: 10,
+              fontSize: "var(--pnv-fs-10)",
               textTransform: "uppercase",
               letterSpacing: 0.4,
               color: "var(--pnv-text-faint)",
@@ -191,13 +191,13 @@ function PlacementRow({
         background: "none",
         cursor: "pointer",
         padding: "4px 12px",
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
         color: "var(--pnv-text-body)",
       }}
     >
       <span style={{ width: 12, color: "var(--pnv-primary)" }}>{selected ? "◉" : "○"}</span>
       <span>{label}</span>
-      <span style={{ fontSize: 10, color: "var(--pnv-text-faint)" }}>{hint}</span>
+      <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)" }}>{hint}</span>
     </button>
   );
 }

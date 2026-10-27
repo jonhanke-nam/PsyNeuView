@@ -324,6 +324,20 @@ settings:
       menu's own Don't remind me writes the same key, so this is where that
       is undone.
 
+  - id: text-size
+    label: Appearance ▸ Text size ▸ Text size
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.appearance.textSize)
+    control: setting-text-size
+    notes: >-
+      Small, Default (default), Large: 1.0, 1.1 and 1.2 times the app's
+      base font sizes (#111). Small is the app's original size; Default
+      puts body text at about 14–15 px. Every UI font size is a
+      --pnv-fs-* variable in index.css that follows it, and the code
+      editor's and Inspector's own A− A+ scales multiply it. The graph's
+      node and edge labels don't change: the canvas zoom sizes them.
+
   - id: graph-pointer
     label: Appearance ▸ Pointer ▸ Pointer in the graph view
     home: settings

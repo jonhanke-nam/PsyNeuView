@@ -45,7 +45,7 @@ export function PnlDetails({
   // "you went from X to Y" shows inline without a reload.
   const showPrevious = previous && !samePnl(previous, pnl);
   return (
-    <div style={{ fontSize: 13 }} data-testid="pnl-details">
+    <div style={{ fontSize: "var(--pnv-fs-13)" }} data-testid="pnl-details">
       {/* The path has its own row below; the summary doesn't repeat it. */}
       {showPrevious && <Row label="Previous version" value={formatInstallSummary(previous!)} dimmed struck />}
       <Row label="Currently installed" value={formatInstallSummary(pnl)} />

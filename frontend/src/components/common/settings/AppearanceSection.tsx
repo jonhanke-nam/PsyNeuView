@@ -15,6 +15,8 @@
  * whether scheduling-condition arrows are drawn (#53): hidden by default (#123).
  * And how the Components panel opens (#113): the word list by default, or
  * the icon strip; the panel's own ◀/▶ only changes it for the session.
+ * And the app's text size (#111): Small, Default or Large, remembered per
+ * browser (stores/textSizeStore.ts).
  */
 
 import { LEGEND_STARTS, isLegendStart, useGraphLegendStore } from "@/stores/graphLegendStore";
@@ -64,11 +66,15 @@ import {
   pointerCursorValue,
   isPointerSize,
 } from "@/utils/graphCursor";
+import { TEXT_SIZES, TEXT_SIZE_LABELS, DEFAULT_TEXT_SIZE, isTextSize, useTextSizeStore } from "@/stores/textSizeStore";
 import { Group, SettingLabel, mutedStyle } from "./shared";
 
 export function AppearanceSection() {
   return (
     <>
+      <Group id="text-size" title="Text size">
+        <TextSizeRow />
+      </Group>
       <Group id="pointer" title="Pointer">
         <GraphPointerRow />
         <div style={{ marginTop: 14 }}>
@@ -118,7 +124,7 @@ function AutomaticLayoutRow() {
   const setStyle = useGraphLayoutDefaultStore((s) => s.setStyle);
   const hint = LAYOUT_STYLES.find((o) => o.id === style)?.hint;
   return (
-    <div style={{ fontSize: 13 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="How models are arranged" htmlFor="setting-graph-layout-default">
         The arrangement a model gets when you open it without a layout of your
         own. Like show_graph places every node where PsyNeuLink's show_graph()
@@ -152,7 +158,7 @@ function GraphLegendRow() {
   const start = useGraphLegendStore((s) => s.start);
   const setStart = useGraphLegendStore((s) => s.setStart);
   return (
-    <div style={{ fontSize: 13 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="How the legend opens" htmlFor="setting-graph-legend-start">
         The legend in the graph view explains the edge types of graph-structure
         conditions. Collapsed, it is a small Legend button in the corner of the
@@ -181,7 +187,7 @@ function ComponentsStartRow() {
   const start = useComponentsStartStore((s) => s.start);
   const setStart = useComponentsStartStore((s) => s.setStart);
   return (
-    <div style={{ fontSize: 13 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="How the panel opens" htmlFor="setting-components-start">
         The Components panel on the left of the graph view. Open, it shows the
         search box and the list of sections; as the icon strip, it is a narrow
@@ -215,7 +221,7 @@ function SchedulingArrowsRow() {
   const arrows = useSchedulingArrowsStore((s) => s.arrows);
   const setArrows = useSchedulingArrowsStore((s) => s.setArrows);
   return (
-    <div style={{ fontSize: 13 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="Scheduling-condition arrows" htmlFor="setting-graph-scheduling-arrows">
         The dashed arrows on the canvas show a model's graph-structure
         conditions (before, after and the like). PsyNeuLink's show_graph
@@ -240,13 +246,13 @@ function SchedulingArrowsRow() {
   );
 }
 
-const selectStyle = { marginTop: 6, fontSize: 12, padding: "3px 6px" } as const;
+const selectStyle = { marginTop: 6, fontSize: "var(--pnv-fs-12)", padding: "3px 6px" } as const;
 
 function GraphPointerRow() {
   const pointer = useGraphPointerStore((s) => s.pointer);
   const setPointer = useGraphPointerStore((s) => s.setPointer);
   return (
-    <div style={{ fontSize: 13 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="Pointer in the graph view" htmlFor="setting-graph-pointer">
         The arrow's tip is the exact point that clicks, so small ports, edge
         labels and the edges themselves are easy to aim at. The hand is the
@@ -283,7 +289,7 @@ function PointerSizeRow() {
   const pressed = isPrecisePointer(shown) ? pointerCursorImage(shown, size, true) : null;
   const name = GRAPH_POINTERS.find((p) => p.id === shown)!.label.toLowerCase();
   return (
-    <div style={{ fontSize: 13 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="Pointer size" htmlFor="setting-graph-pointer-size">
         The size of the pointer in the graph view. Window zoom (⌘+ / ⌘−) doesn't
         change it; this does. The hand is the system's own and keeps its size.
@@ -345,7 +351,7 @@ function NodeOutlineRow() {
   const defaultWidth = useNodeOutlineStore((s) => s.defaultWidth);
   const setWidth = useNodeOutlineStore((s) => s.setWidth);
   return (
-    <div style={{ fontSize: 13 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="Outline width" htmlFor="setting-node-outline">
         How heavy a node's outline is in the graph view. INPUT, OUTPUT and
         CONTROL nodes are drawn {NODE_OUTLINE_EMPHASIS_EXTRA} px heavier, and a
@@ -374,7 +380,7 @@ function EdgeLineRow() {
   const defaultWidth = useEdgeLineStore((s) => s.defaultWidth);
   const setWidth = useEdgeLineStore((s) => s.setWidth);
   return (
-    <div style={{ fontSize: 13 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="Line width" htmlFor="setting-edge-line-width">
         How heavy the lines between nodes (projections) are in the graph view.
         Arrowheads grow with the line, other kinds of projection keep their
@@ -391,6 +397,35 @@ function EdgeLineRow() {
         {EDGE_LINE_WIDTHS.map((w) => (
           <option key={w} value={String(w)}>
             {w} px{w === defaultWidth ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function TextSizeRow() {
+  const size = useTextSizeStore((s) => s.size);
+  const setSize = useTextSizeStore((s) => s.setSize);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <SettingLabel title="Text size" htmlFor="setting-text-size">
+        How big the app's text is: menus, panels, dialogs and the code editor.
+        The editor's and Inspector's own A− A+ still adjust them from here.
+        The graph's node labels follow the canvas zoom instead.
+      </SettingLabel>
+      <select
+        id="setting-text-size"
+        data-testid="setting-text-size"
+        value={size}
+        onChange={(e) => {
+          if (isTextSize(e.target.value)) setSize(e.target.value);
+        }}
+        style={selectStyle}
+      >
+        {TEXT_SIZES.map((t) => (
+          <option key={t} value={t}>
+            {TEXT_SIZE_LABELS[t]}{t === DEFAULT_TEXT_SIZE ? " (default)" : ""}
           </option>
         ))}
       </select>

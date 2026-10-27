@@ -211,7 +211,7 @@ export function TraceControls() {
           one EXECUTION_SET firing in PsyNeuLink's scheduler. Helps the user
           interpret the step counter when they first encounter it. */}
       <span
-        style={{ fontSize: 11, fontWeight: 700, color: "var(--pnv-node-text-strong)", letterSpacing: 0.5, cursor: "help" }}
+        style={{ fontSize: "var(--pnv-fs-11)", fontWeight: 700, color: "var(--pnv-node-text-strong)", letterSpacing: 0.5, cursor: "help" }}
         title={
           "One step = one EXECUTION_SET firing in PsyNeuLink's scheduler.\n" +
           "For a model with K execution sets per trial across N trials,\n" +
@@ -227,7 +227,7 @@ export function TraceControls() {
       {debuggerHookAvailable === false && (
         <span
           style={{
-            fontSize: 10,
+            fontSize: "var(--pnv-fs-10)",
             fontWeight: 600,
             color: "var(--pnv-warning-tag-text)",
             background: "var(--pnv-warning-tint)",
@@ -250,14 +250,14 @@ export function TraceControls() {
       {hasTrialNav && (
         <button onClick={prevTrial}
           disabled={currentTrial === null || currentTrial <= 0}
-          style={{ fontSize: 14, padding: "2px 8px", border: "1px solid var(--pnv-border)", borderRadius: 4, background: "var(--pnv-surface-muted)", cursor: "pointer", color: "var(--pnv-text-body)" }}
+          style={{ fontSize: "var(--pnv-fs-14)", padding: "2px 8px", border: "1px solid var(--pnv-border)", borderRadius: 4, background: "var(--pnv-surface-muted)", cursor: "pointer", color: "var(--pnv-text-body)" }}
           title="Previous trial at the same step offset"
         >⏮</button>
       )}
 
       <button onClick={stepBackward} disabled={traceStep === null || traceStep <= 0}
         data-testid="trace-prev-step"
-        style={{ fontSize: 14, padding: "2px 8px", border: "1px solid var(--pnv-border)", borderRadius: 4, background: "var(--pnv-surface-muted)", cursor: "pointer", color: "var(--pnv-text-body)" }}
+        style={{ fontSize: "var(--pnv-fs-14)", padding: "2px 8px", border: "1px solid var(--pnv-border)", borderRadius: 4, background: "var(--pnv-surface-muted)", cursor: "pointer", color: "var(--pnv-text-body)" }}
         title="Previous step"
       >◀</button>
 
@@ -273,7 +273,7 @@ export function TraceControls() {
           gap: 2,
           width: 64,
           flexShrink: 0,
-          fontSize: 12,
+          fontSize: "var(--pnv-fs-12)",
           fontFamily: "monospace",
           fontWeight: 600,
           color: "var(--pnv-text-body)",
@@ -295,7 +295,7 @@ export function TraceControls() {
             max={displayTotal}
             style={{
               width: 30,
-              fontSize: 12,
+              fontSize: "var(--pnv-fs-12)",
               fontFamily: "monospace",
               fontWeight: 600,
               textAlign: "center",
@@ -331,20 +331,20 @@ export function TraceControls() {
 
       <button onClick={stepForward} disabled={traceStep === null || traceStep >= totalSteps - 1}
         data-testid="trace-next-step"
-        style={{ fontSize: 14, padding: "2px 8px", border: "1px solid var(--pnv-border)", borderRadius: 4, background: "var(--pnv-surface-muted)", cursor: "pointer", color: "var(--pnv-text-body)" }}
+        style={{ fontSize: "var(--pnv-fs-14)", padding: "2px 8px", border: "1px solid var(--pnv-border)", borderRadius: 4, background: "var(--pnv-surface-muted)", cursor: "pointer", color: "var(--pnv-text-body)" }}
         title="Next step"
       >▶</button>
 
       {hasTrialNav && (
         <button onClick={nextTrial}
           disabled={currentTrial === null || currentTrial >= trialBoundaries.length - 1}
-          style={{ fontSize: 14, padding: "2px 8px", border: "1px solid var(--pnv-border)", borderRadius: 4, background: "var(--pnv-surface-muted)", cursor: "pointer", color: "var(--pnv-text-body)" }}
+          style={{ fontSize: "var(--pnv-fs-14)", padding: "2px 8px", border: "1px solid var(--pnv-border)", borderRadius: 4, background: "var(--pnv-surface-muted)", cursor: "pointer", color: "var(--pnv-text-body)" }}
           title="Next trial at the same step offset"
         >⏭</button>
       )}
 
       {hasTrialNav && (
-        <span style={{ fontSize: 11, color: "var(--pnv-text-muted)", fontFamily: "monospace", width: 64, flexShrink: 0, textAlign: "center" }}
+        <span style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)", fontFamily: "monospace", width: 64, flexShrink: 0, textAlign: "center" }}
           title={`Currently on trial ${currentTrial !== null ? currentTrial + 1 : "—"} of ${totalTrials}`}
         >
           Trial {currentTrial !== null ? currentTrial + 1 : "—"}/{totalTrials}
@@ -355,7 +355,7 @@ export function TraceControls() {
           'trial' counts steps within the current trial. Hidden on no-hook
           builds (no trial info to count within). */}
       {hasTrialNav && (
-        <span style={{ display: "inline-flex", border: "1px solid var(--pnv-border)", borderRadius: 4, overflow: "hidden", fontSize: 10, fontFamily: "monospace" }}>
+        <span style={{ display: "inline-flex", border: "1px solid var(--pnv-border)", borderRadius: 4, overflow: "hidden", fontSize: "var(--pnv-fs-10)", fontFamily: "monospace" }}>
           <button
             onClick={() => setViewMode("run")}
             style={{
@@ -390,7 +390,7 @@ export function TraceControls() {
 
       <button onClick={toggleAutoPlay}
         style={{
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           padding: "2px 8px",
           border: "1px solid var(--pnv-border)",
           borderRadius: 4,
@@ -412,7 +412,7 @@ export function TraceControls() {
         onChange={(e) => setPlaybackSpeed(parseFloat(e.target.value))}
         title="Autoplay speed (relative to 400 ms/step)"
         style={{
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           fontFamily: "monospace",
           padding: "2px 4px",
           border: "1px solid var(--pnv-border)",
@@ -436,7 +436,7 @@ export function TraceControls() {
           the bar wider without adding information, so dropped. */}
 
       <button onClick={() => { record("step", "Trace cleared"); clearTrace(); }}
-        style={{ fontSize: 11, padding: "2px 6px", border: "1px solid var(--pnv-border-light)", borderRadius: 4, background: "var(--pnv-surface)", cursor: "pointer", color: "var(--pnv-text-faint)" }}
+        style={{ fontSize: "var(--pnv-fs-11)", padding: "2px 6px", border: "1px solid var(--pnv-border-light)", borderRadius: 4, background: "var(--pnv-surface)", cursor: "pointer", color: "var(--pnv-text-faint)" }}
         title="Clear trace"
       >✕</button>
     </div>

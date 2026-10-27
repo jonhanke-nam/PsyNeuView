@@ -12,6 +12,7 @@ import { useNotificationStore } from "@/stores/notificationStore";
 import { useStatusStore } from "@/stores/statusStore";
 import { useLoadTimingStore } from "@/stores/loadTimingStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useTextScale } from "@/stores/textSizeStore";
 import { recordAction } from "@/utils/history";
 import { findGscEdgeId } from "@/utils/gscEdgeId";
 import { renameNode } from "@/utils/nodeActions";
@@ -422,7 +423,8 @@ export function InspectorPanel() {
   const setSource = useModelStore((s) => s.setSource);
   const loadModelFromServer = useModelStore((s) => s.loadModelFromServer);
   const addNotification = useNotificationStore((s) => s.addNotification);
-  const fontScale = useUIStore((s) => s.inspectorFontScale);
+  // #111: the app's text size multiplies the Inspector's own A− A+ scale.
+  const fontScale = useUIStore((s) => s.inspectorFontScale) * useTextScale();
   const zoomIn = useUIStore((s) => s.zoomIn);
   const zoomOut = useUIStore((s) => s.zoomOut);
 
@@ -3008,7 +3010,7 @@ function specIsComplete(spec: CondSpec): boolean {
 }
 
 const COND_INPUT_STYLE = {
-  fontSize: 12, padding: "3px 6px", borderRadius: 4, border: "1px solid var(--pnv-border)",
+  fontSize: "var(--pnv-fs-12)", padding: "3px 6px", borderRadius: 4, border: "1px solid var(--pnv-border)",
 } as const;
 
 // Recursive editor for one CondSpec node. Composites render nested editors for

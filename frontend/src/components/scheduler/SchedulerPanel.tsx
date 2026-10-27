@@ -1,5 +1,6 @@
 import { useModelStore } from "@/stores/modelStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useTextScale } from "@/stores/textSizeStore";
 import { findGscEdgeId } from "@/utils/gscEdgeId";
 import {
   SchedulerModeToggle,
@@ -28,7 +29,7 @@ export function SchedulerPanel() {
   const setSelectedNodeId = useModelStore((s) => s.setSelectedNodeId);
   const setSelectedEdgeId = useModelStore((s) => s.setSelectedEdgeId);
 
-  const fontScale = useUIStore((s) => s.inspectorFontScale);
+  const fontScale = useUIStore((s) => s.inspectorFontScale) * useTextScale();
   const zoomIn = useUIStore((s) => s.zoomIn);
   const zoomOut = useUIStore((s) => s.zoomOut);
   const s = (base: number) => Math.round(base * fontScale);
@@ -95,8 +96,8 @@ export function SchedulerPanel() {
           <SchedulerModeToggle mode={schedulerConfig.mode} fontPx={s(11)} />
         )}
         <span style={{ marginLeft: "auto", display: "flex", gap: 2 }}>
-          <button onClick={zoomOut} title="Decrease font size" style={{ fontSize: 11, padding: "1px 5px", border: "1px solid var(--pnv-border)", borderRadius: 3, background: "var(--pnv-surface-sunken)", cursor: "pointer", color: "var(--pnv-text-secondary)" }}>A-</button>
-          <button onClick={zoomIn} title="Increase font size" style={{ fontSize: 11, padding: "1px 5px", border: "1px solid var(--pnv-border)", borderRadius: 3, background: "var(--pnv-surface-sunken)", cursor: "pointer", color: "var(--pnv-text-secondary)" }}>A+</button>
+          <button onClick={zoomOut} title="Decrease font size" style={{ fontSize: "var(--pnv-fs-11)", padding: "1px 5px", border: "1px solid var(--pnv-border)", borderRadius: 3, background: "var(--pnv-surface-sunken)", cursor: "pointer", color: "var(--pnv-text-secondary)" }}>A-</button>
+          <button onClick={zoomIn} title="Increase font size" style={{ fontSize: "var(--pnv-fs-11)", padding: "1px 5px", border: "1px solid var(--pnv-border)", borderRadius: 3, background: "var(--pnv-surface-sunken)", cursor: "pointer", color: "var(--pnv-text-secondary)" }}>A+</button>
         </span>
       </div>
       <div style={{ fontSize: s(11), color: "var(--pnv-text-faint)", marginBottom: 14 }}>

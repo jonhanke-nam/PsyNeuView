@@ -28,7 +28,7 @@ export function CheckoutUpdates() {
 
   return (
     <Group id="checkout-updates" title="Keep your checkouts current" summary={summary} defaultFolded badge={<DeveloperBadge audience="developers" />}>
-      <div style={{ fontSize: 13 }} data-testid="checkout-updates">
+      <div style={{ fontSize: "var(--pnv-fs-13)" }} data-testid="checkout-updates">
         <div style={{ ...mutedStyle, marginBottom: 6 }}>
           Your own checkouts are never touched unless you ask here. A pull is a fast-forward of the branch each checkout is
           on, from the remote branch it tracks; with uncommitted changes, or local commits the remote doesn't have, nothing
@@ -47,11 +47,11 @@ export function CheckoutUpdates() {
             <div key={c.id} data-testid="checkout-update-row" data-checkout-path={c.path} style={{ padding: "6px 0", borderTop: "1px solid var(--pnv-border-faint)" }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                 <span style={{ fontWeight: 500 }}>{c.kind === "psyneuview" ? "PsyNeuView" : c.name}</span>
-                {c.in_use && c.kind === "psyneulink" && <span style={{ ...mutedStyle, fontSize: 11 }}>the PsyNeuLink in use</span>}
-                {c.kind === "psyneuview" && <span style={{ ...mutedStyle, fontSize: 11 }}>the PsyNeuView running now</span>}
+                {c.in_use && c.kind === "psyneulink" && <span style={{ ...mutedStyle, fontSize: "var(--pnv-fs-11)" }}>the PsyNeuLink in use</span>}
+                {c.kind === "psyneuview" && <span style={{ ...mutedStyle, fontSize: "var(--pnv-fs-11)" }}>the PsyNeuView running now</span>}
               </div>
               <PathBox path={c.path} />
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: "var(--pnv-fs-12)" }}>
                 <span data-testid="checkout-update-line" style={{ color: TONE_COLOR[line.tone] }}>{line.text}</span>
                 {c.is_checkout && (
                   <Button
@@ -66,7 +66,7 @@ export function CheckoutUpdates() {
                 )}
               </div>
               {pull && (
-                <div data-testid="checkout-update-pull-note" style={{ fontSize: 12, color: TONE_COLOR[pull.tone], marginTop: 2 }}>
+                <div data-testid="checkout-update-pull-note" style={{ fontSize: "var(--pnv-fs-12)", color: TONE_COLOR[pull.tone], marginTop: 2 }}>
                   {pull.text}
                 </div>
               )}
@@ -80,7 +80,7 @@ export function CheckoutUpdates() {
                       disabled={busy}
                       onChange={(e) => void setCheckoutPrefs(c.path, { check: e.target.checked })}
                     />
-                    Check for upstream changes <span style={{ ...mutedStyle, fontSize: 11 }}>({remote})</span>
+                    Check for upstream changes <span style={{ ...mutedStyle, fontSize: "var(--pnv-fs-11)" }}>({remote})</span>
                   </label>
                   <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
                     <input
@@ -90,7 +90,7 @@ export function CheckoutUpdates() {
                       disabled={busy || !c.upstream}
                       onChange={(e) => void setCheckoutPrefs(c.path, { pull_on_launch: e.target.checked })}
                     />
-                    Pull on launch <span style={{ ...mutedStyle, fontSize: 11 }}>(fast-forward from {remote})</span>
+                    Pull on launch <span style={{ ...mutedStyle, fontSize: "var(--pnv-fs-11)" }}>(fast-forward from {remote})</span>
                   </label>
                 </div>
               )}

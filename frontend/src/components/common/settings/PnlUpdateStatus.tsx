@@ -57,7 +57,7 @@ export function PnlUpdateStatus({ currentPnl }: { currentPnl: PsyNeuLinkInfo }) 
   const latest = currentPnl.source === "github";
 
   return (
-    <div data-testid="pnl-update-status" style={{ marginTop: 10, fontSize: 12 }}>
+    <div data-testid="pnl-update-status" style={{ marginTop: 10, fontSize: "var(--pnv-fs-12)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span data-testid="pnl-update-line" style={{ color: TONE_COLOR[line.tone], minWidth: 0 }}>
           {line.text}
@@ -73,7 +73,7 @@ export function PnlUpdateStatus({ currentPnl }: { currentPnl: PsyNeuLinkInfo }) 
         </Button>
       </div>
       {latest && (
-        <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, cursor: "pointer", fontSize: 13 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, cursor: "pointer", fontSize: "var(--pnv-fs-13)" }}>
           <input
             type="checkbox"
             data-testid="setting-pnl-auto-update"

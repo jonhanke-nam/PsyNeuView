@@ -69,7 +69,7 @@ export function BusyIndicator({ placement }: { placement: "toolbar" | "canvas" }
           gap: 6,
           flexShrink: 0,
           color: "var(--pnv-primary)",
-          fontSize: 13,
+          fontSize: "var(--pnv-fs-13)",
           fontWeight: 600,
           visibility: visible ? "visible" : "hidden",
         }}
