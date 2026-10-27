@@ -60,8 +60,12 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
   },
   "components/layout/DeveloperModeIndicator.tsx": { count: 3, what: "the Developer badge that opens its menu, and that menu's two rows" },
   "components/graph/GraphToolbar.tsx": {
-    count: 6,
-    what: "the palette ◧ toggle, Layout: Auto/Custom, Reset Custom Layout, a display toggle (Roles, Names, Ports…), More ▾ and a More row",
+    count: 3,
+    what: "the palette ◧ toggle, Layout: Auto/Custom, Reset Custom Layout",
+  },
+  "components/graph/GraphViewOptionsMenu.tsx": {
+    count: 1,
+    what: "Advanced Graph View Options ▾, a toolbar menu trigger (its rows are checkboxes, selects and Button kinds; #123)",
   },
   "components/editor/CodeEditor.tsx": {
     count: 6,

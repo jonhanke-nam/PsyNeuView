@@ -147,11 +147,13 @@ in both toolbars and their menus, while each control keeps the size it had:
 
 - `toggleColours(on)`: on is blue-tinted with a blue edge
   (`--pnv-primary-tint`, `--pnv-primary`), off is white with a grey edge
-  (`--pnv-surface`, `--pnv-border`). The graph toolbar's Roles, Dims,
-  Names… and More ▾, Layout: Auto, the palette ◧, and the main toolbar's
-  Layout ▾ and Tutorials ▾ while their menu is open (or a walkthrough runs).
+  (`--pnv-surface`, `--pnv-border`). The graph toolbar's Layout: Auto, the
+  palette ◧ and Advanced Graph View Options ▾ while its panel is open, and
+  the main toolbar's Layout ▾ and Tutorials ▾ while their menu is open (or a
+  walkthrough runs). The graph's view options themselves are checkboxes in
+  that panel (#123), not toggles.
 - `menuRowColours(current)`: the current row of a menu (a visible panel,
-  the running walkthrough, a More toggle that is on) is tinted, blue and
+  the running walkthrough) is tinted, blue and
   bold; `MENU_ROW_HOVER` (`--pnv-surface-sunken`) is the grey under the
   pointer on any other row.
 

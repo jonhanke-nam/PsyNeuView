@@ -1,23 +1,26 @@
 /**
- * Compact toolbar above the graph canvas with display toggles and layout controls.
+ * Compact toolbar above the graph canvas: the essentials only.
  * Extracted from the former NodePalette.tsx.
  *
- * Common, at-a-glance controls stay inline. The less-frequent structural
- * toggles (Controller / Learning / CIMs / Inactive — each rebuilds the
- * graph), the Flip X/Y reflections, and Expand/Collapse All live in a
- * single "More" overflow menu so the bar stays scannable (#338).
+ * On the bar: the Components panel toggle, Layout: Auto / Custom, Reset
+ * Custom Layout and the layout engine. Every view option — what nodes and
+ * lines show, the Layered direction, the flips, Expand / Collapse All, and
+ * the parts that rebuild the graph (Controller, Learning, CIMs, Inactive),
+ * which were the More menu (#338) — is in one persistent pop-up, Advanced
+ * Graph View Options ▾ (GraphViewOptionsMenu, #123), so the bar stays short
+ * (the clean look, #109).
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 import { useModelStore, usesFlatPositions } from "@/stores/modelStore";
-import { EDGE_ROUTING_OPTIONS, useGraphSettings } from "@/stores/graphSettingsStore";
+import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { usePaletteStore } from "@/stores/paletteStore";
 import { applyLayout } from "@/utils/layout";
 import { applyShowGraphLayoutNow } from "@/hooks/useShowGraphLayout";
 import { LAYOUT_STYLES } from "@/stores/graphLayoutDefaultStore";
-import { useDismiss } from "@/components/common/dialog/useDismiss";
-import { MENU_ROW_HOVER, menuRowColours, toggleColours } from "@/components/common/toolbarStyles";
+import { toggleColours } from "@/components/common/toolbarStyles";
 import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { GraphViewOptionsMenu } from "./GraphViewOptionsMenu";
 
 export function GraphToolbar() {
   const filePath = useModelStore((s) => s.filePath);
@@ -26,21 +29,6 @@ export function GraphToolbar() {
   const autoLayout = useModelStore((s) => s.autoLayout);
   const setAutoLayout = useModelStore((s) => s.setAutoLayout);
 
-  const colorByRole = useGraphSettings((s) => s.colorByRole);
-  const showDimensions = useGraphSettings((s) => s.showDimensions);
-  const showProjectionLabels = useGraphSettings((s) => s.showProjectionLabels);
-  const showNodeNames = useGraphSettings((s) => s.showNodeNames);
-  const showNodeElements = useGraphSettings((s) => s.showNodeElements);
-  const showArrowheads = useGraphSettings((s) => s.showArrowheads);
-  const edgeRouting = useGraphSettings((s) => s.edgeRouting);
-  const bundleEdges = useGraphSettings((s) => s.bundleEdges);
-  const showControllerToggle = useGraphSettings((s) => s.showController);
-  const showLearning = useGraphSettings((s) => s.showLearning);
-  const showInactive = useGraphSettings((s) => s.showInactive);
-  const showCIMs = useGraphSettings((s) => s.showCIMs);
-  const showFullTypes = useGraphSettings((s) => s.showFullTypes);
-  const showPortDots = useGraphSettings((s) => s.showPortDots);
-  const showExecutionOrder = useGraphSettings((s) => s.showExecutionOrder);
   const direction = useGraphSettings((s) => s.direction);
   const layoutStyle = useGraphSettings((s) => s.layoutStyle);
 
@@ -138,82 +126,6 @@ export function GraphToolbar() {
 
   // #717: Flatten / PyTorch view modes moved to the composition selector in
   // the top Toolbar (they're view-mode choices, not structural toggles).
-  const moreItems: MoreItem[] = [
-    {
-      kind: "toggle",
-      label: "Controller",
-      active: showControllerToggle,
-      onClick: () => {
-        useGraphSettings.getState().setShowController(!showControllerToggle);
-        reloadModel();
-      },
-      title: "Show/hide controller mechanism and control projections",
-    },
-    {
-      kind: "toggle",
-      label: "Learning",
-      active: showLearning,
-      onClick: () => {
-        useGraphSettings.getState().setShowLearning(!showLearning);
-        reloadModel();
-      },
-      title: "Show/hide learning mechanisms and projections",
-    },
-    {
-      kind: "toggle",
-      label: "CIMs",
-      active: showCIMs,
-      onClick: () => {
-        useGraphSettings.getState().setShowCIMs(!showCIMs);
-        reloadModel();
-      },
-      title: "Show/hide CompositionInterfaceMechanisms at composition boundaries",
-    },
-    {
-      kind: "toggle",
-      label: "Inactive",
-      active: showInactive,
-      onClick: () => {
-        useGraphSettings.getState().setShowInactive(!showInactive);
-        reloadModel();
-      },
-      title: "Show/hide inactive projections (red dashed)",
-    },
-    {
-      kind: "toggle",
-      label: "Bundle edges",
-      active: bundleEdges,
-      onClick: () => useGraphSettings.getState().setBundleEdges(!bundleEdges),
-      title: "Spread the attachment points of edges sharing a hub so fan-outs read as distinct branches (lever 2)",
-    },
-    { kind: "divider" },
-    {
-      kind: "action",
-      label: "↕ Flip Y",
-      onClick: flipVertical,
-      title: "Flip graph vertically (reflect across X axis)",
-    },
-    {
-      kind: "action",
-      label: "↔ Flip X",
-      onClick: flipHorizontal,
-      title: "Flip graph horizontally (reflect across Y axis)",
-    },
-    { kind: "divider" },
-    {
-      kind: "action",
-      label: "Expand All",
-      onClick: expandAll,
-      title: "Expand all mechanism nodes to show ports and functions",
-    },
-    {
-      kind: "action",
-      label: "Collapse All",
-      onClick: collapseAll,
-      title: "Collapse all mechanism nodes to compact view",
-    },
-  ];
-
   return (
     <div
       style={{
@@ -293,82 +205,6 @@ export function GraphToolbar() {
 
       <span style={{ width: 1, height: 20, background: "var(--pnv-border-light)", margin: "0 4px" }} />
 
-      <ToggleButton
-        label="Roles"
-        active={colorByRole}
-        onClick={() => useGraphSettings.getState().setColorByRole(!colorByRole)}
-        title="Color nodes by role (INPUT/OUTPUT/CONTROL) vs by type"
-      />
-      <ToggleButton
-        label="Dims"
-        active={showDimensions}
-        onClick={() => useGraphSettings.getState().setShowDimensions(!showDimensions)}
-        title="Show port dimensions on nodes"
-      />
-      <ToggleButton
-        label="Names"
-        active={showNodeNames}
-        onClick={() => useGraphSettings.getState().setShowNodeNames(!showNodeNames)}
-        title="Show structure names (mechanism / composition labels)"
-      />
-      <ToggleButton
-        label="Elements"
-        active={showNodeElements}
-        onClick={() => useGraphSettings.getState().setShowNodeElements(!showNodeElements)}
-        title="Show each node's type and role tags and its function (off by default: just the name, as in show_graph)"
-      />
-      <ToggleButton
-        label="Labels"
-        active={showProjectionLabels}
-        onClick={() => useGraphSettings.getState().setShowProjectionLabels(!showProjectionLabels)}
-        title="Show projection (arrow) names on edges"
-      />
-      <ToggleButton
-        label="Arrows"
-        active={showArrowheads}
-        onClick={() => useGraphSettings.getState().setShowArrowheads(!showArrowheads)}
-        title="Show midline direction arrows on projection edges"
-      />
-      <select
-        value={edgeRouting}
-        onChange={(e) => useGraphSettings.getState().setEdgeRouting(e.target.value as any)}
-        style={{
-          fontSize: 11,
-          padding: "2px 4px",
-          border: "1px solid var(--pnv-border)",
-          borderRadius: 4,
-          background: "var(--pnv-surface)",
-        }}
-        title="Edge style: Angled, Step or Smooth"
-      >
-        {EDGE_ROUTING_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value} title={o.hint}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-      <ToggleButton
-        label="Types"
-        active={showFullTypes}
-        onClick={() => useGraphSettings.getState().setShowFullTypes(!showFullTypes)}
-        title="Show full class names in the type tag (e.g., TransferMechanism instead of Transfer); the tag shows with Elements on"
-      />
-      <ToggleButton
-        label="Order"
-        active={showExecutionOrder}
-        onClick={() => useGraphSettings.getState().setShowExecutionOrder(!showExecutionOrder)}
-        title="Show each node's execution phase (consideration-set rank) without running the model"
-      />
-      <ToggleButton
-        label="Ports"
-        testId="toolbar-show-ports"
-        active={showPortDots}
-        onClick={() => useGraphSettings.getState().setShowPortDots(!showPortDots)}
-        title="Show ports: port dots on the graph (input=blue, output=green, parameter=orange) and the Ports section in Components"
-      />
-
-      <span style={{ width: 1, height: 20, background: "var(--pnv-border-light)", margin: "0 4px" }} />
-
       <select
         value={layoutStyle}
         onChange={(e) => {
@@ -401,187 +237,15 @@ export function GraphToolbar() {
         ))}
       </select>
 
-      <select
-        value={direction}
-        disabled={layoutStyle !== "layered"}
-        onChange={(e) => {
-          useGraphSettings.getState().setDirection(e.target.value as any);
-          const { nodes, edges, setNodes } = useModelStore.getState();
-          const laid = applyLayout(layoutStyle, nodes, edges, { direction: e.target.value as any });
-          setNodes(laid);
-        }}
-        style={{
-          fontSize: 11,
-          padding: "2px 4px",
-          border: "1px solid var(--pnv-border)",
-          borderRadius: 4,
-          background: layoutStyle === "layered" ? "var(--pnv-surface)" : "var(--pnv-surface-sunken)",
-          opacity: layoutStyle === "layered" ? 1 : 0.5,
-        }}
-        title={
-          layoutStyle === "layered"
-            ? "Graph flow direction"
-            : "Direction applies to the Layered engine only"
-        }
-      >
-        <option value="TB">{"↓"} Top-Down</option>
-        <option value="BT">{"↑"} Bottom-Up</option>
-        <option value="LR">{"→"} Left-Right</option>
-        <option value="RL">{"←"} Right-Left</option>
-      </select>
-
       <span style={{ width: 1, height: 20, background: "var(--pnv-border-light)", margin: "0 4px" }} />
 
-      <MoreMenu items={moreItems} />
-    </div>
-  );
-}
-
-function ToggleButton({
-  label,
-  active,
-  onClick,
-  title,
-  testId,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  title?: string;
-  testId?: string;
-}) {
-  return (
-    <button
-      data-testid={testId}
-      aria-pressed={active}
-      onClick={onClick}
-      title={title}
-      style={{
-        fontSize: 11,
-        padding: "3px 8px",
-        ...toggleColours(active),
-        borderRadius: 4,
-        cursor: "pointer",
-        fontWeight: active ? 600 : 400,
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-type MoreItem =
-  | { kind: "toggle"; label: string; active: boolean; onClick: () => void; title?: string }
-  | { kind: "action"; label: string; onClick: () => void; title?: string }
-  | { kind: "divider" };
-
-function MoreMenu({ items }: { items: MoreItem[] }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement | null>(null);
-
-  // Any active toggle inside the menu is surfaced on the button so the
-  // user can see at a glance that something is hidden in here.
-  const anyActive = items.some((i) => i.kind === "toggle" && i.active);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDocClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, [open]);
-  // Escape closes the menu through the shared stack (#1289).
-  useDismiss(open, () => setOpen(false));
-
-  return (
-    <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        style={{
-          fontSize: 11,
-          padding: "3px 8px",
-          ...toggleColours(open || anyActive),
-          borderRadius: 4,
-          cursor: "pointer",
-          fontWeight: open || anyActive ? 600 : 400,
-        }}
-        title="More display and layout options"
-        data-testid="graph-more-button"
-      >
-        More {"▾"}
-      </button>
-      {open && (
-        <div
-          role="menu"
-          data-testid="graph-more-menu"
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            right: 0,
-            zIndex: 20,
-            minWidth: 160,
-            background: "var(--pnv-surface)",
-            border: "1px solid var(--pnv-border)",
-            borderRadius: 6,
-            boxShadow: "var(--pnv-shadow-popover)",
-            padding: 4,
-            display: "flex",
-            flexDirection: "column",
-            gap: 2,
-          }}
-        >
-          {items.map((item, idx) => {
-            if (item.kind === "divider") {
-              return (
-                <span
-                  key={`d${idx}`}
-                  style={{ height: 1, background: "var(--pnv-border-faint)", margin: "2px 4px" }}
-                />
-              );
-            }
-            const active = item.kind === "toggle" && item.active;
-            return (
-              <button
-                key={item.label}
-                onClick={() => {
-                  item.onClick();
-                  // Actions close the menu; toggles stay open so the user
-                  // can flip several without re-opening.
-                  if (item.kind === "action") setOpen(false);
-                }}
-                title={item.title}
-                style={{
-                  fontSize: 11,
-                  textAlign: "left",
-                  padding: "4px 8px",
-                  border: "none",
-                  borderRadius: 4,
-                  ...menuRowColours(active),
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 8,
-                }}
-                onMouseEnter={(e) => {
-                  if (!active) e.currentTarget.style.background = MENU_ROW_HOVER;
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) e.currentTarget.style.background = "transparent";
-                }}
-              >
-                <span>{item.label}</span>
-                {item.kind === "toggle" && (
-                  <span style={{ opacity: active ? 1 : 0.25 }}>
-                    {active ? "✓" : "·"}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <GraphViewOptionsMenu
+        reloadModel={reloadModel}
+        flipVertical={flipVertical}
+        flipHorizontal={flipHorizontal}
+        expandAll={expandAll}
+        collapseAll={collapseAll}
+      />
     </div>
   );
 }
