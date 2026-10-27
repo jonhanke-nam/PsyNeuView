@@ -5,12 +5,16 @@
  */
 
 import { create } from "zustand";
+import { PNL_TAXONOMY_TREE } from "../constants/pnlTypes";
 
 const LS_FAVORITES = "psynewview_palette_favorites";
 const LS_RECENTS = "psynewview_palette_recents";
 const LS_OPEN = "psynewview_palette_open";
 const LS_COMPACT = "psynewview_palette_compact";
-const LS_EXPANDED = "psynewview_palette_expanded";
+// Which sections and sub-groups are open. A new key (#113): the old
+// `psynewview_palette_expanded` mostly held the old all-collapsed default, so
+// reading it would keep most people on the very look #113 replaces.
+export const LS_EXPANDED = "psyneuview.components.expanded";
 const MAX_RECENTS = 8;
 
 function loadJson<T>(key: string, fallback: T): T {
@@ -33,13 +37,19 @@ function loadBool(key: string, fallback: boolean): boolean {
   }
 }
 
-// Nothing expanded to begin with, so the palette opens short and you expand
-// the one category you want (#1135 did the same for the Open menu). Expanding
-// all five put ~40 rows on screen before you had chosen anything.
+// The five top-level sections (Mechanisms, Projections, Compositions,
+// Functions, Ports) start open, so the panel shows the names of the parts
+// rather than a column of headings (#113). Their sub-groups stay closed, which
+// keeps the opening list to about 30 short rows: each section shows its base
+// component and the names of its sub-groups, not every variant.
 //
-// Someone who has used the palette before keeps whatever they left open: this
-// is the fallback for when nothing is stored, not an override.
-const DEFAULT_EXPANDED: string[] = [];
+// Someone who has collapsed a section keeps it collapsed: this is the fallback
+// for when nothing is stored, not an override.
+export const DEFAULT_EXPANDED: string[] = PNL_TAXONOMY_TREE.map((n) => n.id);
+
+export function loadExpanded(): Set<string> {
+  return new Set(loadJson<string[]>(LS_EXPANDED, DEFAULT_EXPANDED));
+}
 
 interface PaletteState {
   isOpen: boolean;
@@ -69,7 +79,7 @@ export const usePaletteStore = create<PaletteState>((set, get) => ({
   isOpen: loadBool(LS_OPEN, true),
   isCompact: loadBool(LS_COMPACT, false),
   searchQuery: "",
-  expandedNodes: new Set(loadJson<string[]>(LS_EXPANDED, DEFAULT_EXPANDED)),
+  expandedNodes: loadExpanded(),
   favorites: loadJson<string[]>(LS_FAVORITES, []),
   recentlyUsed: loadJson<string[]>(LS_RECENTS, []),
   compactFlyoutNodeId: null,

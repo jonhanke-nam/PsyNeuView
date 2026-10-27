@@ -386,6 +386,8 @@ function TreeNode({
     <div>
       <button
         onClick={() => usePaletteStore.getState().toggleNode(node.id)}
+        aria-expanded={isExpanded}
+        data-testid={isTopLevel ? `palette-section-${node.id}` : undefined}
         style={{
           display: "flex",
           alignItems: "center",
