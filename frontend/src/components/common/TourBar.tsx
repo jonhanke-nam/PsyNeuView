@@ -38,7 +38,7 @@ import { useCatalogOpener } from "@/stores/catalogOpenerStore";
 import { useModelStore } from "@/stores/modelStore";
 import { useTourStore } from "@/stores/tourStore";
 import { useUIStore } from "@/stores/uiStore";
-import { narrationAvailable, speakCaption, stopSpeaking, type SpeechEngine } from "@/utils/narration";
+import { loadNarrationVoice, narrationAvailable, resolveVoice, speakCaption, speakerLabel, stopSpeaking, type SpeechEngine } from "@/utils/narration";
 import { matchesNodeName, type TourStep } from "@/utils/tourStep";
 
 /** Where a docs page is read: the repo's `docs/` folder on devel. */
@@ -326,12 +326,12 @@ export function TourBar() {
             style={
               leads
                 ? {
-                    // Narration on (#86): the caption leads the bar, in plain
-                    // text, and is lit while the voice reads it.
+                    // Narration on (#86): the caption leads the bar, still in
+                    // italics (the cue testers found, #93), lit while read.
                     order: -1,
                     display: "block",
                     fontSize: 15,
-                    fontWeight: 500,
+                    fontStyle: "italic",
                     color: "var(--pnv-walkthrough-text)",
                     padding: "1px 6px",
                     marginLeft: -6,
@@ -342,10 +342,11 @@ export function TourBar() {
                 : { display: "block", fontSize: 14, color: "var(--pnv-walkthrough-caption)", marginTop: 2, fontStyle: "italic" }
             }
           >
-            {/* With narration on, a speaker marks the line being read (#86). */}
+            {/* With narration on, the line reads like a script (#93): the voice's
+                name, then what it says. A word at full size, not a small icon. */}
             {narration && (
-              <span data-testid="tour-caption-speaker" aria-label="Read aloud:" style={{ marginRight: 6 }}>
-                🔊
+              <span data-testid="tour-caption-label" style={{ fontWeight: 700, fontStyle: "normal", marginRight: 6 }}>
+                {speakerLabel(resolveVoice(speechEngine()?.getVoices?.() ?? [], loadNarrationVoice()))}:
               </span>
             )}
             <span data-testid="tour-caption">{step.say}</span>

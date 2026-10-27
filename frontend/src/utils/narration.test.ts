@@ -16,6 +16,7 @@ import {
   saveNarrationRate,
   saveNarrationVoice,
   speakCaption,
+  speakerLabel,
   stopSpeaking,
   voiceQuality,
 } from "./narration";
@@ -205,5 +206,23 @@ describe("speaking rate and pronunciation (#1407)", () => {
     const u = e.speak.mock.calls[0][0] as SpeechSynthesisUtterance;
     expect(u.text).toBe("This is Ego's working memory.");
     expect(u.rate).toBe(1.1);
+  });
+});
+
+describe("speakerLabel (#93)", () => {
+  it("names the voice without its quality note", () => {
+    expect(speakerLabel({ name: "Karen (Premium)" })).toBe("Karen");
+    expect(speakerLabel({ name: "Daniel" })).toBe("Daniel");
+  });
+  it("says Narration when no voice is known", () => {
+    expect(speakerLabel(null)).toBe("Narration");
+    expect(speakerLabel({ name: "" })).toBe("Narration");
+  });
+});
+
+describe("speakCaption never throws (#93)", () => {
+  it("returns false when the engine rejects the utterance", () => {
+    const e = { cancel() {}, speak() { throw new TypeError("Failed to convert value to 'SpeechSynthesisVoice'"); }, pause() {}, resume() {}, getVoices: () => [] };
+    expect(speakCaption("Look here.", e as never, (t) => ({ text: t }) as never)).toBe(false);
   });
 });

@@ -254,6 +254,23 @@ export function speakCaption(
   events: { onStart?: () => void; onEnd?: () => void } = {},
 ): boolean {
   if (!engine) return false;
+  // Narration is never worth the app: a voice that won't take an utterance
+  // (or a browser that rejects one) means silence, not an error screen.
+  try {
+    return speakLine(text, engine, makeUtterance, chosenVoice, rate, events);
+  } catch {
+    return false;
+  }
+}
+
+function speakLine(
+  text: string,
+  engine: SpeechEngine,
+  makeUtterance: (text: string) => SpeechSynthesisUtterance,
+  chosenVoice: string | null,
+  rate: number,
+  events: { onStart?: () => void; onEnd?: () => void },
+): boolean {
   engine.cancel();
   const line = text.trim();
   if (!line) return false;
@@ -277,4 +294,14 @@ export function speakCaption(
 /** Stop reading, for when the walkthrough ends or narration is turned off. */
 export function stopSpeaking(engine: SpeechEngine | null): void {
   engine?.cancel();
+}
+
+/**
+ * Who the bar says is speaking (#93): the voice's own name, without the
+ * quality note macOS adds ("Karen (Premium)" → "Karen"), or "Narration" when
+ * no voice is known yet.
+ */
+export function speakerLabel(voice: Pick<SpeechSynthesisVoice, "name"> | null | undefined): string {
+  const name = voice?.name?.replace(/\s*\(.*\)\s*$/, "").trim();
+  return name || "Narration";
 }

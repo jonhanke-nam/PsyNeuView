@@ -75,7 +75,7 @@ test.describe("Narration matches the bar", { tag: "@ci" }, () => {
     await runWalkthrough(page, part, async (step) => {
       const caption = page.getByTestId("tour-caption");
       await expect(caption).toHaveText(step.say ?? "");
-      await expect(page.getByTestId("tour-caption-speaker")).toBeVisible();
+      await expect(page.getByTestId("tour-caption-label")).toHaveText(/^\S.*:$/);
 
       // The voice got this step's caption, respelt.
       await expect
