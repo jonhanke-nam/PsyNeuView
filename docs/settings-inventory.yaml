@@ -312,7 +312,7 @@ settings:
     control: setting-node-outline
     notes: >-
       An ordinary node's outline, 1–6 px in whole pixels (Chrome draws
-      borders at whole pixels); 3 px by default (was 2 after #42, 1 before). The heavier
+      borders at whole pixels); 4 px by default (was 2 after #42, 1 before). The heavier
       outlines follow it: INPUT, OUTPUT and CONTROL nodes + 2 px (replacing
       the Style tab's Border width slider, which set them alone), a selected
       or running node + 2 px more. /rendering-defaults.json can retune the
