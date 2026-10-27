@@ -47,26 +47,26 @@ test("node outlines: heavier defaults, one width in Settings, emphasis and selec
   await prompt.press("Enter");
   await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 60_000 });
 
-  // The defaults: 2 px, or 4 px for INPUT/OUTPUT/CONTROL nodes.
+  // The defaults: 3 px, or 5 px for INPUT/OUTPUT/CONTROL nodes.
   const before = await outlineWidths(page);
-  expect(before).toEqual({ colour: 4, hidden: 2, response: 4 });
+  expect(before).toEqual({ colour: 5, hidden: 3, response: 5 });
 
-  // Choose 3 px in Settings; the canvas follows without a reload, and the
+  // Choose 4 px in Settings; the canvas follows without a reload, and the
   // heavier outlines move with it.
   await page.getByTestId("settings-button").click();
   await page.getByTestId("settings-section-appearance").click();
-  await page.getByTestId("setting-node-outline").selectOption("3");
+  await page.getByTestId("setting-node-outline").selectOption("4");
   await page.keyboard.press("Escape");
   const after = await outlineWidths(page);
   for (const [id, w] of Object.entries(after)) expect(w, id).toBe(before[id] + 1);
 
   // A selected node is 2 px heavier than its own outline.
   await clickCanvasNode(page, "hidden");
-  await expect.poll(async () => (await outlineWidths(page)).hidden).toBe(5);
+  await expect.poll(async () => (await outlineWidths(page)).hidden).toBe(6);
 
   // Remembered across a reload.
   await page.reload();
   await page.getByTestId("settings-button").click();
   await page.getByTestId("settings-section-appearance").click();
-  await expect(page.getByTestId("setting-node-outline")).toHaveValue("3");
+  await expect(page.getByTestId("setting-node-outline")).toHaveValue("4");
 });
