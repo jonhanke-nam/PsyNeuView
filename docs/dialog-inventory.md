@@ -54,6 +54,7 @@ Escape, which every row has.
 | A combobox's list (repo, branch) | menu | `common/Combobox.tsx` | `combobox-list` | the ▼ in a combobox, or typing | click outside, a pick, Tab (the dialog around it stays open) |
 | Open PsyNeuLink test as model | dialog | `common/DeveloperTestsModal.tsx` | `developer-tests-modal` | Open ▾ Developer / Tests… (developer mode) | ×, click outside, Cancel, Open |
 | Save a copy as… | dialog | `layout/Toolbar.tsx` | `save-copy-dialog` | the toolbar's Save a copy as… | ×, click outside, Cancel, Save (not while saving) |
+| Why this file is read only | dialog | `layout/Toolbar.tsx` | `pnl-read-only-note` | the "PsyNeuLink from … · read only" tag beside the model name (a managed PsyNeuLink) | ×, click outside, the tag again, Save a copy as… |
 | Layout menu | menu | `layout/Toolbar.tsx` | `layout-menu-list` | Layout ▾ | the Layout button, click outside, a pick |
 | Tutorials menu | menu | `layout/Toolbar.tsx` | `walkthrough-menu-list` | Tutorials ▾ | the Tutorials button, click outside, a pick |
 | Developer-mode menu | menu | `layout/DeveloperModeIndicator.tsx` | `developer-mode-menu` | the Developer badge (developer mode) | the badge, click outside, a pick |

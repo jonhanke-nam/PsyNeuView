@@ -52,6 +52,7 @@ preview-error-banner.spec.ts
 preview-not-save.spec.ts
 project-folder-move.spec.ts
 pytorch-view.spec.ts
+read-only-badge-note.spec.ts
 reference-lineage.spec.ts
 reference-loaded-marker.spec.ts
 reference-model-editing.spec.ts

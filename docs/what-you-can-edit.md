@@ -154,6 +154,8 @@ from PyPI, and a **kept release** are installed and managed by PsyNeuView.
 Their files are **read only**:
 
 - the toolbar tag says *PsyNeuLink from GitHub · read only* (or *from PyPI*);
+  click it for a short note on why, with a **Save a copy as…** button, so
+  the reason and the way out are there even with the code editor closed;
 - the editor is read only and says why at the top of the file, with a button
   to Settings ▸ Developer;
 - typing changes nothing, so Save stays greyed out — and if a write is
