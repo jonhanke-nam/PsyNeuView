@@ -61,12 +61,15 @@ nothing else. That is a control wearing a costume.
 Over the **canvas, nodes and edges** the pointer is the **arrow**, whose tip
 is the exact point that clicks. React Flow's stylesheet puts a grab hand on
 the pane and a pointer or grab hand on nodes and edges; `index.css`
-overrides those under `.graph-pointer-arrow`, with the arrow coming from
+overrides those under `.graph-pointer-image`, with the image coming from
 `utils/graphCursor.ts` at the size chosen in Settings ▸ Appearance. The
 **grabbing hand** shows only while a drag is in progress — the canvas being
 panned, a node being moved — which is when it carries meaning. Settings ▸
 Appearance also offers **Hand**, which leaves React Flow's cursors as they
-were.
+were, and two precise pointers (#40): a **crosshair** and a **circle**, each
+clicking at its centre (the hot spot is half the image's size) where a dot is
+drawn, and drawn heavier while the button is held over a node or edge, as
+feedback for the click.
 
 The arrow is the *default*, not a replacement for every cursor. A real
 control keeps the cursor that says what it does, under either setting:

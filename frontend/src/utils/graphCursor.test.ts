@@ -10,7 +10,14 @@ import {
   arrowCursorValue,
   arrowHotspot,
   arrowSvg,
+  CENTRE,
+  GRAPH_POINTERS,
+  centreHotspot,
   graphPointerClass,
+  isPrecisePointer,
+  pointerCursorImage,
+  pointerCursorValue,
+  preciseSvg,
   isGraphPointer,
   isPointerSize,
 } from "./graphCursor";
@@ -70,7 +77,45 @@ describe("graph-view pointer (#1301)", () => {
   });
 
   it("names the class index.css keys on", () => {
-    expect(graphPointerClass("arrow")).toBe("graph-pointer-arrow");
+    expect(graphPointerClass("arrow")).toBe("graph-pointer-image");
+    expect(graphPointerClass("crosshair")).toBe("graph-pointer-image");
+    expect(graphPointerClass("circle")).toBe("graph-pointer-image");
     expect(graphPointerClass("hand")).toBe("graph-pointer-hand");
+  });
+
+  describe("the crosshair and the circle (#40)", () => {
+    it("are offered after the arrow and the hand, which stay as they were", () => {
+      expect(GRAPH_POINTERS.map((p) => p.id)).toEqual(["arrow", "hand", "crosshair", "circle"]);
+      expect(isGraphPointer("crosshair") && isGraphPointer("circle")).toBe(true);
+      expect(isPrecisePointer("crosshair") && isPrecisePointer("circle")).toBe(true);
+      expect(isPrecisePointer("arrow") || isPrecisePointer("hand")).toBe(false);
+      expect(pointerCursorValue("arrow", "large")).toBe(arrowCursorValue("large"));
+      expect(pointerCursorValue("arrow", "large", true)).toBe(arrowCursorValue("large"));
+    });
+
+    it("put the hot spot exactly on the centre at every size", () => {
+      expect(CENTRE * 2).toBe(ARROW_VIEWBOX);
+      expect([16, 24, 48, 96].map(centreHotspot)).toEqual([8, 12, 24, 48]);
+      for (const pointer of ["crosshair", "circle"] as const) {
+        for (const { id, px } of POINTER_SIZES) {
+          const image = pointerCursorImage(pointer, id);
+          expect(image.px).toBe(px);
+          expect(image.hotspot).toBe(px / 2);
+          expect(pointerCursorValue(pointer, id)).toBe(`url("${image.url}") ${px / 2} ${px / 2}, crosshair`);
+          expect(decodeURIComponent(image.url.slice("data:image/svg+xml,".length))).toContain(`width="${px}" height="${px}"`);
+          expect(image.url).not.toContain("#");
+        }
+      }
+    });
+
+    it("draw a dot at the centre, and a distinct pressed look", () => {
+      for (const pointer of ["crosshair", "circle"] as const) {
+        const svg = preciseSvg(pointer, 24);
+        expect(svg).toContain(`<circle cx="${CENTRE}" cy="${CENTRE}"`);
+        expect(preciseSvg(pointer, 24, true)).not.toBe(svg);
+        expect(pointerCursorValue(pointer, "medium", true)).not.toBe(pointerCursorValue(pointer, "medium"));
+      }
+      expect(preciseSvg("crosshair", 24)).not.toBe(preciseSvg("circle", 24));
+    });
   });
 });

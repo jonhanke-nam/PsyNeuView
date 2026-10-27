@@ -325,7 +325,10 @@ settings:
       hand shows only while a drag is in progress. Hand keeps React Flow's
       cursors. Real controls (buttons in a node, a clickable edge label, a
       bend handle) keep their own cursor either way; the rule is in
-      docs/ui-interaction-conventions.md.
+      docs/ui-interaction-conventions.md. Crosshair and Circle (#40) are our
+      own SVG images too, hot spot exactly at the centre (half the image's
+      size), a dot drawn there, the system crosshair as the fallback, and a
+      heavier pressed look while the button is held over a node or edge.
 
   - id: graph-pointer-size
     label: Appearance ▸ Pointer ▸ Pointer size
@@ -337,7 +340,7 @@ settings:
       Small, Medium (default), Large, Extra large: 16, 24, 48 and 96 px
       images (utils/graphCursor.ts), all under Chromium's 128 px cap for a
       custom cursor; the system arrow is the fallback if the image can't
-      load. Applies to the arrow; the hand is the system's own. Window zoom
+      load. Applies to the arrow, crosshair and circle; the hand is the system's own. Window zoom
       doesn't scale cursors, so this is the one control for the size.
 
   - id: node-outline

@@ -1,7 +1,8 @@
 /**
  * Settings ▸ Appearance: how the app looks and feels. (#1301)
  *
- * The first two settings are the pointer in the graph view — the arrow or
+ * The first two settings are the pointer in the graph view — the arrow, the
+ * crosshair or circle (#40), or
  * React Flow's hand — and the arrow's size. Both are remembered per browser
  * (stores/graphPointerStore.ts). A preview shows the arrow at the chosen
  * size, since the real pointer is only seen over the canvas; hovering the
@@ -37,9 +38,10 @@ import {
 import {
   GRAPH_POINTERS,
   POINTER_SIZES,
-  arrowCursorImage,
-  arrowCursorValue,
   isGraphPointer,
+  isPrecisePointer,
+  pointerCursorImage,
+  pointerCursorValue,
   isPointerSize,
 } from "@/utils/graphCursor";
 import { Group, SettingLabel, mutedStyle } from "./shared";
@@ -190,7 +192,8 @@ function GraphPointerRow() {
         labels and the edges themselves are easy to aim at. The hand is the
         grab hand over the canvas and nodes. Either way, a grabbing hand shows
         while you drag the canvas, and text fields and dividers keep their own
-        cursors.
+        cursors. The crosshair and the circle click at their centre, drawn as a
+        dot, and turn heavier while the button is held over a node or edge.
       </SettingLabel>
       <select
         id="setting-graph-pointer"
@@ -214,11 +217,15 @@ function PointerSizeRow() {
   const size = useGraphPointerStore((s) => s.size);
   const setSize = useGraphPointerStore((s) => s.setSize);
   const pointer = useGraphPointerStore((s) => s.pointer);
-  const image = arrowCursorImage(size);
+  // The hand is the system's own, so the preview shows the arrow for it.
+  const shown = pointer === "hand" ? "arrow" : pointer;
+  const image = pointerCursorImage(shown, size);
+  const pressed = isPrecisePointer(shown) ? pointerCursorImage(shown, size, true) : null;
+  const name = GRAPH_POINTERS.find((p) => p.id === shown)!.label.toLowerCase();
   return (
     <div style={{ fontSize: 13 }}>
       <SettingLabel title="Pointer size" htmlFor="setting-graph-pointer-size">
-        The size of the arrow in the graph view. Window zoom (⌘+ / ⌘−) doesn't
+        The size of the pointer in the graph view. Window zoom (⌘+ / ⌘−) doesn't
         change it; this does. The hand is the system's own and keeps its size.
       </SettingLabel>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
@@ -236,10 +243,10 @@ function PointerSizeRow() {
             </option>
           ))}
         </select>
-        {/* The arrow as it will show, and the real pointer over this box. */}
+        {/* The pointer as it will show (and, for #40's, its pressed look), and the real pointer over this box. */}
         <div
           data-testid="graph-pointer-preview"
-          title={pointer === "arrow" ? "Move the pointer here to see it" : "The arrow, if you choose it above"}
+          title={pointer === "hand" ? "The arrow, if you choose it above" : "Move the pointer here to see it"}
           style={{
             marginTop: 6,
             minWidth: 128,
@@ -251,10 +258,21 @@ function PointerSizeRow() {
             background: "var(--pnv-surface-muted)",
             border: "1px dashed var(--pnv-border-light)",
             borderRadius: 6,
-            cursor: pointer === "arrow" ? arrowCursorValue(size) : undefined,
+            cursor: pointer === "hand" ? undefined : pointerCursorValue(shown, size),
           }}
         >
-          <img src={image.url} width={image.px} height={image.px} alt={`The arrow at ${image.px} pixels`} draggable={false} />
+          <img src={image.url} width={image.px} height={image.px} alt={`The ${name} at ${image.px} pixels`} draggable={false} />
+          {pressed && (
+            <img
+              data-testid="graph-pointer-preview-pressed"
+              src={pressed.url}
+              width={pressed.px}
+              height={pressed.px}
+              alt={`The ${name} while the button is held`}
+              title="While the button is held"
+              draggable={false}
+            />
+          )}
           <span style={mutedStyle}>{image.px} px</span>
         </div>
       </div>
