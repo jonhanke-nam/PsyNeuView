@@ -361,9 +361,10 @@ export function GraphToolbar() {
       />
       <ToggleButton
         label="Ports"
+        testId="toolbar-show-ports"
         active={showPortDots}
         onClick={() => useGraphSettings.getState().setShowPortDots(!showPortDots)}
-        title="Show port dots on mechanism nodes (input=blue, output=green, parameter=orange)"
+        title="Show ports: port dots on the graph (input=blue, output=green, parameter=orange) and the Ports section in Components"
       />
 
       <span style={{ width: 1, height: 20, background: "var(--pnv-border-light)", margin: "0 4px" }} />
@@ -441,14 +442,18 @@ function ToggleButton({
   active,
   onClick,
   title,
+  testId,
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
   title?: string;
+  testId?: string;
 }) {
   return (
     <button
+      data-testid={testId}
+      aria-pressed={active}
       onClick={onClick}
       title={title}
       style={{
