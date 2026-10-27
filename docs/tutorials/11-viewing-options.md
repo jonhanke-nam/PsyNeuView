@@ -14,7 +14,11 @@ The graph toolbar controls how the model is drawn:
 - **Layout: Auto / Custom** — auto-layout vs. your hand-arranged positions, plus
   **Reset Custom Layout** and direction (**Layered**, **Bottom-Up**, …).
 - Display toggles — **Roles**, **Dims**, **Names**, **Elements**, **Labels**,
-  **Arrows**, **Ports**, **Order**, **Types** — turn detail on and off.
+  **Arrows**, **Ports**, **Order**, **Types** — turn detail on and off. By
+  default a node shows just its name, as `show_graph()` draws it, with its role
+  in the outline colour (green for input, red for output); **Elements** adds
+  each node's type and role tags and its function (for example `f: Logistic`),
+  and is remembered once you choose.
 - The **view selector** (the composition dropdown) — switch between a single
   composition, the whole nested model, and the **flattened** view (below).
 
