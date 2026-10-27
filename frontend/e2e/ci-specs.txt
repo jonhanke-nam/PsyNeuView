@@ -71,6 +71,7 @@ toolbar-menus-over-dividers.spec.ts
 toolbar-no-split-buttons.spec.ts
 tour-highlight-settings.spec.ts
 tour-ring-behind-dialogs.spec.ts
+tour-ring-clear-of-text.spec.ts
 tutorials-menu-folding.spec.ts
 undo-depth.spec.ts
 undo-notices.spec.ts
