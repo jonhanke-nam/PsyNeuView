@@ -31,6 +31,7 @@ import { usePortLayout } from "@/stores/portLayoutStore";
 import { useEdgeAttach, type EdgeEnd } from "@/stores/edgeAttachStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useModelStore } from "@/stores/modelStore";
+import { EDGE_LINE_HIGHLIGHT_EXTRA, EDGE_LINE_HOVER_EXTRA, edgeArrowheadScale, useEdgeLineWidth } from "@/stores/edgeLineStore";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 
@@ -165,7 +166,7 @@ export function ProjectionEdge({
   const setSelectedEdgeId = useModelStore((s) => s.setSelectedEdgeId);
   const showArrowheads = useGraphSettings((s) => s.showArrowheads);
   const edgeRouting = useGraphSettings((s) => s.edgeRouting);
-  const arrowLineThickness = useGraphSettings((s) => s.arrowLineThickness);
+  const lineWidth = useEdgeLineWidth(); // #107: Settings ▸ Appearance ▸ Lines between nodes
   const arrowheadSize = useGraphSettings((s) => s.arrowheadSize);
   const arrowheadPosition = useGraphSettings((s) => s.arrowheadPosition);
   const isSelected = selected || selectedEdgeId === id; // #952
@@ -590,12 +591,15 @@ export function ProjectionEdge({
     ? "var(--pnv-edge-hover)"
     : (style?.stroke as string | undefined) ?? "var(--pnv-edge-default)";
 
-  // #319: the thickness slider scales each projection's per-type base width
+  // #319: the line width scales each projection's per-type base width
   // (Mapping 2, Inactive 1.5, Dangling 2.5, …) rather than flattening them to
-  // one value, so the type distinctions survive. Default thickness 2 ⇒ scale 1.
+  // one value, so the type distinctions survive. An ordinary (Mapping) line is
+  // drawn at exactly the chosen width (#107).
   const baseStrokeWidth = typeof style?.strokeWidth === "number" ? style.strokeWidth : 2;
-  const scaledStrokeWidth = baseStrokeWidth * (arrowLineThickness / 2);
-
+  const scaledStrokeWidth = baseStrokeWidth * (lineWidth / 2);
+  // The arrowhead grows and shrinks with the line (#107); at the default
+  // width it is the size chosen in the Style tab.
+  const headSize = arrowheadSize * edgeArrowheadScale(lineWidth);
   return (
     <>
       <BaseEdge
@@ -612,7 +616,7 @@ export function ProjectionEdge({
           // previous order let ...style clobber them, making thickness, hover,
           // and selection-recolor inert (#319).
           ...style,
-          strokeWidth: hovered ? scaledStrokeWidth + 1 : isCursorHighlighted ? scaledStrokeWidth + 0.5 : scaledStrokeWidth,
+          strokeWidth: hovered ? scaledStrokeWidth + EDGE_LINE_HOVER_EXTRA : isCursorHighlighted ? scaledStrokeWidth + EDGE_LINE_HIGHLIGHT_EXTRA : scaledStrokeWidth,
           stroke: effectiveStroke,
         }}
       />
@@ -645,7 +649,9 @@ export function ProjectionEdge({
       <path ref={pathRef} d={edgePath} fill="none" stroke="none" style={{ pointerEvents: "none" }} />
       {showArrowheads && arrow && (
         <polygon
-          points={`0,0 ${-2 * arrowheadSize},${-arrowheadSize * 0.6} ${-2 * arrowheadSize},${arrowheadSize * 0.6}`}
+          points={`0,0 ${-2 * headSize},${-headSize * 0.6} ${-2 * headSize},${headSize * 0.6}`}
+          data-testid="edge-arrowhead"
+          data-head-size={headSize}
           fill={effectiveStroke}
           transform={`translate(${arrow.x} ${arrow.y}) rotate(${arrow.angle})`}
           style={{ pointerEvents: "none" }}

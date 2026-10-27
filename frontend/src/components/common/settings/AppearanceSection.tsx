@@ -36,6 +36,12 @@ import {
   useNodeOutlineWidth,
 } from "@/stores/nodeOutlineStore";
 import {
+  EDGE_LINE_HOVER_EXTRA,
+  EDGE_LINE_WIDTHS,
+  useEdgeLineStore,
+  useEdgeLineWidth,
+} from "@/stores/edgeLineStore";
+import {
   GRAPH_POINTERS,
   POINTER_SIZES,
   isGraphPointer,
@@ -57,6 +63,9 @@ export function AppearanceSection() {
       </Group>
       <Group id="node-outlines" title="Node outlines">
         <NodeOutlineRow />
+      </Group>
+      <Group id="lines-between-nodes" title="Lines between nodes">
+        <EdgeLineRow />
       </Group>
       <Group id="automatic-layout" title="Automatic layout">
         <AutomaticLayoutRow />
@@ -300,6 +309,35 @@ function NodeOutlineRow() {
         style={selectStyle}
       >
         {NODE_OUTLINE_WIDTHS.map((w) => (
+          <option key={w} value={String(w)}>
+            {w} px{w === defaultWidth ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function EdgeLineRow() {
+  const width = useEdgeLineWidth();
+  const defaultWidth = useEdgeLineStore((s) => s.defaultWidth);
+  const setWidth = useEdgeLineStore((s) => s.setWidth);
+  return (
+    <div style={{ fontSize: 13 }}>
+      <SettingLabel title="Line width" htmlFor="setting-edge-line-width">
+        How heavy the lines between nodes (projections) are in the graph view.
+        Arrowheads grow with the line, other kinds of projection keep their
+        weight relative to it, and the line under the pointer is drawn{" "}
+        {EDGE_LINE_HOVER_EXTRA} px heavier.
+      </SettingLabel>
+      <select
+        id="setting-edge-line-width"
+        data-testid="setting-edge-line-width"
+        value={String(width)}
+        onChange={(e) => setWidth(Number(e.target.value))}
+        style={selectStyle}
+      >
+        {EDGE_LINE_WIDTHS.map((w) => (
           <option key={w} value={String(w)}>
             {w} px{w === defaultWidth ? " (default)" : ""}
           </option>

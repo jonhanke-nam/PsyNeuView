@@ -357,6 +357,21 @@ settings:
       or running node + 2 px more. /rendering-defaults.json can retune the
       default; a width chosen here wins. The Style tab links here.
 
+  - id: edge-line-width
+    label: Appearance ▸ Lines between nodes ▸ Line width
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.edgeLineWidth)
+    control: setting-edge-line-width
+    notes: >-
+      An ordinary (Mapping) projection line, 1–4 px in whole pixels; 3 px by
+      default, the width lines were already drawn at (#107). Other projection
+      types keep their weight relative to it, arrowheads scale with it, and a
+      hovered line stays 1 px heavier (0.5 px under the stepping cursor).
+      Replaces the Style tab's Line thickness slider, which now links here.
+      /rendering-defaults.json (arrowLineThickness) can retune the default;
+      a width chosen here wins. Scheduling arrows are drawn separately.
+
   - id: graph-layout-default
     label: Appearance ▸ Automatic layout ▸ How models are arranged
     home: settings

@@ -51,8 +51,8 @@ interface GraphSettings {
   //   edgeNodeClearance — px a routed edge keeps clear of node boxes it detours.
   edgeLaneGap: number;
   edgeNodeClearance: number;
-  // Arrow appearance (#319). Global across all projection edges.
-  arrowLineThickness: number;      // scales each edge's per-type base width; 2 = unchanged
+  // Arrow appearance (#319). Global across all projection edges. The line
+  // width is its own setting since #107 (stores/edgeLineStore.ts).
   arrowheadSize: number;           // chevron half-length, px
   arrowheadPosition: number;       // fractional position along the path, 0=source .. 1=target
   // #912: node oval border widths (px), parameterized so they can be tuned live
@@ -103,7 +103,6 @@ interface GraphSettings {
   setFloatingPorts: (v: boolean) => void;
   setEdgeLaneGap: (v: number) => void;
   setEdgeNodeClearance: (v: number) => void;
-  setArrowLineThickness: (v: number) => void;
   setArrowheadSize: (v: number) => void;
   setArrowheadPosition: (v: number) => void;
   setNodeBorderWidth: (v: number) => void;
@@ -150,7 +149,6 @@ export const useGraphSettings = create<GraphSettings>((set, get) => ({
   edgeNodeClearance: 20,
   // #912: seeded from the rendering-defaults config (show_graph parity),
   // runtime-overridable via /rendering-defaults.json.
-  arrowLineThickness: RENDERING_DEFAULTS.arrowLineThickness,
   arrowheadSize: RENDERING_DEFAULTS.arrowheadSize,
   arrowheadPosition: RENDERING_DEFAULTS.arrowheadPosition,
   nodeBorderWidth: RENDERING_DEFAULTS.nodeBorderWidth,
@@ -188,7 +186,6 @@ export const useGraphSettings = create<GraphSettings>((set, get) => ({
   setBundleEdges: (v) => set({ bundleEdges: v }),
   setEdgeLaneGap: (v) => set({ edgeLaneGap: v }),
   setEdgeNodeClearance: (v) => set({ edgeNodeClearance: v }),
-  setArrowLineThickness: (v) => set({ arrowLineThickness: v }),
   setArrowheadSize: (v) => set({ arrowheadSize: v }),
   setArrowheadPosition: (v) => set({ arrowheadPosition: v }),
   setNodeBorderWidth: (v) => set({ nodeBorderWidth: v }),

@@ -42,7 +42,6 @@ export function GraphStylePanel() {
   );
 
   // Arrow appearance (#319) — applied live, no Apply button.
-  const arrowLineThickness = useGraphSettings((s) => s.arrowLineThickness);
   const arrowheadSize = useGraphSettings((s) => s.arrowheadSize);
   const arrowheadPosition = useGraphSettings((s) => s.arrowheadPosition);
   // #912: node oval border width (emphasis roles — the visible one).
@@ -97,18 +96,11 @@ export function GraphStylePanel() {
       <div style={{ fontWeight: 600, color: "var(--pnv-text-body)", marginBottom: 8, marginTop: 12, borderBottom: "1px solid var(--pnv-border-faint)", paddingBottom: 4 }}>
         Arrows
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-        <span style={{ minWidth: 110 }}>Line thickness</span>
-        <input
-          type="range"
-          min={1}
-          max={6}
-          step={0.5}
-          value={arrowLineThickness}
-          onChange={(e) => useGraphSettings.getState().setArrowLineThickness(Number(e.target.value))}
-          style={{ flex: 1 }}
-        />
-        <span style={{ fontFamily: "monospace", minWidth: 28, textAlign: "right" }}>{arrowLineThickness}</span>
+      {/* One control per setting (#107): the line width lives in Settings. */}
+      <div style={{ marginBottom: 6 }}>
+        <Button kind="link" data-testid="style-edge-line-link" onClick={() => openSettings("appearance")}>
+          Line width: Settings ▸ Appearance ▸ Lines between nodes
+        </Button>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
         <span style={{ minWidth: 110 }}>Arrowhead size</span>
