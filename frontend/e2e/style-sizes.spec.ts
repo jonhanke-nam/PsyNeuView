@@ -43,7 +43,7 @@ const BASELINE = {
   orientationButtons: 30,
   fileBrowserOpen: 30, // was 28 at 12px text; now 30, level with the path field
   appToolbarButton: 26, // Open ▾, Save, Layout ▾, Tutorials ▾
-  graphToolbarButton: 21, // Roles, Names, More ▾ …
+  graphToolbarButton: 21, // Layout: Auto/Custom, Advanced Graph View Options ▾ (were Roles, More ▾)
   portHeaderButton: 13, // the Inspector's Inputs + / Outputs +
   portHeaderRow: 13,
   addExecutionCondition: 21,
@@ -166,8 +166,10 @@ test("the Inspector and the toolbars keep their row heights", { tag: "@ci" }, as
   await expectHeight(page.getByTestId("toolbar-save"), BASELINE.appToolbarButton, "Save");
   await expectHeight(page.getByTestId("layout-menu-button"), BASELINE.appToolbarButton, "Layout ▾");
   await expect(toolbar).toBeVisible();
-  await expectHeight(page.getByTestId("graph-more-button"), BASELINE.graphToolbarButton, "More ▾");
-  await expectHeight(page.getByRole("button", { name: "Roles", exact: true }), BASELINE.graphToolbarButton, "Roles");
+  // The view toggles moved into Advanced Graph View Options (#123); its
+  // button and Layout: Auto/Custom keep the toggles' height.
+  await expectHeight(page.getByTestId("graph-view-options-button"), BASELINE.graphToolbarButton, "Advanced Graph View Options ▾");
+  await expectHeight(page.getByRole("button", { name: /^Layout: (Auto|Custom)$/ }), BASELINE.graphToolbarButton, "Layout: Auto/Custom");
 
   await clickCanvasNode(page, "B");
   await page.getByTestId("tab-inspector").click();

@@ -18,7 +18,7 @@
  * `test-results/show-graph-agreement/` — run it before a release and look at
  * the sheets. The @ci test holds a few representative models to thresholds.
  */
-import { mutatingTest as test, expect, closePalette } from "./test-base";
+import { mutatingTest as test, expect, closePalette, VIEW_OPTION_IDS } from "./test-base";
 import type { Page, Response } from "@playwright/test";
 import { Graphviz } from "@hpcc-js/wasm-graphviz";
 import { mkdirSync, writeFileSync } from "fs";
@@ -211,10 +211,10 @@ async function enterView(page: Page, view: { value: string; label: string }): Pr
   return savedLayout;
 }
 
-/** Flip one of the graph's More ▸ show_graph options (Controller, Learning, CIMs). */
+/** Flip one of the graph's show_graph options (Controller, Learning, CIMs), in Advanced Graph View Options (#123). */
 async function toggleOption(page: Page, label: string) {
-  await page.getByTestId("graph-more-button").click();
-  const item = page.getByTestId("graph-more-menu").getByRole("button").filter({ hasText: new RegExp(`^${label}`) });
+  await page.getByTestId("graph-view-options-button").click();
+  const item = page.getByTestId(VIEW_OPTION_IDS[label]);
   await Promise.all([loaded(page), item.click()]);
   await page.keyboard.press("Escape");
   await settledBoxes(page);

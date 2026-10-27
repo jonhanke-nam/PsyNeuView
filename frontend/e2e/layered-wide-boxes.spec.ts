@@ -6,7 +6,7 @@
  * is laid out before it is drawn; once drawn, it is laid out again, with the
  * CIMs, when shown, put back against their frame.
  */
-import { mutatingTest as test, expect, closePalette } from "./test-base";
+import { mutatingTest as test, expect, closePalette, VIEW_OPTION_IDS } from "./test-base";
 import type { Page } from "@playwright/test";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -38,17 +38,10 @@ const loaded = (page: Page) =>
     timeout: 60000,
   });
 
-/** Flip one of the graph's More ▸ options (Learning, CIMs). */
+/** Flip one of the graph's options (Learning, CIMs), in Advanced Graph View Options (#123). */
 async function toggleOption(page: Page, label: string) {
-  await page.getByTestId("graph-more-button").click();
-  await Promise.all([
-    loaded(page),
-    page
-      .getByTestId("graph-more-menu")
-      .getByRole("button")
-      .filter({ hasText: new RegExp(`^${label}`) })
-      .click(),
-  ]);
+  await page.getByTestId("graph-view-options-button").click();
+  await Promise.all([loaded(page), page.getByTestId(VIEW_OPTION_IDS[label]).click()]);
   await page.keyboard.press("Escape");
 }
 

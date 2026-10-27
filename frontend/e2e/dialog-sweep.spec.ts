@@ -80,8 +80,10 @@ test.describe("dialog sweep (#1289)", { tag: "@ci" }, () => {
     await page.getByTestId("history-button").click();
     await escapeClosesDialog(page, page.getByTestId("history-panel"));
 
-    await page.getByTestId("graph-more-button").click();
-    await escapeClosesMenu(page, page.getByTestId("graph-more-menu"));
+    // Advanced Graph View Options (#123): a panel with the fixed header,
+    // anchored to its button, like History.
+    await page.getByTestId("graph-view-options-button").click();
+    await escapeClosesDialog(page, page.getByTestId("graph-view-options-menu"));
 
     await page.getByTestId("snippet-menu-button").click();
     await escapeClosesMenu(page, page.getByTestId("snippet-menu"));
