@@ -11,7 +11,7 @@
  * undo the condition is back in the code and the Inspector, and the file still
  * holds the removal until you save.
  */
-import { mutatingTest as test, expect } from "./test-base";
+import { mutatingTest as test, expect, showSchedulingArrows } from "./test-base";
 import { readFileSync, writeFileSync, mkdtempSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
@@ -80,6 +80,9 @@ async function selectNode(page: Page, id: string) {
 }
 
 test.describe("Inspector condition removes record their own undo step (#1369)", { tag: "@ci" }, () => {
+  // Scheduling arrows start hidden (#123); this spec selects a condition by its arrow's badge.
+  test.beforeEach(async ({ page }) => showSchedulingArrows(page));
+
   test.beforeEach(async ({ page }) => {
     page.on("dialog", (d) => void d.accept());
   });

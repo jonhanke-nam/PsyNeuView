@@ -143,6 +143,27 @@ test.describe("Advanced Graph View Options (#123)", { tag: "@ci" }, () => {
     await expect(page.getByTestId("setting-graph-scheduling-arrows")).toBeVisible();
   });
 
+  test("works from the keyboard", async ({ page }) => {
+    await openStroop(page);
+    const button = page.getByTestId("graph-view-options-button");
+    await button.focus();
+    await page.keyboard.press("Enter");
+    await expect(menu(page)).toBeVisible();
+    // The focus moves into the panel: Tab reaches its × and then the first option.
+    await page.keyboard.press("Tab");
+    await expect(menu(page).getByTestId("dialog-close")).toBeFocused();
+    await page.keyboard.press("Tab");
+    const names = page.getByTestId("graph-view-option-names");
+    await expect(names).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(names).not.toBeChecked();
+    await expect(menu(page)).toBeVisible();
+    // Escape closes it and hands the focus back to its button.
+    await page.keyboard.press("Escape");
+    await expect(menu(page)).toHaveCount(0);
+    await expect(button).toBeFocused();
+  });
+
   test("fits a small window, above the panel dividers", async ({ page }) => {
     await page.setViewportSize({ width: 1000, height: 670 });
     await openStroop(page);
