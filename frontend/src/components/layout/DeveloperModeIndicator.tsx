@@ -6,7 +6,7 @@
  * screenshot in a problem report, can tell at once. Clicking it opens a small
  * menu: turn developer mode off, or open Settings at its Developer section.
  *
- * It is a shortcut to the one control (Settings ▸ Developer ▸ Developer mode),
+ * It is a shortcut to the one control (Settings ▸ Developer ▸ Show what's still under development),
  * not a second setting (docs/settings-and-mac-app.md). With developer mode
  * off, nothing shows here.
  */

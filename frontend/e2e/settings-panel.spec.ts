@@ -120,12 +120,13 @@ test.describe("Settings: sections", { tag: "@ci" }, () => {
     await page.getByTestId("settings-section-shortcuts").click();
     await expect(page.getByTestId("setting-keyboard-shortcuts")).toBeVisible();
 
-    // Developer: the mode switch first, then what only developers change,
-    // and the PsyNeuLink details that About no longer carries.
+    // Developer: most useful first, and the switch for what's still under
+    // development last (#95); the PsyNeuLink details About no longer carries.
     await page.getByTestId("settings-section-developer").click();
     const developer = page.getByTestId("settings-content-developer");
     const groups = developer.locator('[data-testid^="settings-group-"]:not([data-testid$="-summary"])');
-    await expect(groups.first()).toHaveAttribute("data-testid", "settings-group-developer-mode");
+    await expect(groups.last()).toHaveAttribute("data-testid", "settings-group-developer-mode");
+    await expect(developer.getByText("Show what's still under development")).toBeVisible();
     await expect(developer.getByTestId("setting-developer-mode")).toBeVisible();
     await expect(developer.getByText("Change install")).toBeVisible();
     await expect(developer.getByTestId("pnl-details").getByText("Currently installed")).toBeVisible();

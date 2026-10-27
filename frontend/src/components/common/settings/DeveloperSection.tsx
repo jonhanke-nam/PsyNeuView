@@ -39,12 +39,9 @@ export function DeveloperSection({
   const macInstall = useMacAppInstall();
   return (
     <>
-      <Group id="developer-mode" title="Developer mode">
-        <DeveloperModeRow />
-      </Group>
-
-      {hasSettingsBridge() && <MacAppInstallSwitcher />}
+      {/* Most useful first, the esoteric last (#95). */}
       {hasSettingsBridge() && <MacAppReleaseCandidates />}
+      {hasSettingsBridge() && <MacAppInstallSwitcher />}
 
       <Group id="pnl-install" title="Which PsyNeuLink is installed" badge={<DeveloperBadge audience="developers" />}>
         {loadError && <div style={errorStyle}>Failed to load: {loadError}</div>}
@@ -73,6 +70,12 @@ export function DeveloperSection({
 
       {/* Update options for your own checkouts (#1304). */}
       {capabilities?.enabled && <CheckoutUpdates />}
+
+      {/* Developer mode, named for what it shows (#95), and last: it is the
+          least used thing here. The group id stays, so links keep working. */}
+      <Group id="developer-mode" title="Under development">
+        <DeveloperModeRow />
+      </Group>
     </>
   );
 }
@@ -90,9 +93,9 @@ function DeveloperModeRow() {
         onChange={(e) => setDeveloperMode(e.target.checked)}
         style={{ marginTop: 3 }}
       />
-      <SettingLabel title="Developer mode" htmlFor="developer-mode-toggle">
+      <SettingLabel title="Show what's still under development" htmlFor="developer-mode-toggle">
         <p style={{ margin: "0 0 4px" }}>
-          Shows the parts of PsyNeuView that are still being worked on. <strong>In the Open menu:</strong> the
+          Shows the parts of PsyNeuView that are still being worked on (developer mode). <strong>In the Open menu:</strong> the
           catalogs under development — PsyNeuLink Examples, Reference Models and Demo Models — and a
           "Developer / Tests…" entry that opens one of PsyNeuLink's own test files as a model.{" "}
           <strong>In this section:</strong> more detail about the installed PsyNeuLink and the copies PsyNeuView
