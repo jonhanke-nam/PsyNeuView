@@ -11,7 +11,7 @@
  * Pure so the wording and the precedence are testable without a socket.
  */
 
-export type SyncKind = "watching" | "reloaded" | "conflict" | "off";
+export type SyncKind = "watching" | "reloaded" | "conflict" | "paused" | "off";
 
 export interface SyncInputs {
   /** Is the WebSocket open? */
@@ -24,6 +24,8 @@ export interface SyncInputs {
   hasConflict: boolean;
   /** When an external change was last applied. */
   lastAppliedAt: number | null;
+  /** The user paused watching from the indicator's popover (#103). */
+  paused?: boolean;
   now: number;
 }
 
@@ -51,13 +53,34 @@ export function deriveSyncState(i: SyncInputs): SyncState {
     return { kind: "off", label: "No model open", hint: "Open a model to watch it for changes." };
   }
 
+  // The user's own choice reads as theirs, not as something that went wrong.
+  if (i.paused) {
+    return {
+      kind: "paused",
+      label: "Watching paused",
+      hint: "You paused watching. Edits made outside PsyNeuView will not appear here until you resume.",
+    };
+  }
+
   // Connected is not the same as armed: the socket can be open while the
-  // backend watches nothing, which is precisely how sync used to fail.
-  if (!i.connected || !i.watchedPath) {
+  // backend watches nothing, which is precisely how sync used to fail. Each
+  // gets its own reason (#103), so "not watching" says why.
+  if (!i.connected) {
     return {
       kind: "off",
       label: "Not watching",
-      hint: "Changes made in another editor will not appear until this reconnects.",
+      hint:
+        "Not connected to the PsyNeuView server, so edits made outside PsyNeuView will not appear here. " +
+        "It reconnects on its own.",
+    };
+  }
+  if (!i.watchedPath) {
+    return {
+      kind: "off",
+      label: "Not watching",
+      hint:
+        "Connected, but the server has not confirmed it is watching this file, so edits made outside " +
+        "PsyNeuView will not appear here.",
     };
   }
 
@@ -72,7 +95,9 @@ export function deriveSyncState(i: SyncInputs): SyncState {
   return {
     kind: "watching",
     label: "Watching for changes",
-    hint: `Edits to ${basename(i.watchedPath)} in another editor appear here automatically.`,
+    hint:
+      `PsyNeuView is watching this file (${basename(i.watchedPath)}). ` +
+      "Edits made outside PsyNeuView appear here automatically.",
   };
 }
 
