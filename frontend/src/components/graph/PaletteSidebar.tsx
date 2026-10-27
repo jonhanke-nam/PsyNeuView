@@ -8,6 +8,7 @@ import { type DragEvent, useEffect, useMemo, useRef } from "react";
 import { useModelStore } from "@/stores/modelStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { usePaletteStore } from "@/stores/paletteStore";
+import { useGraphSettings } from "@/stores/graphSettingsStore";
 import {
   PNL_TAXONOMY_TREE,
   ALL_PNL_DEFS,
@@ -84,6 +85,13 @@ export function PaletteSidebar() {
         .map((type) => findDefByType(type))
         .filter(Boolean) as PnlObjectDef[],
     [recentlyUsed],
+  );
+
+  // Show ports (#112): the Ports section is there only while ports are shown.
+  const showPorts = useGraphSettings((st) => st.showPortDots);
+  const taxonomy = useMemo(
+    () => (showPorts ? PNL_TAXONOMY_TREE : PNL_TAXONOMY_TREE.filter((n) => n.id !== "ports")),
+    [showPorts],
   );
 
   if (!isOpen) return null;
@@ -251,7 +259,7 @@ export function PaletteSidebar() {
                   {(favoriteItems.length > 0 || recentItems.length > 0) && (
                     <CompactDivider color="var(--pnv-text-hint)" />
                   )}
-                  {PNL_TAXONOMY_TREE.map((node) => (
+                  {taxonomy.map((node) => (
                     <CompactCategoryIcon
                       key={node.id}
                       node={node}
@@ -262,7 +270,7 @@ export function PaletteSidebar() {
                   ))}
                 </>
               ) : (
-                PNL_TAXONOMY_TREE.map((node) => (
+                taxonomy.map((node) => (
                   <TreeNode
                     key={node.id}
                     node={node}

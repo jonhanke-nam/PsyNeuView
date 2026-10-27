@@ -63,6 +63,7 @@ shape-mismatch-explained.spec.ts
 show-graph-agreement.spec.ts
 show-graph-edge-courses.spec.ts
 show-graph-tab-fetch.spec.ts
+show-ports.spec.ts
 sidecar-placement.spec.ts
 spline-straightness.spec.ts
 stroop-lc-reference.spec.ts

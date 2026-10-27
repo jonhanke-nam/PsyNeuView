@@ -668,7 +668,7 @@ export function ProjectionEdge({
             const hot = hoveredEnd === d.end;
             const r = hot ? 5 : hovered ? 4 : 3.2;
             return (
-              <div key={d.end} style={{ position: "absolute", transform: `translate(${d.x}px, ${d.y}px)`, pointerEvents: "none" }}>
+              <div key={d.end} data-testid="edge-port-dot" style={{ position: "absolute", transform: `translate(${d.x}px, ${d.y}px)`, pointerEvents: "none" }}>
                 <div
                   className="nodrag nopan" // #975 — same d3-zoom handoff as the bend handles
                   title={shapeable

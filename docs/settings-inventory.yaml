@@ -445,3 +445,17 @@ settings:
       One email address. The default contact is the Mac app's
       ReportDefaults.contactEmail, reported by the bridge as
       reportSendToDefault; empty means that default.
+
+# Remembered choices whose one control lives outside Settings. Settings has no
+# control for these (a second control would break "one control per setting");
+# they are listed here so the inventory says where each one lives. The check in
+# settingsInventory.test.ts reads only `settings` above.
+elsewhere:
+  - id: graph-show-ports
+    label: Show ports
+    home: graph toolbar ▸ Ports button (data-testid toolbar-show-ports)
+    storage: browser localStorage (psyneuview.graph.showPorts; the Mac app keeps psyneuview. keys)
+    notes: >-
+      Off by default (#112). One switch for both the port dots drawn on the
+      graph and the Ports section in the Components panel. A value someone
+      already chose wins over the default.

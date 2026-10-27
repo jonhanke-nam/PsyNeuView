@@ -6,6 +6,28 @@ import { create } from "zustand";
 import { RENDERING_DEFAULTS } from "@/config/renderingDefaults";
 import { loadLayoutDefault } from "@/stores/graphLayoutDefaultStore";
 
+// Show ports (#112): one switch, the toolbar's Ports button. Off by default; it
+// draws the port dots on the graph and shows the Components panel's Ports
+// section. Remembered per browser; a value someone already chose wins.
+export const SHOW_PORTS_KEY = "psyneuview.graph.showPorts";
+
+export function loadShowPorts(): boolean {
+  try {
+    const stored = localStorage.getItem(SHOW_PORTS_KEY);
+    return stored === "true";
+  } catch {
+    return false;
+  }
+}
+
+function saveShowPorts(v: boolean): void {
+  try {
+    localStorage.setItem(SHOW_PORTS_KEY, String(v));
+  } catch {
+    /* storage blocked: the choice lasts this session */
+  }
+}
+
 export type GraphDirection = "TB" | "BT" | "LR" | "RL";
 
 // Which auto-layout engine arranges the graph (#415). "layered" is the
@@ -160,7 +182,7 @@ export const useGraphSettings = create<GraphSettings>((set, get) => ({
   showInactive: false,
   showCIMs: false,
   showFullTypes: false,
-  showPortDots: true,
+  showPortDots: loadShowPorts(),
   // #48: open in Flatten (all compositions), like show_graph draws nested
   // compositions in place by default.
   flat: true,
@@ -198,7 +220,10 @@ export const useGraphSettings = create<GraphSettings>((set, get) => ({
   setShowInactive: (v) => set({ showInactive: v }),
   setShowCIMs: (v) => set({ showCIMs: v }),
   setShowFullTypes: (v) => set({ showFullTypes: v }),
-  setShowPortDots: (v) => set({ showPortDots: v }),
+  setShowPortDots: (v) => {
+    saveShowPorts(v);
+    set({ showPortDots: v });
+  },
   setFlat: (v) => set({ flat: v }),
   setPytorch: (v) => set({ pytorch: v }),
   setShowExecutionOrder: (v) => set({ showExecutionOrder: v }),
