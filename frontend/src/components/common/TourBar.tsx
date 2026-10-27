@@ -38,7 +38,8 @@ import { useCatalogOpener } from "@/stores/catalogOpenerStore";
 import { useModelStore } from "@/stores/modelStore";
 import { useTourStore } from "@/stores/tourStore";
 import { useUIStore } from "@/stores/uiStore";
-import { loadNarrationVoice, narrationAvailable, resolveVoice, speakCaption, speakerLabel, stopSpeaking, type SpeechEngine } from "@/utils/narration";
+import { openSettings } from "./settings/sections";
+import { loadNarrationVoice, narrationAvailable, resolveVoice, speakCaption, stopSpeaking, voiceShortName, type SpeechEngine } from "@/utils/narration";
 import { matchesNodeName, type TourStep } from "@/utils/tourStep";
 
 /** Where a docs page is read: the repo's `docs/` folder on devel. */
@@ -209,6 +210,7 @@ export function TourBar() {
   const docs = walkthrough.docs ?? [];
   // Narration on and a caption to read: the caption leads the bar (#86).
   const leads = narration && Boolean(step?.say) && !finished && !complete && !holdForPointer;
+  const voice = narration ? voiceShortName(resolveVoice(speechEngine()?.getVoices?.() ?? [], loadNarrationVoice())) : null;
   const instruction = finished
     ? "✓ Walkthrough complete."
     : complete
@@ -342,12 +344,27 @@ export function TourBar() {
                 : { display: "block", fontSize: 14, color: "var(--pnv-walkthrough-caption)", marginTop: 2, fontStyle: "italic" }
             }
           >
-            {/* With narration on, the line reads like a script (#93): the voice's
-                name, then what it says. A word at full size, not a small icon. */}
+            {/* With narration on, the line is headed "Narration" (#93): a
+                word at full size, not a small icon, and not a voice's name,
+                which read as a person. The voice follows in small type, and a
+                click opens the one place it's chosen (Settings ▸ Tutorials and
+                Voice). */}
             {narration && (
-              <span data-testid="tour-caption-label" style={{ fontWeight: 700, fontStyle: "normal", marginRight: 6 }}>
-                {speakerLabel(resolveVoice(speechEngine()?.getVoices?.() ?? [], loadNarrationVoice()))}:
-              </span>
+              <button
+                type="button"
+                data-testid="tour-caption-label"
+                onClick={() => openSettings("tutorials-voice")}
+                title="Narration reads this line. Click to choose the voice."
+                style={{ border: "none", background: "none", padding: 0, marginRight: 6, cursor: "pointer", font: "inherit", fontStyle: "normal", color: "inherit" }}
+              >
+                <span style={{ fontWeight: 700 }}>Narration</span>
+                {voice && (
+                  <span data-testid="tour-caption-voice" style={{ fontSize: 12, color: "var(--pnv-walkthrough-caption)" }}>
+                    {" "}({voice})
+                  </span>
+                )}
+                <span style={{ fontWeight: 700 }}>:</span>
+              </button>
             )}
             <span data-testid="tour-caption">{step.say}</span>
           </span>

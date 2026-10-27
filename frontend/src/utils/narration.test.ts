@@ -16,7 +16,7 @@ import {
   saveNarrationRate,
   saveNarrationVoice,
   speakCaption,
-  speakerLabel,
+  voiceShortName,
   stopSpeaking,
   voiceQuality,
 } from "./narration";
@@ -209,14 +209,14 @@ describe("speaking rate and pronunciation (#1407)", () => {
   });
 });
 
-describe("speakerLabel (#93)", () => {
-  it("names the voice without its quality note", () => {
-    expect(speakerLabel({ name: "Karen (Premium)" })).toBe("Karen");
-    expect(speakerLabel({ name: "Daniel" })).toBe("Daniel");
+describe("voiceShortName (#93)", () => {
+  it("drops the quality note", () => {
+    expect(voiceShortName({ name: "Karen (Premium)" })).toBe("Karen");
+    expect(voiceShortName({ name: "Daniel" })).toBe("Daniel");
   });
-  it("says Narration when no voice is known", () => {
-    expect(speakerLabel(null)).toBe("Narration");
-    expect(speakerLabel({ name: "" })).toBe("Narration");
+  it("is null when no voice is known", () => {
+    expect(voiceShortName(null)).toBeNull();
+    expect(voiceShortName({ name: "" })).toBeNull();
   });
 });
 

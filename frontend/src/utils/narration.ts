@@ -297,11 +297,9 @@ export function stopSpeaking(engine: SpeechEngine | null): void {
 }
 
 /**
- * Who the bar says is speaking (#93): the voice's own name, without the
- * quality note macOS adds ("Karen (Premium)" → "Karen"), or "Narration" when
- * no voice is known yet.
+ * The voice's short name for the bar (#93): without the quality note macOS
+ * adds ("Karen (Premium)" → "Karen"), or null when no voice is known yet.
  */
-export function speakerLabel(voice: Pick<SpeechSynthesisVoice, "name"> | null | undefined): string {
-  const name = voice?.name?.replace(/\s*\(.*\)\s*$/, "").trim();
-  return name || "Narration";
+export function voiceShortName(voice: Pick<SpeechSynthesisVoice, "name"> | null | undefined): string | null {
+  return voice?.name?.replace(/\s*\(.*\)\s*$/, "").trim() || null;
 }
