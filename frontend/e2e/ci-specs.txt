@@ -1,6 +1,7 @@
 about-release-dates.spec.ts
 app-shell.spec.ts
 app-update-notice.spec.ts
+arrowheads-at-end.spec.ts
 busy-indicator.spec.ts
 composition-cim-edges.spec.ts
 developer-mode-marking.spec.ts
