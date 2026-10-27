@@ -139,7 +139,9 @@ Karen, Daniel, …, never the novelty voices; `pickVoice` in
 **What narration reads, and how the bar shows it (#86).** Narration reads only
 the caption, never the instruction. Captions run about 11 words (a few
 seconds), instructions about 33 (up to 81), too long to hear on every step.
-With narration on, the caption leads the bar in plain text with 🔊 before it,
+With narration on, the caption leads the bar in italics after a bold
+"Narration" heading, with the voice in small type ("Narration (Karen):"); a click
+on it opens Settings ▸ Tutorials and Voice, the one place the voice is chosen (#93),
 lit while the voice is reading it, and the instruction sits under it as a
 smaller details line. With narration off, the instruction leads and the
 caption follows in italics. `e2e/narration-matches-bar.spec.ts` checks the
