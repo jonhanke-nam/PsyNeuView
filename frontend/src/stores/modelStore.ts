@@ -161,8 +161,12 @@ function annotateEdgeBundles(edges: Edge[]) {
 }
 
 const GROUP_PADDING = { top: 50, bottom: 30, left: 20, right: 20 };
-const NODE_WIDTH = 170;
-const NODE_HEIGHT = 80;
+// The size the layouts reserve for a node. A node is drawn at least this big
+// (MechanismNode), so one showing just its name (#122) fills its slot the way
+// a node with tags and a function line did, and edges meet it where the
+// layout expects.
+export const NODE_WIDTH = 170;
+export const NODE_HEIGHT = 80;
 
 /**
  * Auto-size composition group nodes to fit their children.

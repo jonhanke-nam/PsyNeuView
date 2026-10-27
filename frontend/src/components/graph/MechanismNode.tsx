@@ -9,7 +9,7 @@ import { useSafeUpdateNodeInternals } from "@/hooks/useSafeUpdateNodeInternals";
 import { usePortLayout } from "@/stores/portLayoutStore";
 import type { MechanismData } from "@/stores/modelStore";
 import { useGraphSettings, type GraphDirection } from "@/stores/graphSettingsStore";
-import { useModelStore } from "@/stores/modelStore";
+import { useModelStore, NODE_HEIGHT, NODE_WIDTH } from "@/stores/modelStore";
 import { TYPE_COLORS, ROLE_COLORS, ROLE_PRIORITY } from "@/constants/pnlTypes";
 import { toggleCompositionCollapse } from "@/utils/nodeActions";
 import { formatTraceValue } from "@/utils/traceValues";
@@ -378,7 +378,10 @@ export const MechanismNode = memo(function MechanismNode({
           : isCursorHighlighted
           ? "0 0 0 2px var(--pnv-cursor-highlight), var(--pnv-cursor-glow)"
           : "var(--pnv-shadow-node)",
-        minWidth: 150,
+        // #122: the size of the slot the layout reserves, so a node showing
+        // just its name keeps the size and edge geometry it had with details.
+        minWidth: NODE_WIDTH,
+        minHeight: NODE_HEIGHT,
         textAlign: "center" as const,
         display: "flex",
         flexDirection: "column" as const,
