@@ -52,6 +52,15 @@ function loadSizes(key: string): number[] | undefined {
   return undefined;
 }
 
+// #110: the graph gets the window by default. With nothing stored, the code
+// editor starts at about a quarter of the width (still on screen, so "the
+// code is here" stays obvious and walkthroughs that point at it still work)
+// and the inspector tabs at about a fifth of the height. Allotment scales
+// these to the real window. A split the person has dragged is stored and
+// always wins over these.
+export const DEFAULT_OUTER_SIZES = [25, 75];
+export const DEFAULT_INNER_SIZES = [78, 22];
+
 export type LayoutPanel = "code" | "graph" | "bottom";
 export type LayoutPreset = "graph" | "code-graph" | "graph-inspector" | "everything";
 
@@ -120,8 +129,8 @@ export const useLayoutStore = create<LayoutState>((set, get) => {
     codeVisible: loadBool(LS_CODE_VISIBLE, true),
     graphVisible: loadBool(LS_GRAPH_VISIBLE, true),
     bottomVisible: loadBool(LS_BOTTOM_VISIBLE, true),
-    outerSizes: loadSizes(LS_OUTER_SIZES),
-    innerSizes: loadSizes(LS_INNER_SIZES),
+    outerSizes: loadSizes(LS_OUTER_SIZES) ?? DEFAULT_OUTER_SIZES,
+    innerSizes: loadSizes(LS_INNER_SIZES) ?? DEFAULT_INNER_SIZES,
 
     toggleCode: () => setPanelVisible("code", !get().codeVisible),
     toggleGraph: () => setPanelVisible("graph", !get().graphVisible),
