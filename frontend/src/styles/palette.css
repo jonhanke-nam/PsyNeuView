@@ -245,6 +245,11 @@
   --pnv-walkthrough-current: #1565c0;   /* the step under way: its dot, its ring, the pointer, Next ▸ */
   --pnv-walkthrough-done: #2e7d32;      /* a finished step: its dot, and the ring once the step is done */
   --pnv-walkthrough-todo: #cfdcea;      /* a step still to come: its dot */
+  /* The ring's other colours, chosen in Settings ▸ Tutorials and Voice ▸ Highlight (#100).
+     Blue is --pnv-walkthrough-current; none is green, which means a step is done. */
+  --pnv-walkthrough-ring-orange: #e65100;
+  --pnv-walkthrough-ring-purple: #6a1b9a;
+  --pnv-walkthrough-ring-magenta: #c2185b;
   --pnv-shadow-pointer: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35)); /* a filter, not a box-shadow */
 
   /* Component types: each PsyNeuLink class's colour in the Components
