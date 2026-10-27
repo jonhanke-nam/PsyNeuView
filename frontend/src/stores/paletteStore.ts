@@ -2,14 +2,20 @@
  * Zustand store for the object palette sidebar state.
  * Manages favorites, recently-used, search, and UI collapse state.
  * Persists user preferences to localStorage.
+ *
+ * Whether the panel is the word list or the icon strip is not remembered: it
+ * starts as Settings ▸ Appearance ▸ Components panel says (#113), and the
+ * panel's ◀/▶ button changes it for this session only, so nobody is left
+ * stuck on the strip. The old remembered value (psynewview_palette_compact)
+ * is no longer read.
  */
 
 import { create } from "zustand";
+import { loadComponentsStart } from "./componentsPanelStartStore";
 
 const LS_FAVORITES = "psynewview_palette_favorites";
 const LS_RECENTS = "psynewview_palette_recents";
 const LS_OPEN = "psynewview_palette_open";
-const LS_COMPACT = "psynewview_palette_compact";
 const LS_EXPANDED = "psynewview_palette_expanded";
 const MAX_RECENTS = 8;
 
@@ -67,7 +73,7 @@ interface PaletteState {
 
 export const usePaletteStore = create<PaletteState>((set, get) => ({
   isOpen: loadBool(LS_OPEN, true),
-  isCompact: loadBool(LS_COMPACT, false),
+  isCompact: loadComponentsStart() === "strip",
   searchQuery: "",
   expandedNodes: new Set(loadJson<string[]>(LS_EXPANDED, DEFAULT_EXPANDED)),
   favorites: loadJson<string[]>(LS_FAVORITES, []),
@@ -83,15 +89,9 @@ export const usePaletteStore = create<PaletteState>((set, get) => ({
     localStorage.setItem(LS_OPEN, String(next));
     set({ isOpen: next });
   },
-  setCompact: (compact) => {
-    localStorage.setItem(LS_COMPACT, String(compact));
-    set({ isCompact: compact });
-  },
-  toggleCompact: () => {
-    const next = !get().isCompact;
-    localStorage.setItem(LS_COMPACT, String(next));
-    set({ isCompact: next });
-  },
+  // For this session only: the setting decides how the panel starts (#113).
+  setCompact: (compact) => set({ isCompact: compact }),
+  toggleCompact: () => set({ isCompact: !get().isCompact }),
   setSearchQuery: (query) => set({ searchQuery: query }),
   toggleNode: (nodeId) => {
     const s = new Set(get().expandedNodes);

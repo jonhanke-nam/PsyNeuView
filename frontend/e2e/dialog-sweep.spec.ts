@@ -238,7 +238,7 @@ test.describe("dialog sweep (#1289)", { tag: "@ci" }, () => {
   test("the palette's compact flyout", async ({ page }) => {
     test.setTimeout(180_000);
     await page.addInitScript(() => {
-      localStorage.setItem("psynewview_palette_compact", "true");
+      localStorage.setItem("psyneuview.components.start", "strip");
       localStorage.setItem("psynewview_palette_open", "true");
     });
     await openFromPath(page, scratchModel());
