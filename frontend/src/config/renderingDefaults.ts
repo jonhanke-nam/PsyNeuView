@@ -17,7 +17,12 @@
  */
 
 export interface RenderingDefaults {
-  /** Scales each edge's per-type base width; 2 = unchanged (1×). */
+  /**
+   * The default width of an ordinary (Mapping) projection line, px. Since #107
+   * it seeds Settings ▸ Appearance ▸ Lines between nodes (stores/edgeLineStore.ts);
+   * other projection types scale from it. The name predates the setting and is
+   * kept so existing override files still work.
+   */
   arrowLineThickness: number;
   /** Arrowhead chevron half-length, px. */
   arrowheadSize: number;
@@ -34,7 +39,7 @@ export interface RenderingDefaults {
 
 // show_graph-parity values. Prior defaults were 2 / 5 / 0.5.
 export const RENDERING_DEFAULTS: RenderingDefaults = {
-  arrowLineThickness: 3, // ≈ 1.5× thicker edges
+  arrowLineThickness: 3, // ordinary lines 3 px (#107: the Line width default)
   arrowheadSize: 7, // larger, more show_graph-like chevron
   arrowheadPosition: 0.5,
   nodeBorderWidth: 2, // ordinary roles (#42: was 1, too light to read)

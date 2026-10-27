@@ -6,6 +6,7 @@ developer-mode-marking.spec.ts
 developer-tests-loader.spec.ts
 diagnostics.spec.ts
 dialog-sweep.spec.ts
+edge-line-width.spec.ts
 edge-routing-no-crossings.spec.ts
 edge-shaping-auto-layout.spec.ts
 external-edit-sync.spec.ts

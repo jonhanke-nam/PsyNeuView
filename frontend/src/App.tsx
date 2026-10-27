@@ -6,6 +6,7 @@ import "@xyflow/react/dist/style.css";
 
 import { useGraphSettings } from "./stores/graphSettingsStore";
 import { useNodeOutlineStore } from "./stores/nodeOutlineStore";
+import { useEdgeLineStore } from "./stores/edgeLineStore";
 import { loadRuntimeRenderingDefaults } from "./config/renderingDefaults";
 import { GraphCanvas } from "./components/graph/GraphCanvas";
 import { CodeEditor } from "./components/editor/CodeEditor";
@@ -83,11 +84,12 @@ export default function App() {
   useEffect(() => {
     void loadRuntimeRenderingDefaults().then((o) => {
       const s = useGraphSettings.getState();
-      if (typeof o.arrowLineThickness === "number") s.setArrowLineThickness(o.arrowLineThickness);
       if (typeof o.arrowheadSize === "number") s.setArrowheadSize(o.arrowheadSize);
       if (typeof o.arrowheadPosition === "number") s.setArrowheadPosition(o.arrowheadPosition);
       // The node outline retunes only the default: a width chosen in Settings wins (#42).
       useNodeOutlineStore.getState().setDefault(o.nodeBorderWidth);
+      // Likewise the line width between nodes (#107).
+      useEdgeLineStore.getState().setDefault(o.arrowLineThickness);
     });
   }, []);
 
