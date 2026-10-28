@@ -399,7 +399,7 @@ export function ProjectionEdge({
     // small fractional shift, short edges a large one), then clamped to
     // leave room near the endpoints.
     let t = arrowheadPosition;
-    if (showLabel && label) {
+    if (showLabel && label && arrowheadPosition < 0.999) {
       const labelW = String(label).length * LABEL_CHAR_PX + LABEL_PAD_PX;
       const shiftPx = labelW / 2 + ARROW_LABEL_GAP_PX;
       const shiftFrac = Math.min(ARROW_SHIFT_MAX_FRAC, shiftPx / total);
@@ -431,7 +431,12 @@ export function ProjectionEdge({
     const searchR = Math.min(total * 0.25, 60);
     const STEPS = 8;
     let at = want, bestScore = Infinity;
-    for (let k = -STEPS; k <= STEPS; k++) {
+    // At the target (the default, as show_graph draws it): the tip sits where
+    // the line meets the receiving node, pointing along its last stretch; no
+    // search for a straighter spot, which would pull it back up the line.
+    const atEnd = t >= 0.999;
+    if (atEnd) bestScore = -1;
+    for (let k = -STEPS; k <= STEPS && !atEnd; k++) {
       const L = want + (k / STEPS) * searchR;
       if (L < span || L > total - span) continue;
       const score = turnAt(L) + 0.002 * Math.abs(L - want); // straightest, then nearest
@@ -646,7 +651,7 @@ export function ProjectionEdge({
       </path>
       {/* Hidden measurement path — same geometry as the visible edge,
           referenced for getPointAtLength to position the chevron. */}
-      <path ref={pathRef} d={edgePath} fill="none" stroke="none" style={{ pointerEvents: "none" }} />
+      <path ref={pathRef} data-testid="edge-measure-path" d={edgePath} fill="none" stroke="none" style={{ pointerEvents: "none" }} />
       {showArrowheads && arrow && (
         <polygon
           points={`0,0 ${-2 * headSize},${-headSize * 0.6} ${-2 * headSize},${headSize * 0.6}`}
