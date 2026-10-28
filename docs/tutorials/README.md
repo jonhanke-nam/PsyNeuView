@@ -40,6 +40,7 @@ starts them.
 | 14 | [Starting a model (two-editor)](14-starting-a-model.md) | #1036 |
 | 15 | [The two-editor workflow](15-two-headed-workflow.md) | #1034 |
 | 16 | [Guided walkthroughs: the Cognitive Neuroscience Course](16-course-walkthroughs.md) | #1180 |
+| 17 | [Guided walkthroughs: the PsyNeuLink Tutorials](17-psyneulink-tutorials.md) | #9 |
 
 ## Reference models
 
