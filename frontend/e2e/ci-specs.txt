@@ -24,6 +24,7 @@ gsc-row-selects-edge.spec.ts
 harness.spec.ts
 inspector-condition-undo.spec.ts
 layered-wide-boxes.spec.ts
+layout-default-fresh-profile.spec.ts
 layout-default-show-graph.spec.ts
 layout-mode-per-view.spec.ts
 learn-pathway.spec.ts
