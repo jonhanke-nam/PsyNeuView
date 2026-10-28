@@ -64,6 +64,13 @@ test("section headings say where they come from; a switch is explained before an
   await expect(sourceOf(/Demo Models/)).toHaveText("included with PsyNeuView");
   // My Project Folder names its folder: the harness's temp folder, a full path.
   await expect(sourceOf(/My Project Folder/)).toHaveText(/^\//);
+  // A long path shortens; the section's name stays on one line, as tall as
+  // the path beside it (it used to wrap to three lines).
+  const [nameBox, pathBox] = await Promise.all([
+    heading(/My Project Folder/).getByText("My Project Folder", { exact: true }).boundingBox(),
+    sourceOf(/My Project Folder/).boundingBox(),
+  ]);
+  expect(nameBox!.height).toBeLessThan(pathBox!.height * 2);
   await expect(page.getByTestId("open-menu-source-switch-note")).toHaveCount(0);
   await page.getByTestId("open-menu").click();
 
