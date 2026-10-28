@@ -3,6 +3,7 @@
  */
 
 import { BusyIndicator } from "@/components/common/BusyIndicator";
+import { Z_MENU } from "@/constants/zLayers";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { errorDetail } from "@/utils/errorDetail";
 import { Button } from "@/components/common/Button";
@@ -1624,7 +1625,7 @@ export function Toolbar() {
               border: "1px solid var(--pnv-border-light)",
               borderRadius: 6,
               boxShadow: "var(--pnv-shadow-popover)",
-              zIndex: 1000,
+              zIndex: Z_MENU,
               minWidth: 380,
               maxWidth: 600,
               maxHeight: 500,
@@ -3146,7 +3147,7 @@ function ManagedSourceBadge({ from, title, style }: { from: string; title?: stri
             top: "calc(100% + 4px)",
             left: 0,
             // Above the panel dividers (Allotment sashes, z-index 35), like the Open menu (#1391).
-            zIndex: 1000,
+            zIndex: Z_MENU,
             width: 320,
             display: "flex",
             flexDirection: "column",
@@ -3326,7 +3327,7 @@ function WalkthroughMenu() {
             top: "calc(100% + 4px)",
             left: 0,
             // Above the panel dividers (Allotment sashes, z-index 35), like the Open menu (#1391).
-            zIndex: 1000,
+            zIndex: Z_MENU,
             minWidth: 340,
             // The list outgrows a short window; scroll inside the window instead of off its bottom.
             maxHeight: "calc(100vh - 56px)",
@@ -3522,7 +3523,7 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
             top: "calc(100% + 4px)",
             left: 0,
             // Above the panel dividers (Allotment sashes, z-index 35), like the Open menu (#1391).
-            zIndex: 1000,
+            zIndex: Z_MENU,
             minWidth: 190,
             background: "var(--pnv-surface)",
             border: "1px solid var(--pnv-border)",

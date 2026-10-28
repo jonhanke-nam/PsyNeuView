@@ -58,6 +58,7 @@ import { goToHistoryStep } from "@/hooks/useUndoRedo";
 import { Button } from "./Button";
 import { DialogHeader } from "./dialog/DialogHeader";
 import { useDismiss } from "./dialog/useDismiss";
+import { Z_MENU } from "@/constants/zLayers";
 
 function DiffView({ before, after }: { before: string; after: string }) {
   const diff = diffSource(before, after);
@@ -274,7 +275,7 @@ export function HistoryPanel() {
             border: "1px solid var(--pnv-border-light)",
             borderRadius: 6,
             boxShadow: "var(--pnv-shadow-popover)",
-            zIndex: 1000,
+            zIndex: Z_MENU,
             minWidth: 340,
             maxHeight: 400,
             display: "flex",

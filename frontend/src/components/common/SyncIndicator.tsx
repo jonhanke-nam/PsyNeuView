@@ -22,6 +22,7 @@ import { useExternalChangeStore } from "@/stores/externalChangeStore";
 import { useModelStore } from "@/stores/modelStore";
 import { useSyncStore } from "@/stores/syncStore";
 import { deriveSyncState, RELOADED_MS, type SyncKind } from "@/utils/syncState";
+import { Z_MENU } from "@/constants/zLayers";
 
 const COLORS: Record<SyncKind, { dot: string; text: string }> = {
   watching: { dot: "var(--pnv-success)", text: "var(--pnv-text-muted)" },
@@ -141,7 +142,7 @@ export function SyncIndicator() {
             border: "1px solid var(--pnv-border-light)",
             borderRadius: 6,
             boxShadow: "var(--pnv-shadow-popover)",
-            zIndex: 1000,
+            zIndex: Z_MENU,
             width: 340,
             display: "flex",
             flexDirection: "column",

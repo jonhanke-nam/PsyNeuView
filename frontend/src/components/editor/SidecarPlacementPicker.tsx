@@ -12,6 +12,7 @@ import { useModelStore } from "@/stores/modelStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { LOCATION_LABEL, defaultHint, willMoveFiles } from "@/utils/sidecarPlacement";
 import { useDismiss } from "@/components/common/dialog/useDismiss";
+import { Z_MENU } from "@/constants/zLayers";
 
 export function SidecarPlacementPicker() {
   const filePath = useModelStore((s) => s.filePath);
@@ -121,7 +122,7 @@ export function SidecarPlacementPicker() {
             border: "1px solid var(--pnv-border-light)",
             borderRadius: 6,
             boxShadow: "var(--pnv-shadow-popover)",
-            zIndex: 1000,
+            zIndex: Z_MENU,
             minWidth: 240,
             padding: "4px 0",
           }}

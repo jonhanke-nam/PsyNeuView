@@ -35,6 +35,7 @@ import { tourIdFromUrl, useTourStore } from "@/stores/tourStore";
 import { isOnScreen, toScreenRect, type NodeBox } from "@/utils/offscreenNodes";
 import { cssEscape, nodeSelector } from "@/utils/nodeSelector";
 import { matchesNodeName } from "@/utils/tourStep";
+import { Z_TOUR_OVERLAY } from "@/constants/zLayers";
 
 interface Rect {
   left: number;
@@ -293,7 +294,7 @@ export function TourOverlay() {
       data-testid="tour-overlay"
       // Above Settings and the other dialogs (zIndex 10000): the orientation
       // walkthroughs ring things inside them.
-      style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 10002 }}
+      style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: Z_TOUR_OVERLAY }}
     >
       <div
         data-testid="tour-highlight"
