@@ -44,6 +44,23 @@ export type EdgeRouting = "straight" | "smoothstep" | "spline";
 // What the edge-style menu calls each one (#1299). Only the labels are plain
 // words: the values above are saved in layout files and settings, so they
 // keep their original names.
+// #122: the toolbar's Elements toggle (a node's type and role tags, its
+// function line, a frame's COMPOSITION tag). Off by default, so a node shows
+// just its name as show_graph() draws it; a choice made here is remembered per
+// browser and wins over the default.
+export const NODE_ELEMENTS_KEY = "psyneuview.graph.nodeElements";
+
+function loadShowNodeElements(): boolean {
+  try {
+    const v = localStorage.getItem(NODE_ELEMENTS_KEY);
+    if (v === "true") return true;
+    if (v === "false") return false;
+  } catch {
+    // Storage blocked: the default applies.
+  }
+  return false;
+}
+
 export const EDGE_ROUTING_OPTIONS: { value: EdgeRouting; label: string; hint: string }[] = [
   { value: "straight", label: "Angled", hint: "Straight segments that bend at angles around nodes" },
   { value: "smoothstep", label: "Step", hint: "Horizontal and vertical segments with rounded corners" },
@@ -160,7 +177,7 @@ export const useGraphSettings = create<GraphSettings>((set, get) => ({
   showProjectionLabels: false,
   showArrowheads: true,
   showNodeNames: true,
-  showNodeElements: true,
+  showNodeElements: loadShowNodeElements(),
   // #41: smooth curves by default, matching the default Like show_graph
   // layout's drawing. Node avoidance (`avoidNodes`) works in every style.
   edgeRouting: "spline",
@@ -201,7 +218,14 @@ export const useGraphSettings = create<GraphSettings>((set, get) => ({
   setShowProjectionLabels: (v) => set({ showProjectionLabels: v }),
   setShowArrowheads: (v) => set({ showArrowheads: v }),
   setShowNodeNames: (v) => set({ showNodeNames: v }),
-  setShowNodeElements: (v) => set({ showNodeElements: v }),
+  setShowNodeElements: (v) => {
+    try {
+      localStorage.setItem(NODE_ELEMENTS_KEY, String(v));
+    } catch {
+      // Storage blocked: the choice holds for this page only.
+    }
+    set({ showNodeElements: v });
+  },
   setEdgeRouting: (v) => set({ edgeRouting: v }),
   setAvoidNodes: (v) => set({ avoidNodes: v }),
   setFloatingPorts: (v) => set({ floatingPorts: v }),

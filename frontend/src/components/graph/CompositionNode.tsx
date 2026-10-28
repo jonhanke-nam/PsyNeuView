@@ -121,12 +121,15 @@ export const CompositionNode = memo(function CompositionNode({
         />
       )}
 
-      {/* Header label pinned to top-left */}
+      {/* Header: label at top-left, the frame's buttons at top-right (#122:
+          with the COMPOSITION tag off by default they no longer sit right
+          after a short name, where an edge leaving the frame often runs). */}
       <div
         style={{
           position: "absolute",
           top: 8,
           left: 12,
+          right: 12,
           display: "flex",
           alignItems: "baseline",
           gap: 6,
@@ -149,7 +152,10 @@ export const CompositionNode = memo(function CompositionNode({
           </span>
         )}
         {showNodeNames && (
-          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--pnv-node-text-strong)" }}>
+          <span
+            title={d.label}
+            style={{ fontSize: 13, fontWeight: 600, color: "var(--pnv-node-text-strong)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+          >
             {d.label}
           </span>
         )}
@@ -163,7 +169,7 @@ export const CompositionNode = memo(function CompositionNode({
           title="Focus this composition (fill the canvas)"
           aria-label={`Focus composition ${d.label}`}
           style={{
-            marginLeft: 4,
+            marginLeft: "auto",
             cursor: "pointer",
             fontSize: 10,
             lineHeight: 1,

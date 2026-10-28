@@ -9,7 +9,7 @@ import { useSafeUpdateNodeInternals } from "@/hooks/useSafeUpdateNodeInternals";
 import { usePortLayout } from "@/stores/portLayoutStore";
 import type { MechanismData } from "@/stores/modelStore";
 import { useGraphSettings, type GraphDirection } from "@/stores/graphSettingsStore";
-import { useModelStore } from "@/stores/modelStore";
+import { useModelStore, NODE_HEIGHT, NODE_WIDTH } from "@/stores/modelStore";
 import { TYPE_COLORS, ROLE_COLORS, ROLE_PRIORITY } from "@/constants/pnlTypes";
 import { toggleCompositionCollapse } from "@/utils/nodeActions";
 import { formatTraceValue } from "@/utils/traceValues";
@@ -378,7 +378,10 @@ export const MechanismNode = memo(function MechanismNode({
           : isCursorHighlighted
           ? "0 0 0 2px var(--pnv-cursor-highlight), var(--pnv-cursor-glow)"
           : "var(--pnv-shadow-node)",
-        minWidth: 150,
+        // #122: the size of the slot the layout reserves, so a node showing
+        // just its name keeps the size and edge geometry it had with details.
+        minWidth: NODE_WIDTH,
+        minHeight: NODE_HEIGHT,
         textAlign: "center" as const,
         display: "flex",
         flexDirection: "column" as const,
@@ -484,10 +487,14 @@ export const MechanismNode = memo(function MechanismNode({
         </div>
       )}
 
-      {/* Type + Role badges */}
-      <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
+      {/* Type + Role badges. With Elements off (the default, #122) and no
+          other tag, the row is left out so the name sits centred in the oval,
+          as show_graph() draws it. */}
+      {(showNodeElements || isViewOnly || isCollapsedComposition) && (
+      <div data-testid="node-tags" style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
         {showNodeElements && (
           <span
+            data-testid="node-type-tag"
             style={{
               fontSize: 10,
               color: accentColor,
@@ -501,6 +508,7 @@ export const MechanismNode = memo(function MechanismNode({
         )}
         {showNodeElements && roleLabel && (
           <span
+            data-testid="node-role-tag"
             style={{
               fontSize: 9,
               color: "var(--pnv-on-primary)",
@@ -552,6 +560,7 @@ export const MechanismNode = memo(function MechanismNode({
           </button>
         )}
       </div>
+      )}
       {showNodeNames && (
         <div style={{ fontSize: 14, fontWeight: 600, color: "var(--pnv-text)" }}>
           {d.label}
@@ -559,6 +568,7 @@ export const MechanismNode = memo(function MechanismNode({
       )}
       {showNodeElements && d.function && (
         <div
+          data-testid="node-function-line"
           style={{
             fontSize: 10,
             color: "var(--pnv-text-hint)",
@@ -617,6 +627,15 @@ export const MechanismNode = memo(function MechanismNode({
                   node={d.label}
                   testId={`value-pill-grid-${d.label}`}
                 />
+                {/* The numbers, unseen and no height: the pill is as wide as
+                    with numbers in it, so the node keeps its width when the
+                    tags don't set it (#122). */}
+                <span
+                  aria-hidden
+                  style={{ display: "block", height: 0, overflow: "hidden", visibility: "hidden" }}
+                >
+                  {formatLabeledValue(activeValue, pillLabels, { maxLen: 40 })}
+                </span>
               </>
             ) : (
               formatLabeledValue(activeValue, pillLabels, { maxLen: 40 })
