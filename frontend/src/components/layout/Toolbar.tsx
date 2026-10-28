@@ -13,6 +13,7 @@ import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useTourStore } from "@/stores/tourStore";
 import { useCatalogOpener } from "@/stores/catalogOpenerStore";
 import { menuGroups, orientationWalkthroughs } from "@/utils/tourStep";
+import { useTutorialsMenuStore, visibleMenuGroups } from "@/stores/tutorialsMenuStore";
 import { loadFoldedSections, saveFoldedSections, toggleFolded, unfoldActive } from "@/utils/tutorialsMenuFold";
 import { readOfferChoice, shouldRemindFromMenu, writeOfferChoice } from "@/utils/orientationOffer";
 import { useNotificationStore } from "@/stores/notificationStore";
@@ -3254,7 +3255,11 @@ function WalkthroughMenu() {
   }, [open]);
   useDismiss(open, () => setOpen(false));
 
-  const groups = menuGroups();
+  // #136: the course's section can be hidden from Settings; hidden means
+  // left out of the menu, nothing more (a course walkthrough still opens
+  // by link).
+  const hideCourse = useTutorialsMenuStore((s) => s.hideCourse);
+  const groups = visibleMenuGroups(menuGroups(), hideCourse);
   // #8: section headings fold, like the Open menu's. Remembered; the running
   // walkthrough's section opens whenever the menu does.
   const [folded, setFolded] = useState<Set<string>>(() => loadFoldedSections());

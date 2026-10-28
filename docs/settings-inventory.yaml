@@ -324,6 +324,19 @@ settings:
       menu's own Don't remind me writes the same key, so this is where that
       is undone.
 
+  - id: hide-course
+    label: Tutorials and Voice ▸ Tutorials ▸ Hide the Cognitive Neuroscience Course
+    home: settings
+    section: tutorials-voice
+    storage: browser localStorage (psyneuview.tutorials.hideCourse); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-hide-course
+    notes: >-
+      Off by default (DEFAULT_HIDE_COURSE in stores/tutorialsMenuStore.ts), so
+      the course's section shows in the Tutorials menu (#136). On leaves that
+      one section out of the menu and nothing else: a course walkthrough
+      opened by link (?tour=…) still runs, and the other sections are
+      untouched.
+
   - id: text-size
     label: Appearance ▸ Text size ▸ Text size
     home: settings

@@ -57,7 +57,10 @@ steps:
 - `course:` must look like `"0.3"`, and quoting it keeps YAML from reading it as
   a number. Course walkthroughs appear under **Cognitive Neuroscience Course**
   in lesson order; `orientation:` walkthroughs under **PsyNeuView First
-  Steps** in part order, first; the rest under **Getting started**.
+  Steps** in part order, first; the rest under **Getting started**. The
+  course's section can be left out of the menu from Settings ▸ Tutorials and
+  Voice ▸ Tutorials ▸ **Hide the Cognitive Neuroscience Course** (off by
+  default, #136); `?tour=<id>` still opens a course walkthrough then.
 - `say:` is the caption: **the one sentence you'd say aloud**. The
   instruction is **what you'd point at**, with the exact control names. Every
   step has a caption (a unit test fails otherwise), with no code names, and
