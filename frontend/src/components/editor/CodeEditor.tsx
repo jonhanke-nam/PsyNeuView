@@ -1036,7 +1036,17 @@ export function CodeEditor() {
               </span>
             </>
           ) : (
-            <span title={filePath || undefined} style={{ fontFamily: filePath ? "monospace" : undefined }}>
+            <span
+              title={filePath || undefined}
+              style={{
+                fontFamily: filePath ? "monospace" : undefined,
+                // #111: like the bundle picker, the name gives way first.
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {sourceName}
             </span>
           )}

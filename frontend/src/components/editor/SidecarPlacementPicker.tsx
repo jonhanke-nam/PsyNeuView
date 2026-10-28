@@ -85,7 +85,7 @@ export function SidecarPlacementPicker() {
 
 
   return (
-    <div ref={rootRef} style={{ position: "relative", display: "inline-block" }}>
+    <div ref={rootRef} style={{ position: "relative", display: "inline-block", maxWidth: "100%", minWidth: 0 }}>
       <button
         data-testid="sidecar-placement-button"
         onClick={() => setOpen((o) => !o)}
@@ -102,10 +102,16 @@ export function SidecarPlacementPicker() {
           display: "inline-flex",
           gap: 5,
           alignItems: "center",
+          // #111: in a pane too narrow for the whole label (bigger text), the
+          // location shortens with an ellipsis rather than running off the
+          // pane's edge, where the divider clips it.
+          maxWidth: "100%",
+          minWidth: 0,
+          whiteSpace: "nowrap",
         }}
       >
-        <span style={{ color: "var(--pnv-text-faint)" }}>Files:</span>
-        <span>{LOCATION_LABEL[placement.effective]}</span>
+        <span style={{ color: "var(--pnv-text-faint)", flexShrink: 0 }}>Files:</span>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{LOCATION_LABEL[placement.effective]}</span>
         {inheriting && <span style={{ color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-9)" }}>(default)</span>}
         <span style={{ color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-9)" }}>▾</span>
       </button>
