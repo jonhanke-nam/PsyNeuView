@@ -627,6 +627,15 @@ export const MechanismNode = memo(function MechanismNode({
                   node={d.label}
                   testId={`value-pill-grid-${d.label}`}
                 />
+                {/* The numbers, unseen and no height: the pill is as wide as
+                    with numbers in it, so the node keeps its width when the
+                    tags don't set it (#122). */}
+                <span
+                  aria-hidden
+                  style={{ display: "block", height: 0, overflow: "hidden", visibility: "hidden" }}
+                >
+                  {formatLabeledValue(activeValue, pillLabels, { maxLen: 40 })}
+                </span>
               </>
             ) : (
               formatLabeledValue(activeValue, pillLabels, { maxLen: 40 })
