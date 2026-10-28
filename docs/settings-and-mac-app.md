@@ -56,17 +56,82 @@ anything in the app can open it at a section with `openSettings("developer")`
 (`frontend/src/components/common/settings/sections.ts`). The Mac app's ⌘,
 opens it on the last section.
 
-| Section | What's there | Mac app only |
-|---|---|---|
-| **About** | versions, one line each: PsyNeuView; **Running from** (#1356) — "The version included with the Mac app", "Your checkout at ~/…", or "A browser session served from …" (the one path About shows, since which folder it is *is* the answer), and for a checkout its branch and commit, files changed, how far behind `origin/devel` (and the branch it tracks) it is **as last fetched** (no network on open), how to update, and whether it moved since the server started, with **Check now** (a fetch with a 30-second timeout; nothing is pulled); the **Server commit** and **Page built from**, and an amber note first when the two disagree ("This page is older than the server; reload", with Reload); PsyNeuLink with where it comes from ("PsyNeuLink 0.19.1.0, from PrincetonUniversity/PsyNeuLink @ devel"), ModECI MDF, GitHub sign-in; links; in a browser, **Download diagnostics** — the versions, settings, the open model's name and where it came from, and what happened since the page opened, as one JSON file for a problem report ([Diagnostics](#diagnostics-window__pnvdiagnostics), #1287) | the Mac app's Report a Problem includes the same, so the button is not shown there |
-| **General** | **PsyNeuLink version**: Latest development (recommended, the default; with when the branch last moved) or Official release, picked from every PyPI release with its date (incompatible ones greyed, old ones marked "no run stepping", kept ones marked) — the simple view of Developer's full form, same setting, same install request; "Custom — chosen in Developer" with the source and path when it is anything else; under it, how current it is ("3 commits behind · last checked 10:42", "✓ Up to date", "a newer release is available"), **Check now**, and **Keep Latest development up to date automatically** (on by default; an update installs at the next start, #1304); **Model files**: **Autosave**, off by default, and when on *after N seconds without activity* (10; 2–600) (#1347, [What you can edit](what-you-can-edit.md#autosave)), and where new models' sidecar files go | **Mac app**: restart PsyNeuView if it crashes, open PsyNeuView when you log in |
-| **Appearance** (#1301) | how the app looks and feels, remembered per browser: **Pointer in the graph view** — Arrow (default), our own image whose tip is the exact point that clicks, over the canvas, nodes and edges, with the grabbing hand only while a drag is in progress — or Hand, Crosshair or Circle (#40), our own images too; a bend handle or attachment dot shows the arrow (or the crosshair or circle) rather than the hand, so the exact point is clear; **Pointer size** — Small, Medium (default), Large, Extra large, covering the arrow, the hand, the crosshair, the circle and the grabbing hand while dragging (#40), with a preview. Window zoom doesn't scale cursors; this is the one control for the size; **Automatic layout** — how models are arranged when they have no layout of your own: Like show_graph (default: where PsyNeuLink's show_graph() puts each node, with its edges, #24), Layered, Radial or Force (#19); choosing Like show_graph also switches edges to Smooth, the default edge style (#41); the toolbar's layout menu switches the open model; **Graph legend** — how the legend opens: Starts collapsed (default) or Starts expanded (#7); the legend's own Show/Hide folds it for the open model; **Components panel** — how the panel opens: Starts open (the word list, default) or Starts as the icon strip (#113); the panel's own ◀/▶ switches it for the session only. *Not here:* **Show ports** (#112) is the one switch in the graph toolbar's **Advanced Graph View Options** (#123) — off by default, it shows the port dots on the graph and the Ports section in Components, and is remembered per browser; Settings has no second control for it (listed under `elsewhere` in the inventory) | — |
-| **Tutorials and Voice** (#1404, #1407) | **Voice**: the **Narration voice** that reads walkthrough captions — Automatic (the best English voice installed) or any installed English voice, with ▶ Play sample and how to download a free Premium voice — and the **Speaking rate**; **Tutorials**: the **PsyNeuView First Steps reminder** (offer again, remind in the Tutorials menu, or don't) and **Hide the Cognitive Neuroscience Course** (off by default; leaves the course's section out of the Tutorials menu, while a course walkthrough opened by link still runs, #136). Narration on/off stays on the walkthrough bar | — |
-| **Open menu** | only the sections' order and which catalogs under development show; the ones under development always stay below the everyday sections, and carry the Developer badge when developer mode is what shows them | — |
-| **Folders** (#1295) | everything you can open and where it lives, in the Open menu's order, one row each with its path, whose it is (yours to edit / managed for you) and Show in Finder: **My Project Folder** (Change…, **Move…**, and the one-time offer to move out of a hidden legacy folder), **your catalogs** (add, rename, remove), the PsyNeuLink Library and Examples ("from the PsyNeuLink you've selected", with a link to Developer), the Reference and Demo models included with PsyNeuView; a note on where app data stays | Show in Finder (Copy path in a browser) |
-| **Keyboard shortcuts** | every shortcut, rebindable | — |
-| **Problem reports** (Mac app only: listed only when the bridge is present) | — | how Report a Problem sends a report: Send reports with, Send to |
-| **Developer (advanced)** (always listed, last) | **the developer-mode switch, first**; which PsyNeuLink is installed: a "✓ In use now" line and one **Switch to** dropdown — *Another local checkout…* (Path with a Finder **Choose…** in the Mac app) and *Another GitHub repo or branch…* first, then the known sources in groups that fold with their counts: your checkouts, one per GitHub repo (rows say the branch alone), the official releases on PyPI with dates (the newest five, then *Show older*), only the group holding the one in use starting open — with full names, the one in use marked, what the switch will change said before Apply & restart, a button that appears only for a valid choice that differs from what is installed (#1303, #1331, #1334), and **Manage known sources** (folded: Rename, and Remove for all but the one in use); **where PsyNeuView and PsyNeuLink are installed** (path, whose it is, Show in Finder); **PsyNeuLink details** (repo, branch, commit, path, version, branch freshness, debugging support); the **managed PsyNeuLink copies** and **kept official releases** with size, last used and Remove, and the known checkouts (folded); **Keep your checkouts current** (folded): per checkout, Check for upstream changes and Pull on launch, both off by default, with the remote branch, behind or up to date, last checked and the last launch's pull (#1304) | which PsyNeuView runs: included with the app, or a checkout (folded) |
+Each section below lists its settings one per line, so changes to different
+settings touch different lines.
+
+#### About
+
+- versions, one line each: PsyNeuView
+- **Running from** (#1356) — "The version included with the Mac app", "Your checkout at ~/…", or "A browser session served from …" (the one path About shows, since which folder it is *is* the answer), and for a checkout its branch and commit, files changed, how far behind `origin/devel` (and the branch it tracks) it is **as last fetched** (no network on open), how to update, and whether it moved since the server started, with **Check now** (a fetch with a 30-second timeout; nothing is pulled)
+- the **Server commit** and **Page built from**, and an amber note first when the two disagree ("This page is older than the server; reload", with Reload)
+- PsyNeuLink with where it comes from ("PsyNeuLink 0.19.1.0, from PrincetonUniversity/PsyNeuLink @ devel"), ModECI MDF, GitHub sign-in
+- links
+- in a browser, **Download diagnostics** — the versions, settings, the open model's name and where it came from, and what happened since the page opened, as one JSON file for a problem report ([Diagnostics](#diagnostics-window__pnvdiagnostics), #1287)
+- *Mac app only:* the Mac app's Report a Problem includes the same, so the button is not shown there
+
+#### General
+
+- **PsyNeuLink version**: Latest development (recommended, the default; with when the branch last moved) or Official release, picked from every PyPI release with its date (incompatible ones greyed, old ones marked "no run stepping", kept ones marked) — the simple view of Developer's full form, same setting, same install request
+  - "Custom — chosen in Developer" with the source and path when it is anything else
+  - under it, how current it is ("3 commits behind · last checked 10:42", "✓ Up to date", "a newer release is available"), **Check now**, and **Keep Latest development up to date automatically** (on by default; an update installs at the next start, #1304)
+- **Model files**: **Autosave**, off by default, and when on *after N seconds without activity* (10; 2–600) (#1347, [What you can edit](what-you-can-edit.md#autosave)), and where new models' sidecar files go
+- *Mac app only:* **Mac app**: restart PsyNeuView if it crashes, open PsyNeuView when you log in
+
+#### Appearance (#1301)
+
+How the app looks and feels, remembered per browser:
+
+- **Pointer in the graph view** — Arrow (default), our own image whose tip is the exact point that clicks, over the canvas, nodes and edges, with the grabbing hand only while a drag is in progress — or Hand, Crosshair or Circle (#40), our own images too
+  - a bend handle or attachment dot shows the arrow (or the crosshair or circle) rather than the hand, so the exact point is clear
+- **Pointer size** — Small, Medium (default), Large, Extra large, covering the arrow, the hand, the crosshair, the circle and the grabbing hand while dragging (#40), with a preview. Window zoom doesn't scale cursors
+  - this is the one control for the size
+- **Automatic layout** — how models are arranged when they have no layout of your own: Like show_graph (default: where PsyNeuLink's show_graph() puts each node, with its edges, #24), Layered, Radial or Force (#19)
+  - choosing Like show_graph also switches edges to Smooth, the default edge style (#41)
+  - the toolbar's layout menu switches the open model
+- **Graph legend** — how the legend opens: Starts collapsed (default) or Starts expanded (#7)
+  - the legend's own Show/Hide folds it for the open model
+- **Components panel** — how the panel opens: Starts open (the word list, default) or Starts as the icon strip (#113)
+  - the panel's own ◀/▶ switches it for the session only.
+- *Not here:* **Show ports** (#112) is the one switch in the graph toolbar's **Advanced Graph View Options** (#123) — off by default, it shows the port dots on the graph and the Ports section in Components, and is remembered per browser
+  - Settings has no second control for it (listed under `elsewhere` in the inventory)
+
+#### Tutorials and Voice (#1404, #1407)
+
+- **Voice**: the **Narration voice** that reads walkthrough captions — Automatic (the best English voice installed) or any installed English voice, with ▶ Play sample and how to download a free Premium voice — and the **Speaking rate**
+- **Tutorials**: the **PsyNeuView First Steps reminder** (offer again, remind in the Tutorials menu, or don't)
+- **Hide the Cognitive Neuroscience Course** (off by default; leaves the course's section out of the Tutorials menu, while a course walkthrough opened by link still runs, #136)
+  - Narration on/off stays on the walkthrough bar
+
+#### Open menu
+
+- only the sections' order and which catalogs under development show
+- the ones under development always stay below the everyday sections, and carry the Developer badge when developer mode is what shows them
+
+#### Folders (#1295)
+
+Everything you can open and where it lives, in the Open menu's order, one row each with its path, whose it is (yours to edit / managed for you) and Show in Finder:
+
+- **My Project Folder** (Change…, **Move…**, and the one-time offer to move out of a hidden legacy folder), **your catalogs** (add, rename, remove), the PsyNeuLink Library and Examples ("from the PsyNeuLink you've selected", with a link to Developer), the Reference and Demo models included with PsyNeuView
+- a note on where app data stays
+- *Mac app only:* Show in Finder (Copy path in a browser)
+
+#### Keyboard shortcuts
+
+- every shortcut, rebindable
+
+#### Problem reports (Mac app only: listed only when the bridge is present)
+
+- *Mac app only:* how Report a Problem sends a report: Send reports with, Send to
+
+#### Developer (advanced) (always listed, last)
+
+- **the developer-mode switch, first**
+- which PsyNeuLink is installed: a "✓ In use now" line and one **Switch to** dropdown — *Another local checkout…* (Path with a Finder **Choose…** in the Mac app) and *Another GitHub repo or branch…* first, then the known sources in groups that fold with their counts: your checkouts, one per GitHub repo (rows say the branch alone), the official releases on PyPI with dates (the newest five, then *Show older*), only the group holding the one in use starting open — with full names, the one in use marked, what the switch will change said before Apply & restart, a button that appears only for a valid choice that differs from what is installed (#1303, #1331, #1334), and **Manage known sources** (folded: Rename, and Remove for all but the one in use)
+- **where PsyNeuView and PsyNeuLink are installed** (path, whose it is, Show in Finder)
+- **PsyNeuLink details** (repo, branch, commit, path, version, branch freshness, debugging support)
+- the **managed PsyNeuLink copies** and **kept official releases** with size, last used and Remove, and the known checkouts (folded)
+- **Keep your checkouts current** (folded): per checkout, Check for upstream changes and Pull on launch, both off by default, with the remote branch, behind or up to date, last checked and the last launch's pull (#1304)
+- *Mac app only:* which PsyNeuView runs: included with the app, or a checkout (folded)
 
 Developer follows Problem reports in the list rather than being pinned to
 the bottom, so a short window still shows it; a remembered or requested
