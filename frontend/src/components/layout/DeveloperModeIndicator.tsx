@@ -16,6 +16,7 @@ import { DeveloperBadge } from "@/components/common/DeveloperBadge";
 import { useDismiss } from "@/components/common/dialog/useDismiss";
 import { openSettings } from "@/components/common/settings/sections";
 import { useUIStore } from "@/stores/uiStore";
+import { Z_MENU } from "@/constants/zLayers";
 
 export function DeveloperModeIndicator() {
   const developerMode = useUIStore((s) => s.developerMode);
@@ -70,7 +71,7 @@ export function DeveloperModeIndicator() {
             borderRadius: 6,
             boxShadow: "var(--pnv-shadow-popover)",
             padding: 4,
-            zIndex: 1000,
+            zIndex: Z_MENU,
             display: "flex",
             flexDirection: "column",
           }}

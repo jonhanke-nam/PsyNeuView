@@ -35,6 +35,7 @@ import { useDismiss } from "@/components/common/dialog/useDismiss";
 import { Button } from "@/components/common/Button";
 import { useAutosaveStore } from "@/stores/autosaveStore";
 import { SAVE_EVENT, requestSaveCopy, type SaveRequestDetail, type SaveRequestOptions } from "@/utils/saveRequest";
+import { Z_MENU } from "@/constants/zLayers";
 
 // ─── Highlight decoration ────────────────────────────────────────
 
@@ -1469,7 +1470,7 @@ function SnippetDropdown({ editorRef, compact = false }: { editorRef: React.RefO
             border: "1px solid var(--pnv-border-light)",
             borderRadius: 6,
             boxShadow: "var(--pnv-shadow-popover)",
-            zIndex: 1000,
+            zIndex: Z_MENU,
             minWidth: 160,
             padding: "4px 0",
           }}

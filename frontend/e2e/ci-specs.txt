@@ -33,6 +33,7 @@ learning-nodes-run-inspector.spec.ts
 lock-in-checkout.spec.ts
 mac-app-settings-section.spec.ts
 mdf-gap-warnings.spec.ts
+menus-above-walkthrough-ring.spec.ts
 model-lock.spec.ts
 modulatory-param-edges.spec.ts
 narration-matches-bar.spec.ts

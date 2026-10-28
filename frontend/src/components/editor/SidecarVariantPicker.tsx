@@ -24,6 +24,7 @@ import {
 } from "@/utils/sidecarSeed";
 import type { ModelLabels } from "@/utils/labels";
 import { useDismiss } from "@/components/common/dialog/useDismiss";
+import { Z_MENU } from "@/constants/zLayers";
 
 const KIND_LABEL: Record<SidecarKind, string> = {
   layout: "Layout",
@@ -203,7 +204,7 @@ export function SidecarVariantPicker({ kind }: { kind: SidecarKind }) {
             border: "1px solid var(--pnv-border-light)",
             borderRadius: 6,
             boxShadow: "var(--pnv-shadow-popover)",
-            zIndex: 1000,
+            zIndex: Z_MENU,
             minWidth: 220,
             padding: "4px 0",
           }}
