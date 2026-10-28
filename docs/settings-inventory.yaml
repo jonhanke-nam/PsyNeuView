@@ -499,7 +499,7 @@ settings:
 elsewhere:
   - id: graph-show-ports
     label: Show ports
-    home: graph toolbar ▸ Ports button (data-testid toolbar-show-ports)
+    home: graph toolbar ▸ Advanced Graph View Options ▸ Nodes ▸ Show ports (data-testid toolbar-show-ports, #123)
     storage: browser localStorage (psyneuview.graph.showPorts; the Mac app keeps psyneuview. keys)
     notes: >-
       Off by default (#112). One switch for both the port dots drawn on the
