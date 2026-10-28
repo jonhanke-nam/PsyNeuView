@@ -546,7 +546,9 @@ export function Toolbar() {
         <span aria-hidden="true" style={{ fontSize: "var(--pnv-fs-11)", width: 13, color: "var(--pnv-text-hint)" }}>
           {isSectionCollapsed(id) ? "▶" : "▼"}
         </span>
-        <span>{label}</span>
+        {/* The name stays on one line; a long source path is what shortens.
+            It used to squeeze "My Project Folder" onto three lines. */}
+        <span style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{label}</span>
         {opts?.source && (
           <span
             data-testid="open-menu-section-source"
@@ -562,6 +564,7 @@ export function Toolbar() {
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
               maxWidth: 300,
+              minWidth: 0,
             }}
           >
             {opts.source}
