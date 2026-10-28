@@ -1,0 +1,211 @@
+id: pnl-projections
+title: Adding projections — the mapping matrix
+psyneulink: 3
+minutes: 6
+docs:
+  - tutorials/14-starting-a-model.md
+  - tutorials/05-editing-inspector.md
+  - tutorials/02-running-a-model.md
+# No `model:` — this walkthrough creates its own.
+
+# Lesson 3 of the PsyNeuLink Tutorials (#9): the notebook's fourth section,
+# "Adding Projections".
+#
+# Source notebook:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/master/tutorial/PsyNeuLink%20Tutorial.ipynb
+#   (cells 28–33). The Basics and Primer:
+#   https://princetonuniversity.github.io/PsyNeuLink/BasicsAndPrimer.html
+# Validated against PsyNeuLink 0.20.2.0.
+#
+# Built rather than opened: the notebook joins a Linear unit (slope 2,
+# intercept 2) to a Logistic one, first with the IDENTITY_MATRIX keyword in
+# the pathway, then with an explicit MappingProjection whose matrix is
+# [[1]], and sweeps each from -3 to 3. The New Model starter already has the
+# two nodes and the projection between them: input_node becomes the
+# notebook's linear unit, output_node its logistic unit, and the projection
+# input_to_output is written the notebook's explicit way, a MappingProjection
+# with its sender and receiver, with the identity matrix as its default. The
+# sweep is five trials in one run. The notebook keeps the matrix at 1, so
+# both of its compositions give the same curve; to see the projection
+# multiply, the lesson then writes 0.5 into the matrix and runs the sweep
+# again. Every number below was measured in the app, and the tutorial spec
+# asserts them.
+#
+# What stays in the notebook: the IDENTITY_MATRIX keyword inside a pathway
+# list, since the app always writes the projection out; show_graph(), which
+# is the canvas; the 51-point loops and their plots; and the notebook's
+# names for the two units, linear and logistic. The last step says so.
+
+steps:
+  - id: start-a-new-model
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Start a new model: Open ▸ New Model…, and call it adding_projections.
+      The notebook joins two mechanisms with a projection, which takes the
+      first mechanism's output, multiplies it by the projection's matrix,
+      and delivers the result to the second. The starter has the two nodes
+      and the projection: input_node will be the notebook's linear unit, and
+      output_node its logistic unit.
+    say: >-
+      Start a new model. A projection carries one mechanism's output to the
+      next, multiplied by its matrix.
+    done:
+      nodeExists: output_node
+    act:
+      newModel: adding_projections
+
+  - id: slope-2
+    anchor:
+      node: input_node
+    instruct: >-
+      The notebook's first unit is Linear with slope 2 and intercept 2.
+      Select input_node and, in the Inspector, set slope to 2.
+    say: >-
+      Make the input node the notebook's linear unit: set its slope to 2.
+    done:
+      paramEquals:
+        node: input_node
+        param: slope
+        value: "2"
+    act:
+      setParameter:
+        node: input_node
+        param: slope
+        value: "2"
+
+  - id: intercept-2
+    anchor:
+      node: input_node
+    instruct: >-
+      And set intercept to 2. input_node now gives 2 times its input, plus
+      2: an input of -1 comes out as 0.
+    say: >-
+      And its intercept to 2.
+    done:
+      paramEquals:
+        node: input_node
+        param: intercept
+        value: "2"
+    act:
+      setParameter:
+        node: input_node
+        param: intercept
+        value: "2"
+
+  - id: make-it-logistic
+    anchor:
+      node: output_node
+    instruct: >-
+      The notebook's second unit is Logistic. Select output_node and, in
+      the Inspector, change its Function from Linear to Logistic.
+    say: >-
+      Make the output node Logistic.
+    done:
+      functionIs:
+        node: output_node
+        type: Logistic
+    act:
+      setFunction:
+        node: output_node
+        type: Logistic
+
+  - id: the-identity-matrix
+    anchor:
+      testid: rf__edge-input_to_output
+    instruct: >-
+      Click the arrow between the nodes: the projection input_to_output.
+      Under Projection Parameters, its matrix is [[1]], the 1 by 1 identity
+      matrix: the output of input_node is multiplied by 1 and arrives
+      unchanged. The notebook's IDENTITY_MATRIX keyword means this. In the
+      code, the projection is already the notebook's explicit form, a
+      MappingProjection with its sender and receiver; the identity is its
+      default, so no matrix is written.
+    say: >-
+      Click the arrow. Its matrix is the identity: one by one, holding a 1.
+    done:
+      selectedNode: input_to_output
+    act:
+      selectNode: input_to_output
+
+  - id: run-the-sweep
+    anchor:
+      testid: tab-run
+    instruct: >-
+      The notebook sweeps the composition from -3 to 3 and plots the curve.
+      In the Run tab, give input_node five trials, -3, -1.5, 0, 1.5 and 3,
+      and press Run Model. output_node gives about 0.018, 0.269, 0.881,
+      0.993 and 1.000: the Logistic curve, but with its midpoint at -1,
+      where 2 times the input plus 2 is 0, and twice as steep, since the
+      slope doubles every input before the curve sees it.
+    say: >-
+      Run five trials from minus 3 to 3. The curve's midpoint is at minus
+      1, and it is twice as steep.
+    done:
+      lastRunInputs:
+        input_node: [-3, -1.5, 0, 1.5, 3]
+    act:
+      setTrialInputs:
+        input_node: [-3, -1.5, 0, 1.5, 3]
+      runModel: true
+
+  - id: write-the-matrix
+    anchor:
+      testid: rf__edge-input_to_output
+    instruct: >-
+      The notebook's second composition writes the matrix into the
+      projection itself, matrix=[[1]], and gets the same curve. To see the
+      matrix do something, write a different number: click the arrow and,
+      under Projection Parameters, set matrix to [[0.5]] and press Enter.
+      The code now has the notebook's explicit matrix, and the projection
+      halves what it carries.
+    say: >-
+      Now write a matrix of your own: one half. The projection halves what
+      it carries.
+    done:
+      paramEquals:
+        node: input_to_output
+        param: matrix
+        value: "[[0.5]]"
+    act:
+      setParameter:
+        node: input_to_output
+        param: matrix
+        value: "[[0.5]]"
+
+  - id: run-it-again
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Run the same five trials again. output_node now gives about 0.119,
+      0.378, 0.731, 0.924 and 0.982: the midpoint is still at -1, since half
+      of 0 is 0, but the curve is half as steep. The projection's matrix
+      scales what passes between the nodes.
+    say: >-
+      Run it again. The midpoint stays at minus 1, but the curve is half as
+      steep.
+    done:
+      runsAtLeast: 2
+    act:
+      setTrialInputs:
+        input_node: [-3, -1.5, 0, 1.5, 3]
+      runModel: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: run-panel
+    instruct: >-
+      What this isn't: the notebook's IDENTITY_MATRIX keyword goes inside a
+      pathway list, and the projection is made for you; here the projection
+      is always written out, the notebook's explicit way, with the identity
+      as its default. Its show_graph() is the canvas; its 51-point sweeps
+      are five trials with no curve drawn; and its names for the two units,
+      linear and logistic, stay in the notebook, where input_node and
+      output_node play them.
+    say: >-
+      The notebook's identity keyword, its plots and its unit names stay in
+      the notebook.
+    done:
+      next: true
+    act:
+      next: true

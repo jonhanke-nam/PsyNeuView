@@ -31,6 +31,7 @@ import memoryYaml from "@/walkthroughs/memory.yaml?raw";
 import perceptronYaml from "@/walkthroughs/perceptron.yaml?raw";
 import pnlMechanismYaml from "@/walkthroughs/pnl-mechanism.yaml?raw";
 import pnlCompositionYaml from "@/walkthroughs/pnl-composition.yaml?raw";
+import pnlProjectionsYaml from "@/walkthroughs/pnl-projections.yaml?raw";
 import demoYaml from "@/walkthroughs/demo.yaml?raw";
 import runYaml from "@/walkthroughs/run.yaml?raw";
 import semanticYaml from "@/walkthroughs/semantic.yaml?raw";
@@ -549,6 +550,7 @@ export const WALKTHROUGHS: Record<string, Walkthrough> = {
   hopfield: parseWalkthrough(hopfieldYaml),
   "pnl-mechanism": parseWalkthrough(pnlMechanismYaml),
   "pnl-composition": parseWalkthrough(pnlCompositionYaml),
+  "pnl-projections": parseWalkthrough(pnlProjectionsYaml),
   "orientation-window": parseWalkthrough(orientationWindowYaml),
   "orientation-open": parseWalkthrough(orientationOpenYaml),
   "orientation-editing": parseWalkthrough(orientationEditingYaml),

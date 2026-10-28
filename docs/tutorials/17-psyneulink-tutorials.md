@@ -35,7 +35,7 @@ rows with a `?tour=` are built.
 | --- | --- | --- | --- | --- |
 | 1 | Creating a mechanism — Linear and Logistic | Tutorial: *Creating a mechanism*, *Logistic Function* | `pnl-mechanism` | **Build** from New Model, **run** the notebook's inputs, **edit** slope and intercept, switch the function to Logistic |
 | 2 | From nodes to graphs — a composition | Tutorial: *From Nodes to Graphs: Compositions* | `pnl-composition` | **Build** from New Model, select the projection, **run** 4 and a five-trial sweep, give both nodes **two units**, make it Logistic, run x and 3x, and the step mechanism |
-| 3 | Adding projections | Tutorial: *Adding Projections* | | A Linear unit into a Logistic one; the identity matrix; an explicit `MappingProjection` with its matrix |
+| 3 | Adding projections — the mapping matrix | Tutorial: *Adding Projections* | `pnl-projections` | **Build** from New Model: a Linear unit (slope 2, intercept 2) into a Logistic one; click the arrow for the **identity matrix**; **run** the sweep; write **0.5** into the matrix (the explicit `MappingProjection`) and run again |
 | 4 | The mini Stroop model | Tutorial: *Compositions*, *Mini-Stroop Model* | | Two inputs (colours, words) converging on a Logistic response; a congruent and an incongruent trial |
 | 5 | The pre-trained Stroop model | Tutorial: *Pre-trained Complete Stroop Model* | | The Cohen et al. (1990) network with its weights written in; task demand; the eight input combinations |
 | 6 | Constructing compositions | Tutorial: *Constructing Compositions* | | Lines of two and three layers, a recurrent pathway, several hidden layers, and what each graph looks like |
@@ -48,7 +48,7 @@ rows with a `?tour=` are built.
 | 13 | Learning | Primer: *Learning*, *LearningMechanisms* | | A learning pathway and backpropagation |
 | 14 | Customization | Primer: *Customization* | | A user-defined function |
 
-Lessons 3–14 are listed so the order is settled; they are not built yet. The
+Lessons 4–14 are listed so the order is settled; they are not built yet. The
 notebook's own ending, *Constructing Compositions*, says "more content is
 being added weekly", so the list may grow with it.
 
@@ -133,6 +133,46 @@ sets it.
 
 ---
 
+### 3. Adding projections — the mapping matrix
+
+Notebook cells 28–33. Validated against PsyNeuLink 0.20.2.0.
+
+The notebook joins a `Linear(slope=2, intercept=2)` unit to a `Logistic()`
+one, first with the `IDENTITY_MATRIX` keyword in the pathway list and then
+with an explicit `MappingProjection(sender=…, receiver=…, matrix=[[1]])`, and
+sweeps each from −3 to 3: a projection takes one mechanism's output,
+multiplies it by its matrix, and delivers the result to the next. The
+walkthrough starts a **new model**, `adding_projections`, and makes the
+starter's two nodes the notebook's units: set `input_node`'s **slope** to
+**2** and **intercept** to **2**, and change `output_node`'s function to
+**Logistic**. Click the arrow: under **Projection Parameters** the matrix is
+**[[1]]**, the 1 × 1 identity the keyword means, and in the code the
+projection is already the notebook's explicit form, a `MappingProjection`
+with its sender and receiver; the identity is its default, so no matrix is
+written.
+
+Then the sweep, in the **Run** tab: five trials, **−3, −1.5, 0, 1.5, 3**,
+give **0.018, 0.269, 0.881, 0.993, 1.000**, the Logistic curve with its
+midpoint at −1 (where 2x + 2 = 0) and twice as steep. The notebook keeps the
+matrix at 1, so its two compositions draw the same curve; to see the matrix
+do something, the walkthrough writes **[[0.5]]** into the matrix row, which
+puts `matrix=[[0.5]]` into the code (the notebook's explicit matrix), and
+runs the same five trials again: **0.119, 0.378, 0.731, 0.924, 0.982**, the
+midpoint still at −1 and the curve half as steep. The tutorial spec asserts
+both runs and that `matrix=[[0.5]]` reached the source.
+
+![The projection selected: under Projection Parameters its matrix is [[1]], the identity](assets/tour/pnl-projections-step-6.png)
+
+**What stays in the notebook.** The `IDENTITY_MATRIX` keyword inside a
+pathway list, which makes the projection for you; here the projection is
+always written out, the notebook's explicit way, with the identity as its
+default. `show_graph()` is the canvas; the 51-point sweeps are five trials
+with no curve drawn; and the notebook's names for its units, `linear` and
+`logistic`, stay there, since the walkthrough does not rename the starter's
+nodes.
+
+---
+
 ## What you can expect
 
 - [x] **Tutorials ▾** has a **PsyNeuLink Tutorials** section, folded on first
@@ -145,8 +185,12 @@ sets it.
       it gives both nodes two units through the Inspector's Inputs row and
       asserts the four runs (4; the sweep; 0.269/0.047 and 0.731/0.953; the
       step's 0.00005/0.99995).
+- [x] Lesson 3 is built the same way (`pnl-projections.tutorial.spec.ts`):
+      it edits a projection's matrix under Projection Parameters and asserts
+      both sweeps (0.018 … 1.000 through the identity; 0.119 … 0.982 through
+      0.5) and the `matrix=[[0.5]]` written into the code.
 - [x] Every step has a caption for narration.
-- [ ] **Not yet:** lessons 3–14. Each will be added in order, as a walkthrough
+- [ ] **Not yet:** lessons 4–14. Each will be added in order, as a walkthrough
       with a bundled demo where the model is too big to build by hand.
 
 ## Further reading
@@ -157,4 +201,5 @@ sets it.
 - [Writing a guided walkthrough](../guided-walkthroughs.md), for adding a lesson.
 - PsyNeuLink: [Basics and Primer](https://princetonuniversity.github.io/PsyNeuLink/BasicsAndPrimer.html),
   [`TransferMechanism`](https://princetonuniversity.github.io/PsyNeuLink/TransferMechanism.html),
-  [`Logistic`](https://princetonuniversity.github.io/PsyNeuLink/TransferFunctions.html).
+  [`Logistic`](https://princetonuniversity.github.io/PsyNeuLink/TransferFunctions.html),
+  [`MappingProjection`](https://princetonuniversity.github.io/PsyNeuLink/MappingProjection.html).

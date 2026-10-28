@@ -406,6 +406,7 @@ describe("menuGroups", () => {
     expect(lessons.map((l) => [l.id, l.psyneulink])).toEqual([
       ["pnl-mechanism", 1],
       ["pnl-composition", 2],
+      ["pnl-projections", 3],
     ]);
     for (const l of lessons) {
       expect(l.docs?.length, `"${l.id}" cites no docs page`).toBeGreaterThan(0);
