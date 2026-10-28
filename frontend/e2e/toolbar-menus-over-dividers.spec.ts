@@ -12,6 +12,9 @@ const SASH = '[class*="sash-module_sash"]';
 
 /** Opens a menu at each width until a vertical divider crosses it; returns whether the menu is on top there. */
 async function menuOnTopWhereDividerCrosses(page: Page, open: () => Promise<void>, listTestId: string) {
+  // The old half-and-half split, so the editor's divider reaches across the
+  // toolbar menus; the default (#110) keeps the editor to a quarter.
+  await page.addInitScript(() => localStorage.setItem("psynewview_layout_outer_sizes", "[50,50]"));
   for (const width of [1000, 800, 640]) {
     await page.setViewportSize({ width, height: 800 });
     await page.goto("/");
