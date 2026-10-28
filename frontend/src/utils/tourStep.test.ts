@@ -401,9 +401,12 @@ describe("menuGroups", () => {
     expect(groups[1].walkthroughs.map((x) => x.id)).toEqual(["demo"]);
   });
 
-  it("ships the first PsyNeuLink lesson, with a caption on every step", () => {
+  it("ships the PsyNeuLink lessons in order, with a caption on every step", () => {
     const lessons = menuGroups().find((g) => g.id === "psyneulink")?.walkthroughs ?? [];
-    expect(lessons.map((l) => [l.id, l.psyneulink])).toEqual([["pnl-mechanism", 1]]);
+    expect(lessons.map((l) => [l.id, l.psyneulink])).toEqual([
+      ["pnl-mechanism", 1],
+      ["pnl-composition", 2],
+    ]);
     for (const l of lessons) {
       expect(l.docs?.length, `"${l.id}" cites no docs page`).toBeGreaterThan(0);
       for (const step of l.steps) expect(step.say, `"${l.id}"/"${step.id}" has no caption`).toBeTruthy();
