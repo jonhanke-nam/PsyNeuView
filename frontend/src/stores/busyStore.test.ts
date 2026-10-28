@@ -47,6 +47,8 @@ describe("busyStore (#38)", () => {
     expect(isBackgroundRequest("/health")).toBe(true);
     expect(isBackgroundRequest("/api/jobs/abc")).toBe(true);
     expect(isBackgroundRequest("/api/settings/running?page=1")).toBe(true);
+    // Asked at startup by the Run and Learn panels, not by the user.
+    expect(isBackgroundRequest("/api/execution-modes")).toBe(true);
     expect(isBackgroundRequest("/api/model/load")).toBe(false);
     expect(isBackgroundRequest("/api/jobs")).toBe(false);
     expect(isBackgroundRequest("http://localhost:8000/api/model/save-source")).toBe(false);

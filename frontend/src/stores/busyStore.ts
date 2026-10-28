@@ -100,6 +100,10 @@ const BACKGROUND = [
   /^\/health\b/,
   /^\/api\/settings\/running/,
   /^\/api\/settings\/info\b/,
+  // The Run and Learn panels ask which execution modes exist when they mount,
+  // at startup; it takes about a second, so the wheel spun before anyone did
+  // anything.
+  /^\/api\/execution-modes\b/,
   /^\/api\/settings\/pnl-freshness/,
   /^\/api\/settings\/pnl-updates/,
   /^\/api\/settings\/install\/[^/?]+$/, // polling an install job
