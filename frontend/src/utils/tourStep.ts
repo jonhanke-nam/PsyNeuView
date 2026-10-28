@@ -30,6 +30,7 @@ import logisticYaml from "@/walkthroughs/logistic.yaml?raw";
 import memoryYaml from "@/walkthroughs/memory.yaml?raw";
 import perceptronYaml from "@/walkthroughs/perceptron.yaml?raw";
 import pnlMechanismYaml from "@/walkthroughs/pnl-mechanism.yaml?raw";
+import pnlCompositionYaml from "@/walkthroughs/pnl-composition.yaml?raw";
 import demoYaml from "@/walkthroughs/demo.yaml?raw";
 import runYaml from "@/walkthroughs/run.yaml?raw";
 import semanticYaml from "@/walkthroughs/semantic.yaml?raw";
@@ -85,6 +86,12 @@ export interface TourState {
   traceStep?: number | null;
   /** Path of the open model file, or null when none is open (#1310). */
   filePath?: string | null;
+  /**
+   * Each node's input port shapes, by node name, in port order (#9): a
+   * two-unit mechanism with one port is `[[2]]`. Optional: a condition that
+   * needs it and has no answer is not met.
+   */
+  nodeInputShapes?: Record<string, number[][]>;
 }
 
 /**
@@ -156,6 +163,13 @@ export interface TourCondition {
    * only, since the folder is the person's own.
    */
   fileNamed?: string;
+  /**
+   * Finished once a node's (single) input port has this shape (#9): the
+   * notebook's `default_variable=[0, 0]` is a two-unit mechanism, `[2]`
+   * here. Judged on the model as the app has parsed it, so an edit counts
+   * only once it has reached the backend and come back.
+   */
+  inputShape?: { node: string; shape: number[] };
 }
 
 /** What the CI driver does to play the learner's part. The app ignores it. */
@@ -201,6 +215,11 @@ export interface TourAction {
    * (#1310). Combine with `pickSet` / `runModel` to run the edited model (#49).
    */
   replaceInCode?: { find: string; replace: string };
+  /**
+   * Select a node and set its input port's shape in the Inspector's Inputs
+   * row (#9): `[2]` gives a one-port mechanism two units.
+   */
+  setInputShape?: { node: string; shape: number[] };
 }
 
 /** One trial's value as a vector, whichever way the walkthrough wrote it. */
@@ -381,6 +400,18 @@ export function isDone(condition: TourCondition, state: TourState): boolean {
     if (!path) return false;
     return path.split("/").pop() === condition.fileNamed;
   }
+  if (condition.inputShape !== undefined) {
+    const { node, shape } = condition.inputShape;
+    const shapes = state.nodeInputShapes;
+    if (!shapes) return false;
+    const owner = Object.keys(shapes).find((id) => matchesNodeName(id, node));
+    if (!owner) return false;
+    // One input port, of exactly that shape. A mechanism with several ports
+    // has its shape under one element of input_shapes=[…], which the
+    // Inspector doesn't edit yet, so it isn't judged here either.
+    const ports = shapes[owner];
+    return ports.length === 1 && sameNumbers(ports[0], shape);
+  }
   return false;
 }
 
@@ -517,6 +548,7 @@ export const WALKTHROUGHS: Record<string, Walkthrough> = {
   vectors: parseWalkthrough(vectorsYaml),
   hopfield: parseWalkthrough(hopfieldYaml),
   "pnl-mechanism": parseWalkthrough(pnlMechanismYaml),
+  "pnl-composition": parseWalkthrough(pnlCompositionYaml),
   "orientation-window": parseWalkthrough(orientationWindowYaml),
   "orientation-open": parseWalkthrough(orientationOpenYaml),
   "orientation-editing": parseWalkthrough(orientationEditingYaml),

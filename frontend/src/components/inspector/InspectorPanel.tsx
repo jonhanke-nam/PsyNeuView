@@ -2211,6 +2211,9 @@ function PortRow({
       {shapeEditable ? (
         <input
           type="text"
+          // Stable handle per port, like param-<name>: a walkthrough that
+          // gives a mechanism two units sets it here (#9).
+          data-testid={`port-shape-${name}`}
           value={shapeDraft}
           onChange={(e) => { setShapeDraft(e.target.value); setShapeEditing(true); }}
           onFocus={() => setShapeEditing(true)}

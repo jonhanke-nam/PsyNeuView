@@ -48,6 +48,7 @@ export interface TourStep {
     next?: true;
     traceStepAtLeast?: number;
     fileNamed?: string;
+    inputShape?: { node: string; shape: number[] };
   };
   act?: {
     selectNode?: string;
@@ -71,6 +72,7 @@ export interface TourStep {
     undo?: true;
     redo?: true;
     replaceInCode?: { find: string; replace: string };
+    setInputShape?: { node: string; shape: number[] };
   };
 }
 
@@ -235,6 +237,29 @@ async function act(page: Page, step: TourStep): Promise<void> {
     await committed;
     await expect(field).toHaveValue(value, { timeout: 10_000 });
     await expect(page.getByTestId("status-bar")).toHaveCount(0, { timeout: 30_000 });
+    return;
+  }
+  if (step.act?.setInputShape) {
+    const { node, shape } = step.act.setInputShape;
+    // The Inspector's Inputs row, the one place a mechanism's size is edited
+    // (#9). Select the node first, as setParameter does.
+    await clickNodeOrProjection(page, node);
+    await page.getByTestId("tab-inspector").click();
+    const field = page.locator('[data-testid^="port-shape-"]').first();
+    await expect(field, `no editable input shape on "${node}"`).toBeVisible({ timeout: 10_000 });
+    const value = `[${shape.join(", ")}]`;
+    await field.click();
+    await field.fill(value);
+    // Enter blurs the field, which commits: the source is rewritten and the
+    // model reloaded. Wait for that round trip, as setParameter does (#57).
+    const committed = page.waitForResponse(
+      (r) => r.url().includes("/api/model/update-param") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await field.press("Enter");
+    await committed;
+    await expect(page.getByTestId("status-bar")).toHaveCount(0, { timeout: 30_000 });
+    await expect(field).toHaveValue(value, { timeout: 10_000 });
     return;
   }
   if (step.act?.pickSet) {

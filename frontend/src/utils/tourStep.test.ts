@@ -172,6 +172,28 @@ describe("isDone — the analyze conditions", () => {
   });
 });
 
+describe("isDone — inputShape (#9)", () => {
+  const shapes = (nodeInputShapes: Record<string, number[][]>) => ({ ...state(null), nodeInputShapes });
+
+  it("is done once the node's one input port has that shape", () => {
+    expect(isDone({ inputShape: { node: "output_node", shape: [2] } }, shapes({ output_node: [[2]] }))).toBe(true);
+  });
+
+  it("is not done while the port still has the starter's shape", () => {
+    expect(isDone({ inputShape: { node: "output_node", shape: [2] } }, shapes({ output_node: [[1]] }))).toBe(false);
+  });
+
+  it("is not judged on a mechanism with several input ports", () => {
+    expect(isDone({ inputShape: { node: "both", shape: [2] } }, shapes({ both: [[2], [2]] }))).toBe(false);
+  });
+
+  it("matches suffixed node names, and no node without shapes", () => {
+    expect(isDone({ inputShape: { node: "output_node", shape: [2] } }, shapes({ "output_node-3": [[2]] }))).toBe(true);
+    expect(isDone({ inputShape: { node: "output_node", shape: [2] } }, shapes({}))).toBe(false);
+    expect(isDone({ inputShape: { node: "output_node", shape: [2] } }, state(null))).toBe(false);
+  });
+});
+
 describe("isDone — lastRunInputs (#50)", () => {
   // The Dynamic Systems kick: 2 and 6 on the first trial, then nothing.
   const kick = { node_attract1: [2, 0, 0], node_attract2: [6, 0, 0] };
@@ -379,9 +401,12 @@ describe("menuGroups", () => {
     expect(groups[1].walkthroughs.map((x) => x.id)).toEqual(["demo"]);
   });
 
-  it("ships the first PsyNeuLink lesson, with a caption on every step", () => {
+  it("ships the PsyNeuLink lessons in order, with a caption on every step", () => {
     const lessons = menuGroups().find((g) => g.id === "psyneulink")?.walkthroughs ?? [];
-    expect(lessons.map((l) => [l.id, l.psyneulink])).toEqual([["pnl-mechanism", 1]]);
+    expect(lessons.map((l) => [l.id, l.psyneulink])).toEqual([
+      ["pnl-mechanism", 1],
+      ["pnl-composition", 2],
+    ]);
     for (const l of lessons) {
       expect(l.docs?.length, `"${l.id}" cites no docs page`).toBeGreaterThan(0);
       for (const step of l.steps) expect(step.say, `"${l.id}"/"${step.id}" has no caption`).toBeTruthy();

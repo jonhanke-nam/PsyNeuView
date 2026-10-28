@@ -34,7 +34,7 @@ rows with a `?tour=` are built.
 | # | Lesson | Source | `?tour=` | What you do |
 | --- | --- | --- | --- | --- |
 | 1 | Creating a mechanism — Linear and Logistic | Tutorial: *Creating a mechanism*, *Logistic Function* | `pnl-mechanism` | **Build** from New Model, **run** the notebook's inputs, **edit** slope and intercept, switch the function to Logistic |
-| 2 | From nodes to graphs: a composition | Tutorial: *From Nodes to Graphs: Compositions* | | Put a mechanism in a composition and run it; a two-unit Logistic mechanism; `default_variable` as size and as default input |
+| 2 | From nodes to graphs — a composition | Tutorial: *From Nodes to Graphs: Compositions* | `pnl-composition` | **Build** from New Model, select the projection, **run** 4 and a five-trial sweep, give both nodes **two units**, make it Logistic, run x and 3x, and the step mechanism |
 | 3 | Adding projections | Tutorial: *Adding Projections* | | A Linear unit into a Logistic one; the identity matrix; an explicit `MappingProjection` with its matrix |
 | 4 | The mini Stroop model | Tutorial: *Compositions*, *Mini-Stroop Model* | | Two inputs (colours, words) converging on a Logistic response; a congruent and an incongruent trial |
 | 5 | The pre-trained Stroop model | Tutorial: *Pre-trained Complete Stroop Model* | | The Cohen et al. (1990) network with its weights written in; task demand; the eight input combinations |
@@ -48,7 +48,7 @@ rows with a `?tour=` are built.
 | 13 | Learning | Primer: *Learning*, *LearningMechanisms* | | A learning pathway and backpropagation |
 | 14 | Customization | Primer: *Customization* | | A user-defined function |
 
-Lessons 2–14 are listed so the order is settled; they are not built yet. The
+Lessons 3–14 are listed so the order is settled; they are not built yet. The
 notebook's own ending, *Constructing Compositions*, says "more content is
 being added weekly", so the list may grow with it.
 
@@ -90,6 +90,49 @@ for the same drift.
 
 ---
 
+### 2. From nodes to graphs — a composition
+
+Notebook cells 18–27. Validated against PsyNeuLink 0.20.2.0.
+
+The notebook puts its mechanism in a `Composition` with
+`add_linear_processing_pathway`, draws it with `show_graph`, and runs the
+composition. Here a model is always a composition, so the walkthrough starts a
+**new model**, `first_composition`, and points at what the starter already
+is: `input_node`, `output_node`, and the projection `input_to_output` between
+them. Click the arrow: the Inspector shows the projection, and in the code
+the pathway is `add_node` twice and `add_projection` once; the canvas is the
+notebook's `show_graph`, redrawn on every edit.
+
+Then the notebook's runs, in the **Run** tab. An input of **4** gives **4**:
+two Linear nodes pass it straight through. The notebook's 51-point sweep
+from −3 to 3 becomes one run of five trials, **−3, −1.5, 0, 1.5, 3**, whose
+outputs equal their inputs, five points of the straight line it plots. Next
+the notebook's two-unit mechanism, `default_variable=[0, 0]`: in the
+Inspector's **Inputs** row, set `input_node`'s shape to **[2]**, then
+`output_node`'s. The code changes to `input_shapes=[2]`, today's name for
+that size, and the projection between them resizes to a 2 × 2 identity
+matrix. Change `output_node`'s function to **Logistic** and run two trials,
+**[−1, −3]** and **[1, 3]**: **0.269, 0.047** and **0.731, 0.953**, each unit
+its own point on the curve, the second unit's the steeper of the notebook's
+two plotted curves. Last, the notebook's step mechanism: set **gain** to
+**100** and the midpoint **x_0** to **1**, and run **[0.9, 1.1]**:
+**0.00005** and **0.99995**, which the results table rounds to 0 and 1, just
+below the step and just above it. The tutorial spec asserts all four runs.
+
+![The two-unit model after the sweep, with input_node's shape set to [2]](assets/tour/pnl-composition-step-6.png)
+
+**What stays in the notebook.** `show_graph()`, which the canvas does all
+the time; `reportOutputPref`, whose printout is the Run tab's results table;
+the 51-point loops and their plots, which here are trials in one run with no
+curve drawn; and `default_variable` as the input used when none is given,
+which has no counterpart because the Run tab always sends inputs. The step
+mechanism's `Logistic(gain=100, offset=100)` was written for the older
+Logistic that added `offset` inside the exponent; PsyNeuLink now adds it to
+the output, so the step at an input of 1 is `x_0=1` today, as the walkthrough
+sets it.
+
+---
+
 ## What you can expect
 
 - [x] **Tutorials ▾** has a **PsyNeuLink Tutorials** section, folded on first
@@ -98,8 +141,12 @@ for the same drift.
       list drives `frontend/e2e/tutorials/pnl-mechanism.tutorial.spec.ts`,
       which captures the screenshots on this page and asserts the outputs the
       steps quote (2, 12, 17, 0.119).
+- [x] Lesson 2 is built the same way (`pnl-composition.tutorial.spec.ts`):
+      it gives both nodes two units through the Inspector's Inputs row and
+      asserts the four runs (4; the sweep; 0.269/0.047 and 0.731/0.953; the
+      step's 0.00005/0.99995).
 - [x] Every step has a caption for narration.
-- [ ] **Not yet:** lessons 2–14. Each will be added in order, as a walkthrough
+- [ ] **Not yet:** lessons 3–14. Each will be added in order, as a walkthrough
       with a bundled demo where the model is too big to build by hand.
 
 ## Further reading

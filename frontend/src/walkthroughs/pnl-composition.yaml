@@ -1,0 +1,264 @@
+id: pnl-composition
+title: From nodes to graphs — a composition
+psyneulink: 2
+minutes: 6
+docs:
+  - tutorials/14-starting-a-model.md
+  - tutorials/05-editing-inspector.md
+  - tutorials/02-running-a-model.md
+# No `model:` — this walkthrough creates its own.
+
+# Lesson 2 of the PsyNeuLink Tutorials (#9): the notebook's third section,
+# "From Nodes to Graphs: Compositions".
+#
+# Source notebook:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/master/tutorial/PsyNeuLink%20Tutorial.ipynb
+#   (cells 18–27). The Basics and Primer:
+#   https://princetonuniversity.github.io/PsyNeuLink/BasicsAndPrimer.html
+# Validated against PsyNeuLink 0.20.2.0.
+#
+# Built rather than opened: the notebook puts one mechanism in a Composition
+# and runs the composition. The New Model starter already is a composition
+# (input_node -> output_node), so the lesson starts there: input_node passes
+# the number through, and output_node is the notebook's mechanism. The
+# notebook's run of 4; its sweep from -3 to 3 (five trials in one run here);
+# its two-unit Logistic mechanism (default_variable=[0, 0], which is the
+# Inspector's input shape [2]) fed x and 3x; and its step mechanism
+# (gain 100) with [0.9, 1.1] are all run as they are. Every number below was
+# measured in the app, and the tutorial spec asserts them.
+#
+# What stays in the notebook: show_graph(), which the canvas does all the
+# time; reportOutputPref, whose printout is the Run tab's results here; the
+# 51-point loops and their plots; and default_variable as the input used when
+# none is given, since the Run tab always sends inputs. The step mechanism's
+# Logistic(gain=100, offset=100) was written for an older Logistic whose
+# offset was added in the exponent; PsyNeuLink now adds offset to the output,
+# so the step at an input of 1 is x_0 = 1 today. The last step says so.
+
+steps:
+  - id: start-a-new-model
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Start a new model: Open ▸ New Model…, and call it first_composition.
+      The notebook puts its mechanism in a Composition, the graph a model
+      runs in: mechanisms are its nodes and projections its edges. Here a
+      model is always a composition, and the starter already is one, with
+      input_node, output_node and the projection between them.
+    say: >-
+      Start a new model. A model is a composition: a graph of mechanisms
+      joined by projections.
+    done:
+      nodeExists: output_node
+    act:
+      newModel: first_composition
+
+  - id: the-graph-and-its-code
+    anchor:
+      testid: rf__edge-input_to_output
+    instruct: >-
+      Click the arrow between the two nodes. It is the projection
+      input_to_output, the composition's one edge, and the Inspector shows
+      its matrix. In the code, the notebook's add_linear_processing_pathway
+      is three lines: add_node for each mechanism, and add_projection for
+      the edge. The canvas is the notebook's show_graph, redrawn whenever
+      the code changes.
+    say: >-
+      Click the arrow: the projection joining the two nodes. The canvas
+      draws the composition's graph.
+    done:
+      selectedNode: input_to_output
+    act:
+      selectNode: input_to_output
+
+  - id: run-4
+    anchor:
+      testid: tab-run
+    instruct: >-
+      The notebook runs the composition with 4. In the Run tab, set
+      input_node's one trial to 4 and press Run Model. output_node gives 4:
+      both nodes are Linear with slope 1, so the number goes in, along the
+      projection, and out unchanged. The notebook's reporting printout is
+      the results table here.
+    say: >-
+      Run it with 4. The output is 4: two Linear nodes pass it straight
+      through.
+    done:
+      lastRunInputs:
+        input_node: [4]
+    act:
+      setTrialInputs:
+        input_node: [4]
+      runModel: true
+
+  - id: sweep-minus-3-to-3
+    anchor:
+      testid: run-panel
+    instruct: >-
+      The notebook then runs it 51 times, from -3 to 3, and plots the
+      outputs. Here one run can take several trials: give input_node five
+      trials, -3, -1.5, 0, 1.5 and 3, and run. Each output equals its input:
+      the straight line the notebook plots, five points of it.
+    say: >-
+      Run five trials from minus 3 to 3. Each output equals its input: a
+      straight line.
+    done:
+      lastRunInputs:
+        input_node: [-3, -1.5, 0, 1.5, 3]
+    act:
+      setTrialInputs:
+        input_node: [-3, -1.5, 0, 1.5, 3]
+      runModel: true
+
+  - id: two-units-in
+    anchor:
+      node: input_node
+    instruct: >-
+      The notebook's second composition has a mechanism with two units,
+      made with default_variable=[0, 0]. Select input_node and, in the
+      Inspector's Inputs, change its shape from [1] to [2]. The code
+      changes to input_shapes=[2], today's name for that size.
+    say: >-
+      Give the input node two units: set its input shape to two.
+    done:
+      inputShape:
+        node: input_node
+        shape: [2]
+    act:
+      setInputShape:
+        node: input_node
+        shape: [2]
+
+  - id: two-units-out
+    anchor:
+      node: output_node
+    instruct: >-
+      And output_node too: set its input shape to [2]. The projection
+      between them is resized to a 2 by 2 identity matrix, so each unit of
+      input_node feeds its own unit of output_node.
+    say: >-
+      And the output node too. The projection becomes a two by two identity
+      matrix.
+    done:
+      inputShape:
+        node: output_node
+        shape: [2]
+    act:
+      setInputShape:
+        node: output_node
+        shape: [2]
+
+  - id: make-it-logistic
+    anchor:
+      node: output_node
+    instruct: >-
+      The notebook's two-unit mechanism is Logistic, with gain 1 and bias 0.
+      In the Inspector, change output_node's Function from Linear to
+      Logistic.
+    say: >-
+      Change the output node's function to Logistic.
+    done:
+      functionIs:
+        node: output_node
+        type: Logistic
+    act:
+      setFunction:
+        node: output_node
+        type: Logistic
+
+  - id: run-x-and-3x
+    anchor:
+      testid: tab-run
+    instruct: >-
+      The notebook feeds the units x and 3x, from -3 to 3. Run two trials:
+      -1 and -3, then 1 and 3. output_node gives about 0.269 and 0.047,
+      then 0.731 and 0.953: each unit reads its own point on the curve, and
+      the second unit, three times as far out, gives the steeper of the two
+      curves the notebook plots.
+    say: >-
+      Run minus 1 and minus 3, then 1 and 3. Each unit reads its own point
+      on the curve.
+    done:
+      lastRunInputs:
+        input_node: [[-1, -3], [1, 3]]
+    act:
+      setTrialInputs:
+        input_node: [[-1, -3], [1, 3]]
+      runModel: true
+
+  - id: gain-100
+    anchor:
+      node: output_node
+    instruct: >-
+      The notebook's last mechanism is a step: Logistic with gain 100. A
+      steep gain turns the curve into a step. Select output_node and set
+      gain to 100.
+    say: >-
+      Set the gain to 100. A steep gain makes the curve a step.
+    done:
+      paramEquals:
+        node: output_node
+        param: gain
+        value: "100"
+    act:
+      setParameter:
+        node: output_node
+        param: gain
+        value: "100"
+
+  - id: midpoint-1
+    anchor:
+      node: output_node
+    instruct: >-
+      The notebook puts the step at an input of 1 with offset=100, which
+      its older Logistic added inside the exponent. Today offset is added
+      to the output, and the midpoint is x_0. Set x_0 to 1.
+    say: >-
+      Put the step at an input of 1: set the midpoint to 1.
+    done:
+      paramEquals:
+        node: output_node
+        param: x_0
+        value: "1"
+    act:
+      setParameter:
+        node: output_node
+        param: x_0
+        value: "1"
+
+  - id: run-the-step
+    anchor:
+      testid: tab-run
+    instruct: >-
+      The notebook executes it with [0.9, 1.1]. Run one trial of 0.9 and
+      1.1. output_node gives 0.00005 and 0.99995, the notebook's own two
+      numbers, which the results table rounds to 0 and 1: just below the
+      step and just above it.
+    say: >-
+      Run 0.9 and 1.1: just below the step and just above it.
+    done:
+      lastRunInputs:
+        input_node: [[0.9, 1.1]]
+    act:
+      setTrialInputs:
+        input_node: [[0.9, 1.1]]
+      runModel: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: run-panel
+    instruct: >-
+      What this isn't: the notebook's show_graph() is the canvas, drawn all
+      the time; its reportOutputPref printout is the results table; its
+      51-point loops are trials in one run, with no curve drawn; and
+      default_variable as the input used when none is given has no
+      counterpart, since the Run tab always sends inputs. Its step
+      mechanism's offset=100 was written for an older Logistic; today the
+      step's position is x_0.
+    say: >-
+      The notebook's graph drawing, its plots and its default inputs stay
+      in the notebook.
+    done:
+      next: true
+    act:
+      next: true

@@ -99,6 +99,7 @@ than auto-advancing. Node names match exactly, or with a session suffix
 | `next: true` | the learner pressed **Next** in the bar. For a step that only explains; the bar shows the button only for such a step. Use sparingly — a step that can turn on an action should |
 | `traceStepAtLeast: <n>` | the trace bar is on at least step *n* (0-based) |
 | `fileNamed: <name.py>` | the open model's file has that name, wherever it is: a new model was started, or a particular file opened |
+| `inputShape: { node, shape }` | the node's one input port has that shape, `[2]` for two units, as the model has been parsed. A mechanism with several input ports isn't judged (the Inspector doesn't edit those shapes yet) |
 
 `lastRunInputs` and `lastTraining` judge a **finished** run or training, not
 the form: typing the values isn't enough, and the learner has to run them.
@@ -116,6 +117,7 @@ feeds it inputs that stay different).
 | `selectNode: <name>` | clicks the node on the canvas, or the projection's arrow when no node has that name |
 | `setParameter: { node, param, value }` | selects the node (or projection) and types into its Inspector row (`param-<name>`); for a projection, the row under **Projection Parameters**, the one that edits the code |
 | `setFunction: { node, type }` | selects the node and picks the class in the Inspector's **Change function class** dropdown |
+| `setInputShape: { node, shape }` | selects the node and types the shape into the Inspector's **Inputs** row (`port-shape-<port>`), which rewrites `input_shapes=` in the code |
 | `runModel: true` | clicks **Run Model** and waits for the results |
 | `setTrialInputs: { <node>: [trials…] }` | fills each node's Run-panel **Paste CSV** box. Combine with `runModel: true` in the same step |
 | `train: { inputs, targets?, epochs }` | sets the Learn tab's trial count, fills every cell, sets epochs, starts learning, and waits for the step's own `done`. Leave `targets` out for a model with none |
