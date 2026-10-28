@@ -53,7 +53,7 @@ import { serializeRoutes, type RoutableEdge } from "@/utils/edgeRoutes";
 import { useEdgeAttach } from "@/stores/edgeAttachStore";
 import { prunePositions } from "@/utils/prunePositions";
 import { useGraphPointerStore } from "@/stores/graphPointerStore";
-import { GRAPH_CURSOR_VAR, GRAPH_PRESSED_CURSOR_VAR, graphPointerClass, pointerCursorValue } from "@/utils/graphCursor";
+import { graphCursorVars, graphPointerClass } from "@/utils/graphCursor";
 import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
 
 const nodeTypes = {
@@ -695,17 +695,16 @@ export function GraphCanvas() {
           data-testid="graph-canvas-viewport"
           // The pointer over the canvas, nodes and edges (#1301): the class
           // picks the rules in index.css, the variables carry the chosen image
-          // (arrow, crosshair or ring, #40) at the chosen size, and its pressed look. React Flow's own cursors apply under "hand".
+          // (arrow, hand, crosshair or ring, #40) at the chosen size, its
+          // pressed look, the closed hand for a drag, and the pointer over a
+          // control point (never the hand).
           className={graphPointerClass(pointer)}
           style={{
             flex: 1,
             minWidth: 0,
             minHeight: 0,
             position: "relative",
-            ...(pointer !== "hand" && {
-              [GRAPH_CURSOR_VAR]: pointerCursorValue(pointer, pointerSize),
-              [GRAPH_PRESSED_CURSOR_VAR]: pointerCursorValue(pointer, pointerSize, true),
-            }),
+            ...graphCursorVars(pointer, pointerSize),
           } as CSSProperties}
           onDragOver={onDragOver}
           onDrop={onDrop}

@@ -681,7 +681,11 @@ export function ProjectionEdge({
             return (
               <div key={d.end} data-testid="edge-port-dot" style={{ position: "absolute", transform: `translate(${d.x}px, ${d.y}px)`, pointerEvents: "none" }}>
                 <div
-                  className="nodrag nopan" // #975 — same d3-zoom handoff as the bend handles
+                  // #975 — same d3-zoom handoff as the bend handles. #40: a
+                  // control point shows the precise pointer, never the hand
+                  // (index.css); it has nothing to say under Auto, so it is
+                  // left as it is there.
+                  className={shapeable ? "nodrag nopan graph-control-point" : "nodrag nopan"}
                   title={shapeable
                     ? `${d.label}\ndrag: move this edge · Option-drag: move the whole port`
                     : d.label}
@@ -694,7 +698,7 @@ export function ProjectionEdge({
                     setHovered(false);
                     setHoveredEnd(null);
                   }}
-                  style={{ position: "absolute", left: -8, top: -8, width: 16, height: 16, borderRadius: "50%", cursor: shapeable ? "grab" : "default", pointerEvents: "all" }}
+                  style={{ position: "absolute", left: -8, top: -8, width: 16, height: 16, borderRadius: "50%", cursor: shapeable ? undefined : "default", pointerEvents: "all" }}
                 >
                   <div style={{ position: "absolute", left: 8 - r, top: 8 - r, width: 2 * r, height: 2 * r, borderRadius: "50%", background: d.color, border: `${hot ? 1.5 : 1}px solid var(--pnv-surface)`, boxSizing: "border-box", pointerEvents: "none" }} />
                 </div>
@@ -727,7 +731,9 @@ export function ProjectionEdge({
                   // pane and never sees React's synthetic propagation. Without
                   // this the handle tracks the cursor until d3-zoom's own drag
                   // threshold trips, then the canvas takes the gesture over.
-                  className="nodrag nopan"
+                  // #40: `graph-control-point` gives it the precise pointer
+                  // (the arrow, or the crosshair or circle), never the hand.
+                  className="nodrag nopan graph-control-point"
                   // #1365: stable hook for e2e; a `title*="bend"` lookup also
                   // matches unrelated toolbar tooltips.
                   data-testid="edge-bend-handle"
@@ -757,7 +763,7 @@ export function ProjectionEdge({
                   }}
                   onMouseEnter={() => setHoveredWp(i)}
                   onMouseLeave={() => setHoveredWp((v) => (v === i ? null : v))}
-                  style={{ position: "absolute", left: -12, top: -12, width: 24, height: 24, borderRadius: "50%", cursor: "grab", pointerEvents: "all", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  style={{ position: "absolute", left: -12, top: -12, width: 24, height: 24, borderRadius: "50%", pointerEvents: "all", display: "flex", alignItems: "center", justifyContent: "center" }}
                 >
                   <div style={{ width: r, height: r, borderRadius: "50%", background: hot ? color : "var(--pnv-surface)", border: `2px ${wp.forced ? "dashed" : "solid"} ${color}`, boxSizing: "border-box", transition: "width 0.1s, height 0.1s, background 0.1s" }} />
                 </div>

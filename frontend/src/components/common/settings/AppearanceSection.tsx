@@ -2,9 +2,9 @@
  * Settings ▸ Appearance: how the app looks and feels. (#1301)
  *
  * The first two settings are the pointer in the graph view — the arrow, the
- * crosshair or circle (#40), or
- * React Flow's hand — and the arrow's size. Both are remembered per browser
- * (stores/graphPointerStore.ts). A preview shows the arrow at the chosen
+ * hand, the crosshair or the circle (#40) — and its size, which covers them
+ * all and the grabbing hand (#40). Both are remembered per browser
+ * (stores/graphPointerStore.ts). A preview shows the pointer at the chosen
  * size, since the real pointer is only seen over the canvas; hovering the
  * preview shows the real thing too. Look-and-feel settings belong here
  * (docs/settings-etiquette.md §1). The graph legend's opening state (#7)
@@ -59,7 +59,6 @@ import {
   GRAPH_POINTERS,
   POINTER_SIZES,
   isGraphPointer,
-  isPrecisePointer,
   pointerCursorImage,
   pointerCursorValue,
   isPointerSize,
@@ -251,9 +250,11 @@ function GraphPointerRow() {
         The arrow's tip is the exact point that clicks, so small ports, edge
         labels and the edges themselves are easy to aim at. The hand is the
         grab hand over the canvas and nodes. Either way, a grabbing hand shows
-        while you drag the canvas, and text fields and dividers keep their own
-        cursors. The crosshair and the circle click at their centre, drawn as a
-        dot, and turn heavier while the button is held over a node or edge.
+        while you drag the canvas, a bend handle or an attachment dot shows
+        the arrow rather than the hand so the exact point is clear, and text
+        fields and dividers keep their own cursors. The crosshair and the
+        circle click at their centre, drawn as a dot, turn heavier while the
+        button is held over a node or edge, and show over handles and dots too.
       </SettingLabel>
       <select
         id="setting-graph-pointer"
@@ -277,16 +278,16 @@ function PointerSizeRow() {
   const size = useGraphPointerStore((s) => s.size);
   const setSize = useGraphPointerStore((s) => s.setSize);
   const pointer = useGraphPointerStore((s) => s.pointer);
-  // The hand is the system's own, so the preview shows the arrow for it.
-  const shown = pointer === "hand" ? "arrow" : pointer;
-  const image = pointerCursorImage(shown, size);
-  const pressed = isPrecisePointer(shown) ? pointerCursorImage(shown, size, true) : null;
-  const name = GRAPH_POINTERS.find((p) => p.id === shown)!.label.toLowerCase();
+  const image = pointerCursorImage(pointer, size);
+  // The arrow has one look; the others change while the button is held (the hand closes).
+  const pressed = pointer === "arrow" ? null : pointerCursorImage(pointer, size, true);
+  const name = GRAPH_POINTERS.find((p) => p.id === pointer)!.label.toLowerCase();
   return (
     <div style={{ fontSize: 13 }}>
       <SettingLabel title="Pointer size" htmlFor="setting-graph-pointer-size">
-        The size of the pointer in the graph view. Window zoom (⌘+ / ⌘−) doesn't
-        change it; this does. The hand is the system's own and keeps its size.
+        The size of the pointer in the graph view — the arrow, the hand, the
+        crosshair or the circle, and the grabbing hand while you drag. Window
+        zoom (⌘+ / ⌘−) doesn't change it; this does.
       </SettingLabel>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
         <select
@@ -306,7 +307,7 @@ function PointerSizeRow() {
         {/* The pointer as it will show (and, for #40's, its pressed look), and the real pointer over this box. */}
         <div
           data-testid="graph-pointer-preview"
-          title={pointer === "hand" ? "The arrow, if you choose it above" : "Move the pointer here to see it"}
+          title="Move the pointer here to see it"
           style={{
             marginTop: 6,
             minWidth: 128,
@@ -318,7 +319,7 @@ function PointerSizeRow() {
             background: "var(--pnv-surface-muted)",
             border: "1px dashed var(--pnv-border-light)",
             borderRadius: 6,
-            cursor: pointer === "hand" ? undefined : pointerCursorValue(shown, size),
+            cursor: pointerCursorValue(pointer, size),
           }}
         >
           <img src={image.url} width={image.px} height={image.px} alt={`The ${name} at ${image.px} pixels`} draggable={false} />
@@ -329,7 +330,7 @@ function PointerSizeRow() {
               width={pressed.px}
               height={pressed.px}
               alt={`The ${name} while the button is held`}
-              title="While the button is held"
+              title={pointer === "hand" ? "While you drag" : "While the button is held"}
               draggable={false}
             />
           )}

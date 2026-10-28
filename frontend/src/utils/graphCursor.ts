@@ -14,6 +14,14 @@
  * is held over a node or edge, they show a pressed variant (heavier, filled
  * centre) as feedback for the click; the arrow keeps its one look.
  *
+ * #40 too: the **hand** is our own image as well, so Pointer size covers it
+ * — an open hand over the canvas, nodes and edges, and a closed one while a
+ * drag is in progress. The closed hand is the grabbing cursor under every
+ * setting (the arrow's and the precise pointers' drags show it too). And a
+ * **control point** (a bend handle, an attachment dot) shows the precise
+ * pointer rather than the hand, so the exact point is clear: the arrow under
+ * Arrow and Hand, the crosshair or ring under those (`controlPointPointer`).
+ *
  * The arrow is our own SVG, so the size is real and the same in a browser and
  * in the Mac app: a system arrow can't be resized from CSS, and window zoom
  * (⌘+ / ⌘−) doesn't scale cursors. Browsers cap a custom cursor image —
@@ -156,30 +164,77 @@ export function centreHotspot(px: number): number {
   return Math.min(px - 1, Math.round((CENTRE * px) / ARROW_VIEWBOX));
 }
 
-/** The image and hot spot for any image pointer (not the hand) at a size. */
+/**
+ * The hand, drawn in the same 24-unit box, white with a black edge like the
+ * system's: an open hand (grab) and a closed one (grabbing). Each piece is
+ * drawn twice — all edges first, then all fills over them — so the pieces
+ * read as one silhouette with one outline, and the gaps between the fingers
+ * are the edge showing through. The hot spot is the centre of the image,
+ * on the palm.
+ */
+function handShapes(closed: boolean): string {
+  // Four fingers side by side (x), each a rounded bar from its tip (y) down into the palm.
+  const fingers = closed
+    ? [
+        [6.3, 6.5],
+        [9.3, 5.5],
+        [12.3, 5.8],
+        [15.3, 7],
+      ].map(([x, y]) => `<rect x="${x}" y="${y}" width="2.7" height="6" rx="1.35"/>`)
+    : [
+        [6.3, 3.5],
+        [9.3, 1.2],
+        [12.3, 2.2],
+        [15.3, 4.8],
+      ].map(([x, y]) => `<rect x="${x}" y="${y}" width="2.7" height="${13.5 - y}" rx="1.35"/>`);
+  const palm = closed
+    ? `<rect x="6" y="9" width="12.3" height="11.5" rx="3.6"/>`
+    : `<rect x="6.3" y="10" width="11.7" height="11.5" rx="3.6"/>`;
+  // The thumb: leaning out to the left of an open hand, folded across a closed one.
+  const thumb = closed
+    ? `<rect x="3.2" y="12" width="2.8" height="7" rx="1.4" transform="rotate(-22 4.6 19)"/>`
+    : `<rect x="4.4" y="11" width="2.8" height="8" rx="1.4" transform="rotate(-38 5.8 19)"/>`;
+  return fingers.join("") + palm + thumb;
+}
+
+/** The open or closed hand as an SVG document, `px` on each side. */
+export function handSvg(px: number, closed = false): string {
+  const shapes = handShapes(closed);
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 ${ARROW_VIEWBOX} ${ARROW_VIEWBOX}">` +
+    `<g fill="${INK}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round">${shapes}</g>` +
+    `<g fill="${EDGE}">${shapes}</g>` +
+    `</svg>`
+  );
+}
+
+/** The image and hot spot for any pointer at a size; `pressed` is the hand's closed look. */
 export function pointerCursorImage(
-  pointer: Exclude<GraphPointer, "hand">,
+  pointer: GraphPointer,
   size: PointerSize,
   pressed = false,
 ): { px: number; url: string; hotspot: number } {
   if (pointer === "arrow") return arrowCursorImage(size);
   const px = pointerSizePx(size);
-  const url = `data:image/svg+xml,${encodeURIComponent(preciseSvg(pointer, px, pressed))}`;
-  return { px, url, hotspot: centreHotspot(px) };
+  const svg = pointer === "hand" ? handSvg(px, pressed) : preciseSvg(pointer, px, pressed);
+  return { px, url: `data:image/svg+xml,${encodeURIComponent(svg)}`, hotspot: centreHotspot(px) };
 }
 
 /**
- * The `cursor` value for an image pointer: the image with its hot spot, then
- * a system fallback (the arrow for the arrow, the crosshair otherwise).
+ * The `cursor` value for a pointer: the image with its hot spot, then a
+ * system fallback (the arrow for the arrow, the crosshair for the precise
+ * pointers, grab or grabbing for the open or closed hand).
  */
-export function pointerCursorValue(
-  pointer: Exclude<GraphPointer, "hand">,
-  size: PointerSize,
-  pressed = false,
-): string {
+export function pointerCursorValue(pointer: GraphPointer, size: PointerSize, pressed = false): string {
   if (pointer === "arrow") return arrowCursorValue(size);
   const { url, hotspot } = pointerCursorImage(pointer, size, pressed);
-  return `url("${url}") ${hotspot} ${hotspot}, crosshair`;
+  const fallback = pointer === "hand" ? (pressed ? "grabbing" : "grab") : "crosshair";
+  return `url("${url}") ${hotspot} ${hotspot}, ${fallback}`;
+}
+
+/** The pointer over a control point (a bend handle, an attachment dot): never the hand. */
+export function controlPointPointer(pointer: GraphPointer): Exclude<GraphPointer, "hand"> {
+  return pointer === "hand" ? "arrow" : pointer;
 }
 
 /** The class `index.css` keys its graph-view cursor rules on. */
@@ -187,6 +242,25 @@ export function graphPointerClass(pointer: GraphPointer): string {
   return pointer === "hand" ? "graph-pointer-hand" : "graph-pointer-image";
 }
 
-/** The CSS variable the image rules read, and the one for a held button. */
+/**
+ * The CSS variables the rules read: the pointer, its look while the button
+ * is held, the closed hand while a drag is in progress, and the pointer over
+ * a control point with its held look.
+ */
 export const GRAPH_CURSOR_VAR = "--graph-pointer-cursor";
 export const GRAPH_PRESSED_CURSOR_VAR = "--graph-pointer-pressed-cursor";
+export const GRAPH_GRABBING_CURSOR_VAR = "--graph-pointer-grabbing-cursor";
+export const GRAPH_POINT_CURSOR_VAR = "--graph-pointer-point-cursor";
+export const GRAPH_POINT_PRESSED_CURSOR_VAR = "--graph-pointer-point-pressed-cursor";
+
+/** Every variable GraphCanvas sets on the viewport, for a pointer at a size. */
+export function graphCursorVars(pointer: GraphPointer, size: PointerSize): Record<string, string> {
+  const point = controlPointPointer(pointer);
+  return {
+    [GRAPH_CURSOR_VAR]: pointerCursorValue(pointer, size),
+    [GRAPH_PRESSED_CURSOR_VAR]: pointerCursorValue(pointer, size, true),
+    [GRAPH_GRABBING_CURSOR_VAR]: pointerCursorValue("hand", size, true),
+    [GRAPH_POINT_CURSOR_VAR]: pointerCursorValue(point, size),
+    [GRAPH_POINT_PRESSED_CURSOR_VAR]: pointerCursorValue(point, size, true),
+  };
+}
