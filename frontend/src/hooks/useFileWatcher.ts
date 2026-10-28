@@ -108,7 +108,7 @@ export function useFileWatcher() {
         // Re-arm the watch. The backend forgets what it was watching when the
         // socket drops (and a restarted backend never knew), and filePath has
         // not changed, so the effect below will not fire on its own.
-        if (filePathRef.current) {
+        if (filePathRef.current && !useSyncStore.getState().paused) {
           ws.send(JSON.stringify({ type: "watch_file", filePath: filePathRef.current }));
         }
       };
@@ -164,6 +164,8 @@ export function useFileWatcher() {
         }
         if (message.type !== "file_changed") return;
 
+        useSyncStore.getState().noteChange(message.filePath);
+
         // Read live state: this handler is created once and would otherwise
         // see the source from the first render.
         const { source, savedSource } = useModelStore.getState();
@@ -218,12 +220,51 @@ export function useFileWatcher() {
     };
   }, [applyChange]);
 
-  // When filePath changes, tell the backend to watch it
+  // When filePath changes, or watching is paused or resumed from the
+  // indicator (#103), tell the backend what to watch. The backend already
+  // knows "stop_watching"; pausing is that, and resuming is a fresh watch.
+  const paused = useSyncStore((s) => s.paused);
   useEffect(() => {
     const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN || !filePath) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (paused) {
+      ws.send(JSON.stringify({ type: "stop_watching" }));
+      return;
+    }
+    if (!filePath) return;
     ws.send(JSON.stringify({ type: "watch_file", filePath }));
-  }, [filePath]);
+  }, [filePath, paused]);
+
+  // Resuming catches up (#103): a fresh watch takes the file as it is now as
+  // its baseline, so an edit made while paused would otherwise never arrive.
+  // Treat it as the change it is: take it if nothing here is unsaved, ask if
+  // something is.
+  const wasPaused = useRef(paused);
+  useEffect(() => {
+    const resumed = wasPaused.current && !paused;
+    wasPaused.current = paused;
+    if (!resumed || !filePath) return;
+    let cancelled = false;
+    void readDiskVersion(filePath).then((disk) => {
+      if (cancelled || !disk) return;
+      const { source, savedSource, filePath: open } = useModelStore.getState();
+      if (open !== filePath || disk.source === savedSource) return;
+      useSyncStore.getState().noteChange(filePath);
+      record("file", `Model changed on disk while watching was paused: ${filePath}`, {
+        path: filePath,
+        applied: source === savedSource,
+      });
+      if (source !== savedSource) {
+        setPendingChange({ filePath, source: disk.source, model: disk.model });
+        return;
+      }
+      applyChange(disk.source, disk.model);
+      useSyncStore.getState().noteApplied();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [paused, filePath, applyChange, setPendingChange]);
 
   return {
     /** Non-null while an external change is waiting on the user's decision. */

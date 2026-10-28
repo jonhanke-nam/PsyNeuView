@@ -36,7 +36,6 @@ import { useModelStore } from "./stores/modelStore";
 import { useNotificationStore } from "./stores/notificationStore";
 import { useLayoutStore } from "./stores/layoutStore";
 import { importModelFiles } from "./utils/importModelFiles";
-import { SyncIndicator } from "./components/common/SyncIndicator";
 import { installDiagnostics, noteUiFact } from "./utils/diagnostics";
 
 type BottomTab = "inspector" | "scheduler" | "run" | "learn" | "runstate" | "showgraph" | "style";
@@ -147,11 +146,6 @@ export default function App() {
         <DiagnosticPanel />
         <NotificationBar />
         <StatusBar />
-        {/* #1028: always present, so "nothing is happening" and "nothing is
-            connected" stop looking the same. */}
-        <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 8px" }}>
-          <SyncIndicator />
-        </div>
         <div style={{ flex: 1, overflow: "hidden" }}>
           <Allotment
             defaultSizes={outerSizes}

@@ -82,14 +82,18 @@ Sync used to be invisible: when it worked you saw the canvas change, and when it
 stopped you saw nothing at all — *"no changes yet"* and *"not connected"* looked
 identical.
 
-There is now a small indicator that always says which:
+There is now a small indicator, at the right end of the bar that names the
+model ("my_model: 7 mechanisms…"), that always says which. Hover it for what it
+means; click it for the file being watched, when it last changed outside
+PsyNeuView, and a switch to pause watching ([#103](https://github.com/jonhanke-nam/PsyNeuView/issues/103)):
 
 | it says | meaning |
 |---|---|
 | **Watching for changes** | armed — edits in PyCharm will appear here |
 | **Reloaded from disk** | briefly, just after a change arrived, so the canvas moving is explained |
 | **Waiting on you** | both sides changed; it's asking which to keep |
-| **Not watching** | no model open, or the connection dropped |
+| **Watching paused** | you paused it from the popover; resume there |
+| **Not watching** | the connection dropped, or the server has not confirmed the watch; the tooltip says which |
 
 If it says *Not watching* while a model is open, sync will recover on its own
 when the connection comes back. Nothing is lost in the meantime — your file is

@@ -84,4 +84,5 @@ tutorials-menu-folding.spec.ts
 undo-depth.spec.ts
 undo-notices.spec.ts
 value-grid.spec.ts
+watch-status-in-bar.spec.ts
 where-things-live.spec.ts

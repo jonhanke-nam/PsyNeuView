@@ -53,8 +53,29 @@ describe("deriveSyncState", () => {
     expect(kind({ hasConflict: true, lastAppliedAt: base.now })).toBe("conflict");
   });
 
+  it("is paused when the user paused it, whatever the socket says", () => {
+    expect(kind({ paused: true })).toBe("paused");
+    expect(kind({ paused: true, watchedPath: null })).toBe("paused");
+    expect(kind({ paused: true, hasConflict: true })).toBe("conflict");
+  });
+
+  /** #103: "not watching" says why. */
+  it("gives a different reason for a dropped socket and an unarmed watch", () => {
+    const dropped = deriveSyncState({ ...base, connected: false });
+    const unarmed = deriveSyncState({ ...base, watchedPath: null });
+    expect(dropped.label).toBe(unarmed.label);
+    expect(dropped.hint).not.toBe(unarmed.hint);
+    expect(dropped.hint).toMatch(/not connected/i);
+    expect(unarmed.hint).toMatch(/not confirmed/i);
+  });
+
+  it("explains what watching means", () => {
+    expect(deriveSyncState(base).hint).toMatch(/outside PsyNeuView appear here automatically/);
+  });
+
   it("gives every state its own wording", () => {
     const all = [
+      deriveSyncState({ ...base, paused: true }),
       deriveSyncState(base),
       deriveSyncState({ ...base, watchedPath: null }),
       deriveSyncState({ ...base, filePath: null }),
@@ -67,7 +88,7 @@ describe("deriveSyncState", () => {
 
   /** "Not watching" is a fact to act on, not an error to apologise for. */
   it("does not describe being off as a failure", () => {
-    for (const o of [{ connected: false }, { watchedPath: null }, { filePath: null }]) {
+    for (const o of [{ connected: false }, { watchedPath: null }, { filePath: null }, { paused: true }]) {
       expect(deriveSyncState({ ...base, ...o }).label).not.toMatch(/error|failed|broken/i);
     }
   });

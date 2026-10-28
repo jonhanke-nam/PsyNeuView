@@ -62,6 +62,7 @@ Escape, which every row has.
 | Graph toolbar's More menu | menu | `graph/GraphToolbar.tsx` | `graph-more-menu` | More ▾ in the graph toolbar | the More button, click outside |
 | Node context menu | menu | `graph/NodeContextMenu.tsx` | `node-context-menu` | right-click on a node | click outside, a pick |
 | Palette's compact flyout | menu | `graph/PaletteSidebar.tsx` | `palette-compact-flyout` | a category in the compact palette | click outside, the category again, its ‹ |
+| Watching for changes (the file-watch status) | dialog | `common/SyncIndicator.tsx` | `sync-popover` | the ● status at the right end of the diagnostics bar (#103) | ×, click outside, the status again |
 | Changes since the last version that built | dialog | `graph/LastGoodDiff.tsx` | `last-good-diff` | Compare with that version, on the stale-graph banner | ×, click outside |
 | Changes since save | dialog | `common/ChangesSinceSaveDialog.tsx` | `changes-since-save` | the orange unsaved dot beside the model name; History ▸ Changes since save… | ×, click outside, Close |
 | Revert the file to this save | dialog | `common/RevertToSaveDialog.tsx` | `revert-to-save` | History ▸ a save marker ▸ Revert the file to this save…; History's "You've undone to" line | ×, click outside, Cancel, Revert the file (not while reverting) |
