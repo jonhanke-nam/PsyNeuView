@@ -38,6 +38,7 @@ readOnlyTest.describe("Hide the Cognitive Neuroscience Course", { tag: "@ci" }, 
     // Only the course goes; the other sections are as they were.
     await expect(page.getByTestId("walkthrough-group-orientation")).toBeVisible();
     await expect(page.getByTestId("walkthrough-group-general")).toBeVisible();
+    await expect(page.getByTestId("walkthrough-group-psyneulink")).toBeVisible();
     await page.keyboard.press("Escape");
 
     await page.reload();

@@ -1,0 +1,231 @@
+id: pnl-mechanism
+title: Creating a mechanism — Linear and Logistic
+psyneulink: 1
+minutes: 5
+docs:
+  - tutorials/14-starting-a-model.md
+  - tutorials/05-editing-inspector.md
+  - tutorials/02-running-a-model.md
+# No `model:` — this walkthrough creates its own.
+
+# Lesson 1 of the PsyNeuLink Tutorials (#9): the first two sections of
+# PsyNeuLink's own Tutorial notebook, "Creating a mechanism" and "Logistic
+# Function".
+#
+# Source notebook:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/master/tutorial/PsyNeuLink%20Tutorial.ipynb
+#   (cells 6–17). The Basics and Primer:
+#   https://princetonuniversity.github.io/PsyNeuLink/BasicsAndPrimer.html
+# Validated against PsyNeuLink 0.20.2.0.
+#
+# Built rather than opened: the notebook makes one TransferMechanism and
+# executes it on its own, with no Composition. The app always runs a
+# Composition, so the New Model starter (input_node -> output_node) stands in
+# for it: input_node passes the number through unchanged (Linear, slope 1),
+# and output_node is the notebook's mechanism. The notebook's three exercises
+# (slope 3 with input 4; slope 4 and intercept 5 with input 3) and its
+# Logistic example (input -2) are run as they are. Every number below was
+# measured in the app, and the tutorial spec asserts them.
+#
+# What stays in the notebook: `.execute()` on a lone mechanism, `.plot()` of
+# the curve, and the gain/offset step-function examples, which were written
+# for an older Logistic. PsyNeuLink now ADDS offset to the output
+# (scale / (1 + e^(-gain * (x + bias - x_0))) + offset), so
+# Logistic(gain=5, offset=10) gives 10.00005 for an input of -2, not a step
+# at -2. The last step says so.
+
+steps:
+  - id: start-a-new-model
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Start a new model: Open ▸ New Model…, and call it first_mechanism. The
+      notebook makes one mechanism and executes it on its own. PsyNeuView runs
+      a composition, so the starter's two nodes stand in: input_node passes
+      the number through, and output_node is the notebook's mechanism.
+    say: >-
+      Start a new model. The output node will be the notebook's mechanism.
+    done:
+      nodeExists: output_node
+    act:
+      newModel: first_mechanism
+
+  - id: a-transfer-mechanism
+    anchor:
+      node: output_node
+    instruct: >-
+      Select output_node. It is a TransferMechanism, the basic unit of
+      computation: it takes an input, applies its function, and passes the
+      result on. The Inspector shows its function is Linear, with slope 1 and
+      intercept 0: the notebook's y = ax + b, with a = 1 and b = 0.
+    say: >-
+      A transfer mechanism applies its function to its input. This one is
+      Linear, slope 1, intercept 0.
+    done:
+      selectedNode: output_node
+    act:
+      selectNode: output_node
+
+  - id: execute-2
+    anchor:
+      testid: tab-run
+    instruct: >-
+      The notebook executes the mechanism with 2. In the Run tab, set
+      input_node's one trial to 2 and press Run Model. output_node gives 2:
+      slope 1 times 2, plus intercept 0.
+    say: >-
+      Run it with an input of 2. The output is 2.
+    done:
+      lastRunInputs:
+        input_node: [2]
+    act:
+      setTrialInputs:
+        input_node: [2]
+      runModel: true
+
+  - id: slope-3
+    anchor:
+      node: output_node
+    instruct: >-
+      The notebook's first exercise: change the slope to 3. Select output_node
+      and, in the Inspector, set slope to 3. The code changes to match.
+    say: >-
+      Now change the slope to 3.
+    done:
+      paramEquals:
+        node: output_node
+        param: slope
+        value: "3"
+    act:
+      setParameter:
+        node: output_node
+        param: slope
+        value: "3"
+
+  - id: execute-4
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Run it with an input of 4. output_node gives 12: 3 times 4. The slope
+      scales the input.
+    say: >-
+      Run it with 4. The output is 12: 3 times 4.
+    done:
+      lastRunInputs:
+        input_node: [4]
+    act:
+      setTrialInputs:
+        input_node: [4]
+      runModel: true
+
+  - id: slope-4
+    anchor:
+      node: output_node
+    instruct: >-
+      The second exercise asks what slope 4 and intercept 5 give for an input
+      of 3. Predict it, then set slope to 4.
+    say: >-
+      Predict what slope 4 and intercept 5 give for an input of 3. Then set
+      the slope to 4.
+    done:
+      paramEquals:
+        node: output_node
+        param: slope
+        value: "4"
+    act:
+      setParameter:
+        node: output_node
+        param: slope
+        value: "4"
+
+  - id: intercept-5
+    anchor:
+      node: output_node
+    instruct: >-
+      And set intercept to 5. The intercept is added after the slope has
+      scaled the input: slope times input, plus intercept.
+    say: >-
+      And set the intercept to 5.
+    done:
+      paramEquals:
+        node: output_node
+        param: intercept
+        value: "5"
+    act:
+      setParameter:
+        node: output_node
+        param: intercept
+        value: "5"
+
+  - id: execute-3
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Run it with an input of 3. output_node gives 17: 4 times 3 is 12, plus
+      5. That is the whole of a Linear mechanism.
+    say: >-
+      Run it with 3. The output is 17: 4 times 3, plus 5.
+    done:
+      lastRunInputs:
+        input_node: [3]
+    act:
+      setTrialInputs:
+        input_node: [3]
+      runModel: true
+
+  - id: make-it-logistic
+    anchor:
+      node: output_node
+    instruct: >-
+      Other transfer functions are Exponential, Logistic and SoftMax. In the
+      Inspector, change output_node's Function from Linear to Logistic: an
+      S-shaped curve whose output stays between 0 and 1. Its parameters are
+      the notebook's gain 1, bias 0 and offset 0.
+    say: >-
+      Change the function to Logistic: an S-shaped curve between 0 and 1.
+    done:
+      functionIs:
+        node: output_node
+        type: Logistic
+    act:
+      setFunction:
+        node: output_node
+        type: Logistic
+
+  - id: execute-minus-2
+    anchor:
+      testid: tab-run
+    instruct: >-
+      The notebook executes it with -2. Run it with an input of -2.
+      output_node gives about 0.119: the input is a point on the x axis, and
+      the output is the curve's height there, well down its left tail. An
+      input of 0 would give 0.5, the curve's midpoint.
+    say: >-
+      Run it with minus 2. The output is about 0.12, low on the curve's left
+      tail.
+    done:
+      lastRunInputs:
+        input_node: [-2]
+    act:
+      setTrialInputs:
+        input_node: [-2]
+      runModel: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: run-panel
+    instruct: >-
+      What this isn't: the notebook executes the mechanism on its own, with no
+      composition, and plots its curve with plot(); here a model is always a
+      composition, and there is no curve, so you read one point at a time.
+      Its gain and offset examples (gain 5, offset 10) were written for an
+      older Logistic: PsyNeuLink now adds offset to the output, so that
+      setting gives 10.00005 for -2, not a step. To move the curve's midpoint
+      today, set x_0; to make it a step, raise the gain.
+    say: >-
+      The notebook's plots, and its older gain and offset examples, stay in
+      the notebook.
+    done:
+      next: true
+    act:
+      next: true

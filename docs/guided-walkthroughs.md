@@ -32,6 +32,7 @@ title: Perceptron — AND, and why not XOR
 model: Logic Gate Network       # optional: the Open-menu label it runs against
 course: "0.3"                   # optional: course lesson, "module.lesson"
 orientation: 3                  # optional: its place in PsyNeuView First Steps
+psyneulink: 1                   # optional: its place in PsyNeuLink Tutorials (one of the three)
 minutes: 3                      # optional: about how long, shown in the menu
 docs:                           # optional: the docs pages it relies on, under docs/
   - what-you-can-edit.md        #   (shown in the bar, so drift is caught in review)
@@ -57,7 +58,10 @@ steps:
 - `course:` must look like `"0.3"`, and quoting it keeps YAML from reading it as
   a number. Course walkthroughs appear under **Cognitive Neuroscience Course**
   in lesson order; `orientation:` walkthroughs under **PsyNeuView First
-  Steps** in part order, first; the rest under **Getting started**. The
+  Steps** in part order, first; `psyneulink:` walkthroughs under **PsyNeuLink
+  Tutorials** in lesson order, between Getting started and the course (#9;
+  the lesson list is in [the PsyNeuLink Tutorials page](tutorials/17-psyneulink-tutorials.md));
+  the rest under **Getting started**. A walkthrough belongs to one section. The
   course's section can be left out of the menu from Settings ▸ Tutorials and
   Voice ▸ Tutorials ▸ **Hide the Cognitive Neuroscience Course** (off by
   default, #136); `?tour=<id>` still opens a course walkthrough then.
@@ -187,7 +191,8 @@ The orientation parts are driven by
 `frontend/e2e/tutorials/orientation.tutorial.spec.ts`, one test per part, and
 their front door by `orientation-controls.tutorial.spec.ts`. For a course or
 general walkthrough, add a `test.describe` to
-`frontend/e2e/tutorials/tour-demo.tutorial.spec.ts`:
+`frontend/e2e/tutorials/tour-demo.tutorial.spec.ts`; a PsyNeuLink Tutorials
+lesson gets its own spec, `frontend/e2e/tutorials/pnl-<lesson>.tutorial.spec.ts`:
 load it with `loadWalkthrough("<id>")`, `page.goto("/?tour=<id>")`, and
 `runWalkthrough(page, w, onStep)`, where `onStep` captures
 `docs/tutorials/assets/tour/<id>-step-N.png`. A screenshot is taken **before**

@@ -326,6 +326,7 @@ describe("isDone — lastTraining on inputs, for a model with no targets (#48)",
 describe("menuGroups", () => {
   const w = (id: string, course?: string) => ({ id, title: id, course, steps: [] as never[] });
   const o = (id: string, orientation: number) => ({ id, title: id, orientation, steps: [] as never[] });
+  const p = (id: string, psyneulink: number) => ({ id, title: id, psyneulink, steps: [] as never[] });
 
   /** #1310: the orientation leads the menu, in its own numbered order. */
   it("puts PsyNeuView First Steps first, in part order", () => {
@@ -367,6 +368,33 @@ describe("menuGroups", () => {
 
   it("omits an empty section", () => {
     expect(menuGroups([w("demo")]).map((g) => g.title)).toEqual(["Getting started"]);
+  });
+
+  /** #9: PsyNeuLink's own tutorials sit between the app's walkthroughs and the course, in lesson order. */
+  it("puts PsyNeuLink Tutorials after Getting started and before the course, in lesson order", () => {
+    const groups = menuGroups([o("o-one", 1), w("ddm", "2.1"), p("p-two", 2), w("demo"), p("p-one", 1)]);
+    expect(groups.map((g) => g.id)).toEqual(["orientation", "general", "psyneulink", "course"]);
+    expect(groups[2].title).toBe("PsyNeuLink Tutorials");
+    expect(groups[2].walkthroughs.map((x) => x.id)).toEqual(["p-one", "p-two"]);
+    expect(groups[1].walkthroughs.map((x) => x.id)).toEqual(["demo"]);
+  });
+
+  it("ships the first PsyNeuLink lesson, with a caption on every step", () => {
+    const lessons = menuGroups().find((g) => g.id === "psyneulink")?.walkthroughs ?? [];
+    expect(lessons.map((l) => [l.id, l.psyneulink])).toEqual([["pnl-mechanism", 1]]);
+    for (const l of lessons) {
+      expect(l.docs?.length, `"${l.id}" cites no docs page`).toBeGreaterThan(0);
+      for (const step of l.steps) expect(step.say, `"${l.id}"/"${step.id}" has no caption`).toBeTruthy();
+    }
+  });
+
+  it("rejects a psyneulink lesson number that isn't a whole number from 1, or a second section", () => {
+    const doc = (extra: string) =>
+      `id: x\ntitle: X\n${extra}steps:\n  - id: s\n    anchor: {testid: t}\n    instruct: i\n    done: {nodeExists: n}\n`;
+    expect(() => parseWalkthrough(doc("psyneulink: 0\n"))).toThrow(/psyneulink must be/);
+    expect(() => parseWalkthrough(doc("psyneulink: first\n"))).toThrow(/psyneulink must be/);
+    expect(() => parseWalkthrough(doc("psyneulink: 1\ncourse: \"0.1\"\n"))).toThrow(/one section only/);
+    expect(parseWalkthrough(doc("psyneulink: 2\n")).psyneulink).toBe(2);
   });
 
   it("orders the shipped course walkthroughs as the course does", () => {

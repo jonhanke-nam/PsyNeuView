@@ -74,6 +74,7 @@ nav:
       - Starting a model (two-editor): tutorials/14-starting-a-model.md
       - The two-editor workflow: tutorials/15-two-headed-workflow.md
       - Guided walkthroughs (the course): tutorials/16-course-walkthroughs.md
+      - Guided walkthroughs (PsyNeuLink Tutorials): tutorials/17-psyneulink-tutorials.md
   - Developer:
       - Testing: testing.md
       - Writing a guided walkthrough: guided-walkthroughs.md

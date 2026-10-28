@@ -3436,7 +3436,7 @@ function WalkthroughMenu() {
                   }}
                 >
                   <span>
-                    {w.orientation !== undefined ? `${w.orientation}. ` : ""}
+                    {w.orientation !== undefined ? `${w.orientation}. ` : w.psyneulink !== undefined ? `${w.psyneulink}. ` : ""}
                     {w.title}
                   </span>
                   <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", whiteSpace: "nowrap" }}>

@@ -115,8 +115,10 @@ def clean(text) -> str:
 def group_of(raw: dict) -> tuple[str, tuple]:
     if raw.get("orientation") is not None or str(raw.get("id", "")).startswith("orientation-"):
         return "PsyNeuView First Steps", (0, float(raw.get("orientation") or 99))
+    if raw.get("psyneulink") is not None:
+        return "PsyNeuLink Tutorials", (2, int(raw["psyneulink"]))
     if raw.get("course") is not None:
-        return "Cognitive Neuroscience Course", (2, tuple(int(p) for p in str(raw["course"]).split(".")))
+        return "Cognitive Neuroscience Course", (3, tuple(int(p) for p in str(raw["course"]).split(".")))
     return "Getting started", (1, 0)
 
 
