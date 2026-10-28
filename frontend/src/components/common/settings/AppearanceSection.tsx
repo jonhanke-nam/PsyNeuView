@@ -13,9 +13,18 @@
  * And how heavy node outlines are (#42): one width, remembered per browser
  * (stores/nodeOutlineStore.ts), that the heavier outlines follow. And
  * whether scheduling-condition arrows are drawn (#53): shown by default.
+ * And how the Components panel opens (#113): the word list by default, or
+ * the icon strip; the panel's own ◀/▶ only changes it for the session.
  */
 
 import { LEGEND_STARTS, isLegendStart, useGraphLegendStore } from "@/stores/graphLegendStore";
+import {
+  COMPONENTS_STARTS,
+  DEFAULT_COMPONENTS_START,
+  isComponentsStart,
+  useComponentsStartStore,
+} from "@/stores/componentsPanelStartStore";
+import { usePaletteStore } from "@/stores/paletteStore";
 import { SCHEDULING_ARROWS, isSchedulingArrows, useSchedulingArrowsStore } from "@/stores/schedulingArrowsStore";
 import {
   DEFAULT_LAYOUT_STYLE,
@@ -75,6 +84,9 @@ export function AppearanceSection() {
       </Group>
       <Group id="scheduling-arrows" title="Scheduling arrows">
         <SchedulingArrowsRow />
+      </Group>
+      <Group id="components-panel" title="Components panel">
+        <ComponentsStartRow />
       </Group>
     </>
   );
@@ -153,6 +165,40 @@ function GraphLegendRow() {
           <option key={o.id} value={o.id}>
             {o.label}
             {o.id === "collapsed" ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function ComponentsStartRow() {
+  const start = useComponentsStartStore((s) => s.start);
+  const setStart = useComponentsStartStore((s) => s.setStart);
+  return (
+    <div style={{ fontSize: 13 }}>
+      <SettingLabel title="How the panel opens" htmlFor="setting-components-start">
+        The Components panel on the left of the graph view. Open, it shows the
+        search box and the list of sections; as the icon strip, it is a narrow
+        column of icons. Either way, the panel's own ◀ and ▶ button switches
+        it until you next open PsyNeuView.
+      </SettingLabel>
+      <select
+        id="setting-components-start"
+        data-testid="setting-components-start"
+        value={start}
+        onChange={(e) => {
+          if (!isComponentsStart(e.target.value)) return;
+          setStart(e.target.value);
+          // Show the choice now, too.
+          usePaletteStore.getState().setCompact(e.target.value === "strip");
+        }}
+        style={selectStyle}
+      >
+        {COMPONENTS_STARTS.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+            {o.id === DEFAULT_COMPONENTS_START ? " (default)" : ""}
           </option>
         ))}
       </select>

@@ -3,6 +3,7 @@ app-shell.spec.ts
 app-update-notice.spec.ts
 arrowheads-at-end.spec.ts
 busy-indicator.spec.ts
+components-panel-start-setting.spec.ts
 composition-cim-edges.spec.ts
 developer-mode-marking.spec.ts
 developer-tests-loader.spec.ts

@@ -422,6 +422,20 @@ settings:
       graph legend is hidden too. PsyNeuLink's show_graph() doesn't draw
       them. The Scheduler panel lists the conditions either way.
 
+  - id: components-start
+    label: Appearance ▸ Components panel ▸ How the panel opens
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.components.start); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-components-start
+    notes: >-
+      Starts open (the word list, default) or Starts as the icon strip (#113).
+      Decides how the Components panel opens. The panel's own ◀/▶ button
+      collapses or opens it for the current session without changing this
+      setting; it is no longer remembered, and the old remembered value
+      (psynewview_palette_compact) is not read, so nobody stays stuck on the
+      strip. Which sections are unfolded is still remembered by the panel.
+
   - id: catalogs
     label: Folders ▸ Your catalogs (add, rename, remove)
     home: settings
