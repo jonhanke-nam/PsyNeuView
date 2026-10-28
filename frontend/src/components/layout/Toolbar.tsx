@@ -72,7 +72,7 @@ import { pnlSourceLabel, sourceSwitchNote, type PsyNeuLinkInfo } from "@/utils/p
 import { abbreviateHome } from "@/components/common/settings/shared";
 import { record as recordActivity, recordMenuClick } from "@/utils/activityLog";
 import { noteModelOrigin } from "@/utils/diagnostics";
-import { SAVE_COPY_EVENT } from "@/utils/saveRequest";
+import { SAVE_COPY_EVENT, requestSaveCopy } from "@/utils/saveRequest";
 import { stripProtectionLine } from "@/utils/protectionLine";
 import { AutosaveStatus } from "./AutosaveStatus";
 import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
@@ -3067,11 +3067,7 @@ function PnlSourceBadge() {
 
   if (status.kind !== "local") {
     const from = status.kind === "github" ? "GitHub" : "PyPI";
-    return (
-      <span data-testid="pnl-source-badge" title={status.message} style={style(false)}>
-        PsyNeuLink from {from} · read only
-      </span>
-    );
+    return <ManagedSourceBadge from={from} title={status.message} style={style(false)} />;
   }
 
   const editable = !!status.editable;
@@ -3097,6 +3093,91 @@ function PnlSourceBadge() {
     >
       {editable ? "your PsyNeuLink checkout · editing" : "your PsyNeuLink checkout · protected"}
     </button>
+  );
+}
+
+/**
+ * The "PsyNeuLink from … · read only" tag, for a PsyNeuLink that PsyNeuView
+ * manages (#50). The editor's banner explains it too, but only while the code
+ * editor is open; clicking the tag says the same thing from the toolbar and
+ * offers the way out, Save a copy as… (the same `requestSaveCopy` the banner
+ * of a permanently protected model uses). Escape, the ×, a click outside or
+ * the tag again close it.
+ */
+function ManagedSourceBadge({ from, title, style }: { from: string; title?: string; style: React.CSSProperties }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+  useDismiss(open, () => setOpen(false));
+
+  const saveCopy = () => {
+    setOpen(false);
+    requestSaveCopy();
+  };
+
+  return (
+    <span ref={ref} style={{ position: "relative", display: "inline-block" }}>
+      <button
+        type="button"
+        data-testid="pnl-source-badge"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => setOpen((o) => !o)}
+        title={`${title ? `${title} ` : ""}Click to see why, and how to work on a copy.`}
+        style={{ ...style, cursor: "pointer" }}
+      >
+        PsyNeuLink from {from} · read only
+      </button>
+      {open && (
+        <div
+          role="dialog"
+          aria-labelledby="pnl-read-only-note-title"
+          data-testid="pnl-read-only-note"
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            // Above the panel dividers (Allotment sashes, z-index 35), like the Open menu (#1391).
+            zIndex: 1000,
+            width: 320,
+            display: "flex",
+            flexDirection: "column",
+            background: "var(--pnv-surface)",
+            border: "1px solid var(--pnv-border)",
+            borderRadius: 6,
+            boxShadow: "var(--pnv-shadow-popover)",
+            whiteSpace: "normal",
+            fontFamily: "inherit",
+            textAlign: "left",
+          }}
+        >
+          <DialogHeader title="Why this file is read only" titleId="pnl-read-only-note-title" onClose={() => setOpen(false)} compact />
+          <div style={{ padding: "10px 12px", fontSize: 12, lineHeight: 1.5, color: "var(--pnv-text)" }}>
+            <p style={{ margin: "0 0 8px" }}>
+              This file is part of the PsyNeuLink that PsyNeuView installed from {from}. PsyNeuView keeps it read
+              only, so it stays the same as where it came from and an update can replace it.
+            </p>
+            <p style={{ margin: 0 }}>
+              To change it, save your own copy and work on that. Moving nodes is fine here: the layout is kept
+              separately.
+            </p>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 12px 12px" }}>
+            <Button kind="primary" size="compact" data-testid="pnl-read-only-note-save-copy" onClick={saveCopy}>
+              Save a copy as…
+            </Button>
+          </div>
+        </div>
+      )}
+    </span>
   );
 }
 

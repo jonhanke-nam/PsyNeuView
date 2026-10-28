@@ -113,9 +113,9 @@ test("a managed PsyNeuLink (GitHub) is read only, with the reason and the way ou
     await declareInstall(page, "github", root);
     await openModel(page, model);
 
-    // The badge is a label, not a switch: nothing to click.
+    // The badge is not a switch: clicking it explains, it never allows edits
+    // (#50, read-only-badge-note.spec.ts).
     await expect(badge(page)).toHaveText("PsyNeuLink from GitHub · read only");
-    await expect(badge(page)).toHaveJSProperty("tagName", "SPAN");
     // No "editable" beside "read only": the per-model badge stays out of it.
     await expect(editModeBadge(page)).toHaveCount(0);
 
