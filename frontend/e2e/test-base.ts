@@ -114,6 +114,31 @@ export const mutatingTest = base.extend({
   },
 });
 
+/**
+ * Scheduling-condition arrows start hidden (#123). A spec about those arrows,
+ * their badges or the legend that explains them shows them the way a user
+ * would choose to in Settings ▸ Appearance — only when unset, so a spec that
+ * hides them and reloads still sees its own choice.
+ */
+const SCHEDULING_ARROWS_KEY = "psyneuview.graph.schedulingArrows";
+export async function showSchedulingArrows(page: import("@playwright/test").Page) {
+  await page.addInitScript((key) => {
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, "shown");
+  }, SCHEDULING_ARROWS_KEY);
+}
+
+/**
+ * The test ids of the graph's view options that used to be More ▾ rows, by the
+ * name the More menu gave them. They live in Advanced Graph View Options now
+ * (#123): open it with `graph-view-options-button`, then click the checkbox.
+ */
+export const VIEW_OPTION_IDS: Record<string, string> = {
+  Controller: "graph-view-option-controller",
+  Learning: "graph-view-option-learning",
+  CIMs: "graph-view-option-cims",
+  Inactive: "graph-view-option-inactive",
+};
+
 /** Exported so a spec about folding can opt out of the seeding above. */
 export { COLLAPSED_SECTIONS_KEY, SHOWN_DEV_SECTIONS_KEY, ORIENTATION_OFFER_KEY, TUTORIALS_FOLDED_KEY };
 

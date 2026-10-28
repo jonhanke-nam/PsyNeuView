@@ -417,10 +417,13 @@ settings:
     storage: browser localStorage (psyneuview.graph.schedulingArrows); inside the Mac app, the app keeps it (PagePreferences, #218)
     control: setting-graph-scheduling-arrows
     notes: >-
-      Shown (default) or Hidden, as in show_graph (#53). Whether the graph
-      view draws the dashed graph-structure-condition arrows; hidden, the
-      graph legend is hidden too. PsyNeuLink's show_graph() doesn't draw
-      them. The Scheduler panel lists the conditions either way.
+      Hidden, as in show_graph (default since #123), or Shown (#53).
+      Whether the graph view draws the dashed graph-structure-condition
+      arrows; hidden, the graph legend is hidden too. PsyNeuLink's
+      show_graph() doesn't draw them. A choice already stored in the
+      browser wins over the default. The Scheduler panel lists the
+      conditions either way. The graph toolbar's Advanced Graph View
+      Options menu links here rather than holding a second control.
 
   - id: components-start
     label: Appearance ▸ Components panel ▸ How the panel opens
@@ -496,7 +499,7 @@ settings:
 elsewhere:
   - id: graph-show-ports
     label: Show ports
-    home: graph toolbar ▸ Ports button (data-testid toolbar-show-ports)
+    home: graph toolbar ▸ Advanced Graph View Options ▸ Nodes ▸ Show ports (data-testid toolbar-show-ports, #123)
     storage: browser localStorage (psyneuview.graph.showPorts; the Mac app keeps psyneuview. keys)
     notes: >-
       Off by default (#112). One switch for both the port dots drawn on the

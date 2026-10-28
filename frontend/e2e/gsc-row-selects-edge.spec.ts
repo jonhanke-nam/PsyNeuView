@@ -11,7 +11,7 @@
  *
  * Screenshots land in `$SHOTS_DIR` when it is set.
  */
-import { mutatingTest as test, expect } from "./test-base";
+import { mutatingTest as test, expect, showSchedulingArrows } from "./test-base";
 import { copyFileSync, mkdtempSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
@@ -64,6 +64,9 @@ const selectedBadges = (page: Page) => page.locator('[data-testid="gsc-edge-badg
 test.use({ viewport: { width: 1600, height: 1000 } });
 
 test.describe("A graph-condition row selects its edge (#1370)", { tag: "@ci" }, () => {
+  // Scheduling arrows start hidden (#123); this spec is about them.
+  test.beforeEach(async ({ page }) => showSchedulingArrows(page));
+
   test("the owner's row in the Inspector selects the condition's edge", async ({ page }) => {
     test.setTimeout(180_000);
     await openFromPath(page, scratchModel());

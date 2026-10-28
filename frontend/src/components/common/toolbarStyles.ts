@@ -7,11 +7,12 @@
  * main toolbar, the graph toolbar and their menus draw "on" the same way.
  *
  *   toggleColours   a toolbar toggle or menu trigger: blue-tinted with a
- *                   blue edge while on (Roles, Names, Ports; Layout ▾ while
- *                   its menu is open), white with a grey edge while off.
+ *                   blue edge while on (Layout: Auto; Layout ▾ or Advanced
+ *                   Graph View Options ▾ while open), white with a grey
+ *                   edge while off.
  *   menuRowColours  a row in a toolbar menu: blue-tinted and bold while it
  *                   is the current choice (a visible panel, the running
- *                   walkthrough, a More toggle that is on).
+ *                   walkthrough).
  *   MENU_ROW_HOVER  the grey under the pointer on a row that is not current.
  */
 import type { CSSProperties } from "react";

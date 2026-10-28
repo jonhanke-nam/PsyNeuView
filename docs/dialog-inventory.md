@@ -59,7 +59,7 @@ Escape, which every row has.
 | Tutorials menu | menu | `layout/Toolbar.tsx` | `walkthrough-menu-list` | Tutorials ▾ | the Tutorials button, click outside, a pick |
 | Developer-mode menu | menu | `layout/DeveloperModeIndicator.tsx` | `developer-mode-menu` | the Developer badge (developer mode) | the badge, click outside, a pick |
 | History | dialog | `common/HistoryPanel.tsx` | `history-panel` | the History button | ×, click outside, the History button |
-| Graph toolbar's More menu | menu | `graph/GraphToolbar.tsx` | `graph-more-menu` | More ▾ in the graph toolbar | the More button, click outside |
+| Advanced Graph View Options | dialog | `graph/GraphViewOptionsMenu.tsx` | `graph-view-options-menu` | Advanced Graph View Options ▾ in the graph toolbar (it took in the More menu, #123) | ×, its button, click outside; stays open while you change options |
 | Node context menu | menu | `graph/NodeContextMenu.tsx` | `node-context-menu` | right-click on a node | click outside, a pick |
 | Palette's compact flyout | menu | `graph/PaletteSidebar.tsx` | `palette-compact-flyout` | a category in the compact palette | click outside, the category again, its ‹ |
 | Watching for changes (the file-watch status) | dialog | `common/SyncIndicator.tsx` | `sync-popover` | the ● status at the right end of the diagnostics bar (#103) | ×, click outside, the status again |

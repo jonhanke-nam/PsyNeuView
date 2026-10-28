@@ -1,6 +1,6 @@
 /**
- * Show ports (#112): ports are hidden by default, and the graph toolbar's one
- * Ports switch shows both the port dots on the graph and the Components
+ * Show ports (#112): ports are hidden by default, and the one Show ports
+ * switch, in the graph toolbar's Advanced Graph View Options (#123), shows both the port dots on the graph and the Components
  * panel's Ports section. The choice is remembered across a reload.
  */
 import { mutatingTest as test, expect } from "./test-base";
@@ -10,6 +10,13 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MODEL = path.resolve(__dirname, "..", "..", "backend", "reference_models", "stroop_reference_with_lc.py");
 const SHOTS = process.env.PNV_SHOT_DIR;
+
+/** The Show ports switch lives in Advanced Graph View Options (#123): open it first. */
+async function showPortsSwitch(page: import("@playwright/test").Page) {
+  await page.getByTestId("graph-view-options-button").click();
+  await expect(page.getByTestId("graph-view-options-menu")).toBeVisible();
+  return page.getByTestId("toolbar-show-ports");
+}
 
 async function openModel(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: /Open/ }).first().click();
@@ -31,10 +38,10 @@ test.describe("Show ports (#112)", { tag: "@ci" }, () => {
     await openModel(page);
     const sidebar = page.getByTestId("palette-sidebar");
     const portsSection = sidebar.getByText(/^\W*ports$/i);
-    const toggle = page.getByTestId("toolbar-show-ports");
+    const toggle = await showPortsSwitch(page);
 
     // Default: off — no port dots drawn, no Ports section.
-    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await expect(toggle).not.toBeChecked();
     await expect(page.getByTestId("edge-port-dot")).toHaveCount(0);
     await expect(sidebar.getByText(/^\W*mechanisms$/i)).toBeVisible();
     await expect(portsSection).toHaveCount(0);
@@ -42,7 +49,8 @@ test.describe("Show ports (#112)", { tag: "@ci" }, () => {
 
     // One switch turns both on.
     await toggle.click();
-    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect(toggle).toBeChecked();
+    await page.keyboard.press("Escape");
     await expect(page.getByTestId("edge-port-dot")).not.toHaveCount(0);
     await expect(portsSection).toBeVisible();
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "2-ports-on.png") });
@@ -50,7 +58,8 @@ test.describe("Show ports (#112)", { tag: "@ci" }, () => {
     // Remembered across a reload.
     await page.reload();
     await openModel(page);
-    await expect(page.getByTestId("toolbar-show-ports")).toHaveAttribute("aria-pressed", "true");
+    await expect(await showPortsSwitch(page)).toBeChecked();
+    await page.keyboard.press("Escape");
     await expect(page.getByTestId("edge-port-dot")).not.toHaveCount(0);
     await expect(page.getByTestId("palette-sidebar").getByText(/^\W*ports$/i)).toBeVisible();
   });

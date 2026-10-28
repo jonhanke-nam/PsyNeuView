@@ -12,13 +12,18 @@ How to control what the graph shows — layout, nesting, and the flattened view.
 The graph toolbar controls how the model is drawn:
 
 - **Layout: Auto / Custom** — auto-layout vs. your hand-arranged positions, plus
-  **Reset Custom Layout** and direction (**Layered**, **Bottom-Up**, …).
-- Display toggles — **Roles**, **Dims**, **Names**, **Elements**, **Labels**,
-  **Arrows**, **Ports**, **Order**, **Types** — turn detail on and off. By
-  default a node shows just its name, as `show_graph()` draws it, with its role
-  in the outline colour (green for input, red for output); **Elements** adds
-  each node's type and role tags and its function (for example `f: Logistic`),
-  and is remembered once you choose.
+  **Reset Custom Layout** and the layout (**Like show_graph**, **Layered**, …).
+- **Advanced Graph View Options ▾** — one panel that stays open while you
+  change things, grouped as **Nodes** (names, type and role tags, full type
+  names, colour by role, dimensions, run order, show ports, expand or collapse
+  all), **Layout** (direction such as **Bottom-Up**, flips), **Lines** (line
+  style, direction arrows, line names, spreading shared lines) and **What the
+  graph shows** (controller, learning, interface nodes, inactive lines).
+  Escape, a click outside or its × closes it. The dashed scheduling arrows are
+  hidden by default; turn them on in Settings ▸ Appearance.
+  By default a node shows just its name, as `show_graph()` draws it, with its
+  role in the outline colour; **Type and role tags** adds each node's tags and
+  its function (for example `f: Logistic`), and is remembered once you choose.
 - The **view selector** (the composition dropdown) — switch between a single
   composition, the whole nested model, and the **flattened** view (below).
 
@@ -46,7 +51,8 @@ node has been flattened out of a nested composition, the Inspector shows its
 
 - [x] Layout can be **auto** or your **custom** arrangement, with a reset and
       direction options.
-- [x] Display toggles show/hide roles, names, ports, arrows, and more.
+- [x] Advanced Graph View Options shows or hides roles, names, ports, arrows,
+      and more, and stays open while you change several.
 - [x] **Flatten** inlines nested compositions into one graph; toggling it off
       restores the nested view.
 - [x] Flattened nodes carry **provenance** back to their source composition.

@@ -6,7 +6,8 @@ import { create } from "zustand";
 import { RENDERING_DEFAULTS } from "@/config/renderingDefaults";
 import { loadLayoutDefault } from "@/stores/graphLayoutDefaultStore";
 
-// Show ports (#112): one switch, the toolbar's Ports button. Off by default; it
+// Show ports (#112): one switch, in the graph toolbar's Advanced Graph View
+// Options (#123). Off by default; it
 // draws the port dots on the graph and shows the Components panel's Ports
 // section. Remembered per browser; a value someone already chose wins.
 export const SHOW_PORTS_KEY = "psyneuview.graph.showPorts";

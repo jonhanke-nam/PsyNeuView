@@ -464,6 +464,7 @@ export const MechanismNode = memo(function MechanismNode({
           color-coded GSC edge badges. */}
       {showExecutionOrder && executionPhase !== null && (
         <div
+          data-testid="node-order-badge"
           style={{
             position: "absolute",
             top: -8,
@@ -562,7 +563,7 @@ export const MechanismNode = memo(function MechanismNode({
       </div>
       )}
       {showNodeNames && (
-        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--pnv-text)" }}>
+        <div data-testid="node-name" style={{ fontSize: 14, fontWeight: 600, color: "var(--pnv-text)" }}>
           {d.label}
         </div>
       )}
