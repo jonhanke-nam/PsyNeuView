@@ -8,7 +8,8 @@
  * mid-walkthrough; this section has no second switch for it.
  *
  * Tutorials: the walkthrough choices that used to have no way back, such as
- * "Don't remind me" on the orientation reminder.
+ * "Don't remind me" on the orientation reminder, and which sections the
+ * Tutorials menu lists (#136).
  */
 
 import { useState } from "react";
@@ -27,6 +28,7 @@ import {
   type RingThickness,
 } from "@/stores/tourHighlightStore";
 import { NarrationVoiceSetting } from "./NarrationVoiceSetting";
+import { useTutorialsMenuStore } from "@/stores/tutorialsMenuStore";
 import { Group, SettingLabel, mutedStyle, selectStyle } from "./shared";
 
 export function TutorialsVoiceSection() {
@@ -41,6 +43,7 @@ export function TutorialsVoiceSection() {
       </Group>
       <Group id="tutorials" title="Tutorials">
         <OrientationReminderSetting />
+        <HideCourseSetting />
       </Group>
     </>
   );
@@ -114,6 +117,34 @@ function OrientationReminderSetting() {
       </select>
       <div style={{ ...mutedStyle, marginTop: 6 }}>Remembered in this browser.</div>
     </div>
+  );
+}
+
+/**
+ * Whether the Tutorials menu lists the Cognitive Neuroscience Course (#136).
+ * Off by default, so the course shows. Hiding it is about the menu only: a
+ * course walkthrough opened by link still runs.
+ */
+function HideCourseSetting() {
+  const hideCourse = useTutorialsMenuStore((s) => s.hideCourse);
+  const setHideCourse = useTutorialsMenuStore((s) => s.setHideCourse);
+  return (
+    <label style={{ fontSize: "var(--pnv-fs-13)", marginTop: 14, display: "flex", gap: 8, alignItems: "flex-start" }}>
+      <input
+        type="checkbox"
+        data-testid="setting-hide-course"
+        checked={hideCourse}
+        onChange={(e) => setHideCourse(e.target.checked)}
+        style={{ marginTop: 3 }}
+      />
+      <span>
+        Hide the Cognitive Neuroscience Course
+        <span style={{ ...mutedStyle, display: "block" }}>
+          Leaves the course's walkthroughs out of the Tutorials menu. A course walkthrough opened by link still runs.
+          Remembered in this browser.
+        </span>
+      </span>
+    </label>
   );
 }
 
