@@ -59,7 +59,19 @@ test.describe("Advanced Graph View Options (#123)", { tag: "@ci" }, () => {
     await menu(page).getByTestId("dialog-close").click();
     await expect(menu(page)).toHaveCount(0);
     await openMenu(page);
-    await page.locator(".react-flow__pane").click({ position: { x: 5, y: 5 } });
+    // A click on the graph, clear of the panel: the first point of the canvas
+    // under the panel's top edge, left or right of it, that is the canvas.
+    const spot = await page.evaluate(() => {
+      const panel = document.querySelector('[data-testid="graph-view-options-menu"]')!.getBoundingClientRect();
+      const y = panel.top + 40;
+      for (let x = 5; x < window.innerWidth; x += 10) {
+        if (x >= panel.left && x <= panel.right) continue;
+        if (document.elementFromPoint(x, y)?.classList.contains("react-flow__pane")) return { x, y };
+      }
+      return null;
+    });
+    expect(spot, "some of the canvas beside the panel").not.toBeNull();
+    await page.mouse.click(spot!.x, spot!.y);
     await expect(menu(page)).toHaveCount(0);
   });
 
