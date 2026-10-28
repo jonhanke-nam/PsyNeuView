@@ -29,6 +29,7 @@ import iscciYaml from "@/walkthroughs/iscci.yaml?raw";
 import logisticYaml from "@/walkthroughs/logistic.yaml?raw";
 import memoryYaml from "@/walkthroughs/memory.yaml?raw";
 import perceptronYaml from "@/walkthroughs/perceptron.yaml?raw";
+import pnlMechanismYaml from "@/walkthroughs/pnl-mechanism.yaml?raw";
 import demoYaml from "@/walkthroughs/demo.yaml?raw";
 import runYaml from "@/walkthroughs/run.yaml?raw";
 import semanticYaml from "@/walkthroughs/semantic.yaml?raw";
@@ -275,6 +276,12 @@ export interface Walkthrough {
    * walkthrough.
    */
   orientation?: number;
+  /**
+   * Its place in **PsyNeuLink Tutorials** (#9), the walkthroughs that follow
+   * PsyNeuLink's own Tutorial notebook and Basics and Primer: 1 for the first
+   * lesson, and so on. Absent for every other walkthrough.
+   */
+  psyneulink?: number;
   /** The docs pages the walkthrough relies on, as paths under `docs/` (#1310). */
   docs?: string[];
   /**
@@ -425,7 +432,7 @@ function sameTrials(wanted: TrialInputs, actual: Record<string, number[][]>): bo
 export function parseWalkthrough(text: string): Walkthrough {
   const raw = yaml.load(text) as Partial<Walkthrough> | undefined;
   if (!raw || typeof raw !== "object") throw new Error("walkthrough: not a mapping");
-  const { id, title, model, course, orientation, docs, developerMode, minutes, steps } = raw;
+  const { id, title, model, course, orientation, psyneulink, docs, developerMode, minutes, steps } = raw;
   if (!id || !title) throw new Error("walkthrough: needs id and title");
   if (!Array.isArray(steps) || steps.length === 0) throw new Error("walkthrough: needs steps");
   steps.forEach((step, i) => {
@@ -454,6 +461,12 @@ export function parseWalkthrough(text: string): Walkthrough {
   if (orientation !== undefined && (!Number.isInteger(orientation) || orientation < 1)) {
     throw new Error(`walkthrough "${id}": orientation must be a whole number from 1, got ${JSON.stringify(orientation)}`);
   }
+  if (psyneulink !== undefined && (!Number.isInteger(psyneulink) || psyneulink < 1)) {
+    throw new Error(`walkthrough "${id}": psyneulink must be a whole number from 1, got ${JSON.stringify(psyneulink)}`);
+  }
+  if ([course, orientation, psyneulink].filter((x) => x !== undefined).length > 1) {
+    throw new Error(`walkthrough "${id}": belongs to one section only (course, orientation or psyneulink)`);
+  }
   const docList =
     docs === undefined ? undefined : (Array.isArray(docs) ? docs : [docs]).map((d) => String(d));
   if (docList?.some((d) => !/^[\w./-]+\.md$/.test(d))) {
@@ -471,6 +484,7 @@ export function parseWalkthrough(text: string): Walkthrough {
     model,
     course: course === undefined ? undefined : String(course),
     orientation,
+    psyneulink,
     docs: docList,
     developerMode,
     minutes,
@@ -502,6 +516,7 @@ export const WALKTHROUGHS: Record<string, Walkthrough> = {
   td: parseWalkthrough(tdYaml),
   vectors: parseWalkthrough(vectorsYaml),
   hopfield: parseWalkthrough(hopfieldYaml),
+  "pnl-mechanism": parseWalkthrough(pnlMechanismYaml),
   "orientation-window": parseWalkthrough(orientationWindowYaml),
   "orientation-open": parseWalkthrough(orientationOpenYaml),
   "orientation-editing": parseWalkthrough(orientationEditingYaml),
@@ -525,10 +540,11 @@ function lessonKey(lesson: string): [number, number] {
  * which rows were course lessons.
  */
 export const ORIENTATION_GROUP = "PsyNeuView First Steps";
+export const PSYNEULINK_GROUP = "PsyNeuLink Tutorials";
 
 export interface MenuGroup {
   /** Stable, for the test id `walkthrough-group-<id>`. */
-  id: "orientation" | "general" | "course";
+  id: "orientation" | "general" | "psyneulink" | "course";
   title: string;
   walkthroughs: Walkthrough[];
 }
@@ -539,7 +555,12 @@ export function menuGroups(all: Walkthrough[] = Object.values(WALKTHROUGHS)): Me
   const orientation = all
     .filter((w) => w.orientation !== undefined)
     .sort((a, b) => a.orientation! - b.orientation!);
-  const general = all.filter((w) => !w.course && w.orientation === undefined);
+  const general = all.filter((w) => !w.course && w.orientation === undefined && w.psyneulink === undefined);
+  // #9: PsyNeuLink's own tutorials, in lesson order, between the app's own
+  // walkthroughs and the course.
+  const psyneulink = all
+    .filter((w) => w.psyneulink !== undefined)
+    .sort((a, b) => a.psyneulink! - b.psyneulink!);
   const course = all
     .filter((w) => w.course)
     .sort((a, b) => {
@@ -550,6 +571,7 @@ export function menuGroups(all: Walkthrough[] = Object.values(WALKTHROUGHS)): Me
   return [
     { id: "orientation" as const, title: ORIENTATION_GROUP, walkthroughs: orientation },
     { id: "general" as const, title: "Getting started", walkthroughs: general },
+    { id: "psyneulink" as const, title: PSYNEULINK_GROUP, walkthroughs: psyneulink },
     { id: "course" as const, title: "Cognitive Neuroscience Course", walkthroughs: course },
   ].filter((g) => g.walkthroughs.length > 0);
 }

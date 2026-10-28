@@ -13,7 +13,7 @@
 export const TUTORIALS_FOLDED_KEY = "psyneuview.tutorials.foldedSections";
 
 /** Sections folded on first run: all but PsyNeuView First Steps. */
-export const DEFAULT_FOLDED_SECTIONS: readonly string[] = ["general", "course"];
+export const DEFAULT_FOLDED_SECTIONS: readonly string[] = ["general", "psyneulink", "course"];
 
 type Storage = Pick<globalThis.Storage, "getItem" | "setItem">;
 

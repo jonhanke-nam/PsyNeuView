@@ -30,10 +30,11 @@ readOnlyTest.describe("Tutorials menu sections fold", { tag: "@ci" }, () => {
 
     await expect(page.getByTestId("tutorials-section-orientation")).toHaveAttribute("aria-expanded", "true");
     await expect(page.getByTestId("walkthrough-orientation-window")).toBeVisible();
-    for (const id of ["general", "course"]) {
+    for (const id of ["general", "psyneulink", "course"]) {
       await expect(page.getByTestId(`tutorials-section-${id}`)).toHaveAttribute("aria-expanded", "false");
     }
     await expect(page.getByTestId("walkthrough-demo")).toHaveCount(0);
+    await expect(page.getByTestId("walkthrough-pnl-mechanism")).toHaveCount(0);
     await expect(page.getByTestId("walkthrough-ego")).toHaveCount(0);
     // A folded heading says how many walkthroughs it holds.
     await expect(page.getByTestId("tutorials-section-course")).toContainText("14");
@@ -74,7 +75,7 @@ mutatingTest.describe("Tutorials menu sections fold, while a walkthrough runs", 
     // Everything folded, then start the general "demo" walkthrough by URL.
     await page.addInitScript(([key]) => {
       if (!sessionStorage.getItem("fold-spec-seeded")) {
-        localStorage.setItem(key, JSON.stringify(["orientation", "general", "course"]));
+        localStorage.setItem(key, JSON.stringify(["orientation", "general", "psyneulink", "course"]));
         sessionStorage.setItem("fold-spec-seeded", "1");
       }
     }, [TUTORIALS_FOLDED_KEY]);
