@@ -17,6 +17,7 @@ fit-frames-edges.spec.ts
 flat-layout-namespace.spec.ts
 flat-view.spec.ts
 github-file-loader.spec.ts
+graph-fills-window.spec.ts
 graph-legend.spec.ts
 graph-pointer-precise.spec.ts
 graph-pointer.spec.ts

@@ -63,8 +63,10 @@ async function holdsFor(page: Page, ms: number, check: () => Promise<void>) {
 }
 
 async function typeAtLine(page: Page, lineText: string, text: string) {
-  // Click the line, then Home: a click lands wherever the line wraps.
-  await page.locator(".cm-line", { hasText: lineText }).first().click();
+  // Click the very start of the line's first row. In a narrow editor the line
+  // wraps, and a click in the middle then Home lands at the start of a later
+  // row, splitting the line.
+  await page.locator(".cm-line", { hasText: lineText }).first().click({ position: { x: 1, y: 4 } });
   await page.keyboard.press("Home");
   await page.keyboard.type(text, { delay: 40 });
 }
