@@ -49,8 +49,10 @@ for (const m of MODELS) {
     await closePalette(page);
     await page.waitForTimeout(700);
 
-    const routing = page.locator("select").filter({ has: page.locator('option[value="spline"]') }).first();
-    await routing.selectOption("spline");
+    // Line style lives in Advanced Graph View Options (#123).
+    await page.getByTestId("graph-view-options-button").click();
+    await page.getByTestId("graph-view-option-edge-style").selectOption("spline");
+    await page.keyboard.press("Escape");
     await page.waitForTimeout(900);
 
     const report = await page.evaluate(() => {
