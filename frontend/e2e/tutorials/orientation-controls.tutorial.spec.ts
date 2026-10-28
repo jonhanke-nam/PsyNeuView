@@ -124,7 +124,9 @@ test.describe("The Tutorials menu", () => {
     const groupIds = await list
       .locator('[data-testid^="walkthrough-group-"]')
       .evaluateAll((els) => els.map((e) => e.getAttribute("data-testid")));
-    expect(groupIds).toEqual(["walkthrough-group-orientation", "walkthrough-group-general", "walkthrough-group-course"]);
+    expect(groupIds).toEqual([
+      "walkthrough-group-orientation", "walkthrough-group-general", "walkthrough-group-psyneulink", "walkthrough-group-course",
+    ]);
 
     const group = list.getByTestId("walkthrough-group-orientation");
     await expect(group).toContainText("PsyNeuView First Steps");
