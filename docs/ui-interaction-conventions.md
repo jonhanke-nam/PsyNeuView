@@ -65,23 +65,31 @@ overrides those under `.graph-pointer-image`, with the image coming from
 `utils/graphCursor.ts` at the size chosen in Settings ▸ Appearance. The
 **grabbing hand** shows only while a drag is in progress — the canvas being
 panned, a node being moved — which is when it carries meaning. Settings ▸
-Appearance also offers **Hand**, which leaves React Flow's cursors as they
-were, and two precise pointers (#40): a **crosshair** and a **circle**, each
-clicking at its centre (the hot spot is half the image's size) where a dot is
-drawn, and drawn heavier while the button is held over a node or edge, as
-feedback for the click.
+Appearance also offers **Hand** — our own open hand where React Flow put its
+grab hand, closing while held (#40) — and two precise pointers (#40): a
+**crosshair** and a **circle**, each clicking at its centre (the hot spot is
+half the image's size) where a dot is drawn, and drawn heavier while the
+button is held over a node or edge, as feedback for the click. **Pointer
+size** covers all four and the grabbing hand, which is the drag cursor under
+every choice.
 
 The arrow is the *default*, not a replacement for every cursor. A real
 control keeps the cursor that says what it does, under either setting:
 
 - A `<button>` inside a node (expand, focus, collapse) and a clickable edge
   label say **pointer** — a click affordance on a control, as above.
-- A handle you drag — an edge's bend handle, the GSC legend's title bar —
-  says **grab**, and **grabbing** while held: a drag surface signalled by
-  cursor, as above. Under "hand" the edge's hit path says grab too
+- A drag surface with an area — the GSC legend's title bar — says
+  **grab**, and **grabbing** while held: a drag surface signalled by cursor,
+  as above. Under "hand" the edge's hit path shows the hand too
   (`.projection-edge-hit`), since that is a drag surface in the hand's
-  idiom; under the arrow it stays the arrow, and the bend handles that
-  appear on hover carry the grab.
+  idiom; under the arrow it stays the arrow.
+- A **control point** — an edge's bend handle, an attachment dot — is a
+  point, so it shows the *precise* pointer and never the hand, under every
+  setting (#40): the arrow under Arrow and Hand, the crosshair or circle
+  under those, with the pressed look while it is held and dragged. In code,
+  the `graph-control-point` class; `index.css` reads the pointer from the
+  `--graph-pointer-point-cursor` variables GraphCanvas sets. The handle's
+  hover growth is what says it can be dragged.
 - Text fields keep the **text** cursor, dividers their **resize** cursors,
   and "what is this?" tooltips **help**.
 
