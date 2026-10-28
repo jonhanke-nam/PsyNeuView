@@ -20,6 +20,7 @@ flat-view.spec.ts
 github-file-loader.spec.ts
 graph-fills-window.spec.ts
 graph-legend.spec.ts
+graph-pointer-hand-size.spec.ts
 graph-pointer-precise.spec.ts
 graph-pointer.spec.ts
 graph-view-options.spec.ts

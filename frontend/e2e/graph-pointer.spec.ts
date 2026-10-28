@@ -138,9 +138,11 @@ test.describe("the pointer in the graph view (#1301)", { tag: "@ci" }, () => {
     await shotWithCursor(page, "02-canvas-arrow-medium", at);
     await page.mouse.down();
     await expect(page.locator(".react-flow__pane")).toHaveClass(/dragging/);
-    expect(await computedCursor(page, ".react-flow__pane")).toBe("grabbing");
+    // #40: the grabbing hand is our own closed hand at the chosen size, the system's as the fallback.
+    const GRABBING = /^url\("data:image\/svg\+xml,[^"]+"\) 12 12, grabbing$/;
+    expect(await computedCursor(page, ".react-flow__pane")).toMatch(GRABBING);
     for (let i = 1; i <= 5; i++) await page.mouse.move(at.x + i * 8, at.y - i * 4);
-    expect(await computedCursor(page, ".react-flow__pane")).toBe("grabbing");
+    expect(await computedCursor(page, ".react-flow__pane")).toMatch(GRABBING);
     await page.mouse.up();
     await expect(page.locator(".react-flow__pane")).not.toHaveClass(/dragging/);
     expect(await computedCursor(page, ".react-flow__pane")).toBe(pane);
@@ -181,14 +183,16 @@ test.describe("the pointer in the graph view (#1301)", { tag: "@ci" }, () => {
     await loadModel(page);
     expect(await computedCursor(page, ".react-flow__pane")).toBe(xlarge);
 
-    // Hand: React Flow's own cursors, grab on the pane. The model is in Auto,
+    // Hand: our own open hand on the pane, sized like the arrow (#40, the
+    // sizes are in graph-pointer-hand-size.spec.ts). The model is in Auto,
     // where an edge can be selected but not shaped (#41): a pointer, not a hand.
+    const HAND = /^url\("data:image\/svg\+xml,[^"]+"\) 48 48, grab$/;
     await openAppearance(page);
     await page.getByTestId("setting-graph-pointer").selectOption("hand");
     await page.keyboard.press("Escape");
-    expect(await computedCursor(page, ".react-flow__pane")).toBe("grab");
+    expect(await computedCursor(page, ".react-flow__pane")).toMatch(HAND);
     expect(await computedCursor(page, ".projection-edge-hit")).toBe("pointer");
     await loadModel(page);
-    expect(await computedCursor(page, ".react-flow__pane")).toBe("grab");
+    expect(await computedCursor(page, ".react-flow__pane")).toMatch(HAND);
   });
 });
