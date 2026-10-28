@@ -347,13 +347,19 @@ settings:
     notes: >-
       Arrow (default) or Hand (#1301). The arrow is our own SVG image with
       the hot spot on its tip, over the canvas, nodes and edges; the grabbing
-      hand shows only while a drag is in progress. Hand keeps React Flow's
-      cursors. Real controls (buttons in a node, a clickable edge label, a
-      bend handle) keep their own cursor either way; the rule is in
-      docs/ui-interaction-conventions.md. Crosshair and Circle (#40) are our
-      own SVG images too, hot spot exactly at the centre (half the image's
-      size), a dot drawn there, the system crosshair as the fallback, and a
-      heavier pressed look while the button is held over a node or edge.
+      hand shows only while a drag is in progress. Hand is our own SVG image
+      too (#40): an open hand where React Flow put its grab hand (the pane,
+      nodes, the edge's hit path) and a closed one while held; the closed
+      hand is the drag cursor under every choice. Real controls (buttons in a
+      node, a clickable edge label) keep their own cursor either way, and a
+      control point (a bend handle, an attachment dot) shows the precise
+      pointer rather than the hand so the exact point is clear (#40): the
+      arrow under Arrow and Hand, the crosshair or circle under those; the
+      rule is in docs/ui-interaction-conventions.md. Crosshair and Circle
+      (#40) are our own SVG images too, hot spot exactly at the centre (half
+      the image's size), a dot drawn there, the system crosshair as the
+      fallback, and a heavier pressed look while the button is held over a
+      node or edge.
 
   - id: graph-pointer-size
     label: Appearance ▸ Pointer ▸ Pointer size
@@ -364,9 +370,10 @@ settings:
     notes: >-
       Small, Medium (default), Large, Extra large: 16, 24, 48 and 96 px
       images (utils/graphCursor.ts), all under Chromium's 128 px cap for a
-      custom cursor; the system arrow is the fallback if the image can't
-      load. Applies to the arrow, crosshair and circle; the hand is the system's own. Window zoom
-      doesn't scale cursors, so this is the one control for the size.
+      custom cursor; the system cursor is the fallback if the image can't
+      load. Applies to the arrow, the hand, the crosshair and the circle,
+      and to the grabbing hand while dragging (#40). Window zoom doesn't
+      scale cursors, so this is the one control for the size.
 
   - id: node-outline
     label: Appearance ▸ Node outlines ▸ Outline width

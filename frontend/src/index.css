@@ -75,12 +75,11 @@ button:hover {
    arrow setting (Settings ▸ Appearance, the default) the canvas, nodes and
    edges all show the arrow instead — its tip is the exact point that clicks
    — and the grabbing hand appears only while a drag is in progress. The
-   arrow itself is our own image at the chosen size, in --graph-arrow-cursor
-   (set by GraphCanvas from utils/graphCursor.ts), with the system arrow as
-   the fallback. Real controls keep their own cursor: a <button> inside a
-   node, a clickable edge label and a bend handle say pointer or grab
-   themselves (docs/ui-interaction-conventions.md). Under "hand" nothing here
-   applies and React Flow's cursors stand, with the edge hit path's grab. */
+   pointer itself is our own image at the chosen size, in the
+   --graph-pointer-* variables (set by GraphCanvas from utils/graphCursor.ts),
+   with the system cursor as the fallback. Real controls keep their own
+   cursor: a <button> inside a node and a clickable edge label say pointer
+   themselves (docs/ui-interaction-conventions.md). */
 .graph-pointer-image .react-flow__pane.draggable,
 .graph-pointer-image .react-flow__node.selectable,
 .graph-pointer-image .react-flow__node.draggable,
@@ -95,17 +94,46 @@ button:hover {
 .graph-pointer-image .react-flow__edge.selectable:active {
   cursor: var(--graph-pointer-pressed-cursor, var(--graph-pointer-cursor, default));
 }
-.graph-pointer-image .react-flow__pane.dragging,
-.graph-pointer-image .react-flow__node.draggable.dragging {
-  cursor: grabbing;
-}
+
+/* #40: under "hand" the hand is our own image too, so Pointer size covers
+   it: the open hand where React Flow put its grab hand (the pane, nodes, and
+   the edge's hit path, a drag surface in the hand's idiom), and the closed
+   hand while it is held there. Edges themselves keep React Flow's pointer. */
+.graph-pointer-hand .react-flow__pane.draggable,
+.graph-pointer-hand .react-flow__node.draggable,
 .graph-pointer-hand .projection-edge-hit {
-  cursor: grab;
+  cursor: var(--graph-pointer-cursor, grab);
+}
+.graph-pointer-hand .react-flow__node.draggable:active,
+.graph-pointer-hand .projection-edge-hit:active {
+  cursor: var(--graph-pointer-grabbing-cursor, grabbing);
 }
 
 /* #41: in an automatic layout an edge can be selected but not shaped. */
 .graph-pointer-hand .projection-edge-hit.projection-edge-hit-auto {
   cursor: pointer;
+}
+
+/* #40: a drag in progress — the canvas being panned, a node being moved —
+   shows the closed hand at the chosen size under every setting. */
+.graph-pointer-image .react-flow__pane.dragging,
+.graph-pointer-image .react-flow__node.draggable.dragging,
+.graph-pointer-hand .react-flow__pane.dragging,
+.graph-pointer-hand .react-flow__node.draggable.dragging {
+  cursor: var(--graph-pointer-grabbing-cursor, grabbing);
+}
+
+/* #40: a control point — an edge's bend handle, an attachment dot — shows
+   the precise pointer, never the hand, so the exact point is clear: the
+   arrow under Arrow and Hand, the crosshair or circle under those, and the
+   pressed look while it is held (and dragged). */
+.graph-pointer-image .graph-control-point,
+.graph-pointer-hand .graph-control-point {
+  cursor: var(--graph-pointer-point-cursor, default);
+}
+.graph-pointer-image .graph-control-point:active,
+.graph-pointer-hand .graph-control-point:active {
+  cursor: var(--graph-pointer-point-pressed-cursor, var(--graph-pointer-point-cursor, default));
 }
 
 /* Allotment sash styling */

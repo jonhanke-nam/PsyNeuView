@@ -11,9 +11,17 @@ import {
   arrowHotspot,
   arrowSvg,
   CENTRE,
+  GRAPH_CURSOR_VAR,
+  GRAPH_GRABBING_CURSOR_VAR,
+  GRAPH_POINT_CURSOR_VAR,
+  GRAPH_POINT_PRESSED_CURSOR_VAR,
   GRAPH_POINTERS,
+  GRAPH_PRESSED_CURSOR_VAR,
   centreHotspot,
+  controlPointPointer,
+  graphCursorVars,
   graphPointerClass,
+  handSvg,
   isPrecisePointer,
   pointerCursorImage,
   pointerCursorValue,
@@ -116,6 +124,59 @@ describe("graph-view pointer (#1301)", () => {
         expect(pointerCursorValue(pointer, "medium", true)).not.toBe(pointerCursorValue(pointer, "medium"));
       }
       expect(preciseSvg("crosshair", 24)).not.toBe(preciseSvg("circle", 24));
+    });
+  });
+
+  describe("the hand at every size, and the closed hand for a drag (#40)", () => {
+    it("is our own image at each size, with the hot spot on the palm at the centre", () => {
+      for (const { id, px } of POINTER_SIZES) {
+        const open = pointerCursorImage("hand", id);
+        expect(open.px).toBe(px);
+        expect(open.hotspot).toBe(px / 2);
+        const svg = decodeURIComponent(open.url.slice("data:image/svg+xml,".length));
+        expect(svg).toContain(`width="${px}" height="${px}"`);
+        expect(svg).toBe(handSvg(px));
+        expect(open.url).not.toContain("#");
+        expect(pointerCursorValue("hand", id)).toBe(`url("${open.url}") ${px / 2} ${px / 2}, grab`);
+      }
+      // Distinct sizes give distinct hands: the setting changes something.
+      expect(new Set(POINTER_SIZES.map((s) => pointerCursorValue("hand", s.id))).size).toBe(POINTER_SIZES.length);
+    });
+
+    it("closes while held, with the system grabbing hand as the fallback", () => {
+      expect(handSvg(24, true)).not.toBe(handSvg(24));
+      const closed = pointerCursorImage("hand", "large", true);
+      expect(decodeURIComponent(closed.url.slice("data:image/svg+xml,".length))).toBe(handSvg(48, true));
+      expect(pointerCursorValue("hand", "large", true)).toBe(`url("${closed.url}") 24 24, grabbing`);
+      expect(pointerCursorValue("hand", "large", true)).not.toBe(pointerCursorValue("hand", "large"));
+    });
+  });
+
+  describe("a control point shows the precise pointer, never the hand (#40)", () => {
+    it("maps Hand to the arrow and leaves the others as they are", () => {
+      expect(controlPointPointer("hand")).toBe("arrow");
+      expect(controlPointPointer("arrow")).toBe("arrow");
+      expect(controlPointPointer("crosshair")).toBe("crosshair");
+      expect(controlPointPointer("circle")).toBe("circle");
+    });
+
+    it("sets every variable the rules read, for every pointer at every size", () => {
+      for (const { id: pointer } of GRAPH_POINTERS) {
+        for (const { id: size } of POINTER_SIZES) {
+          const vars = graphCursorVars(pointer, size);
+          expect(vars[GRAPH_CURSOR_VAR]).toBe(pointerCursorValue(pointer, size));
+          expect(vars[GRAPH_PRESSED_CURSOR_VAR]).toBe(pointerCursorValue(pointer, size, true));
+          // The drag's closed hand is the same under every pointer, at this size.
+          expect(vars[GRAPH_GRABBING_CURSOR_VAR]).toBe(pointerCursorValue("hand", size, true));
+          expect(vars[GRAPH_GRABBING_CURSOR_VAR].endsWith(", grabbing")).toBe(true);
+          // Over a control point: the arrow for the arrow and the hand, else the pointer itself.
+          const point = controlPointPointer(pointer);
+          expect(vars[GRAPH_POINT_CURSOR_VAR]).toBe(pointerCursorValue(point, size));
+          expect(vars[GRAPH_POINT_PRESSED_CURSOR_VAR]).toBe(pointerCursorValue(point, size, true));
+          expect(vars[GRAPH_POINT_CURSOR_VAR].endsWith(", grab")).toBe(false);
+        }
+      }
+      expect(graphCursorVars("hand", "medium")[GRAPH_POINT_CURSOR_VAR]).toBe(arrowCursorValue("medium"));
     });
   });
 });
