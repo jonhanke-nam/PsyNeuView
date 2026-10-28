@@ -1,6 +1,6 @@
 /**
  * A node shows just its name by default, as PsyNeuLink's show_graph() draws
- * it (#122). The graph toolbar's Elements toggle brings back the type and
+ * it (#122). Type and role tags, in Advanced Graph View Options, brings back the type and
  * role tags and the function line, and the choice is remembered across a
  * reload. The role is still shown by the outline colour either way.
  */
@@ -21,7 +21,12 @@ comp.add_linear_processing_pathway([colour, hidden, response])
 
 type Page = import("@playwright/test").Page;
 
-const elementsToggle = (page: Page) => page.getByRole("button", { name: "Elements", exact: true });
+/** "Type and role tags" in Advanced Graph View Options (#123): open the panel, flip it, close it. */
+async function toggleElements(page: Page) {
+  await page.getByTestId("graph-view-options-button").click();
+  await page.getByTestId("graph-view-option-elements").click();
+  await page.keyboard.press("Escape");
+}
 
 /** Open a model by path (a reload doesn't reopen it). */
 async function openModel(page: Page, model: string) {
@@ -63,7 +68,7 @@ test("node names: just the name by default, Elements brings the details back and
   expect(r.border).not.toBe(h.border);
 
   // Elements brings the details back.
-  await elementsToggle(page).click();
+  await toggleElements(page);
   await expect(hidden.getByTestId("node-type-tag")).toHaveText(/transfer/i);
   await expect(hidden.getByTestId("node-function-line")).toHaveText("f: Logistic");
   await expect(canvasNode(page, "colour").first().getByTestId("node-role-tag")).toHaveText(/input/i);
@@ -74,7 +79,7 @@ test("node names: just the name by default, Elements brings the details back and
   await expect(canvasNode(page, "hidden").first().getByTestId("node-function-line")).toHaveText("f: Logistic");
 
   // And turning it off again is remembered too.
-  await elementsToggle(page).click();
+  await toggleElements(page);
   await page.reload();
   await openModel(page, model);
   await expect(canvasNode(page, "hidden").first().getByTestId("node-function-line")).toHaveCount(0);

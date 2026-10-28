@@ -40,6 +40,7 @@ import { useDismiss } from "@/components/common/dialog/useDismiss";
 import { Button } from "@/components/common/Button";
 import { toggleColours } from "@/components/common/toolbarStyles";
 import { openSettings } from "@/components/common/settings/sections";
+import { Z_MENU } from "@/constants/zLayers";
 
 interface Props {
   /** Reload the model: the "What the graph shows" options rebuild the graph. */
@@ -163,7 +164,7 @@ export function GraphViewOptionsMenu({ reloadModel, flipVertical, flipHorizontal
               maxHeight: placement.maxHeight,
               // Above the panel dividers (Allotment sashes, z-index 35), as the
               // main toolbar's menus are (#1391).
-              zIndex: 1000,
+              zIndex: Z_MENU,
               outline: "none",
               background: "var(--pnv-surface)",
               border: "1px solid var(--pnv-border)",
