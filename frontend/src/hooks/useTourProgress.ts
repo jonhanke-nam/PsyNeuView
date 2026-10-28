@@ -103,14 +103,18 @@ export function useTourProgress(): TourProgress {
 
   const nodeParams: Record<string, Record<string, string>> = {};
   const nodeFunctions: Record<string, string> = {};
+  // Input port shapes, as the Inspector's Inputs rows show them (#9).
+  const nodeInputShapes: Record<string, number[][]> = {};
   for (const node of nodes) {
     const data = node.data as
       | {
           params?: Record<string, unknown>;
           function?: { type?: string; params?: Record<string, unknown> } | null;
+          inputPorts?: { shape?: number[] }[];
         }
       | undefined;
     if (data?.function?.type) nodeFunctions[node.id] = data.function.type;
+    if (data?.inputPorts) nodeInputShapes[node.id] = data.inputPorts.map((p) => p.shape ?? []);
     nodeParams[node.id] = {
       ...flatten(data?.params),
       ...flatten(data?.function?.params),
@@ -153,6 +157,7 @@ export function useTourProgress(): TourProgress {
         nextPressed,
         traceStep,
         filePath,
+        nodeInputShapes,
       })
     : false;
 
