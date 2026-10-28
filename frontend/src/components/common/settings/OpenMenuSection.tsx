@@ -95,7 +95,7 @@ function OpenMenuOrderRows() {
   const isDefault = isDefaultOrder(order, catalogIds);
 
   const arrow: React.CSSProperties = {
-    fontSize: 11, lineHeight: 1, padding: "1px 5px", cursor: "pointer",
+    fontSize: "var(--pnv-fs-11)", lineHeight: 1, padding: "1px 5px", cursor: "pointer",
     border: "1px solid var(--pnv-border-light)", borderRadius: 3, background: "var(--pnv-surface-muted)", color: "var(--pnv-text-muted)",
   };
   const arrowButton = (i: number, to: number, title: string, glyph: string) => {
@@ -113,7 +113,7 @@ function OpenMenuOrderRows() {
   };
 
   return (
-    <div style={{ fontSize: 13 }} data-testid="setting-open-menu-sections">
+    <div style={{ fontSize: "var(--pnv-fs-13)" }} data-testid="setting-open-menu-sections">
       {order.map((id, i) => (
         <div
           key={id}
@@ -137,7 +137,7 @@ function OpenMenuOrderRows() {
                     ? "Always shown in developer mode"
                     : "Show this catalog in the Open menu without developer mode"
                 }
-                style={{ fontSize: 11, color: "var(--pnv-text-muted)", display: "flex", alignItems: "center", gap: 3, cursor: developerMode ? "default" : "pointer" }}
+                style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)", display: "flex", alignItems: "center", gap: 3, cursor: developerMode ? "default" : "pointer" }}
               >
                 <input
                   type="checkbox"
@@ -168,7 +168,7 @@ function OpenMenuOrderRows() {
         </Button>
       )}
 
-      <div style={{ fontSize: 11, color: "var(--pnv-text-faint)", marginTop: 8, lineHeight: 1.5 }}>
+      <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", marginTop: 8, lineHeight: 1.5 }}>
         You can also drag a section by its heading in the Open menu. The catalogs still under
         development stay below the everyday sections; "show" puts one on the menu without
         developer mode, which shows them all. Recent is not listed: it sits under History,

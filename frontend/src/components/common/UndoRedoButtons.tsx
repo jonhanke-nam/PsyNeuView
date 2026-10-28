@@ -36,7 +36,7 @@ export function UndoRedoButtons() {
         disabled={!canUndo}
         title={undoDesc ? `Undo: ${undoDesc} (⌘Z)` : "Nothing to undo"}
         style={{
-          fontSize: 14,
+          fontSize: "var(--pnv-fs-14)",
           padding: "2px 6px",
           border: "1px solid var(--pnv-border)",
           borderRadius: "4px 0 0 4px",
@@ -54,7 +54,7 @@ export function UndoRedoButtons() {
         disabled={!canRedo}
         title={redoDesc ? `Redo: ${redoDesc} (⌘⇧Z)` : "Nothing to redo"}
         style={{
-          fontSize: 14,
+          fontSize: "var(--pnv-fs-14)",
           padding: "2px 6px",
           border: "1px solid var(--pnv-border)",
           borderLeft: "none",
@@ -68,7 +68,7 @@ export function UndoRedoButtons() {
         ↪
       </button>
       {historyDepth > 0 && (
-        <span style={{ fontSize: 10, color: "var(--pnv-text-faint)", marginLeft: 4 }}>
+        <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", marginLeft: 4 }}>
           {historyDepth}
         </span>
       )}

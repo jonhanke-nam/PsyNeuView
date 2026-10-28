@@ -220,7 +220,7 @@ export function ShowGraphPanel({ active }: ShowGraphPanelProps) {
 
   if (!filePath) {
     return (
-      <div style={{ padding: 16, color: "var(--pnv-text-hint)", fontSize: 13 }}>
+      <div style={{ padding: 16, color: "var(--pnv-text-hint)", fontSize: "var(--pnv-fs-13)" }}>
         Load a model to see its show_graph output.
       </div>
     );
@@ -232,7 +232,7 @@ export function ShowGraphPanel({ active }: ShowGraphPanelProps) {
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        fontSize: 13,
+        fontSize: "var(--pnv-fs-13)",
       }}
     >
       {/* Option toggles */}
@@ -252,7 +252,7 @@ export function ShowGraphPanel({ active }: ShowGraphPanelProps) {
             <label
               key={key}
               style={{
-                fontSize: 11,
+                fontSize: "var(--pnv-fs-11)",
                 color: "var(--pnv-text-secondary)",
                 cursor: "pointer",
                 display: "flex",
@@ -273,7 +273,7 @@ export function ShowGraphPanel({ active }: ShowGraphPanelProps) {
           onClick={fetchShowGraph}
           disabled={loading}
           style={{
-            fontSize: 11,
+            fontSize: "var(--pnv-fs-11)",
             padding: "2px 8px",
             background: "var(--pnv-surface-sunken)",
             border: "1px solid var(--pnv-border-light)",
@@ -295,7 +295,7 @@ export function ShowGraphPanel({ active }: ShowGraphPanelProps) {
             padding: "4px 12px",
             borderBottom: "1px solid var(--pnv-border-faint)",
             flexShrink: 0,
-            fontSize: 11,
+            fontSize: "var(--pnv-fs-11)",
             color: "var(--pnv-text-muted)",
           }}
         >
@@ -347,7 +347,7 @@ export function ShowGraphPanel({ active }: ShowGraphPanelProps) {
             background: "var(--pnv-danger-tint)",
             color: "var(--pnv-danger)",
             borderRadius: 4,
-            fontSize: 12,
+            fontSize: "var(--pnv-fs-12)",
             flexShrink: 0,
           }}
         >
@@ -357,7 +357,7 @@ export function ShowGraphPanel({ active }: ShowGraphPanelProps) {
 
       {/* SVG display with zoom/pan */}
       {loading && !svg && (
-        <div style={{ padding: "12px 16px", color: "var(--pnv-text-hint)", fontSize: 12 }}>
+        <div style={{ padding: "12px 16px", color: "var(--pnv-text-hint)", fontSize: "var(--pnv-fs-12)" }}>
           Rendering show_graph...
         </div>
       )}
@@ -387,7 +387,7 @@ export function ShowGraphPanel({ active }: ShowGraphPanelProps) {
 }
 
 const zoomBtnStyle: React.CSSProperties = {
-  fontSize: 13,
+  fontSize: "var(--pnv-fs-13)",
   width: 24,
   height: 22,
   border: "1px solid var(--pnv-border-light)",

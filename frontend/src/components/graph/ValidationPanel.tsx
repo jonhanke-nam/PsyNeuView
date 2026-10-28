@@ -36,7 +36,7 @@ export function ValidationPanel() {
         border: "1px solid var(--pnv-danger)",
         borderRadius: 6,
         boxShadow: "var(--pnv-shadow-float)",
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
         fontFamily: "monospace",
         maxWidth: 480,
         minWidth: 240,
@@ -60,9 +60,9 @@ export function ValidationPanel() {
         }}
         title={expanded ? "Hide list" : "Show list"}
       >
-        <span style={{ fontSize: 14 }}>⚠</span>
+        <span style={{ fontSize: "var(--pnv-fs-14)" }}>⚠</span>
         <span data-testid="validation-summary" title={`${issueCount} to fix`}>{kinds.join(", ")}</span>
-        <span style={{ marginLeft: "auto", fontFamily: "sans-serif", fontSize: 10 }}>
+        <span style={{ marginLeft: "auto", fontFamily: "sans-serif", fontSize: "var(--pnv-fs-10)" }}>
           {expanded ? "▾" : "▸"}
         </span>
       </button>
@@ -101,7 +101,7 @@ export function ValidationPanel() {
                     color: "var(--pnv-primary-deep)",
                     fontWeight: 600,
                     fontFamily: "monospace",
-                    fontSize: 12,
+                    fontSize: "var(--pnv-fs-12)",
                   }}
                 >
                   {d.varName}
@@ -109,7 +109,7 @@ export function ValidationPanel() {
                 <span style={{ color: "var(--pnv-text-muted)" }}> ({d.type}) — </span>
                 <span style={{ color: "var(--pnv-danger)" }}>{sideText}</span>
                 {d.line ? (
-                  <span style={{ color: "var(--pnv-text-faint)", fontSize: 11 }}> · line {d.line}</span>
+                  <span style={{ color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-11)" }}> · line {d.line}</span>
                 ) : null}
               </li>
             );
@@ -131,7 +131,7 @@ export function ValidationPanel() {
                   color: "var(--pnv-primary-deep)",
                   fontWeight: 600,
                   fontFamily: "monospace",
-                  fontSize: 12,
+                  fontSize: "var(--pnv-fs-12)",
                 }}
               >
                 {b.varName}
@@ -140,7 +140,7 @@ export function ValidationPanel() {
                 {" "}({b.senderRef ?? "?"} → {b.receiverRef ?? "?"}) — couldn't be made:{" "}
               </span>
               <span style={{ color: "var(--pnv-danger)", fontFamily: "sans-serif" }}>{b.error}</span>
-              {b.line ? <span style={{ color: "var(--pnv-text-faint)", fontSize: 11 }}> · line {b.line}</span> : null}
+              {b.line ? <span style={{ color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-11)" }}> · line {b.line}</span> : null}
             </li>
           ))}
         </ul>

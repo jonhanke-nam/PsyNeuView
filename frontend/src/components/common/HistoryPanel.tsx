@@ -64,7 +64,7 @@ function DiffView({ before, after }: { before: string; after: string }) {
   const diff = diffSource(before, after);
   if (diff.unchanged) {
     return (
-      <div style={{ padding: "4px 12px 6px 24px", fontSize: 11, color: "var(--pnv-text-faint)" }}>
+      <div style={{ padding: "4px 12px 6px 24px", fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)" }}>
         This action didn't change the code.
       </div>
     );
@@ -81,7 +81,7 @@ function DiffView({ before, after }: { before: string; after: string }) {
         maxHeight: 180,
         overflow: "auto",
         fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-        fontSize: 11,
+        fontSize: "var(--pnv-fs-11)",
       }}
     >
       {lines.map((line, i) => {
@@ -168,7 +168,7 @@ function SaveMarker({
         borderLeft: selected ? "3px solid var(--pnv-success)" : "3px solid transparent",
         background: selected ? "var(--pnv-success-tint)" : "transparent",
         color: "var(--pnv-success)",
-        fontSize: 11,
+        fontSize: "var(--pnv-fs-11)",
         textAlign: "left",
         cursor: "pointer",
       }}
@@ -179,7 +179,7 @@ function SaveMarker({
         <span
           data-testid="history-save-automatic"
           style={{
-            fontSize: 10, padding: "0 5px", borderRadius: 3, color: "var(--pnv-text-muted)",
+            fontSize: "var(--pnv-fs-10)", padding: "0 5px", borderRadius: 3, color: "var(--pnv-text-muted)",
             background: "var(--pnv-surface-sunken)", border: "1px solid var(--pnv-border-faint)",
           }}
         >
@@ -249,7 +249,7 @@ export function HistoryPanel() {
         aria-expanded={open}
         data-testid="history-button"
         style={{
-          fontSize: 10,
+          fontSize: "var(--pnv-fs-10)",
           padding: "1px 5px",
           border: open ? "1px solid var(--pnv-primary)" : "1px solid var(--pnv-border-light)",
           borderRadius: 3,
@@ -287,7 +287,7 @@ export function HistoryPanel() {
           {filePath && (
             <div
               style={{
-                padding: "6px 12px", fontSize: 12, display: "flex", justifyContent: "space-between",
+                padding: "6px 12px", fontSize: "var(--pnv-fs-12)", display: "flex", justifyContent: "space-between",
                 alignItems: "center", gap: 8, borderBottom: "1px solid var(--pnv-border-faint)",
               }}
             >
@@ -302,7 +302,7 @@ export function HistoryPanel() {
               >
                 Changes since save…
               </Button>
-              <span style={{ fontSize: 10, color: unsaved ? "var(--pnv-unsaved)" : "var(--pnv-text-faint)" }}>
+              <span style={{ fontSize: "var(--pnv-fs-10)", color: unsaved ? "var(--pnv-unsaved)" : "var(--pnv-text-faint)" }}>
                 {unsaved ? "unsaved changes" : "all saved"}
               </span>
             </div>
@@ -311,7 +311,7 @@ export function HistoryPanel() {
             <div
               data-testid="history-at-save"
               style={{
-                padding: "6px 12px", fontSize: 12, lineHeight: 1.4, display: "flex", flexDirection: "column", gap: 4,
+                padding: "6px 12px", fontSize: "var(--pnv-fs-12)", lineHeight: 1.4, display: "flex", flexDirection: "column", gap: 4,
                 color: "var(--pnv-text-body)", background: "var(--pnv-success-tint)",
                 borderBottom: "1px solid var(--pnv-border-faint)",
               }}
@@ -321,7 +321,7 @@ export function HistoryPanel() {
                 version, until you save or revert.
               </span>
               {block ? (
-                <span style={{ fontSize: 11, color: "var(--pnv-text-muted)" }}>{revertBlockReason(block)}</span>
+                <span style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)" }}>{revertBlockReason(block)}</span>
               ) : (
                 <span>
                   <Button kind="small" data-testid="history-at-save-revert" onClick={() => revert(atSave)}>
@@ -334,7 +334,7 @@ export function HistoryPanel() {
           <div style={{ overflowY: "auto", padding: "4px 0" }}>
             <div
               data-testid="history-counts"
-              style={{ padding: "6px 12px", fontSize: 10, color: "var(--pnv-text-faint)", borderBottom: "1px solid var(--pnv-border-faint)" }}
+              style={{ padding: "6px 12px", fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", borderBottom: "1px solid var(--pnv-border-faint)" }}
               title={depth.title}
             >
               {Math.max(0, past.length - 1)} undo steps, {future.length} redo steps
@@ -342,10 +342,10 @@ export function HistoryPanel() {
               <span style={{ marginLeft: 6 }}>· click an action to see the code change or go to it</span>
             </div>
             {entries.length === 0 && (
-              <div style={{ padding: "8px 12px", fontSize: 12, color: "var(--pnv-text-faint)" }}>No history</div>
+              <div style={{ padding: "8px 12px", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-faint)" }}>No history</div>
             )}
             {firstShown > 0 && (
-              <div style={{ padding: "4px 12px", fontSize: 11 }}>
+              <div style={{ padding: "4px 12px", fontSize: "var(--pnv-fs-11)" }}>
                 <Button
                   kind="link"
                   data-testid="history-show-earlier"
@@ -378,7 +378,7 @@ export function HistoryPanel() {
                     onClick={() => opens && setExpanded(isExpanded ? null : i)}
                     style={{
                       padding: "4px 12px",
-                      fontSize: 12,
+                      fontSize: "var(--pnv-fs-12)",
                       display: "flex",
                       justifyContent: "space-between",
                       gap: 8,
@@ -403,7 +403,7 @@ export function HistoryPanel() {
                         <span
                           data-testid="history-on-disk"
                           title="The file on disk holds this step's code"
-                          style={{ marginLeft: 6, fontSize: 10, fontWeight: 400, color: "var(--pnv-success)" }}
+                          style={{ marginLeft: 6, fontSize: "var(--pnv-fs-10)", fontWeight: 400, color: "var(--pnv-success)" }}
                         >
                           on disk
                         </span>
@@ -412,7 +412,7 @@ export function HistoryPanel() {
                     {summary && (
                       <span
                         style={{
-                          fontSize: 10,
+                          fontSize: "var(--pnv-fs-10)",
                           color: summary.startsWith("no change") ? "var(--pnv-warning)" : "var(--pnv-text-faint)",
                           whiteSpace: "nowrap",
                           fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
@@ -453,7 +453,7 @@ export function HistoryPanel() {
                         {selected && (
                           <div
                             data-testid="history-save-detail"
-                            style={{ padding: "4px 12px 6px 23px", fontSize: 11, color: "var(--pnv-text-muted)", background: "var(--pnv-success-tint)" }}
+                            style={{ padding: "4px 12px 6px 23px", fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)", background: "var(--pnv-success-tint)" }}
                           >
                             {onDisk ? (
                               "The file on disk holds this version."

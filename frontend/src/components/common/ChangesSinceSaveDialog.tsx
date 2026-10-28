@@ -91,7 +91,7 @@ function ChangesSinceSave({ filePath }: { filePath: string }) {
         }}
       >
         <DialogHeader title="Changes since save" titleId="changes-since-save-title" onClose={hide}>
-          <span style={{ fontSize: 12, color: "var(--pnv-text-muted)", fontFamily: MONO }} title={filePath}>
+          <span style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", fontFamily: MONO }} title={filePath}>
             {fileName}
           </span>
         </DialogHeader>
@@ -101,7 +101,7 @@ function ChangesSinceSave({ filePath }: { filePath: string }) {
             <div
               data-testid="changes-since-save-outside"
               style={{
-                fontSize: 13, lineHeight: 1.5, padding: "8px 12px", borderRadius: 6,
+                fontSize: "var(--pnv-fs-13)", lineHeight: 1.5, padding: "8px 12px", borderRadius: 6,
                 color: "var(--pnv-text-body)", background: "var(--pnv-warning-tint)", border: "1px solid var(--pnv-warning-border)",
               }}
             >
@@ -113,7 +113,7 @@ function ChangesSinceSave({ filePath }: { filePath: string }) {
             <div
               data-testid="changes-since-save-missing"
               style={{
-                fontSize: 13, lineHeight: 1.5, padding: "8px 12px", borderRadius: 6,
+                fontSize: "var(--pnv-fs-13)", lineHeight: 1.5, padding: "8px 12px", borderRadius: 6,
                 color: "var(--pnv-text-body)", background: "var(--pnv-warning-tint)", border: "1px solid var(--pnv-warning-border)",
               }}
             >
@@ -121,7 +121,7 @@ function ChangesSinceSave({ filePath }: { filePath: string }) {
               last opened or saved; saving puts the editor's text back on disk.
             </div>
           )}
-          <div data-testid="changes-since-save-summary" style={{ fontSize: 14, fontWeight: 600, color: "var(--pnv-text)" }}>
+          <div data-testid="changes-since-save-summary" style={{ fontSize: "var(--pnv-fs-14)", fontWeight: 600, color: "var(--pnv-text)" }}>
             {disk.state === "loading" && "Reading the file on disk…"}
             {disk.state === "error" && (
               <span style={{ color: "var(--pnv-danger)" }}>Could not read the file on disk ({disk.message}).</span>
@@ -129,7 +129,7 @@ function ChangesSinceSave({ filePath }: { filePath: string }) {
             {counts && (
               <>
                 <span>{describeChanges(counts)}</span>
-                <span style={{ fontWeight: 400, fontSize: 12, color: "var(--pnv-text-muted)", marginLeft: 8 }}>
+                <span style={{ fontWeight: 400, fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", marginLeft: 8 }}>
                   {counts.added + counts.removed === 0
                     ? "The editor matches the file on disk."
                     : "in the editor, compared with the file on disk"}
@@ -140,11 +140,11 @@ function ChangesSinceSave({ filePath }: { filePath: string }) {
         </div>
 
         {counts && counts.added + counts.removed > 0 && (
-          <div style={{ overflow: "auto", fontFamily: MONO, fontSize: 12.5 }}>
+          <div style={{ overflow: "auto", fontFamily: MONO, fontSize: "var(--pnv-fs-12_5)" }}>
             <div
               style={{
                 display: "flex", position: "sticky", top: 0, zIndex: 1, background: "var(--pnv-surface-muted)",
-                borderBottom: "1px solid var(--pnv-border-faint)", fontSize: 11, color: "var(--pnv-text-muted)",
+                borderBottom: "1px solid var(--pnv-border-faint)", fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)",
                 fontFamily: "inherit",
               }}
             >

@@ -86,7 +86,7 @@ const filterRowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 8,
-  fontSize: 13,
+  fontSize: "var(--pnv-fs-13)",
   marginBottom: 6,
 };
 
@@ -103,7 +103,7 @@ const listStyle: React.CSSProperties = {
 
 const fileHeaderStyle: React.CSSProperties = {
   padding: "6px 10px",
-  fontSize: 11,
+  fontSize: "var(--pnv-fs-11)",
   textTransform: "uppercase",
   color: "var(--pnv-text-muted)",
   background: "var(--pnv-border-faint)",
@@ -116,7 +116,7 @@ const fileHeaderStyle: React.CSSProperties = {
 
 const classHeaderStyle: React.CSSProperties = {
   padding: "3px 10px 3px 22px",
-  fontSize: 11,
+  fontSize: "var(--pnv-fs-11)",
   color: "var(--pnv-text-body)",
   background: "var(--pnv-surface-sunken)",
   fontWeight: 600,
@@ -126,7 +126,7 @@ const rowItemStyle = (selected: boolean, disabled: boolean): React.CSSProperties
   padding: "4px 10px 4px 34px",
   cursor: disabled ? "not-allowed" : "pointer",
   fontFamily: "monospace",
-  fontSize: 12,
+  fontSize: "var(--pnv-fs-12)",
   background: selected ? "var(--pnv-primary-tint)" : "transparent",
   color: disabled ? "var(--pnv-text-faint)" : "var(--pnv-text)",
   whiteSpace: "nowrap",
@@ -296,7 +296,7 @@ export function DeveloperTestsModal({ onCancel, onExtracted }: DeveloperTestsMod
           {sourceTree && (
             <div
               style={{
-                fontSize: 11,
+                fontSize: "var(--pnv-fs-11)",
                 color: "var(--pnv-text-hint)",
                 fontFamily: "monospace",
                 maxWidth: 380,
@@ -313,7 +313,7 @@ export function DeveloperTestsModal({ onCancel, onExtracted }: DeveloperTestsMod
         <div style={bodyStyle}>
 
         {tests === null && !loadError && (
-          <div style={{ padding: "10px 0", fontSize: 12, color: "var(--pnv-text-hint)" }}>
+          <div style={{ padding: "10px 0", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-hint)" }}>
             Discovering tests…
           </div>
         )}
@@ -325,7 +325,7 @@ export function DeveloperTestsModal({ onCancel, onExtracted }: DeveloperTestsMod
               background: "var(--pnv-danger-tint)",
               color: "var(--pnv-danger)",
               borderRadius: 4,
-              fontSize: 12,
+              fontSize: "var(--pnv-fs-12)",
               marginBottom: 8,
             }}
           >
@@ -340,7 +340,7 @@ export function DeveloperTestsModal({ onCancel, onExtracted }: DeveloperTestsMod
               background: "var(--pnv-warning-tint)",
               color: "var(--pnv-warning)",
               borderRadius: 4,
-              fontSize: 12,
+              fontSize: "var(--pnv-fs-12)",
               marginBottom: 8,
             }}
           >
@@ -362,20 +362,20 @@ export function DeveloperTestsModal({ onCancel, onExtracted }: DeveloperTestsMod
                 style={{
                   flex: 1,
                   padding: "5px 8px",
-                  fontSize: 13,
+                  fontSize: "var(--pnv-fs-13)",
                   fontFamily: "monospace",
                   border: "1px solid var(--pnv-border)",
                   borderRadius: 4,
                 }}
               />
-              <span style={{ fontSize: 11, color: "var(--pnv-text-hint)", whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-hint)", whiteSpace: "nowrap" }}>
                 {shownCount} / {totalCount}
               </span>
             </div>
 
             <div style={listStyle}>
               {filteredGroups.length === 0 && (
-                <div style={{ padding: "10px 12px", fontSize: 12, color: "var(--pnv-text-hint)" }}>
+                <div style={{ padding: "10px 12px", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-hint)" }}>
                   {filter
                     ? "No tests match this filter."
                     : "No tests discovered under tests/composition."}
@@ -430,7 +430,7 @@ export function DeveloperTestsModal({ onCancel, onExtracted }: DeveloperTestsMod
                                 {m.method_name}
                                 {disabledReason && (
                                   <span
-                                    style={{ marginLeft: 8, fontSize: 10, color: "var(--pnv-danger)" }}
+                                    style={{ marginLeft: 8, fontSize: "var(--pnv-fs-10)", color: "var(--pnv-danger)" }}
                                   >
                                     (unextractable)
                                   </span>
@@ -455,7 +455,7 @@ export function DeveloperTestsModal({ onCancel, onExtracted }: DeveloperTestsMod
               background: "var(--pnv-danger-tint)",
               color: "var(--pnv-danger)",
               borderRadius: 4,
-              fontSize: 12,
+              fontSize: "var(--pnv-fs-12)",
             }}
           >
             {extractErrorMessage(extractError)}

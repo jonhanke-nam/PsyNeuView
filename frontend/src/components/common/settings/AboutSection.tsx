@@ -53,7 +53,7 @@ export function AboutSection({ info, loadError }: { info: SettingsInfo | null; l
       {loadError && <div style={errorStyle}>Failed to load: {loadError}</div>}
       {!loadError && !info && <div style={mutedStyle}>Loading…</div>}
       {info && (
-        <div style={{ fontSize: 13 }}>
+        <div style={{ fontSize: "var(--pnv-fs-13)" }}>
           <div data-testid="about-psyneuview-version">
             <Row label="PsyNeuView version" value={psyneuviewVersionLine(info.psyneuview.version, mac)} />
           </div>
@@ -72,7 +72,7 @@ export function AboutSection({ info, loadError }: { info: SettingsInfo | null; l
           <Row label="GitHub sign-in" value={formatGithubAuth(info.github_auth)} />
         </div>
       )}
-      <div style={{ marginTop: 10, fontSize: 12 }}>
+      <div style={{ marginTop: 10, fontSize: "var(--pnv-fs-12)" }}>
         <a href="https://github.com/jonhanke-nam/PsyNeuView" target="_blank" rel="noreferrer" style={linkStyle}>
           PsyNeuView on GitHub
         </a>
@@ -178,7 +178,7 @@ function RunningFrom({
               key={line.id}
               data-testid="about-running-line"
               data-line-id={line.id}
-              style={{ fontSize: 12, lineHeight: 1.4, marginTop: 2, color: TONE_COLOR[line.tone] }}
+              style={{ fontSize: "var(--pnv-fs-12)", lineHeight: 1.4, marginTop: 2, color: TONE_COLOR[line.tone] }}
             >
               {line.text}
             </div>
@@ -218,7 +218,7 @@ function MismatchNote({ text, reload, id }: { text: string; reload: boolean; id:
         alignItems: "center",
         gap: 10,
         flexWrap: "wrap",
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
         lineHeight: 1.4,
         padding: "6px 10px",
         marginBottom: 8,

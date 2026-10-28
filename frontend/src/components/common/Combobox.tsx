@@ -41,7 +41,7 @@ export interface ComboboxProps {
 const inputStyle: React.CSSProperties = {
   flex: 1,
   padding: "5px 8px",
-  fontSize: 13,
+  fontSize: "var(--pnv-fs-13)",
   border: "1px solid var(--pnv-border)",
   borderRadius: 4,
   background: "var(--pnv-surface)",
@@ -174,7 +174,7 @@ export function Combobox({
           background: "transparent",
           cursor: disabled ? "default" : "pointer",
           color: "var(--pnv-text-muted)",
-          fontSize: 10,
+          fontSize: "var(--pnv-fs-10)",
         }}
       >
         ▼
@@ -197,7 +197,7 @@ export function Combobox({
             borderRadius: 4,
             boxShadow: "var(--pnv-shadow-float)",
             zIndex: 10,
-            fontSize: 12,
+            fontSize: "var(--pnv-fs-12)",
           }}
         >
           {(() => {
@@ -210,7 +210,7 @@ export function Combobox({
                     key={`hdr-${row.section}`}
                     style={{
                       padding: "4px 8px",
-                      fontSize: 10,
+                      fontSize: "var(--pnv-fs-10)",
                       textTransform: "uppercase",
                       color: "var(--pnv-text-hint)",
                       background: "var(--pnv-surface-sunken)",
@@ -243,7 +243,7 @@ export function Combobox({
                 >
                   <span>{row.label}</span>
                   {row.isDefault && (
-                    <span style={{ color: "var(--pnv-text-hint)", fontSize: 10 }}>default</span>
+                    <span style={{ color: "var(--pnv-text-hint)", fontSize: "var(--pnv-fs-10)" }}>default</span>
                   )}
                 </div>,
               );
@@ -255,7 +255,7 @@ export function Combobox({
                   style={{
                     padding: "6px 8px",
                     color: "var(--pnv-danger)",
-                    fontSize: 11,
+                    fontSize: "var(--pnv-fs-11)",
                     borderTop: rows.length ? "1px solid var(--pnv-border-faint)" : undefined,
                   }}
                 >

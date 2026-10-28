@@ -367,3 +367,22 @@
   --pnv-type-gating-signal: #4a148c;
   --pnv-type-learning-signal: #e65100;
 }
+
+/* Type sizes (#111): not colours, but tokens all the same. The app's text
+   size, Settings ▸ Appearance ▸ Text size, sets --pnv-text-scale (stores/textSizeStore.ts); every UI font size is one of
+   these variables, so they all follow it. 1.1 is the default; the canvas's
+   node and edge labels don't use them. */
+:root {
+  --pnv-text-scale: 1.1;
+  --pnv-fs-9: calc(9px * var(--pnv-text-scale));
+  --pnv-fs-10: calc(10px * var(--pnv-text-scale));
+  --pnv-fs-11: calc(11px * var(--pnv-text-scale));
+  --pnv-fs-11_5: calc(11.5px * var(--pnv-text-scale));
+  --pnv-fs-12: calc(12px * var(--pnv-text-scale));
+  --pnv-fs-12_5: calc(12.5px * var(--pnv-text-scale));
+  --pnv-fs-13: calc(13px * var(--pnv-text-scale));
+  --pnv-fs-14: calc(14px * var(--pnv-text-scale));
+  --pnv-fs-15: calc(15px * var(--pnv-text-scale));
+  --pnv-fs-16: calc(16px * var(--pnv-text-scale));
+  --pnv-fs-18: calc(18px * var(--pnv-text-scale));
+}

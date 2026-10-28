@@ -690,7 +690,7 @@ export function RunPanel() {
 
   if (!filePath) {
     return (
-      <div style={{ padding: 16, color: "var(--pnv-text-hint)", fontSize: 13 }}>
+      <div style={{ padding: 16, color: "var(--pnv-text-hint)", fontSize: "var(--pnv-fs-13)" }}>
         Load a model to run it.
       </div>
     );
@@ -707,7 +707,7 @@ export function RunPanel() {
         padding: "0 16px",
         overflow: "auto",
         height: "100%",
-        fontSize: 13,
+        fontSize: "var(--pnv-fs-13)",
       }}
     >
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", padding: "12px 0" }}>
@@ -737,7 +737,7 @@ export function RunPanel() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--pnv-text-body)" }}>
+                <span style={{ fontSize: "var(--pnv-fs-12)", fontWeight: 600, color: "var(--pnv-text-body)" }}>
                   Inputs
                 </span>
                 {inputNodes.length > 0 && (
@@ -745,7 +745,7 @@ export function RunPanel() {
                 )}
                 {runSets.length > 0 && (
                   <label
-                    style={{ fontSize: 12, color: "var(--pnv-text-secondary)", whiteSpace: "nowrap" }}
+                    style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", whiteSpace: "nowrap" }}
                     title="Inputs this model declares itself, in the shape Composition.run takes (#1216)"
                   >
                     From{" "}
@@ -753,7 +753,7 @@ export function RunPanel() {
                       data-testid="run-input-set"
                       value={inputSetName}
                       onChange={(e) => applyInputSet(e.target.value)}
-                      style={{ fontSize: 12 }}
+                      style={{ fontSize: "var(--pnv-fs-12)" }}
                     >
                       {runSets.map((set) => (
                         <option key={set.name} value={set.name}>
@@ -768,7 +768,7 @@ export function RunPanel() {
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 {executionModes.length > 0 && (
                   <label
-                    style={{ fontSize: 12, color: "var(--pnv-text-secondary)", whiteSpace: "nowrap" }}
+                    style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", whiteSpace: "nowrap" }}
                     title={
                       executionModes.find((m) => m.id === executionMode)?.reason ??
                       "Execution backend used for this run"
@@ -823,7 +823,7 @@ export function RunPanel() {
                   background: "var(--pnv-danger-tint)",
                   color: "var(--pnv-danger)",
                   borderRadius: 4,
-                  fontSize: 12,
+                  fontSize: "var(--pnv-fs-12)",
                 }}
               >
                 {error}
@@ -835,7 +835,7 @@ export function RunPanel() {
                   onClick={() => setWarningsOpen((v) => !v)}
                   aria-expanded={warningsOpen}
                   style={{
-                    fontSize: 11,
+                    fontSize: "var(--pnv-fs-11)",
                     padding: "2px 8px",
                     border: "1px solid var(--pnv-warning-border)",
                     borderRadius: 3,
@@ -855,7 +855,7 @@ export function RunPanel() {
                       background: "var(--pnv-warning-tint)",
                       border: "1px solid var(--pnv-warning-border)",
                       borderRadius: 4,
-                      fontSize: 11,
+                      fontSize: "var(--pnv-fs-11)",
                       color: "var(--pnv-warning)",
                       maxHeight: 220,
                       overflow: "auto",
@@ -879,7 +879,7 @@ export function RunPanel() {
                       background: "var(--pnv-warning-tint)",
                       border: "1px solid var(--pnv-warning-border)",
                       borderRadius: 3,
-                      fontSize: 11,
+                      fontSize: "var(--pnv-fs-11)",
                       color: "var(--pnv-warning)",
                       lineHeight: 1.45,
                     }}
@@ -899,7 +899,7 @@ export function RunPanel() {
                       library {modelWarnings.others === 1 ? "warning" : "warnings"}
                     </Button>
                     {otherWarningsOpen && (
-                      <div style={{ fontSize: 10, color: "var(--pnv-text-faint)", marginTop: 3, paddingLeft: 4 }}>
+                      <div style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", marginTop: 3, paddingLeft: 4 }}>
                         Deprecation and future-version notices from PsyNeuLink's
                         dependencies. Nothing in your model causes these.
                       </div>
@@ -911,7 +911,7 @@ export function RunPanel() {
               </div>
             )}
             {hasInvalid && !error && (
-              <div style={{ fontSize: 11, color: "var(--pnv-danger)", marginTop: 2 }}>
+              <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-danger)", marginTop: 2 }}>
                 Some input cells aren't numbers — fix the highlighted slots to run.
               </div>
             )}
@@ -927,7 +927,7 @@ export function RunPanel() {
                   background: "var(--pnv-primary-tint)",
                   border: "1px solid var(--pnv-primary-tint-border)",
                   borderRadius: 4,
-                  fontSize: 11,
+                  fontSize: "var(--pnv-fs-11)",
                   color: "var(--pnv-text-body)",
                 }}
               >
@@ -986,7 +986,7 @@ export function RunPanel() {
           <div style={{ flex: 1, minWidth: 300 }}>
             <div
               style={{
-                fontSize: 12,
+                fontSize: "var(--pnv-fs-12)",
                 fontWeight: 600,
                 color: "var(--pnv-text-body)",
                 marginBottom: 6,
@@ -1045,7 +1045,7 @@ export function RunPanel() {
             <details style={{ marginTop: 12 }}>
               <summary
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pnv-fs-12)",
                   color: "var(--pnv-text-muted)",
                   cursor: "pointer",
                   fontWeight: 500,
@@ -1064,13 +1064,13 @@ export function RunPanel() {
             {/* Collapsible raw data table */}
             <details style={{ marginTop: 12 }}>
               <summary
-                style={{ fontSize: 12, color: "var(--pnv-text-muted)", cursor: "pointer" }}
+                style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}
               >
                 Raw data
               </summary>
               <table
                 style={{
-                  fontSize: 11,
+                  fontSize: "var(--pnv-fs-11)",
                   borderCollapse: "collapse",
                   marginTop: 4,
                   width: "100%",
@@ -1159,7 +1159,7 @@ function CaptureNote({ capture }: { capture: CaptureInfo }) {
       style={{
         margin: "0 0 8px",
         padding: "6px 9px",
-        fontSize: 11,
+        fontSize: "var(--pnv-fs-11)",
         lineHeight: 1.4,
         color: "var(--pnv-warning)",
         background: "var(--pnv-warning-tint)",
@@ -1209,7 +1209,7 @@ function SteppingSupportNote({ level, reason }: { level: string; reason: string 
       style={{
         margin: "0 0 8px",
         padding: "6px 9px",
-        fontSize: 11,
+        fontSize: "var(--pnv-fs-11)",
         lineHeight: 1.4,
         color: degraded ? "var(--pnv-warning)" : "var(--pnv-primary-text-on-tint)",
         background: degraded ? "var(--pnv-warning-tint)" : "var(--pnv-primary-tint)",
@@ -1229,7 +1229,7 @@ function HookSupportNote() {
       style={{
         margin: "0 0 8px",
         padding: "6px 9px",
-        fontSize: 11,
+        fontSize: "var(--pnv-fs-11)",
         lineHeight: 1.4,
         color: "var(--pnv-warning)",
         background: "var(--pnv-warning-tint)",
@@ -1337,7 +1337,7 @@ function RecentRunsList({
           marginBottom: 6,
         }}
       >
-        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--pnv-text-body)" }}>
+        <span style={{ fontSize: "var(--pnv-fs-12)", fontWeight: 600, color: "var(--pnv-text-body)" }}>
           Recent runs{records.length ? ` (${records.length})` : ""}
         </span>
         <div style={{ display: "flex", gap: 6 }}>
@@ -1368,7 +1368,7 @@ function RecentRunsList({
       </div>
 
       {records.length === 0 ? (
-        <div style={{ fontSize: 11, color: "var(--pnv-text-faint)" }}>
+        <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)" }}>
           No runs yet — run the model to pin a record here.
         </div>
       ) : (
@@ -1394,7 +1394,7 @@ function RecentRunsList({
                 }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, color: "var(--pnv-text-body)" }}>
+                  <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-body)" }}>
                     {r.compositionName}{" "}
                     <span style={{ color: "var(--pnv-text-faint)" }}>
                       · {r.numTrials} trial{r.numTrials === 1 ? "" : "s"}
@@ -1415,7 +1415,7 @@ function RecentRunsList({
                   </div>
                   <div
                     style={{
-                      fontSize: 10,
+                      fontSize: "var(--pnv-fs-10)",
                       color: "var(--pnv-text-faint)",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -1444,7 +1444,7 @@ function RecentRunsList({
                   }}
                 >
                   <span
-                    style={{ fontSize: 10, color: "var(--pnv-text-faint)", padding: "3px 6px", alignSelf: "center" }}
+                    style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", padding: "3px 6px", alignSelf: "center" }}
                   >
                     Export
                   </span>
@@ -1452,7 +1452,7 @@ function RecentRunsList({
                     onClick={() => downloadRunRecord(r, "json")}
                     title="Export this run as JSON"
                     style={{
-                      fontSize: 11,
+                      fontSize: "var(--pnv-fs-11)",
                       padding: "3px 8px",
                       border: "none",
                       borderLeft: "1px solid var(--pnv-border-faint)",
@@ -1468,7 +1468,7 @@ function RecentRunsList({
                     onClick={() => downloadRunRecord(r, "yaml")}
                     title="Export this run as YAML"
                     style={{
-                      fontSize: 11,
+                      fontSize: "var(--pnv-fs-11)",
                       padding: "3px 8px",
                       border: "none",
                       borderLeft: "1px solid var(--pnv-border-faint)",
@@ -1522,7 +1522,7 @@ function InputNodeEditor({
   return (
     <div style={{ marginBottom: 12 }} data-testid={`run-input-${node.name}`}>
       <label
-        style={{ fontSize: 12, color: "var(--pnv-text-secondary)", display: "block", marginBottom: 3 }}
+        style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", display: "block", marginBottom: 3 }}
       >
         {node.name}{" "}
         <span style={{ color: "var(--pnv-text-faint)" }}>
@@ -1534,7 +1534,7 @@ function InputNodeEditor({
           key={t}
           style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}
         >
-          <span style={{ fontSize: 10, color: "var(--pnv-text-faint)", minWidth: 42 }}>
+          <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", minWidth: 42 }}>
             Trial {t + 1}
           </span>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, flex: 1 }}>
@@ -1559,7 +1559,7 @@ function InputNodeEditor({
         </div>
       ))}
       <details style={{ marginTop: 2 }}>
-        <summary style={{ fontSize: 10, color: "var(--pnv-text-hint)", cursor: "pointer" }}>
+        <summary style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-hint)", cursor: "pointer" }}>
           Paste CSV
         </summary>
         <textarea
@@ -1570,7 +1570,7 @@ function InputNodeEditor({
           style={{
             width: "100%",
             fontFamily: "monospace",
-            fontSize: 11,
+            fontSize: "var(--pnv-fs-11)",
             padding: 4,
             border: "1px solid var(--pnv-border-light)",
             borderRadius: 3,
@@ -1608,7 +1608,7 @@ function InputCell({
   const invalid = !isValidCell(value);
   return (
     <label
-      style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 10, color: "var(--pnv-text-muted)" }}
+      style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-muted)" }}
     >
       <span style={{ fontFamily: "monospace" }}>{label}</span>
       <input
@@ -1619,7 +1619,7 @@ function InputCell({
         style={{
           width: 48,
           fontFamily: "monospace",
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           padding: "2px 4px",
           border: `1px solid ${invalid ? "var(--pnv-danger)" : "var(--pnv-border-light)"}`,
           background: invalid ? "var(--pnv-danger-tint)" : "var(--pnv-surface)",
@@ -1653,13 +1653,13 @@ function GroupingToggle({
         overflow: "hidden",
       }}
     >
-      <span style={{ fontSize: 10, color: "var(--pnv-text-faint)", padding: "2px 6px" }}>Group by</span>
+      <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", padding: "2px 6px" }}>Group by</span>
       {options.map((o) => (
         <button
           key={o.key}
           onClick={() => onChange(o.key)}
           style={{
-            fontSize: 11,
+            fontSize: "var(--pnv-fs-11)",
             padding: "2px 8px",
             border: "none",
             borderLeft: "1px solid var(--pnv-border-faint)",
@@ -1714,7 +1714,7 @@ function TrialGroupedEditor({
               marginBottom: 4,
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--pnv-text-secondary)" }}>
+            <span style={{ fontSize: "var(--pnv-fs-11)", fontWeight: 600, color: "var(--pnv-text-secondary)" }}>
               Trial {t + 1}
             </span>
             <Button
@@ -1735,7 +1735,7 @@ function TrialGroupedEditor({
                 key={node.varName}
                 style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}
               >
-                <span style={{ fontSize: 10, color: "var(--pnv-text-faint)", minWidth: 70 }}>
+                <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", minWidth: 70 }}>
                   {node.name}
                 </span>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, flex: 1 }}>
@@ -1915,7 +1915,7 @@ function TrialOutputs({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          fontSize: 12,
+          fontSize: "var(--pnv-fs-12)",
           fontWeight: 600,
           color: "var(--pnv-text-body)",
           marginBottom: 6,
@@ -1935,7 +1935,7 @@ function TrialOutputs({
           }
           style={{
             padding: "2px 8px",
-            fontSize: 11,
+            fontSize: "var(--pnv-fs-11)",
             fontWeight: 500,
             cursor: "pointer",
             borderRadius: 4,
@@ -1950,7 +1950,7 @@ function TrialOutputs({
       {gridNodes.length > 0 && (
         <div
           data-testid="run-value-views"
-          style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8, fontSize: 11 }}
+          style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8, fontSize: "var(--pnv-fs-11)" }}
         >
           {gridNodes.map((g) => (
             <GridNodeControls
@@ -1989,7 +1989,7 @@ function TrialOutputs({
                 background: active ? "var(--pnv-trace-tint)" : "var(--pnv-surface-muted)",
                 padding: "8px 10px",
                 cursor: clickable ? "pointer" : "default",
-                fontSize: 11,
+                fontSize: "var(--pnv-fs-11)",
               }}
             >
               {/* 1-indexed for display, raw trial_num on hover. #336 gap 5. */}
@@ -2004,7 +2004,7 @@ function TrialOutputs({
               >
                 <span>Trial {r.trial + 1}</span>
                 {active && (
-                  <span style={{ color: "var(--pnv-trace-value)", fontSize: 10 }}>● stepping</span>
+                  <span style={{ color: "var(--pnv-trace-value)", fontSize: "var(--pnv-fs-10)" }}>● stepping</span>
                 )}
               </div>
 
@@ -2188,7 +2188,7 @@ function WithinTrialSteps({
           border: "none",
           background: "none",
           padding: 0,
-          fontSize: 10,
+          fontSize: "var(--pnv-fs-10)",
           color: "var(--pnv-trace-value)",
           cursor: "pointer",
           fontFamily: "monospace",
@@ -2209,7 +2209,7 @@ function WithinTrialSteps({
               }}
               title={`Jump trace to scheduler step ${s.step + 1}`}
               style={{
-                fontSize: 10,
+                fontSize: "var(--pnv-fs-10)",
                 fontFamily: "monospace",
                 color: "var(--pnv-trace-value)",
                 cursor: "pointer",
@@ -2245,7 +2245,7 @@ function GridNodeControls({
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", lineHeight: 1.5 }}>
       <span style={{ color: "var(--pnv-trace-value)", fontFamily: "monospace" }}>{node}</span>
-      <span style={{ color: "var(--pnv-text-hint)", fontSize: 10 }}>{size} values, as</span>
+      <span style={{ color: "var(--pnv-text-hint)", fontSize: "var(--pnv-fs-10)" }}>{size} values, as</span>
       <ValueViewToggle node={node} size={size} view={view} shape={grid?.shape} testId={`run-value-view-${node}`} />
       {grid && <GridLegend scale={grid.scale} testId={`run-value-legend-${node}`} />}
     </div>
@@ -2322,7 +2322,7 @@ function ValueRow({
           style={{
             color: "var(--pnv-warning)",
             fontFamily: "monospace",
-            fontSize: 10,
+            fontSize: "var(--pnv-fs-10)",
             lineHeight: 1.4,
             paddingLeft: 12,
           }}
@@ -2434,7 +2434,7 @@ function DebuggerSnapshotTable() {
 
   return (
     <details style={{ marginTop: 12 }}>
-      <summary style={{ fontSize: 12, color: "var(--pnv-text-muted)", cursor: "pointer" }}>
+      <summary style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}>
         Debugger snapshots {snapshots.length > 0 && (
           <span style={{ color: "var(--pnv-text-faint)" }}>
             ({filterActive ? `${visibleCount} of ${snapshots.length} shown` : snapshots.length})
@@ -2442,7 +2442,7 @@ function DebuggerSnapshotTable() {
         )}
       </summary>
       {snapshots.length === 0 ? (
-        <div style={{ fontSize: 11, color: "var(--pnv-text-faint)", padding: "6px 0" }}>
+        <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", padding: "6px 0" }}>
           No snapshots captured. The PsyNeuLink build in use does not include
           the <code>_debugger</code> hook yet.
         </div>
@@ -2467,7 +2467,7 @@ function DebuggerSnapshotTable() {
                 onClick={() => toggleCat(cat)}
                 title={on ? `Hide ${cat} rows` : `Show ${cat} rows`}
                 style={{
-                  fontSize: 10,
+                  fontSize: "var(--pnv-fs-10)",
                   fontFamily: "monospace",
                   padding: "1px 7px",
                   borderRadius: 10,
@@ -2489,7 +2489,7 @@ function DebuggerSnapshotTable() {
                 setTrialFilter(e.target.value === "all" ? "all" : Number(e.target.value))
               }
               style={{
-                fontSize: 10,
+                fontSize: "var(--pnv-fs-10)",
                 marginLeft: "auto",
                 padding: "1px 4px",
                 border: "1px solid var(--pnv-border-light)",
@@ -2517,7 +2517,7 @@ function DebuggerSnapshotTable() {
         >
           <table
             style={{
-              fontSize: 11,
+              fontSize: "var(--pnv-fs-11)",
               borderCollapse: "collapse",
               width: "100%",
               fontFamily: "monospace",

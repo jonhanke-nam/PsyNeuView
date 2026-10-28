@@ -176,7 +176,7 @@ export function SettingsPanel({ isOpen, onClose, section: requested = null }: Pr
             aria-label="Settings sections"
             data-testid="settings-sidebar"
             style={{
-              width: 180,
+              width: "calc(180px * var(--pnv-text-scale))", // #111: grows with the text
               flexShrink: 0,
               padding: "12px 8px",
               borderRight: "1px solid var(--pnv-border-faint)",
@@ -201,7 +201,7 @@ export function SettingsPanel({ isOpen, onClose, section: requested = null }: Pr
                     gap: 6,
                     textAlign: "left",
                     padding: "6px 10px",
-                    fontSize: 13,
+                    fontSize: "var(--pnv-fs-13)",
                     fontWeight: active ? 600 : 400,
                     color: active ? "var(--pnv-primary)" : "var(--pnv-text-body)",
                     background: active ? "var(--pnv-primary-tint)" : "transparent",

@@ -88,7 +88,7 @@ export function NarrationVoiceSetting() {
   };
 
   return (
-    <div style={{ fontSize: 13 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="Narration voice" htmlFor="setting-narration-voice">
         The voice that reads a walkthrough's captions when narration is on (the speaker button on the walkthrough
         bar). Automatic uses the best English voice on this computer.

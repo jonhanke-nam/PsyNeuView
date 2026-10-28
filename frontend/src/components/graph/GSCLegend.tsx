@@ -209,7 +209,7 @@ export function GSCLegend() {
           border: "1px solid var(--pnv-border-light)",
           borderRadius: 6,
           padding: "4px 10px",
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           fontWeight: 600,
           color: "var(--pnv-text-secondary)",
           cursor: "pointer",
@@ -260,7 +260,7 @@ export function GSCLegend() {
         padding: "6px 10px 4px",
         borderBottom: "1px solid var(--pnv-border-faint)",
       }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--pnv-node-text-strong)", letterSpacing: 0.5 }}>
+        <span style={{ fontSize: "var(--pnv-fs-11)", fontWeight: 700, color: "var(--pnv-node-text-strong)", letterSpacing: 0.5 }}>
           LEGEND
         </span>
         <DialogCloseButton onClick={toggleVisible} label="Hide legend" title="Hide legend" color="var(--pnv-text-faint)" inline testId="gsc-legend-hide" />
@@ -341,7 +341,7 @@ function LegendRow({
       </svg>
       {/* Label badge */}
       <span style={{
-        fontSize: 10, fontWeight: 600, fontFamily: "monospace",
+        fontSize: "var(--pnv-fs-10)", fontWeight: 600, fontFamily: "monospace",
         color: "var(--pnv-on-primary)", background: color,
         padding: "0 5px", borderRadius: 6, lineHeight: "15px",
         whiteSpace: "nowrap",
@@ -349,7 +349,7 @@ function LegendRow({
         {label}
       </span>
       {/* Type name */}
-      <span style={{ fontSize: 10, color: "var(--pnv-node-text-detail)", whiteSpace: "nowrap" }}>
+      <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-node-text-detail)", whiteSpace: "nowrap" }}>
         {description.split(" — ")[0]}
       </span>
     </div>

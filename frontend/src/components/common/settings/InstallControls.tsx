@@ -177,14 +177,14 @@ export function InstallControls({
   const problem = form ? installFormProblem(form) : null;
   const pending = !!form && problem === null && !folderBlocks && somethingToApply(form, currentPnl, applyOptions);
   const sameAsInUse = !!form && problem === null && !folderBlocks && !pending;
-  const row: React.CSSProperties = { display: "flex", alignItems: "center", gap: 12, fontSize: 13 };
+  const row: React.CSSProperties = { display: "flex", alignItems: "center", gap: 12, fontSize: "var(--pnv-fs-13)" };
   const labelStyle: React.CSSProperties = { width: 80, color: "var(--pnv-text-secondary)", flexShrink: 0 };
 
   return (
     <div style={{ padding: 12, background: "var(--pnv-surface-muted)", borderRadius: 6 }}>
       <div
         style={{
-          fontSize: 12,
+          fontSize: "var(--pnv-fs-12)",
           fontWeight: 600,
           color: "var(--pnv-text-body)",
           marginBottom: 8,
@@ -232,7 +232,7 @@ export function InstallControls({
               }}
             >
               <span style={{ flex: 1, minWidth: 0 }}>{chosen ? <BreakAfterSlashes text={chosen.fullName} /> : "Choose a source…"}</span>
-              <span aria-hidden="true" style={{ fontSize: 10, color: "var(--pnv-text-muted)", flexShrink: 0 }}>▼</span>
+              <span aria-hidden="true" style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-muted)", flexShrink: 0 }}>▼</span>
             </button>
             {open && (
               <SwitchListbox
@@ -248,7 +248,7 @@ export function InstallControls({
 
         {/* A known source or a release: its full name, no fields. */}
         {chosen && chosen.form && (
-          <div data-testid="install-choice-name" style={{ marginLeft: 92, fontSize: 12, color: "var(--pnv-text-body)", overflowWrap: "anywhere" }}>
+          <div data-testid="install-choice-name" style={{ marginLeft: 92, fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-body)", overflowWrap: "anywhere" }}>
             <BreakAfterSlashes text={chosen.title} />
           </div>
         )}
@@ -320,7 +320,7 @@ export function InstallControls({
                 loadError={branchData.error ? "Couldn't load branches — type the name manually." : null}
               />
             </div>
-            <div style={{ marginLeft: 92, fontSize: 11, color: "var(--pnv-text-hint)" }}>
+            <div style={{ marginLeft: 92, fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-hint)" }}>
               Leave Repo blank to install from {DEFAULT_GITHUB_REPO}. Public GitHub repos only.
             </div>
           </>
@@ -338,7 +338,7 @@ export function InstallControls({
 
         {/* What the switch changes, and what it doesn't, before it is applied (#1295). */}
         {pending && !isRunning && (
-          <div data-testid="install-switch-summary" style={{ fontSize: 12, color: "var(--pnv-primary-text-on-tint)", background: "var(--pnv-primary-tint)", border: "1px solid var(--pnv-primary-tint-border)", borderRadius: 4, padding: "6px 8px" }}>
+          <div data-testid="install-switch-summary" style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-primary-text-on-tint)", background: "var(--pnv-primary-tint)", border: "1px solid var(--pnv-primary-tint-border)", borderRadius: 4, padding: "6px 8px" }}>
             {switchSummary(form, currentPnl, applyOptions)}
           </div>
         )}
@@ -346,7 +346,7 @@ export function InstallControls({
         {(pending || isRunning) && (
           <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8 }}>
             {!isRunning && form && (
-              <span data-testid="install-wait-hint" style={{ fontSize: 11, color: "var(--pnv-text-hint)" }}>
+              <span data-testid="install-wait-hint" style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-hint)" }}>
                 Expected wait: {expectedWait(form, currentPnl)}
               </span>
             )}
@@ -370,7 +370,7 @@ export function InstallControls({
 
       {job && (
         <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: 12, color: "var(--pnv-text-secondary)", marginBottom: 4 }}>
+          <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", marginBottom: 4 }}>
             Status: <strong>{job.status}</strong>
             {job.exit_code !== null && ` (exit ${job.exit_code})`}
             {formatJobElapsed(job) && (
@@ -382,7 +382,7 @@ export function InstallControls({
             style={{
               background: "var(--pnv-code-bg)",
               color: "var(--pnv-border-light)",
-              fontSize: 11,
+              fontSize: "var(--pnv-fs-11)",
               padding: 8,
               borderRadius: 4,
               maxHeight: 180,
@@ -395,7 +395,7 @@ export function InstallControls({
             {job.log.join("\n") || "(starting…)"}
           </pre>
           {isDone && job.status === "succeeded" && (
-            <div style={{ marginTop: 8, fontSize: 12, color: "var(--pnv-success)" }}>
+            <div style={{ marginTop: 8, fontSize: "var(--pnv-fs-12)", color: "var(--pnv-success)" }}>
               ✓ Install succeeded. PsyNeuLink details below shows the new version.
             </div>
           )}
@@ -472,7 +472,7 @@ function FolderCheckLine({
   const { check } = folder;
   if (check.status === "usable") {
     return (
-      <div data-testid="install-path-usable" style={{ ...indent, fontSize: 12, color: "var(--pnv-success)" }}>
+      <div data-testid="install-path-usable" style={{ ...indent, fontSize: "var(--pnv-fs-12)", color: "var(--pnv-success)" }}>
         ✓ A PsyNeuLink checkout.
       </div>
     );
@@ -487,7 +487,7 @@ function FolderCheckLine({
   return (
     <div
       data-testid="install-download-offer"
-      style={{ ...indent, fontSize: 12, color: "var(--pnv-text-body)", background: "var(--pnv-surface)", border: "1px solid var(--pnv-border-light)", borderRadius: 4, padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6 }}
+      style={{ ...indent, fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-body)", background: "var(--pnv-surface)", border: "1px solid var(--pnv-border-light)", borderRadius: 4, padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6 }}
     >
       <div style={{ fontWeight: 600 }}>Download PsyNeuLink here</div>
       <div style={{ ...mutedStyle, color: "var(--pnv-text-secondary)" }}>
@@ -503,7 +503,7 @@ function FolderCheckLine({
           value={downloadFrom}
           disabled={disabled}
           onChange={(e) => onDownloadFrom(e.target.value)}
-          style={{ ...selectStyle, fontSize: 12 }}
+          style={{ ...selectStyle, fontSize: "var(--pnv-fs-12)" }}
         >
           {sources.map((d) => (
             <option key={downloadSourceValue(d)} value={downloadSourceValue(d)}>
@@ -673,20 +673,20 @@ function ManageKnownSources({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const badge = (text: string, color: string): React.ReactNode => (
-    <span style={{ fontSize: 10, color, border: `1px solid ${color}`, borderRadius: 3, padding: "0 4px", whiteSpace: "nowrap" }}>
+    <span style={{ fontSize: "var(--pnv-fs-10)", color, border: `1px solid ${color}`, borderRadius: 3, padding: "0 4px", whiteSpace: "nowrap" }}>
       {text}
     </span>
   );
   const kindOf = (e: PnlSourceEntry) => (e.kind === "local" ? "Your checkout" : e.kind === "github" ? "GitHub" : "Official release");
 
   return (
-    <div data-testid="pnl-known-sources" style={{ fontSize: 13, marginTop: 4 }}>
+    <div data-testid="pnl-known-sources" style={{ fontSize: "var(--pnv-fs-13)", marginTop: 4 }}>
       <Button
         kind="link"
         data-testid="pnl-manage-sources-toggle"
         aria-expanded={shown}
         onClick={() => setShown((v) => !v)}
-        style={{ fontSize: 12 }}
+        style={{ fontSize: "var(--pnv-fs-12)" }}
       >
         {shown ? "▼" : "▶"} Manage known sources ({sources.length})
       </Button>
@@ -718,7 +718,7 @@ function ManageKnownSources({
                       value={draft}
                       placeholder={sourceOptionName({ ...e, label: null })}
                       onChange={(ev) => setDraft(ev.target.value)}
-                      style={{ ...inputStyle, fontSize: 12, padding: "2px 6px" }}
+                      style={{ ...inputStyle, fontSize: "var(--pnv-fs-12)", padding: "2px 6px" }}
                     />
                     <Button kind="small" type="submit">Save</Button>
                     <Button kind="small" onClick={() => setEditingId(null)}>Cancel</Button>
@@ -729,7 +729,7 @@ function ManageKnownSources({
                     <span
                       data-testid="pnl-source-name"
                       title={full}
-                      style={{ flex: 1, minWidth: 0, fontSize: 12, color: "var(--pnv-text)", overflowWrap: "anywhere" }}
+                      style={{ flex: 1, minWidth: 0, fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text)", overflowWrap: "anywhere" }}
                     >
                       <span style={{ color: "var(--pnv-text-muted)" }}>{kindOf(e)}: </span>
                       <BreakAfterSlashes text={full} />

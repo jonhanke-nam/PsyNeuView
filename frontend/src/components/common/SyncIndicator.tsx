@@ -114,7 +114,7 @@ export function SyncIndicator() {
         onClick={() => setOpen((o) => !o)}
         style={{
           display: "inline-flex", alignItems: "center", gap: 6,
-          padding: "0 6px", fontSize: 11, lineHeight: "inherit", color: color.text,
+          padding: "0 6px", fontSize: "var(--pnv-fs-11)", lineHeight: "inherit", color: color.text,
           whiteSpace: "nowrap", cursor: "pointer", userSelect: "none",
           background: "none", border: "none", borderRadius: 3, fontFamily: "inherit",
         }}
@@ -151,15 +151,15 @@ export function SyncIndicator() {
           }}
         >
           <DialogHeader title={state.label} titleId="sync-popover-title" compact onClose={() => setOpen(false)} />
-          <div style={{ padding: "8px 12px 10px", display: "flex", flexDirection: "column", gap: 8, fontSize: 12 }}>
+          <div style={{ padding: "8px 12px 10px", display: "flex", flexDirection: "column", gap: 8, fontSize: "var(--pnv-fs-12)" }}>
             <div style={{ color: "var(--pnv-text-muted)", lineHeight: 1.4 }}>{state.hint}</div>
             {shownPath && (
               <div>
-                <div style={{ fontSize: 11, color: "var(--pnv-text-hint)", marginBottom: 2 }}>File</div>
+                <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-hint)", marginBottom: 2 }}>File</div>
                 <div
                   data-testid="sync-popover-path"
                   style={{
-                    fontFamily: "monospace", fontSize: 11, color: "var(--pnv-text-body)",
+                    fontFamily: "monospace", fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-body)",
                     background: "var(--pnv-surface-sunken)", borderRadius: 4,
                     padding: "3px 6px", wordBreak: "break-all", userSelect: "text",
                   }}
@@ -169,7 +169,7 @@ export function SyncIndicator() {
               </div>
             )}
             <div>
-              <div style={{ fontSize: 11, color: "var(--pnv-text-hint)", marginBottom: 2 }}>Last changed outside PsyNeuView</div>
+              <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-hint)", marginBottom: 2 }}>Last changed outside PsyNeuView</div>
               <div data-testid="sync-popover-last-change" style={{ color: "var(--pnv-text-body)" }}>
                 {changed ? formatLastChange(changed.at, now) : "Not since you opened it"}
               </div>

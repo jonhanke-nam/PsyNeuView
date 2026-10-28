@@ -58,9 +58,9 @@ function useMacAppSettings(): {
 
 function LoadState({ loadError }: { loadError: string | null }) {
   if (loadError) {
-    return <div style={{ fontSize: 12, color: "var(--pnv-danger)" }}>Couldn't read the Mac app's settings: {loadError}</div>;
+    return <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-danger)" }}>Couldn't read the Mac app's settings: {loadError}</div>;
   }
-  return <div style={{ fontSize: 12, color: "var(--pnv-text-hint)" }}>Loading…</div>;
+  return <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-hint)" }}>Loading…</div>;
 }
 
 /** General: the two switches the app acts on. */
@@ -81,7 +81,7 @@ export function MacAppLaunchToggles() {
   };
 
   return (
-    <div style={{ fontSize: 13 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <label style={checkRow}>
         <input
           type="checkbox"
@@ -100,7 +100,7 @@ export function MacAppLaunchToggles() {
         />
         Open PsyNeuView when you log in
       </label>
-      {error && <div style={{ fontSize: 12, color: "var(--pnv-danger)", marginTop: 6 }}>{error}</div>}
+      {error && <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-danger)", marginTop: 6 }}>{error}</div>}
     </div>
   );
 }
@@ -129,7 +129,7 @@ export function MacAppReleaseCandidates() {
 
   return (
     <Group id="release-candidates" title="Release candidates" badge={<DeveloperBadge audience="developers" />}>
-      <div style={{ fontSize: 13 }}>
+      <div style={{ fontSize: "var(--pnv-fs-13)" }}>
         <label style={checkRow}>
           <input
             type="checkbox"
@@ -139,10 +139,10 @@ export function MacAppReleaseCandidates() {
           />
           Get release candidates
         </label>
-        <div style={{ fontSize: 12, color: "var(--pnv-text-hint)", marginLeft: 20 }}>
+        <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-hint)", marginLeft: 20 }}>
           Your app's update notice also offers test versions before they are released to everyone.
         </div>
-        {error && <div style={{ fontSize: 12, color: "var(--pnv-danger)", marginTop: 6 }}>{error}</div>}
+        {error && <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-danger)", marginTop: 6 }}>{error}</div>}
       </div>
     </Group>
   );
@@ -230,8 +230,8 @@ export function MacAppInstallSwitcher() {
       {!settings ? (
         <LoadState loadError={loadError} />
       ) : (
-        <div style={{ fontSize: 13 }}>
-          <div data-testid="mac-install-running" style={{ fontSize: 12, color: "var(--pnv-text-secondary)", margin: "2px 0 6px" }}>
+        <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+          <div data-testid="mac-install-running" style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", margin: "2px 0 6px" }}>
             Running now: {settings.install.running}
           </div>
 
@@ -270,7 +270,7 @@ export function MacAppInstallSwitcher() {
                     data-testid="mac-install-path"
                     disabled={switching}
                     style={{
-                      flex: 1, minWidth: 0, fontSize: 12, padding: "3px 6px",
+                      flex: 1, minWidth: 0, fontSize: "var(--pnv-fs-12)", padding: "3px 6px",
                       border: "1px solid var(--pnv-border)", borderRadius: 4, fontFamily: "monospace",
                     }}
                   />
@@ -282,7 +282,7 @@ export function MacAppInstallSwitcher() {
                 </div>
                 {path && <PathBox path={path} label="Full path of the checkout" />}
                 {settings.install.recentCheckouts.length > 0 && (
-                  <div style={{ marginTop: 4, fontSize: 11, color: "var(--pnv-text-hint)" }}>
+                  <div style={{ marginTop: 4, fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-hint)" }}>
                     Used before:{" "}
                     {settings.install.recentCheckouts.map((p) => (
                       <Button
@@ -308,13 +308,13 @@ export function MacAppInstallSwitcher() {
             </div>
           )}
           {verdict && verdict.decision !== "nothingToDo" && (
-            <div data-testid="mac-install-hint" style={{ fontSize: 12, color: hintColor, marginTop: 6 }}>
+            <div data-testid="mac-install-hint" style={{ fontSize: "var(--pnv-fs-12)", color: hintColor, marginTop: 6 }}>
               {verdict.message}
             </div>
           )}
           {(canApply || switching) && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 6 }}>
-              <span data-testid="mac-install-apply-explanation" style={{ fontSize: 11, color: "var(--pnv-text-hint)" }}>
+              <span data-testid="mac-install-apply-explanation" style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-hint)" }}>
                 Switching stops PsyNeuView and starts the one you pick. Nothing is deleted, and
                 switching back is the same choice. {APPLY_EXPLANATION}
               </span>
@@ -330,7 +330,7 @@ export function MacAppInstallSwitcher() {
               </Button>
             </div>
           )}
-          {error && <div style={{ fontSize: 12, color: "var(--pnv-danger)", marginTop: 6 }}>{error}</div>}
+          {error && <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-danger)", marginTop: 6 }}>{error}</div>}
         </div>
       )}
     </Group>
@@ -378,8 +378,8 @@ export function MacAppProblemReports({ defaultFolded = true }: { defaultFolded?:
       {!settings ? (
         <LoadState loadError={loadError} />
       ) : (
-        <div style={{ fontSize: 13 }}>
-          <div style={{ fontSize: 11, color: "var(--pnv-text-hint)", margin: "2px 0 6px" }}>
+        <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+          <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-hint)", margin: "2px 0 6px" }}>
             Help ▸ Report a Problem… saves a report folder in Downloads. These choose how it
             offers to send it.
           </div>
@@ -389,7 +389,7 @@ export function MacAppProblemReports({ defaultFolded = true }: { defaultFolded?:
               data-testid="setting-mac-report-send-with"
               value={settings.reportSendWith}
               onChange={(e) => setReport("reportSendWith", e.target.value as ReportSendWith)}
-              style={{ fontSize: 12, padding: "2px 4px" }}
+              style={{ fontSize: "var(--pnv-fs-12)", padding: "2px 4px" }}
             >
               <option value="ask">Ask each time (show every way)</option>
               <option value="mail">Mail app</option>
@@ -410,18 +410,18 @@ export function MacAppProblemReports({ defaultFolded = true }: { defaultFolded?:
                 if (e.key === "Enter") commitSendTo();
               }}
               style={{
-                flex: 1, minWidth: 0, fontSize: 12, padding: "3px 6px",
+                flex: 1, minWidth: 0, fontSize: "var(--pnv-fs-12)", padding: "3px 6px",
                 border: "1px solid var(--pnv-border)", borderRadius: 4,
               }}
             />
           </label>
           {settings.reportSendToDefault && (
-            <div style={{ fontSize: 11, color: "var(--pnv-text-hint)", marginLeft: 118 }}>
+            <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-hint)", marginLeft: 118 }}>
               Leave empty to send to {settings.reportSendToDefault}.
             </div>
           )}
           {reportError && (
-            <div data-testid="mac-report-error" style={{ fontSize: 12, color: "var(--pnv-danger)", marginTop: 6 }}>
+            <div data-testid="mac-report-error" style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-danger)", marginTop: 6 }}>
               {reportError}
             </div>
           )}
@@ -459,4 +459,4 @@ const checkRow: React.CSSProperties = {
 const fieldRow: React.CSSProperties = {
   display: "flex", alignItems: "center", gap: 8, padding: "2px 0",
 };
-const fieldLabel: React.CSSProperties = { width: 110, flexShrink: 0, fontSize: 12, color: "var(--pnv-text-body)" };
+const fieldLabel: React.CSSProperties = { width: 110, flexShrink: 0, fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-body)" };

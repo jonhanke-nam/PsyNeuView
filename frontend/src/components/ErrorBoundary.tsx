@@ -62,7 +62,7 @@ export class ErrorBoundary extends Component<Props, State> {
           borderRadius: 8,
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 18 }}>Something went wrong</h2>
+        <h2 style={{ margin: 0, fontSize: "var(--pnv-fs-18)" }}>Something went wrong</h2>
         <p style={{ margin: 0, color: "var(--pnv-text-secondary)" }}>
           The app hit an unexpected error while rendering. Your work isn&rsquo;t
           lost — reload to recover, and please report this with the details below.
@@ -73,7 +73,7 @@ export class ErrorBoundary extends Component<Props, State> {
             padding: "10px 12px",
             width: "100%",
             overflow: "auto",
-            fontSize: 12,
+            fontSize: "var(--pnv-fs-12)",
             background: "var(--pnv-surface)",
             border: "1px solid var(--pnv-danger-border)",
             borderRadius: 4,

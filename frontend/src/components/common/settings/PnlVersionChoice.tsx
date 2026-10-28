@@ -96,7 +96,7 @@ export function PnlVersionChoice({
 
   if (inUse === "custom" || inUse === null) {
     return (
-      <div data-testid="pnl-version-custom" style={{ fontSize: 13 }}>
+      <div data-testid="pnl-version-custom" style={{ fontSize: "var(--pnv-fs-13)" }}>
         <div style={{ fontWeight: 500 }}>Custom — chosen in Developer</div>
         <div style={{ paddingLeft: GROUP_INDENT }}>
           <div data-testid="pnl-version-custom-source" style={{ marginTop: 2 }}>
@@ -118,7 +118,7 @@ export function PnlVersionChoice({
   const latestDescription = `${SIMPLE_PNL_CHOICES.latest.description}${branchDate ? ` · last updated ${branchDate}` : ""}`;
 
   return (
-    <div style={{ fontSize: 13 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <div data-testid="setting-pnl-version" role="radiogroup" aria-label="PsyNeuLink version">
         {(Object.keys(SIMPLE_PNL_CHOICES) as SimplePnlChoice[]).map((key) => {
           const choice = SIMPLE_PNL_CHOICES[key];
@@ -139,7 +139,7 @@ export function PnlVersionChoice({
                 {inUse === key && (
                   <span
                     data-testid="pnl-version-in-use"
-                    style={{ marginLeft: 6, fontSize: 10, color: "var(--pnv-success)", border: "1px solid var(--pnv-success)", borderRadius: 3, padding: "0 4px" }}
+                    style={{ marginLeft: 6, fontSize: "var(--pnv-fs-10)", color: "var(--pnv-success)", border: "1px solid var(--pnv-success)", borderRadius: 3, padding: "0 4px" }}
                   >
                     in use{key === "official" && inUseVersion ? ` · ${inUseVersion}` : ""}
                   </span>
@@ -162,7 +162,7 @@ export function PnlVersionChoice({
                           setChosen("official");
                         }}
                         disabled={isRunning}
-                        style={{ ...selectStyle, flex: "none", fontFamily: "monospace", fontSize: 12, maxWidth: "100%" }}
+                        style={{ ...selectStyle, flex: "none", fontFamily: "monospace", fontSize: "var(--pnv-fs-12)", maxWidth: "100%" }}
                       >
                         {releases.releases.map((r) => {
                           const state = releaseOptionState(r);
@@ -195,7 +195,7 @@ export function PnlVersionChoice({
         One PsyNeuLink is in use at a time. Another repo, branch or your own checkout: {toDeveloper}
       </div>
       {chosen === "official" && chosenRelease?.limited && !isRunning && (
-        <div data-testid="pnl-version-limited" style={{ fontSize: 12, color: "var(--pnv-warning)", background: "var(--pnv-warning-tint)", border: "1px solid var(--pnv-warning-border)", borderRadius: 4, padding: "6px 8px", marginTop: 6 }}>
+        <div data-testid="pnl-version-limited" style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-warning)", background: "var(--pnv-warning-tint)", border: "1px solid var(--pnv-warning-border)", borderRadius: 4, padding: "6px 8px", marginTop: 6 }}>
           ⚠ {chosenRelease.limited_reason ?? "An older release: no run stepping."} Models still load and run.
         </div>
       )}
@@ -205,7 +205,7 @@ export function PnlVersionChoice({
         </div>
       )}
       {differs && !isRunning && (
-        <div data-testid="install-switch-summary" style={{ fontSize: 12, color: "var(--pnv-primary-text-on-tint)", background: "var(--pnv-primary-tint)", border: "1px solid var(--pnv-primary-tint-border)", borderRadius: 4, padding: "6px 8px", marginTop: 6 }}>
+        <div data-testid="install-switch-summary" style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-primary-text-on-tint)", background: "var(--pnv-primary-tint)", border: "1px solid var(--pnv-primary-tint-border)", borderRadius: 4, padding: "6px 8px", marginTop: 6 }}>
           {summary}
         </div>
       )}
@@ -217,7 +217,7 @@ export function PnlVersionChoice({
       {(differs || isRunning) && (
         <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: 6 }}>
           {!isRunning && (
-            <span style={{ fontSize: 11, color: "var(--pnv-text-hint)" }}>
+            <span style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-hint)" }}>
               Switching reinstalls PsyNeuLink and restarts the model runner. Expected wait:{" "}
               {chosenRelease?.kept ? "a few seconds" : expectedWait(form, currentPnl)}
             </span>
@@ -235,7 +235,7 @@ export function PnlVersionChoice({
       )}
       {submitError && <div style={{ ...errorStyle, marginTop: 6 }}>{submitError}</div>}
       {job && (
-        <div style={{ marginTop: 8, fontSize: 12, color: "var(--pnv-text-secondary)" }}>
+        <div style={{ marginTop: 8, fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)" }}>
           Status: <strong>{job.status}</strong>
           {formatJobElapsed(job) && <span style={{ color: "var(--pnv-text-hint)" }}> — {formatJobElapsed(job)}</span>}
           {isDone && job.status === "succeeded" && (
@@ -247,7 +247,7 @@ export function PnlVersionChoice({
           {job.log.length > 0 && (
             <details style={{ marginTop: 4 }}>
               <summary style={{ cursor: "pointer", color: "var(--pnv-text-hint)" }}>Log</summary>
-              <pre style={{ background: "var(--pnv-code-bg)", color: "var(--pnv-code-text)", fontSize: 11, padding: 8, borderRadius: 4, maxHeight: 140, overflowY: "auto", margin: "4px 0 0", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+              <pre style={{ background: "var(--pnv-code-bg)", color: "var(--pnv-code-text)", fontSize: "var(--pnv-fs-11)", padding: 8, borderRadius: 4, maxHeight: 140, overflowY: "auto", margin: "4px 0 0", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
                 {job.log.join("\n")}
               </pre>
             </details>

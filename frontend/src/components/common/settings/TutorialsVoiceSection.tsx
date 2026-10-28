@@ -56,7 +56,7 @@ function NarrationRateSetting() {
     recordSettingChanged("walkthrough-narration-rate", value);
   };
   return (
-    <div style={{ fontSize: 13, marginTop: 14 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)", marginTop: 14 }}>
       <SettingLabel title="Speaking rate" htmlFor="setting-narration-rate">
         How fast narration reads. The default is a touch slower than the voice's own pace, for reading and looking at
         the same time. ▶ Play sample uses it too.
@@ -95,7 +95,7 @@ function OrientationReminderSetting() {
     recordSettingChanged("orientation-reminder", next);
   };
   return (
-    <div style={{ fontSize: 13 }}>
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="PsyNeuView First Steps reminder" htmlFor="setting-orientation-reminder">
         The eight short walkthroughs of the app itself. They are always in the Tutorials menu; this is only whether
         PsyNeuView reminds you about them.
@@ -124,7 +124,7 @@ function OrientationReminderSetting() {
  */
 function HighlightSettings() {
   const h = useTourHighlightStore();
-  const row = { fontSize: 13, marginTop: 10 } as const;
+  const row = { fontSize: "var(--pnv-fs-13)", marginTop: 10 } as const;
   return (
     <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
       <div style={{ flex: "1 1 280px" }}>

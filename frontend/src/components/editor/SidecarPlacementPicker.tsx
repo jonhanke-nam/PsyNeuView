@@ -85,13 +85,13 @@ export function SidecarPlacementPicker() {
 
 
   return (
-    <div ref={rootRef} style={{ position: "relative", display: "inline-block" }}>
+    <div ref={rootRef} style={{ position: "relative", display: "inline-block", maxWidth: "100%", minWidth: 0 }}>
       <button
         data-testid="sidecar-placement-button"
         onClick={() => setOpen((o) => !o)}
         title="Where this model's sidecar files (layouts, labels) are stored on disk"
         style={{
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           fontFamily: "monospace",
           padding: "2px 8px",
           border: "1px solid var(--pnv-border)",
@@ -102,12 +102,18 @@ export function SidecarPlacementPicker() {
           display: "inline-flex",
           gap: 5,
           alignItems: "center",
+          // #111: in a pane too narrow for the whole label (bigger text), the
+          // location shortens with an ellipsis rather than running off the
+          // pane's edge, where the divider clips it.
+          maxWidth: "100%",
+          minWidth: 0,
+          whiteSpace: "nowrap",
         }}
       >
-        <span style={{ color: "var(--pnv-text-faint)" }}>Files:</span>
-        <span>{LOCATION_LABEL[placement.effective]}</span>
-        {inheriting && <span style={{ color: "var(--pnv-text-faint)", fontSize: 9 }}>(default)</span>}
-        <span style={{ color: "var(--pnv-text-faint)", fontSize: 9 }}>▾</span>
+        <span style={{ color: "var(--pnv-text-faint)", flexShrink: 0 }}>Files:</span>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{LOCATION_LABEL[placement.effective]}</span>
+        {inheriting && <span style={{ color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-9)" }}>(default)</span>}
+        <span style={{ color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-9)" }}>▾</span>
       </button>
       {open && (
         <div
@@ -130,7 +136,7 @@ export function SidecarPlacementPicker() {
           <div
             style={{
               padding: "3px 12px 5px",
-              fontSize: 10,
+              fontSize: "var(--pnv-fs-10)",
               textTransform: "uppercase",
               letterSpacing: 0.4,
               color: "var(--pnv-text-faint)",
@@ -191,13 +197,13 @@ function PlacementRow({
         background: "none",
         cursor: "pointer",
         padding: "4px 12px",
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
         color: "var(--pnv-text-body)",
       }}
     >
       <span style={{ width: 12, color: "var(--pnv-primary)" }}>{selected ? "◉" : "○"}</span>
       <span>{label}</span>
-      <span style={{ fontSize: 10, color: "var(--pnv-text-faint)" }}>{hint}</span>
+      <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)" }}>{hint}</span>
     </button>
   );
 }

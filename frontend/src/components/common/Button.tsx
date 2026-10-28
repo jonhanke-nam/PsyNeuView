@@ -59,24 +59,24 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const regular: CSSProperties = {
   padding: "8px 20px",
-  fontSize: 13,
+  fontSize: "var(--pnv-fs-13)",
   borderRadius: 6,
   lineHeight: "normal",
 };
 
 const rowSized: CSSProperties = {
   padding: "1px 8px",
-  fontSize: 11,
+  fontSize: "var(--pnv-fs-11)",
   borderRadius: 3,
   lineHeight: "normal",
 };
 
 const SIZES: Record<ButtonSize, CSSProperties> = {
-  compact: { padding: "6px 14px", fontSize: 13, lineHeight: "normal" },
-  slim: { padding: "3px 14px", fontSize: 13, lineHeight: "normal" },
-  tall: { padding: "3px 10px", fontSize: 11, lineHeight: "normal" },
-  line: { padding: "0 6px", fontSize: 11, lineHeight: "18px" },
-  icon: { padding: "0 5px", fontSize: 11, lineHeight: 1 },
+  compact: { padding: "6px 14px", fontSize: "var(--pnv-fs-13)", lineHeight: "normal" },
+  slim: { padding: "3px 14px", fontSize: "var(--pnv-fs-13)", lineHeight: "normal" },
+  tall: { padding: "3px 10px", fontSize: "var(--pnv-fs-11)", lineHeight: "normal" },
+  line: { padding: "0 6px", fontSize: "var(--pnv-fs-11)", lineHeight: "18px" },
+  icon: { padding: "0 5px", fontSize: "var(--pnv-fs-11)", lineHeight: 1 },
 };
 
 /** The look of each kind, enabled; `disabled` overrides what differs. */

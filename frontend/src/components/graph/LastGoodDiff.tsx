@@ -66,11 +66,11 @@ export function LastGoodDiff({ onClose }: { onClose: () => void }) {
       >
         <DialogHeader title="Changes since the last version that built" titleId="last-good-diff-title" onClose={onClose}>
           {lastGoodAt !== null && (
-            <span style={{ fontSize: 12, color: "var(--pnv-text-muted)" }}>that version built {ago(lastGoodAt)}</span>
+            <span style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)" }}>that version built {ago(lastGoodAt)}</span>
           )}
         </DialogHeader>
 
-        <div style={{ overflow: "auto", padding: "8px 0", fontFamily: MONO, fontSize: 12.5 }}>
+        <div style={{ overflow: "auto", padding: "8px 0", fontFamily: MONO, fontSize: "var(--pnv-fs-12_5)" }}>
           {lastGoodSource === null ? (
             <div style={{ padding: "16px", color: "var(--pnv-text-muted)", fontFamily: "inherit" }}>
               Nothing has built yet this session, so there is no version to compare against.

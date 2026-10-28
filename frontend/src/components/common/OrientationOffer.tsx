@@ -91,7 +91,7 @@ export function OrientationOffer() {
         }}
       >
         <DialogHeader title="New to PsyNeuView?" titleId="orientation-offer-title" onClose={later} />
-        <div style={{ padding: "20px 28px", fontSize: 14, color: "var(--pnv-text-body)", lineHeight: 1.55 }}>
+        <div style={{ padding: "20px 28px", fontSize: "var(--pnv-fs-14)", color: "var(--pnv-text-body)", lineHeight: 1.55 }}>
           <p style={{ margin: "0 0 10px" }}>
             <strong>PsyNeuView First Steps</strong> is {parts.length} short walkthroughs, about {minutes}{" "}
             minutes in all, inside the app: what you're looking at, where your work lives, what it runs on,
@@ -112,7 +112,7 @@ export function OrientationOffer() {
               </li>
             ))}
           </ol>
-          <p style={{ margin: "10px 0 0", fontSize: 12, color: "var(--pnv-text-muted)" }}>
+          <p style={{ margin: "10px 0 0", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)" }}>
             They're always in the <strong>Tutorials ▾</strong> menu, so there's no need to take them now.
           </p>
         </div>
@@ -158,7 +158,7 @@ const partNumber: React.CSSProperties = {
   borderRadius: "50%",
   background: "var(--pnv-primary-tint)",
   color: "var(--pnv-primary-deep)",
-  fontSize: 12,
+  fontSize: "var(--pnv-fs-12)",
   fontWeight: 600,
   display: "inline-flex",
   alignItems: "center",
@@ -167,6 +167,6 @@ const partNumber: React.CSSProperties = {
 
 const partMinutes: React.CSSProperties = {
   flexShrink: 0,
-  fontSize: 12,
+  fontSize: "var(--pnv-fs-12)",
   color: "var(--pnv-text-hint)",
 };

@@ -173,7 +173,7 @@ export function SidecarVariantPicker({ kind }: { kind: SidecarKind }) {
         data-testid="sidecar-variant-button"
         onClick={() => setOpen((o) => !o)}
         style={{
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           fontFamily: "monospace",
           padding: "2px 8px",
           border: "1px solid var(--pnv-border)",
@@ -189,7 +189,7 @@ export function SidecarVariantPicker({ kind }: { kind: SidecarKind }) {
       >
         <span style={{ color: "var(--pnv-text-faint)" }}>{KIND_LABEL[kind]}:</span>
         <span>{buttonLabel}</span>
-        <span style={{ color: "var(--pnv-text-faint)", fontSize: 9 }}>▾</span>
+        <span style={{ color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-9)" }}>▾</span>
       </button>
       {open && (
         <div
@@ -219,7 +219,7 @@ export function SidecarVariantPicker({ kind }: { kind: SidecarKind }) {
                 style={{
                   width: "100%",
                   boxSizing: "border-box",
-                  fontSize: 11,
+                  fontSize: "var(--pnv-fs-11)",
                   padding: "3px 6px",
                   border: "1px solid var(--pnv-border-light)",
                   borderRadius: 3,
@@ -252,7 +252,7 @@ export function SidecarVariantPicker({ kind }: { kind: SidecarKind }) {
                       border: "none",
                       background: "none",
                       cursor: v.missing ? "not-allowed" : "pointer",
-                      fontSize: 12,
+                      fontSize: "var(--pnv-fs-12)",
                       fontFamily: "monospace",
                       color: v.missing ? "var(--pnv-danger)" : "var(--pnv-text-body)",
                     }}
@@ -272,7 +272,7 @@ export function SidecarVariantPicker({ kind }: { kind: SidecarKind }) {
               );
             })}
             {filtered.length === 0 && (
-              <div style={{ padding: "6px 12px", fontSize: 11, color: "var(--pnv-text-faint)" }}>No matches</div>
+              <div style={{ padding: "6px 12px", fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)" }}>No matches</div>
             )}
           </div>
           <div style={{ borderTop: "1px solid var(--pnv-border-faint)", marginTop: 4 }}>
@@ -286,7 +286,7 @@ export function SidecarVariantPicker({ kind }: { kind: SidecarKind }) {
                 border: "none",
                 background: "none",
                 cursor: "pointer",
-                fontSize: 12,
+                fontSize: "var(--pnv-fs-12)",
                 color: "var(--pnv-primary)",
               }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "var(--pnv-primary-tint)")}
@@ -310,7 +310,7 @@ function RowBtn({ title, onClick, children }: { title: string; onClick: () => vo
         border: "none",
         background: "none",
         cursor: "pointer",
-        fontSize: 11,
+        fontSize: "var(--pnv-fs-11)",
         color: "var(--pnv-text-hint)",
         padding: "0 2px",
         lineHeight: 1,

@@ -51,7 +51,7 @@ export function AppUpdateNotice() {
         gap: 6,
         flexShrink: 0,
         padding: "2px 4px 2px 10px",
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
         color: "var(--pnv-text)",
         background: "var(--pnv-primary-tint)",
         border: "1px solid var(--pnv-primary-tint-border)",

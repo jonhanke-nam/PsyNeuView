@@ -63,7 +63,7 @@ export function OffscreenNodesIndicator() {
         border: "1px solid var(--pnv-warning-tag-border)",
         background: "var(--pnv-warning-tint)",
         color: "var(--pnv-warning-tag-text)",
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
         cursor: "pointer",
         boxShadow: "var(--pnv-shadow-chip)",
       }}

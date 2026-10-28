@@ -22,7 +22,7 @@ export function PnlCallLine({ call, reason }: Props) {
       <code
         style={{
           display: "block",
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
           color: "var(--pnv-text-body)",
           background: "var(--pnv-surface-sunken)",
@@ -37,7 +37,7 @@ export function PnlCallLine({ call, reason }: Props) {
         {call}
       </code>
       {reason && (
-        <div style={{ fontSize: 11, color: "var(--pnv-warning)", marginTop: 2 }}>{reason}</div>
+        <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-warning)", marginTop: 2 }}>{reason}</div>
       )}
     </div>
   );

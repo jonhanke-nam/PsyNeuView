@@ -207,7 +207,7 @@ const rowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 12,
-  fontSize: 13,
+  fontSize: "var(--pnv-fs-13)",
   marginBottom: 8,
 };
 
@@ -216,7 +216,7 @@ const labelStyle: React.CSSProperties = { width: 70, color: "var(--pnv-text-seco
 const inputStyle: React.CSSProperties = {
   flex: 1,
   padding: "5px 8px",
-  fontSize: 13,
+  fontSize: "var(--pnv-fs-13)",
   border: "1px solid var(--pnv-border)",
   borderRadius: 4,
 };
@@ -234,7 +234,7 @@ const listStyle: React.CSSProperties = {
 
 const sectionHeaderStyle: React.CSSProperties = {
   padding: "4px 10px",
-  fontSize: 10,
+  fontSize: "var(--pnv-fs-10)",
   textTransform: "uppercase",
   color: "var(--pnv-text-hint)",
   background: "var(--pnv-border-faint)",
@@ -246,7 +246,7 @@ const rowItemStyle = (selected: boolean): React.CSSProperties => ({
   padding: "4px 10px",
   cursor: "pointer",
   fontFamily: "monospace",
-  fontSize: 12,
+  fontSize: "var(--pnv-fs-12)",
   background: selected ? "var(--pnv-primary-tint)" : "transparent",
   whiteSpace: "nowrap",
   overflow: "hidden",
@@ -330,7 +330,7 @@ export function GithubFileLoaderModal({ onCancel, onLoaded }: GithubFileLoaderMo
         background: "var(--pnv-danger-tint)",
         color: "var(--pnv-danger)",
         borderRadius: 4,
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
       }}
     >
       {treeErrorMessage(tree.error)}
@@ -401,12 +401,12 @@ export function GithubFileLoaderModal({ onCancel, onLoaded }: GithubFileLoaderMo
 
         <div style={listStyle}>
           {tree.loading && (
-            <div style={{ padding: "10px 12px", fontSize: 12, color: "var(--pnv-text-hint)" }}>
+            <div style={{ padding: "10px 12px", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-hint)" }}>
               Loading file list…
             </div>
           )}
           {!tree.loading && !tree.error && (filtered.recents.length + filtered.all.length === 0) && (
-            <div style={{ padding: "10px 12px", fontSize: 12, color: "var(--pnv-text-hint)" }}>
+            <div style={{ padding: "10px 12px", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-hint)" }}>
               {tree.data == null
                 ? "Enter a repo and branch to list files."
                 : filter
@@ -456,7 +456,7 @@ export function GithubFileLoaderModal({ onCancel, onLoaded }: GithubFileLoaderMo
         </div>
 
         {tree.data?.truncated && (
-          <div style={{ marginTop: 6, fontSize: 11, color: "var(--pnv-text-hint)" }}>
+          <div style={{ marginTop: 6, fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-hint)" }}>
             File list is truncated — narrow with the filter or pick a more specific branch.
           </div>
         )}
@@ -480,7 +480,7 @@ export function GithubFileLoaderModal({ onCancel, onLoaded }: GithubFileLoaderMo
               background: "var(--pnv-danger-tint)",
               color: "var(--pnv-danger)",
               borderRadius: 4,
-              fontSize: 12,
+              fontSize: "var(--pnv-fs-12)",
             }}
           >
             {openErrorMessage(openError)}

@@ -36,7 +36,7 @@ export function StatusBar() {
         padding: "5px 16px",
         background: "var(--pnv-primary-tint)",
         borderBottom: "1px solid var(--pnv-primary-tint-border)",
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
         color: "var(--pnv-primary)",
         animation: "statusPulse 1.5s ease-in-out infinite",
       }}

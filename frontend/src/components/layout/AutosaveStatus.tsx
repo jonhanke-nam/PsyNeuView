@@ -77,7 +77,7 @@ export function AutosaveStatus() {
         padding: "0 4px",
         border: "none",
         background: "none",
-        fontSize: 11,
+        fontSize: "var(--pnv-fs-11)",
         fontFamily: "inherit",
         whiteSpace: "nowrap",
         cursor: "pointer",

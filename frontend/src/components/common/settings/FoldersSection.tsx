@@ -119,7 +119,7 @@ export function FoldersSection() {
 
   return (
     <Group id="folders" title="Folders">
-      <div data-testid="folders-list" style={{ fontSize: 13 }}>
+      <div data-testid="folders-list" style={{ fontSize: "var(--pnv-fs-13)" }}>
         <div data-testid="catalog-settings">
           {order.map(rowFor)}
           <AddCatalogRow />
@@ -211,14 +211,14 @@ function ProjectFolderRow() {
             {projectFolder?.fixed && hasSettingsBridge() && (
               // The Mac app sets the variable itself on launch, so inside the
               // app this is the app's doing, not a developer's.
-              <div data-testid="project-folder-fixed" data-fixed-by="mac-app" style={{ fontSize: 11, color: "var(--pnv-text-muted)", marginTop: 2 }}>
+              <div data-testid="project-folder-fixed" data-fixed-by="mac-app" style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)", marginTop: 2 }}>
                 Set by the PsyNeuView app. Moving it from here comes in a later version.
               </div>
             )}
             {projectFolder?.fixed && !hasSettingsBridge() && (
               // Regular users never set this variable; developer setups and the test
               // suite do. Say so, and mark it as developer territory.
-              <div data-testid="project-folder-fixed" style={{ fontSize: 11, color: "var(--pnv-text-muted)", marginTop: 2 }}>
+              <div data-testid="project-folder-fixed" style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)", marginTop: 2 }}>
                 Fixed by the <code>{projectFolder.fixedBy ?? "PSYNEWVIEW_MODELS_DIR"}</code> environment
                 variable, which developers and the test suite set. Regular users never need it.
                 <DeveloperBadge audience="developers" />
@@ -231,9 +231,9 @@ function ProjectFolderRow() {
               <div
                 data-testid="project-folder-move-offer"
                 role="note"
-                style={{ marginTop: 6, padding: "6px 10px", background: "var(--pnv-warning-tint)", border: "1px solid var(--pnv-warning-border)", borderRadius: 4, fontSize: 12, display: "flex", gap: 8 }}
+                style={{ marginTop: 6, padding: "6px 10px", background: "var(--pnv-warning-tint)", border: "1px solid var(--pnv-warning-border)", borderRadius: 4, fontSize: "var(--pnv-fs-12)", display: "flex", gap: 8 }}
               >
-                <span aria-hidden="true" style={{ color: "var(--pnv-warning)", fontSize: 14, lineHeight: "18px" }}>⚠</span>
+                <span aria-hidden="true" style={{ color: "var(--pnv-warning)", fontSize: "var(--pnv-fs-14)", lineHeight: "18px" }}>⚠</span>
                 <span>
                   <strong>Hidden folder:</strong> your models are in <code>{abbreviateHome(projectFolder.moveOffer.from)}</code>,
                   which Finder doesn't show. Move them to <code>{abbreviateHome(projectFolder.moveOffer.to)}</code>, where
@@ -298,7 +298,7 @@ function WorkingCopiesRow() {
         detail="Where your edits to Reference Models and PsyNeuLink Examples are kept; the included originals are never changed. Demo models start fresh each time they're opened. Kept outside the app, so an update doesn't lose them."
         below={
           locations?.appData.workingCopiesFixedBy ? (
-            <div style={{ fontSize: 11, color: "var(--pnv-text-muted)", marginTop: 2 }}>
+            <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)", marginTop: 2 }}>
               Fixed by the <code>{locations.appData.workingCopiesFixedBy}</code> environment variable, which developers
               and the test suite set.
               <DeveloperBadge audience="developers" />
@@ -333,7 +333,7 @@ function LayoutsRow() {
         detail="Where the node positions and labels you set on a PsyNeuLink Library model are kept when that PsyNeuLink is one PsyNeuView manages (its files are read only). Kept by source, outside the install, so switching or updating PsyNeuLink doesn't lose them."
         below={
           locations?.appData.layoutsFixedBy ? (
-            <div style={{ fontSize: 11, color: "var(--pnv-text-muted)", marginTop: 2 }}>
+            <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)", marginTop: 2 }}>
               Fixed by the <code>{locations.appData.layoutsFixedBy}</code> environment variable, which developers
               and the test suite set.
               <DeveloperBadge audience="developers" />
@@ -415,7 +415,7 @@ function AddCatalogRow() {
     if (picked) setNewPath(picked);
   };
   if (!canEdit) {
-    return <div style={{ fontSize: 11, color: "var(--pnv-text-faint)", marginTop: 6 }}>Catalogs can't be changed on the shared hosted PsyNeuView.</div>;
+    return <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", marginTop: 6 }}>Catalogs can't be changed on the shared hosted PsyNeuView.</div>;
   }
   return (
     <div style={{ marginTop: 8 }}>
@@ -462,7 +462,7 @@ function AddCatalogRow() {
 }
 
 const fieldStyle: React.CSSProperties = {
-  fontSize: 12, padding: "2px 6px", border: "1px solid var(--pnv-border-light)", borderRadius: 3, minWidth: 0,
+  fontSize: "var(--pnv-fs-12)", padding: "2px 6px", border: "1px solid var(--pnv-border-light)", borderRadius: 3, minWidth: 0,
 };
 
 /**
@@ -530,7 +530,7 @@ function MoveProjectFolderDialog({
         style={{ background: "var(--pnv-surface)", borderRadius: 12, width: "92%", maxWidth: 560, display: "flex", flexDirection: "column", boxShadow: "var(--pnv-shadow-dialog)", overflow: "hidden" }}
       >
         <DialogHeader title="Move My Project Folder" titleId="move-project-folder-title" onClose={onClose} />
-        <div style={{ padding: "14px 20px", fontSize: 13, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ padding: "14px 20px", fontSize: "var(--pnv-fs-13)", display: "flex", flexDirection: "column", gap: 10 }}>
           <div>
             <div style={mutedStyle}>From</div>
             <PathBox path={from} />

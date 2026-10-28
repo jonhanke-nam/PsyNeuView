@@ -12,7 +12,7 @@ const crumbStyle: React.CSSProperties = {
   background: "none",
   border: "none",
   padding: "2px 4px",
-  fontSize: 12,
+  fontSize: "var(--pnv-fs-12)",
   color: "var(--pnv-primary-deep)",
   fontWeight: 600,
 };
@@ -52,9 +52,9 @@ export function FocusBreadcrumb() {
         const isLast = i === focusPath.length - 1;
         return (
           <span key={crumb.name} style={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <span style={{ color: "var(--pnv-text-faint)", fontSize: 12 }}>›</span>
+            <span style={{ color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-12)" }}>›</span>
             {isLast ? (
-              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--pnv-node-text-strong)", padding: "2px 4px" }}>
+              <span style={{ fontSize: "var(--pnv-fs-12)", fontWeight: 700, color: "var(--pnv-node-text-strong)", padding: "2px 4px" }}>
                 {crumb.label}
               </span>
             ) : (

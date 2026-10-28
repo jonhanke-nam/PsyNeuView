@@ -59,12 +59,12 @@ export function ExternalChangeModal({ filePath, onLoadFromDisk, onKeepMyEdits }:
       >
         <DialogHeader title={`${fileName} changed on disk`} titleId="external-change-title" onClose={onKeepMyEdits} />
         <div style={{ padding: "16px 28px 24px" }}>
-          <div style={{ fontSize: 13, color: "var(--pnv-text-body)", lineHeight: 1.55, marginBottom: 6 }}>
+          <div style={{ fontSize: "var(--pnv-fs-13)", color: "var(--pnv-text-body)", lineHeight: 1.55, marginBottom: 6 }}>
             Another editor saved this file while you have unsaved changes here, so
             there are two different versions of the model and only you know which
             one you want.
           </div>
-          <ul style={{ fontSize: 13, color: "var(--pnv-text-body)", lineHeight: 1.55, margin: "0 0 18px 18px", padding: 0 }}>
+          <ul style={{ fontSize: "var(--pnv-fs-13)", color: "var(--pnv-text-body)", lineHeight: 1.55, margin: "0 0 18px 18px", padding: 0 }}>
             <li>
               <strong>Load from disk</strong> — take the other editor's version.
               Your unsaved changes here are discarded.

@@ -239,7 +239,7 @@ export function TourBar() {
         background: "var(--pnv-walkthrough-bg)",
         // Reading size (#5): the instruction is the text a learner reads, at
         // the app's body size; the caption one step below it.
-        fontSize: 15,
+        fontSize: "var(--pnv-fs-15)",
         color: "var(--pnv-walkthrough-text)",
         // Above Settings and the other dialogs (zIndex 10000): a walkthrough
         // about Settings needs its bar while Settings is open.
@@ -249,7 +249,7 @@ export function TourBar() {
     >
       {/* The title may wrap (#84): kept on one line, a long one pushed the
           buttons onto a row of their own in a narrow window. */}
-      <span data-testid="tour-title" style={{ flex: "0 1 auto", minWidth: 0, maxWidth: "40ch", fontSize: 13, fontWeight: 600, color: "var(--pnv-walkthrough-label)" }}>
+      <span data-testid="tour-title" style={{ flex: "0 1 auto", minWidth: 0, maxWidth: "40ch", fontSize: "var(--pnv-fs-13)", fontWeight: 600, color: "var(--pnv-walkthrough-label)" }}>
         {walkthrough.title}
       </span>
 
@@ -268,7 +268,7 @@ export function TourBar() {
         ))}
       </span>
 
-      <span style={{ fontSize: 13, color: "var(--pnv-walkthrough-label)", whiteSpace: "nowrap" }}>
+      <span style={{ fontSize: "var(--pnv-fs-13)", color: "var(--pnv-walkthrough-label)", whiteSpace: "nowrap" }}>
         {finished ? "complete" : `step ${stepIndex + 1} of ${walkthrough.steps.length}`}
       </span>
 
@@ -279,7 +279,7 @@ export function TourBar() {
         <span
           data-testid="tour-instruction"
           data-role={leads ? "details" : "lead"}
-          style={{ display: "block", ...(leads ? { fontSize: 13, color: "var(--pnv-walkthrough-caption)", marginTop: 2 } : {}) }}
+          style={{ display: "block", ...(leads ? { fontSize: "var(--pnv-fs-13)", color: "var(--pnv-walkthrough-caption)", marginTop: 2 } : {}) }}
         >
           {instruction}
           {/* #1393: a boxed, red warning with a sign, so it doesn't read as
@@ -294,7 +294,7 @@ export function TourBar() {
                 alignItems: "flex-start",
                 marginTop: 3,
                 padding: "2px 8px",
-                fontSize: 14,
+                fontSize: "var(--pnv-fs-14)",
                 color: "var(--pnv-danger)",
                 background: "var(--pnv-danger-tint)",
                 border: "1px solid var(--pnv-danger)",
@@ -335,7 +335,7 @@ export function TourBar() {
                     // italics (the cue testers found, #93), lit while read.
                     order: -1,
                     display: "block",
-                    fontSize: 15,
+                    fontSize: "var(--pnv-fs-15)",
                     fontStyle: "italic",
                     color: "var(--pnv-walkthrough-text)",
                     padding: "1px 6px",
@@ -344,7 +344,7 @@ export function TourBar() {
                     background: speaking ? "var(--pnv-primary-tint)" : "transparent",
                     transition: "background 150ms ease",
                   }
-                : { display: "block", fontSize: 14, color: "var(--pnv-walkthrough-caption)", marginTop: 2, fontStyle: "italic" }
+                : { display: "block", fontSize: "var(--pnv-fs-14)", color: "var(--pnv-walkthrough-caption)", marginTop: 2, fontStyle: "italic" }
             }
           >
             {/* With narration on, the line is headed "Narration" (#93): a
@@ -362,7 +362,7 @@ export function TourBar() {
               >
                 <span style={{ fontWeight: 700 }}>Narration</span>
                 {voice && (
-                  <span data-testid="tour-caption-voice" style={{ fontSize: 12, color: "var(--pnv-walkthrough-caption)" }}>
+                  <span data-testid="tour-caption-voice" style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-walkthrough-caption)" }}>
                     {" "}({voice})
                   </span>
                 )}
@@ -373,7 +373,7 @@ export function TourBar() {
           </span>
         )}
         {docs.length > 0 && (
-          <span data-testid="tour-docs" style={{ display: "block", fontSize: 12, color: "var(--pnv-walkthrough-docs)", marginTop: 2 }}>
+          <span data-testid="tour-docs" style={{ display: "block", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-walkthrough-docs)", marginTop: 2 }}>
             Based on:{" "}
             {docs.map((d, i) => (
               <span key={d}>
@@ -486,6 +486,6 @@ const barButton: React.CSSProperties = {
   border: "1px solid var(--pnv-walkthrough-border)",
   background: "var(--pnv-surface)",
   cursor: "pointer",
-  fontSize: 13,
+  fontSize: "var(--pnv-fs-13)",
   color: "var(--pnv-walkthrough-text)",
 };

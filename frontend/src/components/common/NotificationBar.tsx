@@ -60,7 +60,7 @@ export function NotificationBar() {
               border: `1px solid ${style.border}`,
               borderRadius: 6,
               color: style.color,
-              fontSize: 12,
+              fontSize: "var(--pnv-fs-12)",
               boxShadow: "var(--pnv-shadow-float)",
               animation: "notifSlideIn 0.2s ease-out",
             }}

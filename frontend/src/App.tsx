@@ -37,6 +37,8 @@ import { useNotificationStore } from "./stores/notificationStore";
 import { useLayoutStore } from "./stores/layoutStore";
 import { importModelFiles } from "./utils/importModelFiles";
 import { installDiagnostics, noteUiFact } from "./utils/diagnostics";
+// #111: loading the store puts the remembered text size on <html> at startup.
+import "./stores/textSizeStore";
 
 type BottomTab = "inspector" | "scheduler" | "run" | "learn" | "runstate" | "showgraph" | "style";
 
@@ -137,7 +139,7 @@ export default function App() {
               justifyContent: "center",
             }}
           >
-            <div style={{ fontSize: 18, fontWeight: 600, color: "var(--pnv-primary)", pointerEvents: "none" }}>
+            <div style={{ fontSize: "var(--pnv-fs-18)", fontWeight: 600, color: "var(--pnv-primary)", pointerEvents: "none" }}>
               Drop .py or .pnlproject file to import
             </div>
           </div>
@@ -247,7 +249,7 @@ export default function App() {
                           marginLeft: "auto",
                           marginRight: 6,
                           padding: "2px 8px",
-                          fontSize: 13,
+                          fontSize: "var(--pnv-fs-13)",
                           lineHeight: 1,
                           color: "var(--pnv-text-hint)",
                           background: "none",
@@ -329,7 +331,7 @@ function TabButton({
       data-testid={`tab-${label.toLowerCase().replace(/\s+/g, "-")}`}
       style={{
         padding: "6px 16px",
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
         fontWeight: active ? 600 : 400,
         color: active ? "var(--pnv-primary)" : "var(--pnv-text-muted)",
         background: "none",

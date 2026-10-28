@@ -43,7 +43,7 @@ export function PresenceIndicator() {
         "one model can run at a time."
       }
       style={{
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
         color: "var(--pnv-text-muted)",
         whiteSpace: "nowrap",
         display: "inline-flex",

@@ -177,7 +177,7 @@ export function GSCEdge({
             position: "absolute",
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             pointerEvents: "all",
-            fontSize: 10,
+            fontSize: "var(--pnv-fs-10)",
             fontWeight: 600,
             fontFamily: "monospace",
             color: "var(--pnv-on-primary)",

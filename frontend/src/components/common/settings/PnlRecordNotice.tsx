@@ -51,7 +51,7 @@ export function PnlRecordNotice({ currentPnl }: { currentPnl: PsyNeuLinkInfo }) 
       data-testid="pnl-record-mismatch"
       role="status"
       style={{
-        fontSize: 12,
+        fontSize: "var(--pnv-fs-12)",
         padding: "8px 10px",
         borderRadius: 5,
         background: "var(--pnv-warning-tint)",

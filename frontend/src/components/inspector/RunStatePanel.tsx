@@ -156,7 +156,7 @@ export function RunStatePanel() {
 
   if (totalSteps === 0) {
     return (
-      <div style={{ padding: 16, color: "var(--pnv-text-hint)", fontSize: 13 }}>
+      <div style={{ padding: 16, color: "var(--pnv-text-hint)", fontSize: "var(--pnv-fs-13)" }}>
         Run a model and step through the trace to see what's happening at
         each scheduler step.
       </div>
@@ -165,7 +165,7 @@ export function RunStatePanel() {
 
   if (traceStep === null) {
     return (
-      <div style={{ padding: 16, color: "var(--pnv-text-hint)", fontSize: 13 }}>
+      <div style={{ padding: 16, color: "var(--pnv-text-hint)", fontSize: "var(--pnv-fs-13)" }}>
         No active trace step. Use the trace bar's ▶ to step forward.
       </div>
     );
@@ -177,10 +177,10 @@ export function RunStatePanel() {
   );
 
   return (
-    <div style={{ padding: "12px 16px", fontSize: 13, lineHeight: 1.5 }}>
+    <div style={{ padding: "12px 16px", fontSize: "var(--pnv-fs-13)", lineHeight: 1.5 }}>
       <div
         style={{
-          fontSize: 12,
+          fontSize: "var(--pnv-fs-12)",
           fontWeight: 700,
           color: "var(--pnv-text-body)",
           marginBottom: 8,
@@ -196,7 +196,7 @@ export function RunStatePanel() {
           Step <b>{traceStep + 1}</b> of {totalSteps}
         </div>
         {hasTrialNav && currentTrial !== null && stepInTrial !== null && (
-          <div style={{ fontFamily: "monospace", color: "var(--pnv-text-muted)", fontSize: 12 }}>
+          <div style={{ fontFamily: "monospace", color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-12)" }}>
             Trial <b>{currentTrial + 1}</b> of {trialBoundaries.length}
             {" · "}step {stepInTrial + 1} of {stepsThisTrial}
           </div>
@@ -205,7 +205,7 @@ export function RunStatePanel() {
 
       {/* Category */}
       <div style={{ marginBottom: 12 }}>
-        <span style={{ color: "var(--pnv-text-muted)", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.3 }}>
+        <span style={{ color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-11)", textTransform: "uppercase", letterSpacing: 0.3 }}>
           Category
         </span>
         <div style={{ fontFamily: "monospace", color: "var(--pnv-primary)", fontWeight: 600 }}>
@@ -215,7 +215,7 @@ export function RunStatePanel() {
 
       {/* Active nodes */}
       <div style={{ marginBottom: 12 }}>
-        <span style={{ color: "var(--pnv-text-muted)", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.3 }}>
+        <span style={{ color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-11)", textTransform: "uppercase", letterSpacing: 0.3 }}>
           Active nodes
         </span>
         <div style={{ fontFamily: "monospace", color: "var(--pnv-text-body)" }}>
@@ -225,7 +225,7 @@ export function RunStatePanel() {
 
       {/* Per-node values */}
       <div style={{ marginBottom: 12 }}>
-        <span style={{ color: "var(--pnv-text-muted)", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.3 }}>
+        <span style={{ color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-11)", textTransform: "uppercase", letterSpacing: 0.3 }}>
           Values at this step
         </span>
         {valuesAtStep && Object.keys(valuesAtStep).length > 0 ? (
@@ -233,7 +233,7 @@ export function RunStatePanel() {
             style={{
               width: "100%",
               fontFamily: "monospace",
-              fontSize: 12,
+              fontSize: "var(--pnv-fs-12)",
               borderCollapse: "collapse",
               marginTop: 4,
             }}
@@ -301,7 +301,7 @@ export function RunStatePanel() {
             </tbody>
           </table>
         ) : (
-          <div style={{ color: "var(--pnv-text-faint)", fontSize: 12, fontStyle: "italic" }}>
+          <div style={{ color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-12)", fontStyle: "italic" }}>
             No per-node values captured. Either the PsyNeuLink build lacks
             the <code>_debugger</code> hook, or this step boundary doesn't
             include <code>NODE_EXECUTION</code> snapshots.
@@ -325,7 +325,7 @@ export function RunStatePanel() {
           onToggle={(e) => setQueueOpen((e.currentTarget as HTMLDetailsElement).open)}
           style={{ marginBottom: 12 }}
         >
-          <summary style={{ cursor: "pointer", color: "var(--pnv-text-muted)", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.3 }}>
+          <summary style={{ cursor: "pointer", color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-11)", textTransform: "uppercase", letterSpacing: 0.3 }}>
             Consideration queue ({considerationQueue.length} phase{considerationQueue.length === 1 ? "" : "s"}
             {activePhaseIdx !== -1 ? ` — phase ${activePhaseIdx + 1} firing now` : ""})
           </summary>
@@ -335,7 +335,7 @@ export function RunStatePanel() {
                 <span
                   style={{
                     fontFamily: "monospace",
-                    fontSize: 11,
+                    fontSize: "var(--pnv-fs-11)",
                     color: "var(--pnv-text-faint)",
                     flexShrink: 0,
                     minWidth: 28,
@@ -357,7 +357,7 @@ export function RunStatePanel() {
                         : "pending";
                     const style: CSSProperties = {
                       fontFamily: "monospace",
-                      fontSize: 11,
+                      fontSize: "var(--pnv-fs-11)",
                       padding: "1px 6px",
                       borderRadius: 3,
                       ...(status === "active"
@@ -380,7 +380,7 @@ export function RunStatePanel() {
               </div>
             ))}
           </div>
-          <div style={{ marginTop: 6, display: "flex", gap: 12, fontSize: 10, color: "var(--pnv-text-hint)" }}>
+          <div style={{ marginTop: 6, display: "flex", gap: 12, fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-hint)" }}>
             <span><span style={{ display: "inline-block", width: 8, height: 8, background: "var(--pnv-trace-value)", borderRadius: 2, marginRight: 4 }} />firing now</span>
             <span><span style={{ display: "inline-block", width: 8, height: 8, background: "var(--pnv-surface-sunken)", border: "1px solid var(--pnv-border-light)", borderRadius: 2, marginRight: 4 }} />fired</span>
             <span><span style={{ display: "inline-block", width: 8, height: 8, border: "1px solid var(--pnv-border)", borderRadius: 2, marginRight: 4 }} />pending</span>
@@ -391,12 +391,12 @@ export function RunStatePanel() {
       {/* Raw snapshot rows — fallback for everything not yet labeled */}
       {snapshotsAtStep.length > 0 && (
         <details style={{ marginTop: 8 }}>
-          <summary style={{ cursor: "pointer", color: "var(--pnv-text-muted)", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.3 }}>
+          <summary style={{ cursor: "pointer", color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-11)", textTransform: "uppercase", letterSpacing: 0.3 }}>
             Raw snapshots at this step ({snapshotsAtStep.length})
           </summary>
           <pre
             style={{
-              fontSize: 11,
+              fontSize: "var(--pnv-fs-11)",
               fontFamily: "monospace",
               background: "var(--pnv-surface-muted)",
               border: "1px solid var(--pnv-border-faint)",

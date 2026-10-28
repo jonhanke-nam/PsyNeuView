@@ -106,13 +106,13 @@ function RevertToSave({ filePath, target }: { filePath: string; target: RevertTa
         }}
       >
         <DialogHeader title={`Revert the file to the save of ${when}`} titleId="revert-to-save-title" onClose={hide}>
-          <span style={{ fontSize: 12, color: "var(--pnv-text-muted)", fontFamily: MONO }} title={filePath}>
+          <span style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", fontFamily: MONO }} title={filePath}>
             {fileName}
           </span>
         </DialogHeader>
 
         <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--pnv-border-faint)", display: "flex", flexDirection: "column", gap: 8 }}>
-          <div data-testid="revert-to-save-explain" style={{ fontSize: 13, lineHeight: 1.5, color: "var(--pnv-text-body)" }}>
+          <div data-testid="revert-to-save-explain" style={{ fontSize: "var(--pnv-fs-13)", lineHeight: 1.5, color: "var(--pnv-text-body)" }}>
             The file on disk and the editor will both hold the version you saved at <strong>{when}</strong>
             {target.mark.kind === "auto" ? " (autosaved)" : ""}.
             {" "}What the editor holds now stays in History: Undo brings it back.
@@ -122,7 +122,7 @@ function RevertToSave({ filePath, target }: { filePath: string; target: RevertTa
             <div
               data-testid="revert-to-save-outside"
               style={{
-                fontSize: 13, lineHeight: 1.5, padding: "8px 12px", borderRadius: 6,
+                fontSize: "var(--pnv-fs-13)", lineHeight: 1.5, padding: "8px 12px", borderRadius: 6,
                 color: "var(--pnv-text-body)", background: "var(--pnv-warning-tint)", border: "1px solid var(--pnv-warning-border)",
               }}
             >
@@ -134,14 +134,14 @@ function RevertToSave({ filePath, target }: { filePath: string; target: RevertTa
             <div
               data-testid="revert-to-save-blocked"
               style={{
-                fontSize: 13, lineHeight: 1.5, padding: "8px 12px", borderRadius: 6,
+                fontSize: "var(--pnv-fs-13)", lineHeight: 1.5, padding: "8px 12px", borderRadius: 6,
                 color: "var(--pnv-text-body)", background: "var(--pnv-warning-tint)", border: "1px solid var(--pnv-warning-border)",
               }}
             >
               {revertBlockReason(block)}
             </div>
           )}
-          <div data-testid="revert-to-save-summary" style={{ fontSize: 14, fontWeight: 600, color: "var(--pnv-text)" }}>
+          <div data-testid="revert-to-save-summary" style={{ fontSize: "var(--pnv-fs-14)", fontWeight: 600, color: "var(--pnv-text)" }}>
             {disk.state === "loading" && "Reading the file on disk…"}
             {disk.state === "error" && (
               <span style={{ color: "var(--pnv-danger)" }}>Could not read the file on disk ({disk.message}).</span>
@@ -149,7 +149,7 @@ function RevertToSave({ filePath, target }: { filePath: string; target: RevertTa
             {counts && (
               <>
                 <span>{describeChanges(counts)}</span>
-                <span style={{ fontWeight: 400, fontSize: 12, color: "var(--pnv-text-muted)", marginLeft: 8 }}>
+                <span style={{ fontWeight: 400, fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", marginLeft: 8 }}>
                   {changes === 0
                     ? "The file on disk already holds this version."
                     : "in the file on disk, if you revert"}
@@ -160,11 +160,11 @@ function RevertToSave({ filePath, target }: { filePath: string; target: RevertTa
         </div>
 
         {counts && changes > 0 && (
-          <div style={{ overflow: "auto", fontFamily: MONO, fontSize: 12.5 }}>
+          <div style={{ overflow: "auto", fontFamily: MONO, fontSize: "var(--pnv-fs-12_5)" }}>
             <div
               style={{
                 display: "flex", position: "sticky", top: 0, zIndex: 1, background: "var(--pnv-surface-muted)",
-                borderBottom: "1px solid var(--pnv-border-faint)", fontSize: 11, color: "var(--pnv-text-muted)",
+                borderBottom: "1px solid var(--pnv-border-faint)", fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)",
                 fontFamily: "inherit",
               }}
             >

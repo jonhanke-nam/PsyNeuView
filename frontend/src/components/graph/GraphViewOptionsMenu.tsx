@@ -131,7 +131,7 @@ export function GraphViewOptionsMenu({ reloadModel, flipVertical, flipHorizontal
         aria-haspopup="dialog"
         aria-expanded={open}
         style={{
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           padding: "3px 8px",
           ...toggleColours(open),
           borderRadius: 4,
@@ -362,7 +362,7 @@ function LinesGroup({ onOpenSettings }: { onOpenSettings: () => void }) {
             onOpenSettings();
             openSettings("appearance");
           }}
-          style={{ fontSize: 12 }}
+          style={{ fontSize: "var(--pnv-fs-12)" }}
         >
           Scheduling arrows…
         </Button>
@@ -418,7 +418,7 @@ function Group({ title, note, children }: { title: string; note?: string; childr
     <section style={{ marginTop: 8 }}>
       <div
         style={{
-          fontSize: 11,
+          fontSize: "var(--pnv-fs-11)",
           fontWeight: 600,
           color: "var(--pnv-text-secondary)",
           textTransform: "uppercase",
@@ -465,7 +465,7 @@ function Toggle({
         style={{ margin: "2px 0 0", flexShrink: 0, cursor: "pointer" }}
       />
       <span style={{ minWidth: 0 }}>
-        <span style={{ display: "block", fontSize: 12, color: "var(--pnv-text)" }}>{label}</span>
+        <span style={{ display: "block", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text)" }}>{label}</span>
         <span style={hintStyle}>{hint}</span>
       </span>
     </label>
@@ -477,7 +477,7 @@ function Choice({ label, hint, htmlFor, children }: { label: string; hint: strin
   return (
     <div style={{ ...rowStyle, cursor: "default", alignItems: "center", justifyContent: "space-between" }}>
       <label htmlFor={htmlFor} style={{ minWidth: 0, cursor: "pointer" }}>
-        <span style={{ display: "block", fontSize: 12, color: "var(--pnv-text)" }}>{label}</span>
+        <span style={{ display: "block", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text)" }}>{label}</span>
         <span style={hintStyle}>{hint}</span>
       </label>
       {children}
@@ -505,14 +505,14 @@ const rowStyle: CSSProperties = {
 
 const hintStyle: CSSProperties = {
   display: "block",
-  fontSize: 11,
+  fontSize: "var(--pnv-fs-11)",
   lineHeight: 1.3,
   color: "var(--pnv-text-muted)",
 };
 
 function selectStyle(enabled: boolean): CSSProperties {
   return {
-    fontSize: 11,
+    fontSize: "var(--pnv-fs-11)",
     padding: "2px 4px",
     border: "1px solid var(--pnv-border)",
     borderRadius: 4,
