@@ -3147,7 +3147,7 @@ function ManagedSourceBadge({ from, title, style }: { from: string; title?: stri
             top: "calc(100% + 4px)",
             left: 0,
             // Above the panel dividers (Allotment sashes, z-index 35), like the Open menu (#1391).
-            zIndex: 1000,
+            zIndex: Z_MENU,
             width: 320,
             display: "flex",
             flexDirection: "column",

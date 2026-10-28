@@ -13,6 +13,7 @@ test("the Tutorials, Open and Layout menus open above the walkthrough ring", { t
   await page.goto("/?tour=orientation-window");
   await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 30_000 });
   await page.getByTestId("tour-next").click(); // step 2 rings the code editor, under the menus
+  await expect(page.getByTestId("tour-bar")).toContainText("step 2 of");
   await expect(page.getByTestId("tour-highlight")).toBeVisible();
 
   for (const [button, list] of [
@@ -28,12 +29,17 @@ test("the Tutorials, Open and Layout menus open above the walkthrough ring", { t
       const ring = document.querySelector('[data-testid="tour-highlight"]') as HTMLElement;
       overlay.style.pointerEvents = "auto";
       ring.style.pointerEvents = "auto";
-      const items = Array.from(document.querySelectorAll(`[data-testid="${listId}"] [role="menuitem"], [data-testid="${listId}"] button`));
+      const list = document.querySelector(`[data-testid="${listId}"]`) as HTMLElement;
+      const box = list.getBoundingClientRect();
+      const items = Array.from(list.querySelectorAll('[role="menuitem"], button'));
       const bad: string[] = [];
       for (const it of items) {
         const r = it.getBoundingClientRect();
         if (!r.width) continue;
-        const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        // Only items shown: one scrolled past the menu's own edge isn't drawn.
+        const x = r.left + r.width / 2, y = r.top + r.height / 2;
+        if (y < box.top || y > box.bottom || y > window.innerHeight) continue;
+        const top = document.elementFromPoint(x, y);
         if (top && overlay.contains(top)) bad.push((it.textContent ?? "").trim().slice(0, 40));
       }
       overlay.style.pointerEvents = "";
