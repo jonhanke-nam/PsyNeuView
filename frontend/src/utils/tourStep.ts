@@ -35,6 +35,7 @@ import pnlProjectionsYaml from "@/walkthroughs/pnl-projections.yaml?raw";
 import pnlMiniStroopYaml from "@/walkthroughs/pnl-mini-stroop.yaml?raw";
 import pnlSimpleConfigurationsYaml from "@/walkthroughs/pnl-simple-configurations.yaml?raw";
 import pnlElaborateConfigurationsYaml from "@/walkthroughs/pnl-elaborate-configurations.yaml?raw";
+import pnlDynamicsOfExecutionYaml from "@/walkthroughs/pnl-dynamics-of-execution.yaml?raw";
 import demoYaml from "@/walkthroughs/demo.yaml?raw";
 import runYaml from "@/walkthroughs/run.yaml?raw";
 import semanticYaml from "@/walkthroughs/semantic.yaml?raw";
@@ -586,6 +587,7 @@ export const WALKTHROUGHS: Record<string, Walkthrough> = {
   "pnl-mini-stroop": parseWalkthrough(pnlMiniStroopYaml),
   "pnl-simple-configurations": parseWalkthrough(pnlSimpleConfigurationsYaml),
   "pnl-elaborate-configurations": parseWalkthrough(pnlElaborateConfigurationsYaml),
+  "pnl-dynamics-of-execution": parseWalkthrough(pnlDynamicsOfExecutionYaml),
   "orientation-window": parseWalkthrough(orientationWindowYaml),
   "orientation-open": parseWalkthrough(orientationOpenYaml),
   "orientation-editing": parseWalkthrough(orientationEditingYaml),

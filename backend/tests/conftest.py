@@ -43,6 +43,13 @@ def _isolate_user_preferences(tmp_path, monkeypatch):
     from app.services.app_config import CONFIG_ENV
 
     monkeypatch.setenv(CONFIG_ENV, str(tmp_path / "user-prefs.json"))
+    # And no PsyNeuLink update checks (#9). A test that starts the app with its
+    # lifespan (TestClient) started the check scheduler, whose first check
+    # finished a network round trip later, inside some other test, and wrote
+    # `pnl_update_state` to whatever preferences file was current: the real one,
+    # when that test had unset the override. Tests of the checks themselves
+    # call them directly, or set this back.
+    monkeypatch.setenv("PSYNEUVIEW_PNL_UPDATE_CHECKS", "0")
     yield
 
 
