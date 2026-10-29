@@ -167,6 +167,7 @@ export function applyDagreLayout(
         source: e.source,
         target: e.target,
         feedback: Boolean((e.data as { feedback?: boolean } | undefined)?.feedback),
+        control: (e.data as { type?: string } | undefined)?.type === "ControlProjection",
       })),
   );
   // #25: an open (nested) composition is a cluster in Dagre's compound graph,

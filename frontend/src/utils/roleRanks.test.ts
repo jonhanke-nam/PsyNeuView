@@ -8,6 +8,26 @@ const e = (source: string, target: string, feedback = false): RankEdge => ({
 });
 
 describe("acyclicEdges", () => {
+  it("breaks a control loop at the control projection, not the task's own edges (#9)", () => {
+    // TASK feeds HIDDEN feeds OUTPUT; OUTPUT feeds MONITOR feeds CONTROL; CONTROL modulates TASK.
+    const nodes = ["CONTROL", "INPUT", "OUTPUT", "MONITOR", "TASK", "HIDDEN"].map((id) => n(id));
+    const control: RankEdge = { source: "CONTROL", target: "TASK", control: true };
+    const kept = acyclicEdges(nodes, [
+      control,
+      e("INPUT", "HIDDEN"),
+      e("HIDDEN", "OUTPUT"),
+      e("OUTPUT", "MONITOR"),
+      e("MONITOR", "CONTROL"),
+      e("TASK", "HIDDEN"),
+    ]);
+    expect(kept).toContainEqual(e("TASK", "HIDDEN"));
+    expect(kept).not.toContainEqual(control);
+  });
+  it("keeps a control projection that closes no cycle", () => {
+    const control: RankEdge = { source: "LC", target: "A", control: true };
+    expect(acyclicEdges([n("LC"), n("A")], [control])).toContainEqual(control);
+  });
+
   it("drops edges marked as feedback", () => {
     const kept = acyclicEdges([n("a"), n("b")], [e("a", "b"), e("b", "a", true)]);
     expect(kept).toHaveLength(1);

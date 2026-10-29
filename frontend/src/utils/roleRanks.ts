@@ -35,6 +35,11 @@ export interface RankEdge {
   target: string;
   /** True for a feedback projection — excluded when measuring depth. */
   feedback?: boolean;
+  /**
+   * True for a ControlProjection. Control acts on the next trial, so where a
+   * cycle runs through one, it is the edge that gives way (#9).
+   */
+  control?: boolean;
 }
 
 export interface RankResult {
@@ -55,9 +60,47 @@ const has = (node: RankNode, names: string[]) =>
  * cycle would make depth undefined for the whole component. Detected by a
  * depth-first walk, dropping the edge that returns to a node still on the
  * stack.
+ *
+ * Control projections are added last, each only if it closes no cycle. Walked
+ * with the rest, a control loop (OUTPUT → conflict monitor → CONTROL → TASK →
+ * the hidden layers → OUTPUT) was entered through CONTROL, and the walk
+ * dropped the task's own data-flow edges instead, putting TASK above the
+ * layers it feeds (#9).
  */
 export function acyclicEdges(nodes: RankNode[], edges: RankEdge[]): RankEdge[] {
-  const candidates = edges.filter((e) => !e.feedback && e.source !== e.target);
+  const candidates = edges.filter((e) => !e.feedback && !e.control && e.source !== e.target);
+  const kept = walkAcyclic(nodes, candidates);
+  for (const e of edges) {
+    if (!e.control || e.feedback || e.source === e.target) continue;
+    if (!reaches(kept, e.target, e.source)) kept.push(e);
+  }
+  return kept;
+}
+
+/** Whether `to` can be reached from `from` along these edges. */
+function reaches(edges: RankEdge[], from: string, to: string): boolean {
+  const out = new Map<string, string[]>();
+  for (const e of edges) {
+    if (!out.has(e.source)) out.set(e.source, []);
+    out.get(e.source)!.push(e.target);
+  }
+  const seen = new Set([from]);
+  const stack = [from];
+  while (stack.length) {
+    const id = stack.pop()!;
+    if (id === to) return true;
+    for (const next of out.get(id) ?? []) {
+      if (!seen.has(next)) {
+        seen.add(next);
+        stack.push(next);
+      }
+    }
+  }
+  return false;
+}
+
+/** The depth-first walk: keeps each edge unless it returns to a node on the stack. */
+function walkAcyclic(nodes: RankNode[], candidates: RankEdge[]): RankEdge[] {
   const out = new Map<string, RankEdge[]>();
   for (const e of candidates) {
     if (!out.has(e.source)) out.set(e.source, []);
