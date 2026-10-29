@@ -37,7 +37,7 @@ rows with a `?tour=` are built.
 | 2 | From nodes to graphs — a composition | Tutorial: *From Nodes to Graphs: Compositions* | `pnl-composition` | **Build** from New Model, select the projection, **run** 4 and a five-trial sweep, give both nodes **two units**, make it Logistic, run x and 3x, and the step mechanism |
 | 3 | Adding projections — the mapping matrix | Tutorial: *Adding Projections* | `pnl-projections` | **Build** from New Model: a Linear unit (slope 2, intercept 2) into a Logistic one; click the arrow for the **identity matrix**; **run** the sweep; write **0.5** into the matrix (the explicit `MappingProjection`) and run again |
 | 4 | The mini Stroop model | Tutorial: *Compositions*, *Mini-Stroop Model* | `pnl-mini-stroop` | **Build** from New Model: add a third node from the palette and **name** it words; give all three **two units**; make the response Logistic and words' slope 1.5; **join** words to the response with a MappingProjection from the palette; **run** a congruent and an incongruent trial |
-| 5 | The pre-trained Stroop model | Tutorial: *Pre-trained Complete Stroop Model* | | The Cohen et al. (1990) network with its weights written in; task demand; the eight input combinations |
+| 5 | The pre-trained Stroop model — Cohen, Dunbar and McClelland (1990) | Tutorial: *Pre-trained Complete Stroop Model* | `pnl-pretrained-stroop` | **Open** the Pretrained Stroop demo; see the **hidden** layer's two pairs and the stronger **word** weights; **run** the notebook's input (red, weakly: 0.55) and **all eight** combinations (naming the ink 1.53 vs 0.55; reading 2.34 vs 1.97) |
 | 6 | Constructing compositions | Tutorial: *Constructing Compositions* | | Lines of two and three layers, a recurrent pathway, several hidden layers, and what each graph looks like |
 | 7 | Simple configurations — a network from a pathway | Primer: *Simple Configurations* | `pnl-simple-configurations` | **Open** the Simple Configurations demo, the Primer's 5-2-5 network from a pathway; click the arrow **PsyNeuLink made** (full connectivity, all 1s); **run** the Primer's input and five zeros; write a **matrix into the pathway** and run again |
 | 8 | More elaborate configurations — the Stroop model | Primer: *More Elaborate Configurations* | `pnl-elaborate-configurations` | **Open** the Elaborate Configurations demo, the Primer's Stroop model from five pathway lists; click the **color** and **word** arrows (weights 2 and 3); see how the **task** input's 4 cancels the hidden layers' bias; **run** the Primer's congruent and incongruent trials (decision times 1.41 and 2.75), then **read the word** green in red ink (1.38) |
@@ -48,8 +48,8 @@ rows with a `?tour=` are built.
 | 13 | Learning — a network learns XOR by backpropagation | Primer: *Learning*, *LearningMechanisms* | `pnl-learning` | **Open** the XOR Learning demo; see the **learning components** one call made; **train** 250 epochs at the default rate (outputs stay near 0.5), raise the **learning rate** to 3 and train 300 (0.035, 0.96, 0.963, 0.044) |
 | 14 | Customization — a Python function as a mechanism's function | Primer: *Customization* | `pnl-customization` | **Open** the Customization demo; see the Primer's `my_sinusoidal_fct` wrapped as a **UserDefinedFunction**; **run** three points of the wave (1, 0, −1); set **amplitude=2** in the code and run again (2, 0, −2) |
 
-Lessons 5 and 6 are listed so the order is settled; they are not built
-yet, so lesson 7 follows lesson 4 in the menu for now. The
+Lesson 6 is listed so the order is settled; it is not built yet, so
+lesson 7 follows lesson 5 in the menu for now. The
 notebook's own ending, *Constructing Compositions*, says "more content is
 being added weekly", so the list may grow with it.
 
@@ -215,6 +215,33 @@ renaming in the Inspector changes a node's `name=`, not the Python variable
 that holds it, so the code still calls the word unit
 `New_TransferMechanism_1`. The pre-trained Stroop model that follows in the
 notebook is lesson 5.
+
+### 5. The pre-trained Stroop model — Cohen, Dunbar and McClelland (1990)
+
+Tutorial notebook, *Pre-trained Complete Stroop Model* (cells 39–43).
+Validated against PsyNeuLink 0.20.2.0.
+
+The demo, **Pretrained Stroop**, is the notebook's code and names:
+`Ink_Color`, `Word` and `Task` (two units each, Linear) into a four-unit
+`Hidden` layer (`Logistic`, bias −4) into `Output` (two units, Linear), with
+the weights the network would have learned written in. `Hidden`'s first two
+units carry the ink, its last two the word; the word's weights, **2.6** in
+and **2.5** out, are stronger than the ink's, 2.2 and 1.3, since reading is
+the more practised skill, and `Task` adds 4 to the pair it selects.
+
+The notebook's input, `notebook_input`, is red ink, the word blue, and
+`Task` **[1, 0]**, name the ink: `Output` is **[0.55, −0.55]**, red, weakly.
+(The notebook's text says the color task is [0, 1]; in its weights it is
+[1, 0], which the lesson follows.) Then `all_eight`, the combinations the
+notebook asks you to try: naming the ink, an agreeing word gives **1.53** and
+a disagreeing one **0.55**; reading the word, **2.34** and **1.97**. The word
+gets in the way of the ink, not the reverse. The tutorial spec and
+`backend/tests/test_demo_pretrained_stroop.py` assert every output.
+
+![All eight combinations, run](assets/tour/pnl-pretrained-stroop-step-6.png)
+
+**What stays in the notebook.** `show_graph` (the canvas) and
+`reportOutputPref` (the Run tab's results and trace).
 
 ### 7. Simple configurations — a network from a pathway
 
@@ -522,6 +549,9 @@ here) and the User's Guide.
       it adds and renames a node, joins it with a MappingProjection from the
       palette, and asserts both trials (congruent 0.5/0.924, incongruent
       0.731/0.818).
+- [x] Lesson 5 opens a bundled demo, the notebook's pre-trained Stroop
+      model (`pnl-pretrained-stroop.tutorial.spec.ts`): it asserts the
+      notebook's input (0.55) and all eight combinations.
 - [x] Lesson 7 opens a bundled demo, the Primer's network made from a
       pathway (`pnl-simple-configurations.tutorial.spec.ts`): it reads the
       two projections PsyNeuLink made (all 1s) and the matrix written into
@@ -557,7 +587,7 @@ here) and the User's Guide.
       (`pnl-customization.tutorial.spec.ts`): it asserts both runs (1, 0, −1;
       with amplitude 2, 2, 0, −2).
 - [x] Every step has a caption for narration.
-- [ ] **Not yet:** lessons 5 and 6. Each will be added in order, as a walkthrough
+- [ ] **Not yet:** lesson 6. Each will be added in order, as a walkthrough
       with a bundled demo where the model is too big to build by hand.
 
 ## Further reading
