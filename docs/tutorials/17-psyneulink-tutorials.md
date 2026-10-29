@@ -42,13 +42,13 @@ rows with a `?tour=` are built.
 | 7 | Simple configurations — a network from a pathway | Primer: *Simple Configurations* | `pnl-simple-configurations` | **Open** the Simple Configurations demo, the Primer's 5-2-5 network from a pathway; click the arrow **PsyNeuLink made** (full connectivity, all 1s); **run** the Primer's input and five zeros; write a **matrix into the pathway** and run again |
 | 8 | More elaborate configurations — the Stroop model | Primer: *More Elaborate Configurations* | `pnl-elaborate-configurations` | **Open** the Elaborate Configurations demo, the Primer's Stroop model from five pathway lists; click the **color** and **word** arrows (weights 2 and 3); see how the **task** input's 4 cancels the hidden layers' bias; **run** the Primer's congruent and incongruent trials (decision times 1.41 and 2.75), then **read the word** green in red ink (1.38) |
 | 9 | Dynamics of execution — time scales and conditions | Primer: *Dynamics of Execution* | `pnl-dynamics-of-execution` | **Open** the Dynamics of Execution demo, the Stroop model with a step-by-step decision; see in the **Scheduler** that a trial ends when the decision is finished; **run** with noise (a different step count each time), then without (59 incongruent, 25 congruent); make the task an **LCAMechanism** the hidden layers **wait** 10 executions for, and watch the word win (−20 in 57) |
-| 10 | Control | Primer: *Control* | | A `ControlMechanism` and what it modulates |
+| 10 | Control — a model that monitors its own conflict | Primer: *Control* | `pnl-control` | **Open** the Stroop With Control demo; see the **task** layer and the **Conflict Monitor** CONTROL listens to; **run** four incongruent trials (the chance of red creeps from 0.024 to 0.088), then **double** the conflict weight and run again (0.024, 0.136, 0.462, 0.682) |
 | 11 | Parameters | Primer: *Parameters* (accessing, setting, function and modulable parameters) | | Reading and changing parameters, in the Inspector and in code |
 | 12 | Displaying and logging values | Primer: *Displaying and Logging Values* | | Reports and logs, and the app's run results and trace |
 | 13 | Learning | Primer: *Learning*, *LearningMechanisms* | | A learning pathway and backpropagation |
 | 14 | Customization | Primer: *Customization* | | A user-defined function |
 
-Lessons 5, 6 and 10–14 are listed so the order is settled; they are not built
+Lessons 5, 6 and 11–14 are listed so the order is settled; they are not built
 yet, so lesson 7 follows lesson 4 in the menu for now. The
 notebook's own ending, *Constructing Compositions*, says "more content is
 being added weekly", so the list may grow with it.
@@ -355,6 +355,40 @@ the termination condition and every number above.
 a fixed count, with its `converge` function and a `When` condition, and the
 list of pre-defined Conditions. The walkthrough's last step says so.
 
+### 10. Control — a model that monitors its own conflict
+
+Basics and Primer, *Control*, and its script
+`Scripts/Examples/Basics And Primer/Stroop Model - Conflict Monitoring.py`.
+Validated against PsyNeuLink 0.20.2.0.
+
+The demo, **Stroop With Control**, is the script with its names: the Stroop
+model with a `TASK` layer, an `LCAMechanism` that settles for 10 executions
+before the hidden layers run (lesson 9), and a `ControlMechanism`, `CONTROL`,
+the composition's controller. Its `ObjectiveMechanism`, the **Conflict
+Monitor**, applies an `Energy` function to `OUTPUT`: with the matrix
+**[[0, −2.5], [−2.5, 0]]** that is 2.5 × red × green, high when both response
+units are active at once. `CONTROL` sets `TASK`'s gain from it, and runs at
+the end of each trial, so the conflict of one trial sets the instruction's
+strength on the next.
+
+The script's run, `stimuli`, is four incongruent trials, naming red ink
+printed as the word green. The conflict is **0.49**, **0.52**, **0.55** and
+**0.57**, and the chance of answering red rises only from **0.024** through
+0.038 and 0.061 to **0.088**: control helps, too slowly. Doubling the Energy
+weight to **[[0, −5], [−5, 0]]** gives the Primer's story: the first trial's
+conflict, **0.98**, sets twice the gain, and the chance of red goes 0.024,
+**0.136**, **0.462**, **0.682**. The Primer prints the model recovering by its
+third trial; PsyNeuLink 0.20.2.0 needs the doubled weight for that. (The
+Primer's text also resets the task at each trial; its script, which the demo
+follows, does not.) The tutorial spec and
+`backend/tests/test_demo_stroop_with_control.py` assert both runs.
+
+![The Conflict Monitor, selected](assets/tour/pnl-control-step-4.png)
+
+**What stays in the Primer.** The `call_after_trial` printout and the
+animation, which the Run tab's results and trace stand in for, and control
+that simulates to choose its allocation (the expected value of control).
+
 ---
 
 ## What you can expect
@@ -392,8 +426,12 @@ list of pre-defined Conditions. The walkthrough's last step says so.
       it reads the trial's termination condition and asserts the four runs
       (20 after some steps, with noise; 20 in 59 and in 25 without; −20 in 57,
       with the task at 0.61 / 0.39, once the hidden layers wait for it).
+- [x] Lesson 10 opens a bundled demo, the Stroop model with control
+      (`pnl-control.tutorial.spec.ts`): it reads the controller and asserts
+      both runs' conflict and chance of red (0.024 … 0.088; with the weight
+      doubled, 0.024 … 0.682).
 - [x] Every step has a caption for narration.
-- [ ] **Not yet:** lessons 5, 6 and 10–14. Each will be added in order, as a walkthrough
+- [ ] **Not yet:** lessons 5, 6 and 11–14. Each will be added in order, as a walkthrough
       with a bundled demo where the model is too big to build by hand.
 
 ## Further reading
