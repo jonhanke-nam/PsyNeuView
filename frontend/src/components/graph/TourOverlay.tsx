@@ -354,9 +354,22 @@ export function TourOverlay() {
  * where the gap is clear, or just inside its edge where it isn't. "Clear" means
  * that along the padded line, what's on top is a container round the whole
  * anchor (the background it sits on), not text or a neighbouring panel.
+ * Empty background counts as clear too (`isBackground`), so a panel whose
+ * neighbour's edge is only padding still gets its ring outside (#9).
  * `alsoClear` names more things the ring may cross: for a node, anything but
  * another node, since a side tucked inside the oval cuts it.
+ *
+ * Where the padded line is taken, the side first tries hugging the anchor,
+ * just outside its edge: between toolbar buttons a few pixels apart, the
+ * full pad lands on the next button. Then inside, where the anchor's edge is
+ * empty background. Then, looser, astride the edge or just inside it, over
+ * padding but never over letters (tabs packed tight). Failing all three, only an anchor big
+ * enough to hold the ring, a panel, has the side tucked inside; inside a
+ * button it cut through the label.
  */
+/** The smallest anchor, across, that a side of the ring may tuck inside. */
+const MIN_TUCKABLE = 80;
+
 export function ringSides(
   rect: Rect,
   pad: number,
@@ -365,23 +378,88 @@ export function ringSides(
   alsoClear: (el: Element) => boolean = () => false,
 ): Record<"top" | "right" | "bottom" | "left", number> {
   const inside = -(width + 2);
+  const hug = width + 2;
+  const roomInside = Math.min(rect.width, rect.height) >= MIN_TUCKABLE;
   const contains = (el: Element | null) => {
     if (!el) return true; // off the page: nothing to cross
     if (alsoClear(el)) return true;
+    if (isBackground(el)) return true;
     const b = el.getBoundingClientRect();
     return b.left <= rect.left + 1 && b.top <= rect.top + 1 && b.right >= rect.left + rect.width - 1 && b.bottom >= rect.top + rect.height - 1;
   };
-  const clear = (points: [number, number][]) => points.every(([x, y]) => contains(topAt(x, y)));
-  const along = (n: number, from: number, to: number) => Array.from({ length: n }, (_, i) => from + ((to - from) * (i + 0.5)) / n);
-  const xs = along(9, rect.left, rect.left + rect.width);
-  const ys = along(7, rect.top, rect.top + rect.height);
-  const l = rect.left - pad, r = rect.left + rect.width + pad, t = rect.top - pad, b = rect.top + rect.height + pad;
-  return {
-    top: clear(xs.map((x) => [x, t])) ? pad : inside,
-    bottom: clear(xs.map((x) => [x, b])) ? pad : inside,
-    left: clear(ys.map((y) => [l, y])) ? pad : inside,
-    right: clear(ys.map((y) => [r, y])) ? pad : inside,
+  // Looser: no letters and no field there, though it may be another
+  // button's padding. Used only where a stricter place can't be had.
+  const noGlyph = (x: number, y: number) => {
+    const el = topAt(x, y);
+    if (!el || contains(el)) return true;
+    if (typeof el.tagName === "string" && FIELD_TAGS.has(el.tagName.toLowerCase())) return false;
+    return !glyphAt(el, x, y);
   };
+  // A ring whose outer edge is `d` from the anchor covers `d - width` to `d`;
+  // both edges are checked.
+  const band = (line: (d: number) => [number, number][], d: number, ok: (x: number, y: number, inner: boolean) => boolean) =>
+    [d, d - width === 0 ? -0.5 : d - width].every((e) => line(e).every(([x, y]) => ok(x, y, e <= 0)));
+  // Inside the anchor, what's under the ring is the anchor or its parts, so
+  // "round the anchor" says nothing there: its letters are what matter.
+  const strict = (x: number, y: number, inner = false) => {
+    const el = topAt(x, y);
+    return contains(el) && !(inner && el && glyphAt(el, x, y));
+  };
+  const along = (n: number, from: number, to: number) => Array.from({ length: n }, (_, i) => from + ((to - from) * (i + 0.5)) / n);
+  // Every 8px or so: with empty containers counting as clear, sparser
+  // points fell between lines of code and missed them.
+  const xs = along(Math.max(9, Math.ceil(rect.width / 8)), rect.left, rect.left + rect.width);
+  const ys = along(Math.max(7, Math.ceil(rect.height / 8)), rect.top, rect.top + rect.height);
+  const side = (line: (d: number) => [number, number][]) => {
+    if (band(line, pad, strict)) return pad;
+    if (hug < pad && band(line, hug, strict)) return hug;
+    // Inside, where the anchor's edge is empty there (a toolbar's padding).
+    if (band(line, inside, strict)) return inside;
+    // Astride the edge, over padding on both sides (tabs packed tight), and
+    // then just inside; never through letters, the anchor's or another's.
+    if (band(line, width / 2, noGlyph)) return width / 2;
+    if (band(line, inside, noGlyph)) return inside;
+    return roomInside ? inside : Math.min(hug, pad);
+  };
+  return {
+    top: side((d) => xs.map((x) => [x, rect.top - d])),
+    bottom: side((d) => xs.map((x) => [x, rect.top + rect.height + d])),
+    left: side((d) => ys.map((y) => [rect.left - d, y])),
+    right: side((d) => ys.map((y) => [rect.left + rect.width + d, y])),
+  };
+}
+
+/** Containers that only lay things out; a bare one shows nothing of its own. */
+const LAYOUT_TAGS = new Set(["div", "section", "main", "nav", "header", "footer", "aside", "form", "ul", "ol", "body", "html"]);
+
+/**
+ * Whether what's at a point is empty background: a layout container with no
+ * text of its own there (a tab bar's padding below its tabs, a toolbar's gap
+ * between buttons). The ring may sit on that; text, buttons and inputs it
+ * may not.
+ */
+function isBackground(el: Element): boolean {
+  if (typeof el.tagName !== "string" || !LAYOUT_TAGS.has(el.tagName.toLowerCase())) return false;
+  return !Array.from(el.childNodes ?? []).some((n) => n.nodeType === 3 && (n.textContent ?? "").trim() !== "");
+}
+
+/** Form fields show their own content box; the ring never lies over one. */
+const FIELD_TAGS = new Set(["input", "select", "textarea"]);
+
+/**
+ * Whether a letter of `el`'s own text is drawn at this point. Measured from
+ * the text's boxes, so a button's padding round its label doesn't count.
+ * Without a DOM (unit tests), any text of its own counts.
+ */
+function glyphAt(el: Element, x: number, y: number): boolean {
+  const texts = Array.from(el.childNodes ?? []).filter((n) => n.nodeType === 3 && (n.textContent ?? "").trim() !== "");
+  if (texts.length === 0) return false;
+  if (typeof document === "undefined" || typeof document.createRange !== "function") return true;
+  const range = document.createRange();
+  return texts.some((n) => {
+    range.selectNodeContents(n);
+    return Array.from(range.getClientRects()).some((r) => x >= r.left - 1 && x <= r.right + 1 && y >= r.top - 1 && y <= r.bottom + 1);
+  });
 }
 
 /** The topmost element at a point, not counting the walkthrough's own overlay. */
