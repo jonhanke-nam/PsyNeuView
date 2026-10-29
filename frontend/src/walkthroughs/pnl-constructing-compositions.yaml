@@ -1,0 +1,179 @@
+id: pnl-constructing-compositions
+title: Constructing compositions — lines, a loop, and parallel layers
+model: Constructing Compositions
+psyneulink: 6
+minutes: 7
+docs:
+  - tutorials/02-running-a-model.md
+  - tutorials/17-psyneulink-tutorials.md
+
+# Lesson 6 of the PsyNeuLink Tutorials (#9): the Tutorial notebook's last
+# section, "Constructing Compositions".
+#
+# Source: PsyNeuLink's tutorial/PsyNeuLink Tutorial.ipynb, cells 44-49.
+# Validated against PsyNeuLink 0.20.2.0.
+#
+# The notebook builds four compositions from four-unit Linear
+# TransferMechanisms: a line of two, a line of three, a recurrent pathway
+# (input, a, b, output, and b back to a), and three hidden layers in
+# parallel. The app shows one composition at a time, and the walkthrough
+# can't work the composition menu, so the demo has one composition, comp,
+# and the lesson reshapes it into each in turn by editing its pathways. See
+# backend/demos/constructing_compositions.py.
+#
+# With the input [1, 2, 3, 4]: the lines pass it through unchanged, since a
+# projection between two layers of the same size is the identity by default;
+# in the loop, hidden_layer_a and hidden_layer_b each work on the other's
+# value from the trial before, so the output is [1, 1, 1, 1], then
+# [2, 3, 4, 5] twice, while hidden_layer_a grows to [3, 5, 7, 9]; the three
+# parallel layers add up at the output, [3, 6, 9, 12]. Every number was
+# measured in the app; backend/tests/test_demo_constructing_compositions.py
+# and the tutorial spec pin them.
+#
+# The notebook ends here: "more content is being added weekly". The last
+# step says so.
+
+steps:
+  - id: open-the-demo
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Constructing Compositions demo. The notebook builds four
+      compositions of different shapes; here there is one, comp, which you
+      will reshape into each. It starts as the first: a line of two layers,
+      four units each.
+    say: >-
+      Open the Constructing Compositions demo: a line of two layers, to start.
+    done:
+      nodeExists: output_layer
+    act:
+      openModel: Constructing Compositions
+
+  - id: run-the-line
+    anchor:
+      testid: tab-run
+    instruct: >-
+      In the Run tab, the demo opens with one_two_three_four, a different
+      number on each unit. Run it: output_layer is [1, 2, 3, 4], the input
+      unchanged. Between two layers of the same size, PsyNeuLink's default
+      projection is the identity matrix: each unit to its own partner.
+    say: >-
+      Run it. The output is the input, unchanged.
+    done:
+      lastRunInputs:
+        input_layer: [[1, 2, 3, 4]]
+    act:
+      pickSet:
+        tab: run
+        name: one_two_three_four
+      runModel: true
+
+  - id: line-of-three
+    anchor:
+      testid: code-editor-pane
+    instruct: >-
+      Make it a line of three. In the code, change the pathway to
+      [input_layer, hidden_layer_a, output_layer]. The canvas gains a layer
+      in the middle, with an arrow on each side.
+    say: >-
+      Put a hidden layer in the middle of the line.
+    done:
+      projectionExists:
+        sender: input_layer
+        receiver: hidden_layer_a
+    act:
+      replaceInCode:
+        find: "pathway=[input_layer, output_layer])"
+        replace: "pathway=[input_layer, hidden_layer_a, output_layer])"
+
+  - id: a-loop
+    anchor:
+      testid: code-editor-pane
+    instruct: >-
+      Now the notebook's recurrent shape: a line of four, input_layer,
+      hidden_layer_a, hidden_layer_b, output_layer, and a second pathway from
+      hidden_layer_b back to hidden_layer_a. In the code, make the pathway
+      [input_layer, hidden_layer_a, hidden_layer_b, output_layer] and add the
+      line comp.add_linear_processing_pathway(pathway=[hidden_layer_b,
+      hidden_layer_a]). The canvas shows the arrow going back.
+    say: >-
+      Add a second hidden layer, and a pathway from it back to the first: a
+      loop.
+    done:
+      projectionExists:
+        sender: hidden_layer_b
+        receiver: hidden_layer_a
+    act:
+      replaceInCode:
+        find: "pathway=[input_layer, hidden_layer_a, output_layer])"
+        replace: "pathway=[input_layer, hidden_layer_a, hidden_layer_b, output_layer])\ncomp.add_linear_processing_pathway(pathway=[hidden_layer_b, hidden_layer_a])"
+
+  - id: run-the-loop
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Run three trials of [1, 2, 3, 4]. In a loop, hidden_layer_a and
+      hidden_layer_b each work on the other's value from the trial before.
+      So on the first trial the output is [1, 1, 1, 1], hidden_layer_b's
+      starting value, then [2, 3, 4, 5] on the next two, while hidden_layer_a,
+      the input plus what came back, grows to [3, 5, 7, 9].
+    say: >-
+      Run three trials. The loop takes a trial to come round.
+    done:
+      trialsAtLeast: 3
+    act:
+      setTrialInputs:
+        input_layer: [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]]
+      runModel: true
+
+  - id: parallel-layers
+    anchor:
+      testid: code-editor-pane
+    instruct: >-
+      Last, the notebook's several hidden layers: three pathways from
+      input_layer to output_layer, each through its own hidden layer, a, b
+      and c. In the code, replace the two pathway lines with
+      comp.add_linear_processing_pathway(pathway=[input_layer, hidden_layer_X,
+      output_layer]) for X = a, b and c. The canvas fans out into three.
+    say: >-
+      Replace the loop with three hidden layers side by side.
+    done:
+      projectionExists:
+        sender: input_layer
+        receiver: hidden_layer_c
+    act:
+      replaceInCode:
+        find: "pathway=[input_layer, hidden_layer_a, hidden_layer_b, output_layer])\ncomp.add_linear_processing_pathway(pathway=[hidden_layer_b, hidden_layer_a])"
+        replace: "pathway=[input_layer, hidden_layer_a, output_layer])\ncomp.add_linear_processing_pathway(pathway=[input_layer, hidden_layer_b, output_layer])\ncomp.add_linear_processing_pathway(pathway=[input_layer, hidden_layer_c, output_layer])"
+
+  - id: run-in-parallel
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Run one_two_three_four once more. Each hidden layer passes [1, 2, 3, 4]
+      on, and output_layer adds what arrives: [3, 6, 9, 12].
+    say: >-
+      Run it. The three layers add up at the output.
+    done:
+      lastRunInputs:
+        input_layer: [[1, 2, 3, 4]]
+    act:
+      pickSet:
+        tab: run
+        name: one_two_three_four
+      runModel: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: run-panel
+    instruct: >-
+      That is the end of the notebook, which says more content is being
+      added weekly. Its four compositions are separate there, each drawn
+      with show_graph; here they were one, reshaped. Next come the Basics and
+      Primer's sections, from lesson 7.
+    say: >-
+      That's the end of the notebook. The Primer comes next.
+    done:
+      next: true
+    act:
+      next: true
