@@ -9,6 +9,9 @@ chance of answering red rises only from 0.024 to 0.088; and that with the
 Energy weight doubled to -5, the chance of red goes 0.024, 0.136, 0.462,
 0.682: control wins. This pins those numbers, so a PsyNeuLink change fails
 here by name.
+
+Lesson 11 uses the same demo: with OUTPUT's Logistic gain set to 2, the
+conflict falls to 0.26 to 0.29 and the chance of red stays near 0.002.
 """
 
 import shutil
@@ -67,3 +70,14 @@ def test_with_the_weight_doubled_control_wins(tmp_path):
     conflict, red = _run(path)
     assert conflict == pytest.approx([0.979, 1.183, 1.250, 1.239], abs=1e-3)
     assert red == pytest.approx([0.024, 0.136, 0.462, 0.682], abs=1e-3)
+
+
+def test_a_steeper_output_reads_less_conflict(tmp_path):
+    path = tmp_path / DEMO.name
+    shutil.copy(DEMO, path)
+    plain = "function=pnl.Logistic)"
+    assert plain in path.read_text()
+    path.write_text(path.read_text().replace(plain, "function=pnl.Logistic(gain=2))", 1))
+    conflict, red = _run(path)
+    assert conflict == pytest.approx([0.259, 0.251, 0.268, 0.287], abs=1e-3)
+    assert red == pytest.approx([0.002, 0.002, 0.002, 0.003], abs=1e-3)
