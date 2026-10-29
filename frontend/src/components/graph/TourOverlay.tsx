@@ -279,7 +279,17 @@ export function TourOverlay() {
   // Each side sits just outside the anchor where there is room, and just
   // inside its edge where the gap is taken by something else (#102): a panel's
   // ring ran through the text above it and into the next panel.
-  const sides = ringSides(rect, pad, ringWidth(highlight.thickness));
+  // A node's ring goes round the oval. Tucked inside, it cut the oval
+  // wherever a line left the node or the node sat against the panels below
+  // the canvas; only another node is in its way.
+  const nodeId = step.anchor.testid ? null : nodes.find((n) => matchesNodeName(n.id, step.anchor.node ?? ""))?.id;
+  const clearOfOtherNodes = nodeId
+    ? (el: Element) => {
+        const owner = el.closest(".react-flow__node");
+        return !owner || owner.getAttribute("data-id") === nodeId;
+      }
+    : undefined;
+  const sides = ringSides(rect, pad, ringWidth(highlight.thickness), undefined, clearOfOtherNodes);
   // Kept inside the window: around something as wide as the window (the
   // toolbar) the padded ring's top and sides fell outside it, and all that
   // showed was a stray line along its bottom edge.
@@ -344,16 +354,20 @@ export function TourOverlay() {
  * where the gap is clear, or just inside its edge where it isn't. "Clear" means
  * that along the padded line, what's on top is a container round the whole
  * anchor (the background it sits on), not text or a neighbouring panel.
+ * `alsoClear` names more things the ring may cross: for a node, anything but
+ * another node, since a side tucked inside the oval cuts it.
  */
 export function ringSides(
   rect: Rect,
   pad: number,
   width: number,
   topAt: (x: number, y: number) => Element | null = (x, y) => topElementAt(x, y),
+  alsoClear: (el: Element) => boolean = () => false,
 ): Record<"top" | "right" | "bottom" | "left", number> {
   const inside = -(width + 2);
   const contains = (el: Element | null) => {
     if (!el) return true; // off the page: nothing to cross
+    if (alsoClear(el)) return true;
     const b = el.getBoundingClientRect();
     return b.left <= rect.left + 1 && b.top <= rect.top + 1 && b.right >= rect.left + rect.width - 1 && b.bottom >= rect.top + rect.height - 1;
   };
