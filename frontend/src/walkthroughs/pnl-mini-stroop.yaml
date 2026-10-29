@@ -1,0 +1,261 @@
+id: pnl-mini-stroop
+title: The mini Stroop model
+psyneulink: 4
+minutes: 8
+docs:
+  - tutorials/14-starting-a-model.md
+  - tutorials/05-editing-inspector.md
+  - tutorials/02-running-a-model.md
+# No `model:` — this walkthrough creates its own.
+
+# Lesson 4 of the PsyNeuLink Tutorials (#9): the notebook's fifth section,
+# "Compositions" and its "Mini-Stroop Model".
+#
+# Source notebook:
+#   https://github.com/PrincetonUniversity/PsyNeuLink/blob/master/tutorial/PsyNeuLink%20Tutorial.ipynb
+#   (cells 34–38). The Basics and Primer:
+#   https://princetonuniversity.github.io/PsyNeuLink/BasicsAndPrimer.html
+# Validated against PsyNeuLink 0.20.2.0.
+#
+# Built rather than opened: the notebook's first composition that is not a
+# line. Two two-unit input mechanisms, Colors (Linear) and Words
+# (Linear, slope 1.5), converge on a two-unit Logistic Response, through two
+# add_linear_processing_pathway calls. The New Model starter already has one
+# of the two pathways: input_node plays Colors and output_node plays
+# Response. The lesson gives both two units and makes output_node Logistic,
+# adds a third TransferMechanism from the palette and names it words, gives
+# it two units and slope 1.5, and draws the second projection: a
+# MappingProjection dragged from the palette onto output_node, then a click
+# on words, its sender. Then the notebook's two trials: a congruent one
+# (blue ink, the word "blue") and an incongruent one (red ink, the word
+# "blue"). Every number below was measured in the app, and the tutorial spec
+# asserts them.
+#
+# What stays in the notebook: show_graph(), which is the canvas;
+# add_linear_processing_pathway, since the app writes each projection out as
+# a MappingProjection; default_variable as a default input; and the
+# notebook's names Colors and Response, which input_node and output_node
+# play. Renaming in the Inspector changes a node's name=, not the Python
+# variable it is assigned to. The last step says so.
+
+steps:
+  - id: start-a-new-model
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Start a new model: Open ▸ New Model…, and call it mini_stroop. The
+      notebook's first composition that is not a line: two input
+      mechanisms, Colors and Words, both feeding one Response mechanism,
+      to model the Stroop task, where naming the ink colour of a word is
+      slowed when the word names a different colour. The starter already
+      has one of the two pathways: input_node will play Colors, and
+      output_node will play Response.
+    say: >-
+      Start a new model. Colours and words will both feed one response.
+    done:
+      nodeExists: output_node
+    act:
+      newModel: mini_stroop
+
+  - id: add-a-third-mechanism
+    anchor:
+      testid: palette-sidebar
+    instruct: >-
+      The word needs a mechanism of its own. Search the Components palette
+      for TransferMechanism and click it to add one. It arrives as
+      New_TransferMechanism_1, Linear with slope 1, and not yet joined to
+      anything.
+    say: >-
+      Add a third mechanism from the palette, for the word.
+    done:
+      nodeExists: New_TransferMechanism_1
+    act:
+      addFromPalette: TransferMechanism
+
+  - id: name-it-words
+    anchor:
+      node: New_TransferMechanism_1
+    instruct: >-
+      Name it as the notebook does. Select New_TransferMechanism_1,
+      double-click its name at the top of the Inspector, type words and
+      press Enter.
+    say: >-
+      Name it words.
+    done:
+      nodeExists: words
+    act:
+      renameNode:
+        node: New_TransferMechanism_1
+        name: words
+
+  - id: colors-two-units
+    anchor:
+      node: input_node
+    instruct: >-
+      Each of the notebook's mechanisms has two units, one for red and one
+      for blue: its default_variable=[0, 0]. Select input_node and, in the
+      Inspector's Inputs, change its shape from [1] to [2]. An input of
+      [1, 0] is red ink, and [0, 1] is blue ink.
+    say: >-
+      Give the colours two units, one for red and one for blue.
+    done:
+      inputShape:
+        node: input_node
+        shape: [2]
+    act:
+      setInputShape:
+        node: input_node
+        shape: [2]
+
+  - id: response-two-units
+    anchor:
+      node: output_node
+    instruct: >-
+      And output_node too: set its input shape to [2]. Its first unit is the
+      strength of the response "red", its second the strength of "blue".
+      The projection between them becomes a 2 by 2 identity matrix: red ink
+      feeds the red response, blue ink the blue one.
+    say: >-
+      And the response: one unit for saying red, one for saying blue.
+    done:
+      inputShape:
+        node: output_node
+        shape: [2]
+    act:
+      setInputShape:
+        node: output_node
+        shape: [2]
+
+  - id: response-logistic
+    anchor:
+      node: output_node
+    instruct: >-
+      The notebook's Response is Logistic. With output_node selected,
+      change its Function from Linear to Logistic in the Inspector.
+    say: >-
+      Make the response Logistic.
+    done:
+      functionIs:
+        node: output_node
+        type: Logistic
+    act:
+      setFunction:
+        node: output_node
+        type: Logistic
+
+  - id: words-two-units
+    anchor:
+      node: words
+    instruct: >-
+      words has two units as well: set its input shape to [2]. An input of
+      [1, 0] is the word "red", and [0, 1] the word "blue".
+    say: >-
+      Give the words two units too.
+    done:
+      inputShape:
+        node: words
+        shape: [2]
+    act:
+      setInputShape:
+        node: words
+        shape: [2]
+
+  - id: words-slope
+    anchor:
+      node: words
+    instruct: >-
+      The notebook's Words is Linear with slope 1.5, so a word counts one
+      and a half times as much as an ink colour: reading is the stronger
+      habit. In the Inspector, set slope to 1.5.
+    say: >-
+      Set its slope to one and a half: reading is the stronger habit.
+    done:
+      paramEquals:
+        node: words
+        param: slope
+        value: "1.5"
+    act:
+      setParameter:
+        node: words
+        param: slope
+        value: "1.5"
+
+  - id: connect-words
+    anchor:
+      node: words
+    instruct: >-
+      The notebook's second pathway joins Words to Response. Open the
+      Components palette (◧ in the graph toolbar), search for
+      MappingProjection, drag it onto output_node, then click words, the
+      sender. A second arrow appears, and the code gains a MappingProjection
+      from words to output_node, with the 2 by 2 identity as its matrix: the
+      word "red" feeds the red response.
+    say: >-
+      Join words to the output node with a second projection.
+    done:
+      projectionExists:
+        sender: words
+        receiver: output_node
+    act:
+      connect:
+        sender: words
+        receiver: output_node
+
+  - id: congruent-trial
+    anchor:
+      testid: tab-run
+    instruct: >-
+      A congruent trial: blue ink, and the word "blue". In the Run tab, set
+      input_node to [0, 1] and words to [0, 1], and press Run Model.
+      output_node gives about 0.5 and 0.924: the red unit gets nothing, so
+      it sits at the Logistic's midpoint, and the blue unit gets 1 from the
+      ink and 1.5 from the word, 2.5 in all.
+    say: >-
+      Run a congruent trial: blue ink, the word blue. Blue wins clearly.
+    done:
+      lastRunInputs:
+        input_node: [[0, 1]]
+        words: [[0, 1]]
+    act:
+      setTrialInputs:
+        input_node: [[0, 1]]
+        words: [[0, 1]]
+      runModel: true
+
+  - id: incongruent-trial
+    anchor:
+      testid: tab-run
+    instruct: >-
+      An incongruent trial: red ink, and the word "blue". Set input_node to
+      [1, 0], keep words at [0, 1], and run again. output_node gives about
+      0.731 and 0.818: the ink pushes toward red, but the word, at 1.5,
+      pushes harder toward blue. The two responses are close, which is the
+      conflict that slows naming the ink in the Stroop task.
+    say: >-
+      Now red ink, the word blue. The word wins, but only just: conflict.
+    done:
+      lastRunInputs:
+        input_node: [[1, 0]]
+        words: [[0, 1]]
+    act:
+      setTrialInputs:
+        input_node: [[1, 0]]
+        words: [[0, 1]]
+      runModel: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: run-panel
+    instruct: >-
+      What this isn't: the notebook builds each pathway with
+      add_linear_processing_pathway, and here every projection is written
+      out as a MappingProjection. Its show_graph() is the canvas, and its
+      names Colors and Response stay in the notebook, where input_node and
+      output_node play them. Renaming in the Inspector changes a node's
+      name, not the Python variable that holds it.
+    say: >-
+      The notebook's pathway calls and its node names stay in the notebook.
+    done:
+      next: true
+    act:
+      next: true

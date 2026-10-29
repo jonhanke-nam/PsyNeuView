@@ -32,6 +32,7 @@ import perceptronYaml from "@/walkthroughs/perceptron.yaml?raw";
 import pnlMechanismYaml from "@/walkthroughs/pnl-mechanism.yaml?raw";
 import pnlCompositionYaml from "@/walkthroughs/pnl-composition.yaml?raw";
 import pnlProjectionsYaml from "@/walkthroughs/pnl-projections.yaml?raw";
+import pnlMiniStroopYaml from "@/walkthroughs/pnl-mini-stroop.yaml?raw";
 import demoYaml from "@/walkthroughs/demo.yaml?raw";
 import runYaml from "@/walkthroughs/run.yaml?raw";
 import semanticYaml from "@/walkthroughs/semantic.yaml?raw";
@@ -580,6 +581,7 @@ export const WALKTHROUGHS: Record<string, Walkthrough> = {
   "pnl-mechanism": parseWalkthrough(pnlMechanismYaml),
   "pnl-composition": parseWalkthrough(pnlCompositionYaml),
   "pnl-projections": parseWalkthrough(pnlProjectionsYaml),
+  "pnl-mini-stroop": parseWalkthrough(pnlMiniStroopYaml),
   "orientation-window": parseWalkthrough(orientationWindowYaml),
   "orientation-open": parseWalkthrough(orientationOpenYaml),
   "orientation-editing": parseWalkthrough(orientationEditingYaml),
