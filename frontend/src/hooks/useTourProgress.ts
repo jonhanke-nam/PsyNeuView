@@ -158,6 +158,7 @@ export function useTourProgress(): TourProgress {
         traceStep,
         filePath,
         nodeInputShapes,
+        projectionEnds: edges.map((e) => ({ source: e.source, target: e.target })),
       })
     : false;
 

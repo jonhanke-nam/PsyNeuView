@@ -194,6 +194,29 @@ describe("isDone — inputShape (#9)", () => {
   });
 });
 
+describe("isDone — projectionExists (#9)", () => {
+  const ends = (projectionEnds: { source: string; target: string }[]) => ({ ...state(null), projectionEnds });
+  const wordsIn = { projectionExists: { sender: "words", receiver: "output_node" } };
+
+  it("is done once a projection runs from the sender to the receiver", () => {
+    expect(
+      isDone(wordsIn, ends([{ source: "input_node", target: "output_node" }, { source: "words", target: "output_node" }])),
+    ).toBe(true);
+  });
+
+  it("is not done for the other projections, or one the wrong way round", () => {
+    expect(isDone(wordsIn, ends([{ source: "input_node", target: "output_node" }]))).toBe(false);
+    expect(isDone(wordsIn, ends([{ source: "output_node", target: "words" }]))).toBe(false);
+  });
+
+  it("matches suffixed node names, and nothing without projections", () => {
+    expect(isDone(wordsIn, ends([{ source: "words-4", target: "output_node-4" }]))).toBe(true);
+    expect(isDone(wordsIn, ends([{ source: "words_extra", target: "output_node" }]))).toBe(false);
+    expect(isDone(wordsIn, ends([]))).toBe(false);
+    expect(isDone(wordsIn, state(null))).toBe(false);
+  });
+});
+
 describe("isDone — lastRunInputs (#50)", () => {
   // The Dynamic Systems kick: 2 and 6 on the first trial, then nothing.
   const kick = { node_attract1: [2, 0, 0], node_attract2: [6, 0, 0] };
@@ -407,6 +430,7 @@ describe("menuGroups", () => {
       ["pnl-mechanism", 1],
       ["pnl-composition", 2],
       ["pnl-projections", 3],
+      ["pnl-mini-stroop", 4],
     ]);
     for (const l of lessons) {
       expect(l.docs?.length, `"${l.id}" cites no docs page`).toBeGreaterThan(0);
