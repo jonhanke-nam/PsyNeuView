@@ -66,6 +66,7 @@ const DEMOS = [
   "simple_stroop_learn.py",
   "simple_stroop.py",
   "stroop_basic.py",
+  "stroop_with_control.py",
   "td_learning.py",
   "vectors_and_matrices.py",
 ].map((f) => `demos/${f}`);

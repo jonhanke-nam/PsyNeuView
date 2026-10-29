@@ -1,0 +1,167 @@
+id: pnl-control
+title: Control — a model that monitors its own conflict
+model: Stroop With Control
+psyneulink: 10
+minutes: 8
+docs:
+  - tutorials/02-running-a-model.md
+  - tutorials/17-psyneulink-tutorials.md
+
+# Lesson 10 of the PsyNeuLink Tutorials (#9): the Basics and Primer's
+# "Control".
+#
+# Source: PsyNeuLink's docs/source/BasicsAndPrimer.rst,
+#   https://princetonuniversity.github.io/PsyNeuLink/BasicsAndPrimer.html
+#   (Control), and its script
+#   Scripts/Examples/Basics And Primer/Stroop Model - Conflict Monitoring.py.
+# Validated against PsyNeuLink 0.20.2.0.
+#
+# The demo is the script with its names: the Stroop model with a TASK layer,
+# an LCAMechanism that settles for 10 executions before the hidden layers
+# run, and a ControlMechanism, CONTROL, the composition's controller. Its
+# ObjectiveMechanism, the Conflict Monitor, applies an Energy function to
+# OUTPUT: with the matrix [[0, -2.5], [-2.5, 0]], that is 2.5 x red x green,
+# high when both are active. CONTROL sets TASK's gain from it, for the next
+# trial. See backend/demos/stroop_with_control.py.
+#
+# The Primer prints the model recovering by its third trial. In PsyNeuLink
+# 0.20.2.0 the script's four trials don't: the gain rises with the
+# conflict, but the chance of answering red only goes from 0.024 to 0.088
+# (and levels off near 0.2 over more trials). Doubling the Energy weight to
+# -5 gives the Primer's story: 0.024, 0.136, 0.462, 0.682. The lesson runs
+# both. The Primer's text also resets the task at each trial; its script,
+# which the demo follows, does not. Every number below was measured in the
+# app; backend/tests/test_demo_stroop_with_control.py and the tutorial spec
+# pin them.
+#
+# What stays in the Primer: call_after_trial and its printout, the
+# animation, and control that simulates to optimise (EVC, LVOC). The last
+# step says so.
+
+steps:
+  - id: open-the-demo
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Stroop With Control demo. It is the Primer's Stroop model with
+      control added: the model watches its own output for conflict, and uses
+      it to strengthen the instruction on the next trial.
+    say: >-
+      Open the Stroop With Control demo: a model that controls itself.
+    done:
+      nodeExists: Conflict Monitor
+    act:
+      openModel: Stroop With Control
+
+  - id: the-task-layer
+    anchor:
+      node: TASK
+    instruct: >-
+      Select TASK. Between TASK INPUT and the hidden layers there is now a
+      task layer, an LCAMechanism whose two units, color and word, compete
+      and settle over 10 executions before the hidden layers run, as in
+      lesson 9. Its gain sets how strongly it holds the instruction. CONTROL
+      sets that gain.
+    say: >-
+      The task layer holds the instruction. Its gain is set by control.
+    done:
+      selectedNode: TASK
+    act:
+      selectNode: TASK
+
+  - id: the-conflict-monitor
+    anchor:
+      node: Conflict Monitor
+    instruct: >-
+      Select Conflict Monitor. It is an ObjectiveMechanism that monitors
+      OUTPUT with an Energy function, matrix [[0, -2.5], [-2.5, 0]]: that
+      works out to 2.5 times red times green, large when both response units
+      are active at once, which is conflict. PsyNeuLink made the projection
+      from OUTPUT to it, and from it to CONTROL, from the constructor's
+      monitor and objective_mechanism arguments.
+    say: >-
+      The conflict monitor: high when red and green are both active.
+    done:
+      selectedNode: Conflict Monitor
+    act:
+      selectNode: Conflict Monitor
+
+  - id: run-four-trials
+    anchor:
+      testid: tab-run
+    instruct: >-
+      In the Run tab, the demo opens with the script's run, stimuli: four
+      incongruent trials, red ink and the word green, naming the color. Press
+      Run Model. CONTROL runs at the end of each trial, so each trial's gain
+      is the conflict of the one before: 0.49, then 0.52, 0.55 and 0.57. The
+      instruction strengthens, and the chance of answering red rises: 0.024,
+      0.038, 0.061, 0.088. Control helps, but too slowly; the word still
+      wins.
+    say: >-
+      Run the four trials. The chance of red rises, from 0.024 to 0.088, but
+      the word still wins.
+    done:
+      lastRunInputs:
+        COLOR INPUT: [[1, 0], [1, 0], [1, 0], [1, 0]]
+        WORD INPUT: [[0, 1], [0, 1], [0, 1], [0, 1]]
+        TASK INPUT: [[1, 0], [1, 0], [1, 0], [1, 0]]
+    act:
+      pickSet:
+        tab: run
+        name: stimuli
+      runModel: true
+
+  - id: double-the-weight
+    anchor:
+      testid: code-editor-pane
+    instruct: >-
+      Make the conflict signal stronger. In the code, change the Energy
+      matrix to [[0, -5], [-5, 0]], twice the weight, so the same conflict
+      asks for twice the gain. Then run the four trials again, from stimuli.
+    say: >-
+      Double the conflict weight, and run the four trials again.
+    done:
+      runsAtLeast: 2
+    act:
+      replaceInCode:
+        find: "matrix=[[0, -2.5], [-2.5, 0]]"
+        replace: "matrix=[[0, -5], [-5, 0]]"
+      pickSet:
+        tab: run
+        name: stimuli
+      runModel: true
+
+  - id: control-wins
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Now the first trial goes as before, a chance of red of 0.024, but its
+      conflict, 0.98, sets a gain twice as high for the next. The chance of
+      red goes 0.136, 0.462, 0.682: by the fourth trial the model most likely
+      names the ink. That is the Primer's account of conflict monitoring:
+      conflict on one trial brings in control on the next.
+    say: >-
+      Now control wins: by the fourth trial, red is likely.
+    done:
+      next: true
+    act:
+      next: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: run-panel
+    instruct: >-
+      What this isn't: the Primer prints each trial with a call_after_trial
+      function and animates the run, which the Run tab's results and trace
+      stand in for. Its printout shows the model recovering by its third
+      trial; PsyNeuLink 0.20.2.0 needs the doubled weight for that. Control
+      that runs simulations to choose its allocation, the expected value of
+      control, stays in the Primer. The next section is Parameters, lesson
+      11.
+    say: >-
+      The Primer's printout, its animation, and control by simulation stay
+      in the Primer.
+    done:
+      next: true
+    act:
+      next: true
