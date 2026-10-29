@@ -60,10 +60,14 @@ decision_pathway = [output, decision]
 # Composition
 # ===========================================================
 
+# The Primer adds the color and word pathways, then the two task
+# pathways. Here the color task pathway comes second, so TASK INPUT
+# is drawn between the two inputs and no arrows cross; the model
+# is the same.
 Stroop_model = pnl.Composition(name='Stroop Model')
 Stroop_model.add_linear_processing_pathway(color_pathway)
-Stroop_model.add_linear_processing_pathway(word_pathway)
 Stroop_model.add_linear_processing_pathway(task_color_pathway)
+Stroop_model.add_linear_processing_pathway(word_pathway)
 Stroop_model.add_linear_processing_pathway(task_word_pathway)
 Stroop_model.add_linear_processing_pathway(decision_pathway)
 

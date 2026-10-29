@@ -20,6 +20,10 @@ docs:
 # Opened rather than built, like lesson 7: the model is five pathway lists
 # with their matrices written between the mechanisms, and the demo keeps the
 # Primer's code and names. See backend/demos/elaborate_configurations.py.
+# It adds the color task pathway second, where the Primer adds it third, so
+# the Layered layout puts TASK INPUT between the two inputs: in the Primer's
+# order, its arrow to COLOR HIDDEN crosses the word arrow at its middle.
+# The model is the same.
 # (The script in Scripts/Examples uses weaker weights, 1 and 2, and a noisy
 # integrator for the decision; the lesson follows the Primer's text.)
 #
@@ -128,7 +132,11 @@ steps:
       difference between OUTPUT's red and green units as evidence, and
       accumulates it to a threshold, upward for red, downward for green. It
       reports the decision, 1 or -1, and how long it took, the decision time,
-      among other values. DECISION is the model's only output.
+      among other values. DECISION is the model's only output. (Its
+      input_format reads SCALAR in the Inspector, though the code says
+      ARRAY: PsyNeuLink keeps the default in that parameter. The ARRAY took
+      effect, as its input port, named ARRAY, which takes both of OUTPUT's
+      units.)
     say: >-
       The decision: a drift diffusion model, which reports a choice and how
       long it took.
