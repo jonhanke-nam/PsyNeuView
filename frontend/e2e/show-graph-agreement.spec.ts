@@ -69,6 +69,7 @@ const DEMOS = [
   "stroop_with_control.py",
   "td_learning.py",
   "vectors_and_matrices.py",
+  "xor_learning.py",
 ].map((f) => `demos/${f}`);
 const ALL_MODELS = [...REFERENCE_MODELS, ...DEMOS];
 
