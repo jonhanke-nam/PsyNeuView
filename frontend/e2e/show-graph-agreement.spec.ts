@@ -61,6 +61,7 @@ const DEMOS = [
   "logic_gate_network.py",
   "nested_compositions.py",
   "neural_network_with_ddm.py",
+  "pretrained_stroop.py",
   "rumelhart_semantic_network.py",
   "scheduling_demo.py",
   "simple_configurations.py",
