@@ -1,0 +1,215 @@
+id: pnl-elaborate-configurations
+title: More elaborate configurations — the Stroop model
+model: Elaborate Configurations
+psyneulink: 8
+minutes: 8
+docs:
+  - tutorials/02-running-a-model.md
+  - tutorials/05-editing-inspector.md
+  - tutorials/17-psyneulink-tutorials.md
+
+# Lesson 8 of the PsyNeuLink Tutorials (#9): the Basics and Primer's second
+# section, "More Elaborate Configurations".
+#
+# Source: PsyNeuLink's docs/source/BasicsAndPrimer.rst,
+#   https://princetonuniversity.github.io/PsyNeuLink/BasicsAndPrimer.html
+#   (More Elaborate Configurations), and its script
+#   Scripts/Examples/Basics And Primer/Stroop Model - Basic.py.
+# Validated against PsyNeuLink 0.20.2.0.
+#
+# Opened rather than built, like lesson 7: the model is five pathway lists
+# with their matrices written between the mechanisms, and the demo keeps the
+# Primer's code and names. See backend/demos/elaborate_configurations.py.
+# It adds the color task pathway second, where the Primer adds it third, so
+# the Layered layout puts TASK INPUT between the two inputs: in the Primer's
+# order, its arrow to COLOR HIDDEN crosses the word arrow at its middle.
+# The model is the same.
+# (The script in Scripts/Examples uses weaker weights, 1 and 2, and a noisy
+# integrator for the decision; the lesson follows the Primer's text.)
+#
+# The Primer prints decision times of 2.80 and 3.94 for its two trials.
+# PsyNeuLink 0.20.2.0 gives 1.41 and 2.75; its point, that the incongruent
+# trial is slower, holds. The DDM's decision itself, 1 or -1, is drawn at
+# random from the chance of reaching each threshold (the Primer warns it
+# "might return -1"), so the lesson quotes the time and that chance, which
+# are fixed. Every number below was measured in the app;
+# backend/tests/test_demo_elaborate_configurations.py and the tutorial spec
+# pin them.
+#
+# What stays in the Primer: show_graph() (the canvas), the run's animate and
+# termination arguments in the script, and the fuller Stroop model in the
+# PsyNeuLink Library. The last step says so.
+
+steps:
+  - id: open-the-demo
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Elaborate Configurations demo. It is the Primer's Stroop
+      model, a simplified version of Cohen, Dunbar and McClelland (1990),
+      with the Primer's own code and names: one pathway for naming the ink
+      color, one for reading the word, two that say which task to do, and a
+      decision at the end.
+    say: >-
+      Open the Elaborate Configurations demo: the Primer's Stroop model.
+    done:
+      nodeExists: DECISION
+    act:
+      openModel: Elaborate Configurations
+
+  - id: the-color-pathway
+    anchor:
+      node: COLOR HIDDEN
+    instruct: >-
+      Select COLOR HIDDEN. Every layer here has two units: the first stands
+      for red, the second for green. In the code, color_pathway is a list,
+      COLOR INPUT, a matrix, COLOR HIDDEN, a matrix, OUTPUT: each matrix sits
+      between the two mechanisms it joins, and becomes the projection's
+      weights. COLOR HIDDEN's Logistic has a bias of -4, which keeps it
+      nearly off unless something else turns it on.
+    say: >-
+      The color hidden layer. Its bias keeps it nearly off unless the task
+      turns it on.
+    done:
+      selectedNode: COLOR HIDDEN
+    act:
+      selectNode: COLOR HIDDEN
+
+  - id: the-color-weights
+    anchor:
+      testid: rf__edge-MappingProjection from COLOR INPUT[OutputPort-0] to COLOR HIDDEN[InputPort-0]
+    instruct: >-
+      Click the arrow from COLOR INPUT to COLOR HIDDEN. Under Projection
+      Parameters, its matrix is [[2, -2], [-2, 2]]: red ink excites the red
+      unit and inhibits the green one, and green ink the reverse.
+    say: >-
+      Click the color arrow. Red ink excites red and inhibits green, with a
+      weight of 2.
+    done:
+      selectedNode: MappingProjection from COLOR INPUT[OutputPort-0] to COLOR HIDDEN[InputPort-0]
+    act:
+      selectNode: MappingProjection from COLOR INPUT[OutputPort-0] to COLOR HIDDEN[InputPort-0]
+
+  - id: the-word-weights
+    anchor:
+      testid: rf__edge-MappingProjection from WORD INPUT[OutputPort-0] to WORD HIDDEN[InputPort-0]
+    instruct: >-
+      Now click the arrow from WORD INPUT to WORD HIDDEN: [[3, -3], [-3, 3]].
+      The word pathway has the same shape, joins the same OUTPUT, and its
+      weights are stronger, 3 where color has 2. Reading a word is the more
+      practised skill, so it pulls harder on the response.
+    say: >-
+      Click the word arrow. The same shape, with stronger weights: reading is
+      the more practised skill.
+    done:
+      selectedNode: MappingProjection from WORD INPUT[OutputPort-0] to WORD HIDDEN[InputPort-0]
+    act:
+      selectNode: MappingProjection from WORD INPUT[OutputPort-0] to WORD HIDDEN[InputPort-0]
+
+  - id: the-task
+    anchor:
+      node: TASK INPUT
+    instruct: >-
+      Select TASK INPUT. Its first unit means "name the color", its second
+      "read the word". Its arrow to COLOR HIDDEN has the matrix [[4, 4], [0,
+      0]]: the color task adds 4 to both color units, which cancels their
+      bias of -4 and turns the color pathway on. Its arrow to WORD HIDDEN,
+      [[0, 0], [4, 4]], does the same for the word task. The task says which
+      pathway to use.
+    say: >-
+      The task input. Its weight of 4 cancels the bias, turning on the
+      pathway for the task.
+    done:
+      selectedNode: TASK INPUT
+    act:
+      selectNode: TASK INPUT
+
+  - id: the-decision
+    anchor:
+      node: DECISION
+    instruct: >-
+      Select DECISION. It is a DDM, a drift diffusion model: it takes the
+      difference between OUTPUT's red and green units as evidence, and
+      accumulates it to a threshold, upward for red, downward for green. It
+      reports the decision, 1 or -1, and how long it took, the decision time,
+      among other values. DECISION is the model's only output. (Its
+      input_format reads SCALAR in the Inspector, though the code says
+      ARRAY: PsyNeuLink keeps the default in that parameter. The ARRAY took
+      effect, as its input port, named ARRAY, which takes both of OUTPUT's
+      units.)
+    say: >-
+      The decision: a drift diffusion model, which reports a choice and how
+      long it took.
+    done:
+      selectedNode: DECISION
+    act:
+      selectNode: DECISION
+
+  - id: run-the-primer
+    anchor:
+      testid: tab-run
+    instruct: >-
+      In the Run tab, the demo opens with the Primer's run, primer_trials:
+      two trials of naming the ink color. In the first the ink is red and the
+      word is red, congruent; in the second the ink is red and the word is
+      green, incongruent. Press Run Model. Both should answer red, but the
+      second is slower: a decision time of about 1.41, then 2.75. The word
+      green pulls the other way, so the chance of answering red falls from
+      0.999 to 0.940. That is the Stroop effect.
+    say: >-
+      Run the Primer's two trials. The incongruent one is slower: about 2.75
+      against 1.41.
+    done:
+      lastRunInputs:
+        COLOR INPUT: [[1, 0], [1, 0]]
+        WORD INPUT: [[1, 0], [0, 1]]
+        TASK INPUT: [[1, 0], [1, 0]]
+    act:
+      pickSet:
+        tab: run
+        name: primer_trials
+      runModel: true
+
+  - id: read-the-word
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Now the other task. Give TASK INPUT [0, 1], read the word, with the
+      same incongruent stimulus: COLOR INPUT [1, 0], red ink, and WORD INPUT
+      [0, 1], the word green. Run it. The answer is green, with a chance of
+      red of only 0.001, and a decision time of about 1.38, as quick as the
+      congruent trial. The weaker color pathway barely slows reading down:
+      the effect runs one way.
+    say: >-
+      Now read the word green, printed in red ink. It is quick, about 1.38:
+      the ink barely gets in the way.
+    done:
+      lastRunInputs:
+        COLOR INPUT: [[1, 0]]
+        WORD INPUT: [[0, 1]]
+        TASK INPUT: [[0, 1]]
+    act:
+      setTrialInputs:
+        COLOR INPUT: [[1, 0]]
+        WORD INPUT: [[0, 1]]
+        TASK INPUT: [[0, 1]]
+      runModel: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: run-panel
+    instruct: >-
+      What this isn't: the Primer's figure is show_graph(), which is the
+      canvas. The decision, 1 or -1, is drawn at random from the chance of
+      reaching each threshold, so a run can now and then answer green where
+      red is likely, as the Primer warns. The Primer prints older decision
+      times, 2.80 and 3.94; the incongruent trial is still the slower. A
+      fuller Stroop model is in the PsyNeuLink Library, and what runs when,
+      inside a trial, is the Primer's next section, Dynamics of Execution.
+    say: >-
+      The decision is drawn at random, so it can now and then go the other
+      way. What runs when is the next lesson.
+    done:
+      next: true
+    act:
+      next: true

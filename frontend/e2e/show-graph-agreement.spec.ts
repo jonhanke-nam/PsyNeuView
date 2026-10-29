@@ -50,6 +50,7 @@ const DEMOS = [
   "bistable_attractor.py",
   "conflict_monitoring.py",
   "ego_coffee_shop.py",
+  "elaborate_configurations.py",
   "episodic_memory.py",
   "feedforward_network.py",
   "hebbian_learning.py",
