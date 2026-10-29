@@ -432,6 +432,7 @@ describe("menuGroups", () => {
       ["pnl-projections", 3],
       ["pnl-mini-stroop", 4],
       ["pnl-pretrained-stroop", 5],
+      ["pnl-constructing-compositions", 6],
       ["pnl-simple-configurations", 7],
       ["pnl-elaborate-configurations", 8],
       ["pnl-dynamics-of-execution", 9],

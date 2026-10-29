@@ -38,7 +38,7 @@ rows with a `?tour=` are built.
 | 3 | Adding projections — the mapping matrix | Tutorial: *Adding Projections* | `pnl-projections` | **Build** from New Model: a Linear unit (slope 2, intercept 2) into a Logistic one; click the arrow for the **identity matrix**; **run** the sweep; write **0.5** into the matrix (the explicit `MappingProjection`) and run again |
 | 4 | The mini Stroop model | Tutorial: *Compositions*, *Mini-Stroop Model* | `pnl-mini-stroop` | **Build** from New Model: add a third node from the palette and **name** it words; give all three **two units**; make the response Logistic and words' slope 1.5; **join** words to the response with a MappingProjection from the palette; **run** a congruent and an incongruent trial |
 | 5 | The pre-trained Stroop model — Cohen, Dunbar and McClelland (1990) | Tutorial: *Pre-trained Complete Stroop Model* | `pnl-pretrained-stroop` | **Open** the Pretrained Stroop demo; see the **hidden** layer's two pairs and the stronger **word** weights; **run** the notebook's input (red, weakly: 0.55) and **all eight** combinations (naming the ink 1.53 vs 0.55; reading 2.34 vs 1.97) |
-| 6 | Constructing compositions | Tutorial: *Constructing Compositions* | | Lines of two and three layers, a recurrent pathway, several hidden layers, and what each graph looks like |
+| 6 | Constructing compositions — lines, a loop, and parallel layers | Tutorial: *Constructing Compositions* | `pnl-constructing-compositions` | **Open** the Constructing Compositions demo and **reshape** its one composition in the code: a line of two, of three, a **loop**, three **parallel** layers; **run** [1, 2, 3, 4] through each (unchanged; the loop's [1, 1, 1, 1] then [2, 3, 4, 5]; [3, 6, 9, 12]) |
 | 7 | Simple configurations — a network from a pathway | Primer: *Simple Configurations* | `pnl-simple-configurations` | **Open** the Simple Configurations demo, the Primer's 5-2-5 network from a pathway; click the arrow **PsyNeuLink made** (full connectivity, all 1s); **run** the Primer's input and five zeros; write a **matrix into the pathway** and run again |
 | 8 | More elaborate configurations — the Stroop model | Primer: *More Elaborate Configurations* | `pnl-elaborate-configurations` | **Open** the Elaborate Configurations demo, the Primer's Stroop model from five pathway lists; click the **color** and **word** arrows (weights 2 and 3); see how the **task** input's 4 cancels the hidden layers' bias; **run** the Primer's congruent and incongruent trials (decision times 1.41 and 2.75), then **read the word** green in red ink (1.38) |
 | 9 | Dynamics of execution — time scales and conditions | Primer: *Dynamics of Execution* | `pnl-dynamics-of-execution` | **Open** the Dynamics of Execution demo, the Stroop model with a step-by-step decision; see in the **Scheduler** that a trial ends when the decision is finished; **run** with noise (a different step count each time), then without (59 incongruent, 25 congruent); make the task an **LCAMechanism** the hidden layers **wait** 10 executions for, and watch the word win (−20 in 57) |
@@ -48,8 +48,8 @@ rows with a `?tour=` are built.
 | 13 | Learning — a network learns XOR by backpropagation | Primer: *Learning*, *LearningMechanisms* | `pnl-learning` | **Open** the XOR Learning demo; see the **learning components** one call made; **train** 250 epochs at the default rate (outputs stay near 0.5), raise the **learning rate** to 3 and train 300 (0.035, 0.96, 0.963, 0.044) |
 | 14 | Customization — a Python function as a mechanism's function | Primer: *Customization* | `pnl-customization` | **Open** the Customization demo; see the Primer's `my_sinusoidal_fct` wrapped as a **UserDefinedFunction**; **run** three points of the wave (1, 0, −1); set **amplitude=2** in the code and run again (2, 0, −2) |
 
-Lesson 6 is listed so the order is settled; it is not built yet, so
-lesson 7 follows lesson 5 in the menu for now. The
+All fourteen lessons are built: the notebook's (1–6), then the Primer's
+(7–14). The
 notebook's own ending, *Constructing Compositions*, says "more content is
 being added weekly", so the list may grow with it.
 
@@ -242,6 +242,33 @@ gets in the way of the ink, not the reverse. The tutorial spec and
 
 **What stays in the notebook.** `show_graph` (the canvas) and
 `reportOutputPref` (the Run tab's results and trace).
+
+### 6. Constructing compositions — lines, a loop, and parallel layers
+
+Tutorial notebook, *Constructing Compositions* (cells 44–49), its last
+section. Validated against PsyNeuLink 0.20.2.0.
+
+The notebook builds four compositions from four-unit Linear
+`TransferMechanism`s: a line of two, a line of three, a recurrent pathway,
+and three hidden layers in parallel. The app shows one composition at a
+time, so the demo, **Constructing Compositions**, has one, `comp`, and the
+walkthrough reshapes it by editing its pathways, the canvas redrawing each
+time. With the input `one_two_three_four`, **[1, 2, 3, 4]**: the line passes
+it through unchanged, since a projection between layers of the same size is
+the identity by default. Make it a line of three; then the notebook's loop,
+`[input_layer, hidden_layer_a, hidden_layer_b, output_layer]` and a second
+pathway from `hidden_layer_b` back to `hidden_layer_a`. In a loop each layer
+works on the other's value from the trial before, so three trials give
+**[1, 1, 1, 1]**, then **[2, 3, 4, 5]** twice, while `hidden_layer_a` grows to
+**[3, 5, 7, 9]**. Last, three pathways through `hidden_layer_a`, `_b` and `_c`
+add up at the output: **[3, 6, 9, 12]**. The tutorial spec and
+`backend/tests/test_demo_constructing_compositions.py` assert every run.
+
+![The loop](assets/tour/pnl-constructing-compositions-step-5.png)
+
+**What stays in the notebook.** Its four separate compositions, each drawn
+with `show_graph`. The notebook ends here: "more content is being added
+weekly".
 
 ### 7. Simple configurations — a network from a pathway
 
@@ -552,6 +579,9 @@ here) and the User's Guide.
 - [x] Lesson 5 opens a bundled demo, the notebook's pre-trained Stroop
       model (`pnl-pretrained-stroop.tutorial.spec.ts`): it asserts the
       notebook's input (0.55) and all eight combinations.
+- [x] Lesson 6 reshapes a bundled demo through code edits
+      (`pnl-constructing-compositions.tutorial.spec.ts`): it asserts the
+      line, the loop's three trials and the parallel layers' sum.
 - [x] Lesson 7 opens a bundled demo, the Primer's network made from a
       pathway (`pnl-simple-configurations.tutorial.spec.ts`): it reads the
       two projections PsyNeuLink made (all 1s) and the matrix written into
@@ -587,8 +617,7 @@ here) and the User's Guide.
       (`pnl-customization.tutorial.spec.ts`): it asserts both runs (1, 0, −1;
       with amplitude 2, 2, 0, −2).
 - [x] Every step has a caption for narration.
-- [ ] **Not yet:** lesson 6. Each will be added in order, as a walkthrough
-      with a bundled demo where the model is too big to build by hand.
+- [x] All fourteen lessons, the notebook's and the Primer's, are built.
 
 ## Further reading
 
