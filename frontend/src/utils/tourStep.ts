@@ -40,6 +40,7 @@ import pnlControlYaml from "@/walkthroughs/pnl-control.yaml?raw";
 import pnlParametersYaml from "@/walkthroughs/pnl-parameters.yaml?raw";
 import pnlDisplayingAndLoggingYaml from "@/walkthroughs/pnl-displaying-and-logging.yaml?raw";
 import pnlLearningYaml from "@/walkthroughs/pnl-learning.yaml?raw";
+import pnlCustomizationYaml from "@/walkthroughs/pnl-customization.yaml?raw";
 import demoYaml from "@/walkthroughs/demo.yaml?raw";
 import runYaml from "@/walkthroughs/run.yaml?raw";
 import semanticYaml from "@/walkthroughs/semantic.yaml?raw";
@@ -596,6 +597,7 @@ export const WALKTHROUGHS: Record<string, Walkthrough> = {
   "pnl-parameters": parseWalkthrough(pnlParametersYaml),
   "pnl-displaying-and-logging": parseWalkthrough(pnlDisplayingAndLoggingYaml),
   "pnl-learning": parseWalkthrough(pnlLearningYaml),
+  "pnl-customization": parseWalkthrough(pnlCustomizationYaml),
   "orientation-window": parseWalkthrough(orientationWindowYaml),
   "orientation-open": parseWalkthrough(orientationOpenYaml),
   "orientation-editing": parseWalkthrough(orientationEditingYaml),

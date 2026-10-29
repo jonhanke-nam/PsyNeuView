@@ -438,6 +438,7 @@ describe("menuGroups", () => {
       ["pnl-parameters", 11],
       ["pnl-displaying-and-logging", 12],
       ["pnl-learning", 13],
+      ["pnl-customization", 14],
     ]);
     for (const l of lessons) {
       expect(l.docs?.length, `"${l.id}" cites no docs page`).toBeGreaterThan(0);

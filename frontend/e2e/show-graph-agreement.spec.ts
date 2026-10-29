@@ -49,6 +49,7 @@ const DEMOS = [
   "autodiff_feedforward.py",
   "bistable_attractor.py",
   "conflict_monitoring.py",
+  "customization.py",
   "dynamics_of_execution.py",
   "ego_coffee_shop.py",
   "elaborate_configurations.py",

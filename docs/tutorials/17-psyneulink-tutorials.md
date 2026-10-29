@@ -46,9 +46,9 @@ rows with a `?tour=` are built.
 | 11 | Parameters — a mechanism's, its function's, and modulated ones | Primer: *Parameters* (accessing, setting, function and modulable parameters) | `pnl-parameters` | **Open** Stroop With Control again; see a mechanism's parameters and its **function's**; **run** and read every trial; set OUTPUT's **gain** to 2 in the Inspector and run again (conflict 0.26, control does less); see TASK's **base** gain |
 | 12 | Displaying and logging values — every execution, step by step | Primer: *Displaying and Logging Values* | `pnl-displaying-and-logging` | **Open** Stroop With Control; **run** the four trials and read each trial's values; **step** the trace through every execution (TASK ten times a trial); open **Run State**; see the run record's **JSON/YAML** export |
 | 13 | Learning — a network learns XOR by backpropagation | Primer: *Learning*, *LearningMechanisms* | `pnl-learning` | **Open** the XOR Learning demo; see the **learning components** one call made; **train** 250 epochs at the default rate (outputs stay near 0.5), raise the **learning rate** to 3 and train 300 (0.035, 0.96, 0.963, 0.044) |
-| 14 | Customization | Primer: *Customization* | | A user-defined function |
+| 14 | Customization — a Python function as a mechanism's function | Primer: *Customization* | `pnl-customization` | **Open** the Customization demo; see the Primer's `my_sinusoidal_fct` wrapped as a **UserDefinedFunction**; **run** three points of the wave (1, 0, −1); set **amplitude=2** in the code and run again (2, 0, −2) |
 
-Lessons 5, 6 and 14 are listed so the order is settled; they are not built
+Lessons 5 and 6 are listed so the order is settled; they are not built
 yet, so lesson 7 follows lesson 4 in the menu for now. The
 notebook's own ending, *Constructing Compositions*, says "more content is
 being added weekly", so the list may grow with it.
@@ -471,6 +471,35 @@ epochs: the error falls to about **0.0015** and the outputs are **0.035**,
 several learning pathways (the app has it as a demo) and the
 `AutodiffComposition` that trains it in PyTorch.
 
+### 14. Customization — a Python function as a mechanism's function
+
+Basics and Primer, *Customization*, its last section. Validated against
+PsyNeuLink 0.20.2.0.
+
+The demo, **Customization**, is the Primer's `my_sinusoidal_fct`, plain
+Python returning `amplitude * sin(2π · frequency · time + phase)`, assigned as
+the function of `my_wave_mech`, a `ProcessingMechanism` with
+`default_variable=[[0], [0]]`. PsyNeuLink wraps it as a
+**UserDefinedFunction**: its first argument is the mechanism's input, two
+input ports for frequency and time, and its other arguments, `phase` and
+`amplitude`, become the function's parameters, listed in the Inspector. The
+Primer gives the mechanism its two values directly; the Run tab sets only a
+node's first input port, so two input nodes, `FREQUENCY` and `TIME`, feed one
+port each.
+
+The Run tab opens with `quarter_cycles`: frequency 1 at times 0.25, 0.5 and
+0.75, giving **1**, about **0** and **−1**: the peak, the crossing and the
+trough. The Inspector lists a user-defined function's parameters but doesn't
+edit them, so the amplitude is changed in the code, `amplitude=2`; the run
+then gives **2**, 0 and **−2**. The tutorial spec and
+`backend/tests/test_demo_customization.py` assert both runs.
+
+![The Primer's function, wrapped](assets/tour/pnl-customization-step-2.png)
+
+**What stays in the Primer.** A `ControlMechanism` modulating `phase` and
+`amplitude`, and its Conclusion's pointers to the Tutorial (the first lessons
+here) and the User's Guide.
+
 ---
 
 ## What you can expect
@@ -524,8 +553,11 @@ several learning pathways (the app has it as a demo) and the
       (`pnl-learning.tutorial.spec.ts`): it trains twice through the Learn tab
       and asserts both trainings' error and outputs (0.255, all near 0.5; with
       the rate at 3, under 0.002 and 0.035, 0.96, 0.963, 0.044).
+- [x] Lesson 14 opens a bundled demo, the Primer's sine function
+      (`pnl-customization.tutorial.spec.ts`): it asserts both runs (1, 0, −1;
+      with amplitude 2, 2, 0, −2).
 - [x] Every step has a caption for narration.
-- [ ] **Not yet:** lessons 5, 6 and 14. Each will be added in order, as a walkthrough
+- [ ] **Not yet:** lessons 5 and 6. Each will be added in order, as a walkthrough
       with a bundled demo where the model is too big to build by hand.
 
 ## Further reading
