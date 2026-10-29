@@ -48,4 +48,11 @@ describe("ringSides (#102)", () => {
     expect(s.top).toBeLessThan(0);
     expect(s.bottom).toBe(10);
   });
+  it("stays outside where what is in the gap is cleared (a node's lines)", () => {
+    const bg = el(0, 0, 1000, 1000);
+    const line = el(190, 40, 210, 100);
+    const topAt = (_x: number, y: number) => (y < 100 ? line : bg);
+    expect(ringSides(rect, 10, 4, topAt).top).toBeLessThan(0);
+    expect(ringSides(rect, 10, 4, topAt, (e) => e === line).top).toBe(10);
+  });
 });
