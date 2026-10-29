@@ -61,6 +61,15 @@ words:
     say: Transfer Mechanism
   - word: FIELD_MEMORY
     say: field memory
+  - word: JSON
+    say: Jason
+    confirm: true
+  - word: YAML
+    say: yam-ul
+    confirm: true
+  - word: PyTorch
+    say: pie-torch
+    confirm: true
 
 reads_fine:
   # Node names and logic words, written in capitals as the model writes them.
@@ -68,10 +77,12 @@ reads_fine:
   - COMBINED
   - CONTEXT
   - MATCH
+  - OUTPUT
   - QUERY
   - RETRIEVED
   - SCORES
   - STATE
+  - TASK
   - WEIGHT
   - WEIGHTED
   - GitHub

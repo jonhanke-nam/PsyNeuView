@@ -43,12 +43,12 @@ rows with a `?tour=` are built.
 | 8 | More elaborate configurations — the Stroop model | Primer: *More Elaborate Configurations* | `pnl-elaborate-configurations` | **Open** the Elaborate Configurations demo, the Primer's Stroop model from five pathway lists; click the **color** and **word** arrows (weights 2 and 3); see how the **task** input's 4 cancels the hidden layers' bias; **run** the Primer's congruent and incongruent trials (decision times 1.41 and 2.75), then **read the word** green in red ink (1.38) |
 | 9 | Dynamics of execution — time scales and conditions | Primer: *Dynamics of Execution* | `pnl-dynamics-of-execution` | **Open** the Dynamics of Execution demo, the Stroop model with a step-by-step decision; see in the **Scheduler** that a trial ends when the decision is finished; **run** with noise (a different step count each time), then without (59 incongruent, 25 congruent); make the task an **LCAMechanism** the hidden layers **wait** 10 executions for, and watch the word win (−20 in 57) |
 | 10 | Control — a model that monitors its own conflict | Primer: *Control* | `pnl-control` | **Open** the Stroop With Control demo; see the **task** layer and the **Conflict Monitor** CONTROL listens to; **run** four incongruent trials (the chance of red creeps from 0.024 to 0.088), then **double** the conflict weight and run again (0.024, 0.136, 0.462, 0.682) |
-| 11 | Parameters | Primer: *Parameters* (accessing, setting, function and modulable parameters) | | Reading and changing parameters, in the Inspector and in code |
+| 11 | Parameters — a mechanism's, its function's, and modulated ones | Primer: *Parameters* (accessing, setting, function and modulable parameters) | `pnl-parameters` | **Open** Stroop With Control again; see a mechanism's parameters and its **function's**; **run** and read every trial; set OUTPUT's **gain** to 2 in the Inspector and run again (conflict 0.26, control does less); see TASK's **base** gain |
 | 12 | Displaying and logging values | Primer: *Displaying and Logging Values* | | Reports and logs, and the app's run results and trace |
 | 13 | Learning | Primer: *Learning*, *LearningMechanisms* | | A learning pathway and backpropagation |
 | 14 | Customization | Primer: *Customization* | | A user-defined function |
 
-Lessons 5, 6 and 11–14 are listed so the order is settled; they are not built
+Lessons 5, 6 and 12–14 are listed so the order is settled; they are not built
 yet, so lesson 7 follows lesson 4 in the menu for now. The
 notebook's own ending, *Constructing Compositions*, says "more content is
 being added weekly", so the list may grow with it.
@@ -389,6 +389,35 @@ follows, does not.) The tutorial spec and
 animation, which the Run tab's results and trace stand in for, and control
 that simulates to choose its allocation (the expected value of control).
 
+### 11. Parameters — a mechanism's, its function's, and modulated ones
+
+Basics and Primer, *Parameters*. Validated against PsyNeuLink 0.20.2.0.
+
+The Primer works on its Control model, so the walkthrough opens **Stroop
+With Control** again. Select `OUTPUT`: its own parameters are under
+**Mechanism Parameters**, and its function's, the `Logistic`'s **gain** 1 and
+**bias** 0, sit by the Function menu; the Primer reaches the second kind as
+`output.function.gain.base`. A parameter's value is its latest, but the
+**Run** tab keeps every trial: `OUTPUT` is [0.267, 0.733] on the first of the
+four and [0.354, 0.646] on the last, what the Primer reaches with
+`get_previous` and `history_max_length`.
+
+Set `OUTPUT`'s gain to **2** in the Inspector, and the code becomes
+`function=pnl.Logistic(gain=2)`. Run again: `OUTPUT` is more decisive, the
+wrong way, [0.118, 0.882]; with one unit near 0 the Conflict Monitor reads
+less conflict, **0.26** instead of 0.49, so control raises the task's gain
+less and the chance of red stays near **0.002**. One function parameter
+changed what control does. Last, `TASK`'s gain reads 1 in the Inspector: its
+**base** value. The gain actually used is the one `CONTROL` sets, the
+*modulated* value, which the Primer reads as `task.parameter_ports[GAIN].value`
+and the app doesn't show.
+
+![OUTPUT's gain set to 2](assets/tour/pnl-parameters-step-5.png)
+
+**What stays in the Primer.** Contexts (a parameter holding different values
+in different compositions) with `get` and `set`, `history_max_length`, and
+reading a modulated value.
+
 ---
 
 ## What you can expect
@@ -430,8 +459,12 @@ that simulates to choose its allocation (the expected value of control).
       (`pnl-control.tutorial.spec.ts`): it reads the controller and asserts
       both runs' conflict and chance of red (0.024 … 0.088; with the weight
       doubled, 0.024 … 0.682).
+- [x] Lesson 11 reuses that demo (`pnl-parameters.tutorial.spec.ts`): it
+      sets OUTPUT's Logistic gain through the Inspector and asserts both
+      runs (OUTPUT 0.267/0.733 and conflict 0.49 …; with gain 2, 0.118/0.882,
+      conflict 0.26 …, chance of red 0.002).
 - [x] Every step has a caption for narration.
-- [ ] **Not yet:** lessons 5, 6 and 11–14. Each will be added in order, as a walkthrough
+- [ ] **Not yet:** lessons 5, 6 and 12–14. Each will be added in order, as a walkthrough
       with a bundled demo where the model is too big to build by hand.
 
 ## Further reading

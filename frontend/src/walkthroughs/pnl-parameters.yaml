@@ -1,0 +1,160 @@
+id: pnl-parameters
+title: Parameters — a mechanism's, its function's, and modulated ones
+model: Stroop With Control
+psyneulink: 11
+minutes: 7
+docs:
+  - tutorials/05-editing-inspector.md
+  - tutorials/17-psyneulink-tutorials.md
+
+# Lesson 11 of the PsyNeuLink Tutorials (#9): the Basics and Primer's
+# "Parameters" (Accessing Parameter Values, Setting Parameter Values,
+# Function Parameters, Modulable Parameters).
+#
+# Source: PsyNeuLink's docs/source/BasicsAndPrimer.rst,
+#   https://princetonuniversity.github.io/PsyNeuLink/BasicsAndPrimer.html
+#   (Parameters).
+# Validated against PsyNeuLink 0.20.2.0.
+#
+# The Primer works on the model from its Control section, so the lesson
+# opens lesson 10's demo, Stroop With Control. What the app shows: a
+# mechanism's own parameters and its function's, separately, in the
+# Inspector; every trial's values in the run's results, which is what the
+# Primer reaches with get_previous and history; and a function parameter,
+# OUTPUT's Logistic gain, set in the Inspector and written into the code.
+# Raising it to 2 makes OUTPUT more decisive, so the Conflict Monitor reads
+# less conflict (0.26 to 0.29 instead of 0.49 to 0.57), control does less,
+# and the chance of red stays near 0.002. Every number below was measured in
+# the app; backend/tests/test_demo_stroop_with_control.py and the tutorial
+# spec pin them.
+#
+# What the app doesn't show is a modulated value: the Inspector shows TASK's
+# gain as its base, 1, while the gain used on each trial is the one CONTROL
+# sets (the Primer reads it with task.parameter_ports[GAIN].value). Nor
+# contexts, get and set with a context, or history_max_length. The last
+# steps say so.
+
+steps:
+  - id: open-the-demo
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Stroop With Control demo again, the model from lesson 10. The
+      Primer uses it to show how parameters work.
+    say: >-
+      Open the Stroop With Control demo again.
+    done:
+      nodeExists: Conflict Monitor
+    act:
+      openModel: Stroop With Control
+
+  - id: two-kinds
+    anchor:
+      node: OUTPUT
+    instruct: >-
+      Select OUTPUT. A mechanism has parameters of its own, under Mechanism
+      Parameters, and its function, here Logistic, has its own too: gain 1
+      and bias 0, next to the Function menu. The Primer reaches the second
+      kind through the function, output.function.gain.base, which is 1.0.
+    say: >-
+      A mechanism has its own parameters, and its function has others: here,
+      the Logistic's gain and bias.
+    done:
+      selectedNode: OUTPUT
+    act:
+      selectNode: OUTPUT
+
+  - id: every-trial
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Run the four trials, stimuli. A parameter's value is its latest one,
+      but the Run tab keeps every trial: OUTPUT is [0.267, 0.733] on the
+      first and [0.354, 0.646] on the last. The Primer reaches earlier values
+      with get_previous, and keeps more of them with history_max_length.
+    say: >-
+      Run the four trials. The Run tab keeps every trial's values, not just
+      the last.
+    done:
+      lastRunInputs:
+        COLOR INPUT: [[1, 0], [1, 0], [1, 0], [1, 0]]
+        WORD INPUT: [[0, 1], [0, 1], [0, 1], [0, 1]]
+        TASK INPUT: [[1, 0], [1, 0], [1, 0], [1, 0]]
+    act:
+      pickSet:
+        tab: run
+        name: stimuli
+      runModel: true
+
+  - id: set-the-gain
+    anchor:
+      node: OUTPUT
+    instruct: >-
+      Now set a function parameter: in the Inspector, change OUTPUT's gain
+      from 1 to 2. The code changes to match, function=pnl.Logistic(gain=2).
+      A steeper Logistic pushes each response unit nearer 0 or 1.
+    say: >-
+      Set OUTPUT's gain to 2: a steeper Logistic.
+    done:
+      paramEquals:
+        node: OUTPUT
+        param: gain
+        value: "2"
+    act:
+      setParameter:
+        node: OUTPUT
+        param: gain
+        value: "2"
+
+  - id: run-again
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Run the four trials again. OUTPUT is more decisive, and the wrong way:
+      [0.118, 0.882] on the first trial. With one unit near 0, the Conflict
+      Monitor reads less conflict, 0.26 instead of 0.49, so CONTROL raises the
+      task's gain less, and the chance of red stays near 0.002 on every
+      trial. One function parameter changed what control does.
+    say: >-
+      Run again. OUTPUT is more decisive, conflict is lower, and control does
+      less.
+    done:
+      runsAtLeast: 2
+    act:
+      pickSet:
+        tab: run
+        name: stimuli
+      runModel: true
+
+  - id: modulated
+    anchor:
+      node: TASK
+    instruct: >-
+      Select TASK. Its Logistic gain reads 1 in the Inspector: that is the
+      base value. The gain actually used on each trial is the one CONTROL
+      sets, the modulated value, through a ParameterPort; the Primer reads it
+      with task.parameter_ports[GAIN].value. The Inspector shows base values
+      only.
+    say: >-
+      TASK's gain reads 1, its base. The gain control sets is the modulated
+      value, which the Inspector doesn't show.
+    done:
+      selectedNode: TASK
+    act:
+      selectNode: TASK
+
+  - id: what-is-not-here
+    anchor:
+      testid: run-panel
+    instruct: >-
+      What this isn't: the Primer's contexts, a parameter holding different
+      values in different compositions, and get and set with a context;
+      history_max_length; and reading a modulated value. The app runs one
+      composition, so one context. The next section is Displaying and
+      Logging Values, lesson 12.
+    say: >-
+      Contexts, and reading a modulated value, stay in the Primer.
+    done:
+      next: true
+    act:
+      next: true
