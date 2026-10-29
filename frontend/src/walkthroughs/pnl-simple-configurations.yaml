@@ -29,6 +29,10 @@ docs:
 # all zeros, then writes a matrix into the pathway list, as the Primer
 # shows, and runs the Primer's input again. The Primer's matrix is random
 # (between -0.1 and 0.1); this one is fixed, so its numbers can be quoted.
+# The Primer also writes its matrix 2 by 5, which PsyNeuLink 0.20.2.0
+# refuses ("The number of rows (2) ... does not equal the length (5) of the
+# sender vector"): a matrix has one row per sending unit, so this one is
+# 5 by 2.
 # See backend/demos/simple_configurations.py. Every number below was
 # measured in the app; backend/tests/test_demo_simple_configurations.py and
 # the tutorial spec pin them.

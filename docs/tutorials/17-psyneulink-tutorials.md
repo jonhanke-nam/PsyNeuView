@@ -245,7 +245,9 @@ before, so the five outputs are always equal. The Primer then gives a
 projection its own matrix by putting it in the pathway list between the
 layers it joins; the walkthrough edits the code to
 `[[input_layer, [[1, 0], [-1, 0], [0, 1], [0, -1], [0, 0]], hidden_layer, output_layer]]`
-(a fixed matrix, where the Primer's is random), so the first hidden unit
+(a fixed matrix, where the Primer's is random; the Primer also writes its
+matrix 2 by 5, which PsyNeuLink refuses, since a matrix has one row per
+sending unit), so the first hidden unit
 hears the first input minus the second and the other the third minus the
 fourth. The Primer's input again gives hidden units of **0.024** and
 **0.057** (Logistic of −3.7 and −2.8) and **0.520** on every output. The
