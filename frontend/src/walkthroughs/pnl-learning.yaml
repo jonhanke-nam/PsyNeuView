@@ -1,0 +1,143 @@
+id: pnl-learning
+title: Learning — a network learns XOR by backpropagation
+model: XOR Learning
+psyneulink: 13
+minutes: 7
+docs:
+  - tutorials/17-psyneulink-tutorials.md
+
+# Lesson 13 of the PsyNeuLink Tutorials (#9): the Basics and Primer's
+# "Learning" (LearningMechanisms).
+#
+# Source: PsyNeuLink's docs/source/BasicsAndPrimer.rst,
+#   https://princetonuniversity.github.io/PsyNeuLink/BasicsAndPrimer.html
+#   (Learning).
+# Validated against PsyNeuLink 0.20.2.0.
+#
+# The demo is the Primer's XOR network, Input (2) -> Hidden (10, Logistic) ->
+# Output (1, Logistic), with add_backpropagation_learning_pathway adding the
+# learning components. Brought up to 0.20.2.0: Composition(name=...), since
+# the Primer's Composition('XOR Composition') is now refused (the first
+# positional argument is pathways), and the call returns a Pathway, not a
+# dict. The starting weights are seeded, where the Primer's are random. See
+# backend/demos/xor_learning.py.
+#
+# At the default learning rate (0.05), 250 epochs leave every output near 0.5
+# (error at target 0.255). With learning_rate=3, 300 epochs give 0.035, 0.96,
+# 0.963 and 0.044 (error 0.0015). Every number was measured in the app;
+# backend/tests/test_demo_xor_learning.py and the tutorial spec pin them.
+#
+# What stays in the Primer: the Rumelhart semantic network built from
+# several learning pathways (the app has it as a demo), and the
+# AutodiffComposition that trains it in PyTorch. The last step says so.
+
+steps:
+  - id: open-the-demo
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the XOR Learning demo. It is the Primer's network for XOR: two
+      inputs, ten hidden units and one output, which should be 1 when exactly
+      one input is 1.
+    say: >-
+      Open the XOR Learning demo: a network that will learn XOR.
+    done:
+      nodeExists: Comparator
+    act:
+      openModel: XOR Learning
+
+  - id: the-learning-components
+    anchor:
+      node: Comparator
+    instruct: >-
+      Select Comparator. One call, add_backpropagation_learning_pathway, made
+      more than the three layers: a TARGET mechanism for the right answer,
+      this Comparator, which takes Output from it to get the error, and a
+      LearningMechanism for each projection, which sends the error back as a
+      LearningProjection that changes the projection's matrix.
+    say: >-
+      The comparator works out the error. PsyNeuLink made it, and the
+      learning mechanisms, from one call.
+    done:
+      selectedNode: Comparator
+    act:
+      selectNode: Comparator
+
+  - id: train-slowly
+    anchor:
+      testid: tab-learn
+    instruct: >-
+      In the Learn tab, the demo opens with xor_training: the four XOR cases
+      and their targets, for 250 epochs. Train it. At the default learning
+      rate, 0.05, the outputs hardly move: all four end near 0.5, and the
+      error at target is about 0.255. The network hasn't learned XOR yet.
+    say: >-
+      Train for 250 epochs. At the default rate, every output stays near one
+      half.
+    done:
+      lastTraining:
+        epochsAtLeast: 250
+        targets:
+          Output: [[0], [1], [1], [0]]
+    act:
+      pickSet:
+        tab: learn
+        name: xor_training
+
+  - id: raise-the-rate
+    anchor:
+      testid: code-editor-pane
+    instruct: >-
+      Raise the learning rate. In the code, give the call a learning rate:
+      after the pathway list, add learning_rate=3, so each error changes the
+      weights sixty times as much. Each LearningMechanism's learning_rate
+      reads 3.
+    say: >-
+      Add a learning rate of 3 to the learning pathway.
+    done:
+      paramEquals:
+        node: Learning Mechanism for Output Weights
+        param: learning_rate
+        value: "3"
+    act:
+      replaceInCode:
+        find: "pathway=[input, input_weights, hidden, output_weights, output])"
+        replace: "pathway=[input, input_weights, hidden, output_weights, output],\n    learning_rate=3)"
+
+  - id: train-again
+    anchor:
+      testid: tab-learn
+    instruct: >-
+      Train again, for 300 epochs. Now the error falls to about 0.0015, and
+      the outputs are 0.035, 0.96, 0.963 and 0.044: near 0, 1, 1 and 0. The
+      network has learned XOR.
+    say: >-
+      Train for 300 epochs. Now the outputs are near zero, one, one and zero.
+    done:
+      lastTraining:
+        epochsAtLeast: 300
+        targets:
+          Output: [[0], [1], [1], [0]]
+    act:
+      train:
+        inputs:
+          Input: [[0, 0], [0, 1], [1, 0], [1, 1]]
+        targets:
+          Output: [[0], [1], [1], [0]]
+        epochs: 300
+
+  - id: what-is-not-here
+    anchor:
+      testid: tab-learn
+    instruct: >-
+      What this isn't: the Primer also builds the Rumelhart semantic network
+      from several learning pathways (the app has it as the Rumelhart
+      Semantic Network demo), and trains it far faster as an
+      AutodiffComposition, in PyTorch. The last section is Customization,
+      lesson 14.
+    say: >-
+      The Rumelhart network and PyTorch training are next in the Primer.
+    done:
+      next: true
+    act:
+      next: true

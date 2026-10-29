@@ -45,10 +45,10 @@ rows with a `?tour=` are built.
 | 10 | Control — a model that monitors its own conflict | Primer: *Control* | `pnl-control` | **Open** the Stroop With Control demo; see the **task** layer and the **Conflict Monitor** CONTROL listens to; **run** four incongruent trials (the chance of red creeps from 0.024 to 0.088), then **double** the conflict weight and run again (0.024, 0.136, 0.462, 0.682) |
 | 11 | Parameters — a mechanism's, its function's, and modulated ones | Primer: *Parameters* (accessing, setting, function and modulable parameters) | `pnl-parameters` | **Open** Stroop With Control again; see a mechanism's parameters and its **function's**; **run** and read every trial; set OUTPUT's **gain** to 2 in the Inspector and run again (conflict 0.26, control does less); see TASK's **base** gain |
 | 12 | Displaying and logging values — every execution, step by step | Primer: *Displaying and Logging Values* | `pnl-displaying-and-logging` | **Open** Stroop With Control; **run** the four trials and read each trial's values; **step** the trace through every execution (TASK ten times a trial); open **Run State**; see the run record's **JSON/YAML** export |
-| 13 | Learning | Primer: *Learning*, *LearningMechanisms* | | A learning pathway and backpropagation |
+| 13 | Learning — a network learns XOR by backpropagation | Primer: *Learning*, *LearningMechanisms* | `pnl-learning` | **Open** the XOR Learning demo; see the **learning components** one call made; **train** 250 epochs at the default rate (outputs stay near 0.5), raise the **learning rate** to 3 and train 300 (0.035, 0.96, 0.963, 0.044) |
 | 14 | Customization | Primer: *Customization* | | A user-defined function |
 
-Lessons 5, 6, 13 and 14 are listed so the order is settled; they are not built
+Lessons 5, 6 and 14 are listed so the order is settled; they are not built
 yet, so lesson 7 follows lesson 4 in the menu for now. The
 notebook's own ending, *Constructing Compositions*, says "more content is
 being added weekly", so the list may grow with it.
@@ -441,6 +441,36 @@ the log: every node, `TASK` 40 times, `OUTPUT` and the Conflict Monitor four.
 **What stays in the Primer.** `run()`'s other hooks, functions called before
 or after each run, trial or pass for custom operations.
 
+### 13. Learning — a network learns XOR by backpropagation
+
+Basics and Primer, *Learning* (*LearningMechanisms*). Validated against
+PsyNeuLink 0.20.2.0.
+
+The demo, **XOR Learning**, is the Primer's network: `Input` (two units),
+`Hidden` (ten, `Logistic`) and `Output` (one, `Logistic`), joined by two
+`MappingProjection`s, with `add_backpropagation_learning_pathway` adding the
+learning components: a `TARGET` mechanism, a **Comparator** that takes
+`Output` from it to get the error, and a `LearningMechanism` for each
+projection that changes its matrix. Three things are brought up to
+0.20.2.0: `Composition(name='XOR Composition')`, since the Primer's
+`Composition('XOR Composition')` is now refused (the first positional
+argument is `pathways`); the call returns a `Pathway`, not a dict, and the
+Learn tab finds the target for you; and the starting weights come from a
+seeded generator, where the Primer's are random.
+
+In the **Learn** tab, `xor_training` holds the four XOR cases and targets for
+250 epochs. At the default learning rate, 0.05, every output stays near 0.5
+(error at target **0.255**). Add `learning_rate=3` to the call and train 300
+epochs: the error falls to about **0.0015** and the outputs are **0.035**,
+**0.96**, **0.963** and **0.044**. The tutorial spec and
+`backend/tests/test_demo_xor_learning.py` assert both trainings.
+
+![XOR learned](assets/tour/pnl-learning-step-6.png)
+
+**What stays in the Primer.** The Rumelhart semantic network built from
+several learning pathways (the app has it as a demo) and the
+`AutodiffComposition` that trains it in PyTorch.
+
 ---
 
 ## What you can expect
@@ -490,8 +520,12 @@ or after each run, trial or pass for custom operations.
       it steps the trace and opens Run State, and asserts the run's log
       holds every node, TASK 40 times (ten a trial) and OUTPUT and the
       Conflict Monitor four.
+- [x] Lesson 13 opens a bundled demo, the Primer's XOR network
+      (`pnl-learning.tutorial.spec.ts`): it trains twice through the Learn tab
+      and asserts both trainings' error and outputs (0.255, all near 0.5; with
+      the rate at 3, under 0.002 and 0.035, 0.96, 0.963, 0.044).
 - [x] Every step has a caption for narration.
-- [ ] **Not yet:** lessons 5, 6, 13 and 14. Each will be added in order, as a walkthrough
+- [ ] **Not yet:** lessons 5, 6 and 14. Each will be added in order, as a walkthrough
       with a bundled demo where the model is too big to build by hand.
 
 ## Further reading
