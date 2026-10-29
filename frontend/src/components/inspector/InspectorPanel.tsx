@@ -106,9 +106,24 @@ export function applyOptimisticUpdate(
   }
   if (declStart < 0) return null;
 
-  // For function context, find the function=pnl.XXX(...) line
+  // Where the declaration ends: its parentheses balance (code only, not a
+  // comment). Every search below stays inside it. Searching on past it, a
+  // function parameter for `output = …(function=pnl.Logistic)` — the class
+  // with no call — found the next mechanism's `function=pnl.Logistic(` and
+  // gave WORD HIDDEN OUTPUT's gain (#9).
+  let declEnd = declStart;
+  for (let i = declStart, depth = 0; i < lines.length; i++) {
+    const code = lines[i].replace(/#.*$/, "");
+    for (const ch of code) depth += ch === "(" ? 1 : ch === ")" ? -1 : 0;
+    declEnd = i;
+    if (depth <= 0) break;
+  }
+  const lastLine = declEnd + 1;
+
+  // For function context, find the function=pnl.XXX(...) line. A bare
+  // `function=pnl.Logistic` has nothing to insert into: the backend handles it.
   const searchStart = context === "function"
-    ? lines.findIndex((l, i) => i >= declStart && /function\s*=\s*pnl\.\w+\(/.test(l))
+    ? lines.findIndex((l, i) => i >= declStart && i < lastLine && /function\s*=\s*pnl\.\w+\(/.test(l))
     : declStart;
   if (searchStart < 0) return null;
 
@@ -116,7 +131,7 @@ export function applyOptimisticUpdate(
 
   if (isDefault) {
     // Remove the param — find and delete it
-    for (let i = searchStart; i < Math.min(searchStart + 15, lines.length); i++) {
+    for (let i = searchStart; i < lastLine; i++) {
       if (paramPattern.test(lines[i])) {
         // Simple removal: delete the line or the param from the line
         const line = lines[i];
@@ -142,7 +157,7 @@ export function applyOptimisticUpdate(
   }
 
   // Replace existing param value
-  for (let i = searchStart; i < Math.min(searchStart + 15, lines.length); i++) {
+  for (let i = searchStart; i < lastLine; i++) {
     if (paramPattern.test(lines[i])) {
       // A list, tuple or dict value (a projection's matrix) can hold commas
       // and run over several lines, which the one-line replace below can't
@@ -161,14 +176,22 @@ export function applyOptimisticUpdate(
 
   // Param not in source yet — insert it
   if (context === "function") {
-    // Insert into the function call: pnl.XXX(existing) → pnl.XXX(existing, param=val)
-    for (let i = searchStart; i < Math.min(searchStart + 5, lines.length); i++) {
-      const closingIdx = lines[i].lastIndexOf(")");
-      if (closingIdx >= 0 && lines[i].includes("pnl.")) {
-        const before = lines[i].substring(0, closingIdx);
-        const after = lines[i].substring(closingIdx);
+    // Insert into the function call: pnl.XXX(existing) → pnl.XXX(existing, param=val),
+    // before the call's own closing paren — not the line's last one, which on
+    // a one-line declaration is the mechanism's: `Logistic(bias=-4), gain=2)`
+    // made gain the mechanism's argument. A call that runs on past this line
+    // is left to the backend.
+    const line = lines[searchStart];
+    const call = /function\s*=\s*pnl\.\w+\(/.exec(line);
+    if (call) {
+      let depth = 1;
+      let j = call.index + call[0].length;
+      for (; j < line.length && depth > 0; j++) depth += line[j] === "(" ? 1 : line[j] === ")" ? -1 : 0;
+      if (depth === 0) {
+        const closingIdx = j - 1;
+        const before = line.substring(0, closingIdx);
         const separator = before.trim().endsWith("(") ? "" : ", ";
-        lines[i] = before + separator + paramName + "=" + newValue + after;
+        lines[searchStart] = before + separator + paramName + "=" + newValue + line.substring(closingIdx);
         return lines.join("\n");
       }
     }
