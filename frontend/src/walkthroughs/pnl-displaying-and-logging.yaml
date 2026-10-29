@@ -1,0 +1,139 @@
+id: pnl-displaying-and-logging
+title: Displaying and logging values — every execution, step by step
+model: Stroop With Control
+psyneulink: 12
+minutes: 6
+docs:
+  - tutorials/02-running-a-model.md
+  - tutorials/04-debugger-stepping.md
+  - tutorials/17-psyneulink-tutorials.md
+
+# Lesson 12 of the PsyNeuLink Tutorials (#9): the Basics and Primer's
+# "Displaying and Logging Values".
+#
+# Source: PsyNeuLink's docs/source/BasicsAndPrimer.rst,
+#   https://princetonuniversity.github.io/PsyNeuLink/BasicsAndPrimer.html
+#   (Displaying and Logging Values).
+# Validated against PsyNeuLink 0.20.2.0.
+#
+# The Primer prints values after each trial with call_after_trial, and logs
+# TASK and CONTROL with log.set_log_conditions(VALUE), printing the log as
+# run:trial:pass:time_step and value. The app keeps the same record without
+# any code: every run logs every node, the Run tab shows each trial, the
+# trace bar steps through every execution (TASK ten times a trial, as the
+# conditions say), Run State shows the current step, and a run record can be
+# exported as JSON or YAML (the Primer's nparray, nparray_dictionary and csv).
+# The lesson opens lesson 10's demo, runs it, and steps.
+#
+# Stepping needs a PsyNeuLink with the debugger hook (0.19.1.0 or later).
+#
+# What stays in the Primer: the other run() hooks (before and after each
+# run, trial or pass) for custom operations. The last step says so.
+
+steps:
+  - id: open-the-demo
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Stroop With Control demo, the model the Primer logs. In
+      PsyNeuLink you choose what to log, with log.set_log_conditions(VALUE);
+      the app logs every node of every run for you.
+    say: >-
+      Open the Stroop With Control demo once more.
+    done:
+      nodeExists: Conflict Monitor
+    act:
+      openModel: Stroop With Control
+
+  - id: run-it
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Run the four trials, stimuli. The Run tab's results list each trial's
+      values for every node: what the Primer prints after each trial with its
+      call_after_trial function.
+    say: >-
+      Run the four trials. The results show each trial, for every node.
+    done:
+      lastRunInputs:
+        COLOR INPUT: [[1, 0], [1, 0], [1, 0], [1, 0]]
+        WORD INPUT: [[0, 1], [0, 1], [0, 1], [0, 1]]
+        TASK INPUT: [[1, 0], [1, 0], [1, 0], [1, 0]]
+    act:
+      pickSet:
+        tab: run
+        name: stimuli
+      runModel: true
+
+  - id: step-the-trace
+    anchor:
+      testid: trace-next-step
+    instruct: >-
+      The trace bar on the canvas steps through the run one execution at a
+      time, the Primer's time_step, and counts the steps and the trials as
+      it goes. Press ▶ to take a step.
+    say: >-
+      Press the trace bar's play button to step through the run.
+    done:
+      traceStepAtLeast: 1
+    act:
+      click: trace-next-step
+
+  - id: task-ten-times
+    anchor:
+      testid: trace-next-step
+    instruct: >-
+      Step again. Each step lights up what ran. TASK runs ten times in every
+      trial before the hidden layers run once, as its conditions say, and
+      CONTROL once, at the end: in the Primer's log, ten TASK entries a trial
+      and one for CONTROL.
+    say: >-
+      Step again. The task runs ten times in each trial; control once, at the
+      end.
+    done:
+      traceStepAtLeast: 2
+    act:
+      click: trace-next-step
+
+  - id: run-state
+    anchor:
+      testid: tab-run-state
+    instruct: >-
+      Click Run State. It shows the step you are on in detail: which nodes
+      ran, and the value each one holds. This is the Primer's log entry for
+      that time.
+    say: >-
+      Run State shows the current step in detail.
+    done:
+      visible: panel-run-state
+    act:
+      click: tab-run-state
+
+  - id: export
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Back in the Run tab, each run is kept as a record under the results,
+      with Re-run, and export as JSON or YAML: every node's value on every
+      trial, in a file. The Primer gets the same from its log as a numpy
+      array, a dictionary, or CSV.
+    say: >-
+      Each run is kept, and can be exported as JSON or YAML.
+    done:
+      visible: run-panel
+    act:
+      click: tab-run
+
+  - id: what-is-not-here
+    anchor:
+      testid: run-panel
+    instruct: >-
+      What this isn't: run()'s other hooks, functions called before or after
+      each run, trial or pass to do something custom, need code; the app's
+      log is always on. The next section is Learning, lesson 13.
+    say: >-
+      Custom hooks around each trial stay in the Primer.
+    done:
+      next: true
+    act:
+      next: true
