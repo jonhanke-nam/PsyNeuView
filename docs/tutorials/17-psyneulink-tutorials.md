@@ -40,7 +40,7 @@ rows with a `?tour=` are built.
 | 5 | The pre-trained Stroop model | Tutorial: *Pre-trained Complete Stroop Model* | | The Cohen et al. (1990) network with its weights written in; task demand; the eight input combinations |
 | 6 | Constructing compositions | Tutorial: *Constructing Compositions* | | Lines of two and three layers, a recurrent pathway, several hidden layers, and what each graph looks like |
 | 7 | Simple configurations — a network from a pathway | Primer: *Simple Configurations* | `pnl-simple-configurations` | **Open** the Simple Configurations demo, the Primer's 5-2-5 network from a pathway; click the arrow **PsyNeuLink made** (full connectivity, all 1s); **run** the Primer's input and five zeros; write a **matrix into the pathway** and run again |
-| 8 | More elaborate configurations | Primer: *More Elaborate Configurations* | | The Stroop model with two pathways and a decision mechanism |
+| 8 | More elaborate configurations — the Stroop model | Primer: *More Elaborate Configurations* | `pnl-elaborate-configurations` | **Open** the Elaborate Configurations demo, the Primer's Stroop model from five pathway lists; click the **color** and **word** arrows (weights 2 and 3); see how the **task** input's 4 cancels the hidden layers' bias; **run** the Primer's congruent and incongruent trials (decision times 1.41 and 2.75), then **read the word** green in red ink (1.38) |
 | 9 | Dynamics of execution | Primer: *Dynamics of Execution* | | The scheduler, conditions, and time scales |
 | 10 | Control | Primer: *Control* | | A `ControlMechanism` and what it modulates |
 | 11 | Parameters | Primer: *Parameters* (accessing, setting, function and modulable parameters) | | Reading and changing parameters, in the Inspector and in code |
@@ -48,7 +48,7 @@ rows with a `?tour=` are built.
 | 13 | Learning | Primer: *Learning*, *LearningMechanisms* | | A learning pathway and backpropagation |
 | 14 | Customization | Primer: *Customization* | | A user-defined function |
 
-Lessons 5, 6 and 8–14 are listed so the order is settled; they are not built
+Lessons 5, 6 and 9–14 are listed so the order is settled; they are not built
 yet, so lesson 7 follows lesson 4 in the menu for now. The
 notebook's own ending, *Constructing Compositions*, says "more content is
 being added weekly", so the list may grow with it.
@@ -265,6 +265,55 @@ recurrent projection from `output` back to `hidden` (a fourth entry in the
 pathway, or `add_projection`), whose timing is the Primer's *Dynamics of
 Execution*, lesson 9. The walkthrough's last step says so.
 
+### 8. More elaborate configurations — the Stroop model
+
+Basics and Primer, *More Elaborate Configurations*, and its script
+`Scripts/Examples/Basics And Primer/Stroop Model - Basic.py`. Validated
+against PsyNeuLink 0.20.2.0.
+
+The Primer's Stroop model is a simplified version of Cohen, Dunbar and
+McClelland (1990), built from five pathway lists, each with the matrices of
+its projections written between the mechanisms: color naming (`COLOR INPUT`,
+`COLOR HIDDEN`, `OUTPUT`), word reading (`WORD INPUT`, `WORD HIDDEN`, the same
+`OUTPUT`), two task pathways from `TASK INPUT` to each hidden layer, and
+`OUTPUT` to `DECISION`, a `DDM`. The walkthrough opens a bundled demo,
+**Elaborate Configurations**, with the Primer's code and names. (It adds the
+color task pathway second, where the Primer adds it third, so the Layered
+layout puts `TASK INPUT` between the two inputs and no arrows cross; the
+model is the same.)
+
+Every layer has two units, red then green. Select `COLOR HIDDEN`: its
+`Logistic` has a bias of **−4**, which keeps it nearly off. Click the color
+arrow: **[[2, −2], [−2, 2]]**, red ink exciting red and inhibiting green; the
+word arrow is **[[3, −3], [−3, 3]]**, stronger, since reading is the more
+practised skill. `TASK INPUT`'s arrows, **[[4, 4], [0, 0]]** to color and
+**[[0, 0], [4, 4]]** to word, add 4 to the hidden layer of the task asked
+for, cancelling its bias: the task says which pathway to use. `DECISION`
+accumulates the difference between `OUTPUT`'s two units to a threshold, and
+reports the choice, 1 or −1, and the decision time. (The Inspector shows its
+`input_format` as SCALAR, though the code says ARRAY: PsyNeuLink keeps the
+default in that parameter, and the ARRAY shows as its input port's name.)
+
+Then the runs. The demo opens with the Primer's, `primer_trials`: two color
+naming trials, red ink with the word red (congruent), then red ink with the
+word green (incongruent). The decision times are **1.41** and **2.75**, and
+the chance of answering red falls from **0.999** to **0.940**: the Stroop
+effect. The Primer prints 2.80 and 3.94, from an older PsyNeuLink; the
+incongruent trial is still the slower. Then the other task: `TASK INPUT`
+**[0, 1]**, reading the word green in red ink, answers green (a chance of red
+of **0.001**) in **1.38**, as quick as the congruent trial: the weaker color
+pathway barely slows reading. The DDM's 1 or −1 is drawn at random from those
+chances, so a run can now and then go the unlikely way, as the Primer warns;
+the tutorial spec and `backend/tests/test_demo_elaborate_configurations.py`
+assert the times and chances, which are fixed.
+
+![The Primer's two trials, run](assets/tour/pnl-elaborate-configurations-step-8.png)
+
+**What stays in the Primer.** Its figure is `show_graph()`, which is the
+canvas; the script's `termination_processing` and `animate` arguments to
+`run`; and the fuller Stroop model in the PsyNeuLink Library. What runs when,
+within a trial, is the Primer's *Dynamics of Execution*, lesson 9.
+
 ---
 
 ## What you can expect
@@ -292,8 +341,13 @@ Execution*, lesson 9. The walkthrough's last step says so.
       two projections PsyNeuLink made (all 1s) and the matrix written into
       the pathway, and asserts the three runs (0.881; 0.5 and 0.731; 0.024,
       0.057 and 0.520).
+- [x] Lesson 8 opens a bundled demo, the Primer's Stroop model
+      (`pnl-elaborate-configurations.tutorial.spec.ts`): it reads the six
+      matrices the pathway lists wrote, and asserts the decision times and
+      chances of red (1.41 and 0.999, 2.75 and 0.940; reading, 1.38 and
+      0.001).
 - [x] Every step has a caption for narration.
-- [ ] **Not yet:** lessons 5, 6 and 8–14. Each will be added in order, as a walkthrough
+- [ ] **Not yet:** lessons 5, 6 and 9–14. Each will be added in order, as a walkthrough
       with a bundled demo where the model is too big to build by hand.
 
 ## Further reading
