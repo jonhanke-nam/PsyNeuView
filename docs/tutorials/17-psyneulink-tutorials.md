@@ -36,7 +36,7 @@ rows with a `?tour=` are built.
 | 1 | Creating a mechanism — Linear and Logistic | Tutorial: *Creating a mechanism*, *Logistic Function* | `pnl-mechanism` | **Build** from New Model, **run** the notebook's inputs, **edit** slope and intercept, switch the function to Logistic |
 | 2 | From nodes to graphs — a composition | Tutorial: *From Nodes to Graphs: Compositions* | `pnl-composition` | **Build** from New Model, select the projection, **run** 4 and a five-trial sweep, give both nodes **two units**, make it Logistic, run x and 3x, and the step mechanism |
 | 3 | Adding projections — the mapping matrix | Tutorial: *Adding Projections* | `pnl-projections` | **Build** from New Model: a Linear unit (slope 2, intercept 2) into a Logistic one; click the arrow for the **identity matrix**; **run** the sweep; write **0.5** into the matrix (the explicit `MappingProjection`) and run again |
-| 4 | The mini Stroop model | Tutorial: *Compositions*, *Mini-Stroop Model* | | Two inputs (colours, words) converging on a Logistic response; a congruent and an incongruent trial |
+| 4 | The mini Stroop model | Tutorial: *Compositions*, *Mini-Stroop Model* | `pnl-mini-stroop` | **Build** from New Model: add a third node from the palette and **name** it words; give all three **two units**; make the response Logistic and words' slope 1.5; **join** words to the response with a MappingProjection from the palette; **run** a congruent and an incongruent trial |
 | 5 | The pre-trained Stroop model | Tutorial: *Pre-trained Complete Stroop Model* | | The Cohen et al. (1990) network with its weights written in; task demand; the eight input combinations |
 | 6 | Constructing compositions | Tutorial: *Constructing Compositions* | | Lines of two and three layers, a recurrent pathway, several hidden layers, and what each graph looks like |
 | 7 | Simple configurations | Primer: *Simple Configurations* | | A 5-2-5 feedforward network from a pathway; the projections PsyNeuLink adds for you |
@@ -48,7 +48,7 @@ rows with a `?tour=` are built.
 | 13 | Learning | Primer: *Learning*, *LearningMechanisms* | | A learning pathway and backpropagation |
 | 14 | Customization | Primer: *Customization* | | A user-defined function |
 
-Lessons 4–14 are listed so the order is settled; they are not built yet. The
+Lessons 5–14 are listed so the order is settled; they are not built yet. The
 notebook's own ending, *Constructing Compositions*, says "more content is
 being added weekly", so the list may grow with it.
 
@@ -173,6 +173,50 @@ nodes.
 
 ---
 
+### 4. The mini Stroop model
+
+Notebook cells 34–38. Validated against PsyNeuLink 0.20.2.0.
+
+The notebook's first composition that is not a line: two input mechanisms,
+`Colors` (Linear) and `Words` (Linear, slope 1.5), converge on a `Response`
+mechanism (Logistic), each with two units (`default_variable=[0, 0]`), one
+for red and one for blue, joined by two `add_linear_processing_pathway`
+calls. It models the Stroop task, where naming a word's ink colour is slowed
+when the word names a different colour. The walkthrough starts a **new
+model**, `mini_stroop`, whose starter is already one of the two pathways:
+`input_node` plays Colors and `output_node` plays Response. It adds a
+**TransferMechanism** from the Components palette and **renames** it `words`
+(double-click the name in the Inspector's header); gives `words`,
+`input_node` and `output_node` an input shape of **[2]**; makes
+`output_node` **Logistic** and sets `words`' **slope** to **1.5**; then
+joins `words` to `output_node`: drag **MappingProjection** from the palette
+onto `output_node` and click `words`, its sender. A second arrow appears,
+and the code gains a `MappingProjection` with the 2 × 2 identity as its
+matrix, so the word "red" feeds the red response.
+
+Then the notebook's two trials, in the **Run** tab. Congruent, blue ink and
+the word "blue" (`input_node` **[0, 1]**, `words` **[0, 1]**): **0.5** and
+**0.924**. The red unit gets nothing and sits at the Logistic's midpoint; the
+blue unit gets 1 from the ink and 1.5 from the word. Incongruent, red ink and
+the word "blue" (`input_node` **[1, 0]**): **0.731** and **0.818**. The ink
+pushes toward red, the word pushes harder toward blue, and the two responses
+are close: the conflict that slows naming the ink. The tutorial spec asserts
+both trials and that the drag wrote a second `MappingProjection` into
+`output_node`.
+
+![Both inputs joined to output_node, before the congruent trial](assets/tour/pnl-mini-stroop-step-10.png)
+
+**What stays in the notebook.** `add_linear_processing_pathway`, which makes
+each projection for you; here every projection is written out as a
+`MappingProjection`. `show_graph()` is the canvas. The names `Colors` and
+`Response` stay there, since `input_node` and `output_node` play them; and
+renaming in the Inspector changes a node's `name=`, not the Python variable
+that holds it, so the code still calls the word unit
+`New_TransferMechanism_1`. The pre-trained Stroop model that follows in the
+notebook is lesson 5.
+
+---
+
 ## What you can expect
 
 - [x] **Tutorials ▾** has a **PsyNeuLink Tutorials** section, folded on first
@@ -189,8 +233,12 @@ nodes.
       it edits a projection's matrix under Projection Parameters and asserts
       both sweeps (0.018 … 1.000 through the identity; 0.119 … 0.982 through
       0.5) and the `matrix=[[0.5]]` written into the code.
+- [x] Lesson 4 is built the same way (`pnl-mini-stroop.tutorial.spec.ts`):
+      it adds and renames a node, joins it with a MappingProjection from the
+      palette, and asserts both trials (congruent 0.5/0.924, incongruent
+      0.731/0.818).
 - [x] Every step has a caption for narration.
-- [ ] **Not yet:** lessons 4–14. Each will be added in order, as a walkthrough
+- [ ] **Not yet:** lessons 5–14. Each will be added in order, as a walkthrough
       with a bundled demo where the model is too big to build by hand.
 
 ## Further reading
