@@ -431,6 +431,7 @@ describe("menuGroups", () => {
       ["pnl-composition", 2],
       ["pnl-projections", 3],
       ["pnl-mini-stroop", 4],
+      ["pnl-simple-configurations", 7],
     ]);
     for (const l of lessons) {
       expect(l.docs?.length, `"${l.id}" cites no docs page`).toBeGreaterThan(0);

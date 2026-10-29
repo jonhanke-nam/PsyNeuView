@@ -1,0 +1,213 @@
+id: pnl-simple-configurations
+title: Simple configurations — a network from a pathway
+model: Simple Configurations
+psyneulink: 7
+minutes: 6
+docs:
+  - tutorials/02-running-a-model.md
+  - tutorials/05-editing-inspector.md
+  - tutorials/17-psyneulink-tutorials.md
+
+# Lesson 7 of the PsyNeuLink Tutorials (#9): the Basics and Primer's first
+# section, "Simple Configurations".
+#
+# Source: PsyNeuLink's docs/source/BasicsAndPrimer.rst,
+#   https://princetonuniversity.github.io/PsyNeuLink/BasicsAndPrimer.html
+#   (Simple Configurations). Its example scripts, under
+#   Scripts/Examples/Basics And Primer/, begin with the next section's
+#   Stroop model; this section has none.
+# Validated against PsyNeuLink 0.20.2.0.
+#
+# Opened rather than built: the Primer's point is that a pathway list makes
+# the projections for you, and a model built in the app always writes its
+# projections out. The Simple Configurations demo is the Primer's code with
+# its names: Input (five units, Linear), hidden (two, Logistic) and output
+# (five, Logistic), and Composition(pathways=[[input_layer, hidden_layer,
+# output_layer]]), with no projection written. PsyNeuLink adds a
+# MappingProjection from each to the next, sized to fit and full of 1s (the
+# Primer's FULL_CONNECTIVITY_MATRIX). The lesson runs the Primer's input and
+# all zeros, then writes a matrix into the pathway list, as the Primer
+# shows, and runs the Primer's input again. The Primer's matrix is random
+# (between -0.1 and 0.1); this one is fixed, so its numbers can be quoted.
+# The Primer also writes its matrix 2 by 5, which PsyNeuLink 0.20.2.0
+# refuses ("The number of rows (2) ... does not equal the length (5) of the
+# sender vector"): a matrix has one row per sending unit, so this one is
+# 5 by 2.
+# See backend/demos/simple_configurations.py. Every number below was
+# measured in the app; backend/tests/test_demo_simple_configurations.py and
+# the tutorial spec pin them.
+#
+# What stays in the Primer: executing a mechanism on its own,
+# output_layer.execute([0, 2.5, 10.9, 2, 7.6]); show_graph(), which is the
+# canvas; add_linear_processing_pathway and add_nodes; the random matrix and
+# the explicit MappingProjection object in the pathway; and the recurrent
+# projection back to hidden, whose timing is the Primer's Dynamics of
+# Execution (lesson 9). The last step says so.
+
+steps:
+  - id: open-the-demo
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Simple Configurations demo. It is the Primer's first example,
+      with the Primer's own code and names: a 5-2-5 feedforward network, three
+      layers of five, two and five units, made from a pathway.
+    say: >-
+      Open the Simple Configurations demo: a network of three layers, made
+      from a pathway.
+    done:
+      nodeExists: hidden
+    act:
+      openModel: Simple Configurations
+
+  - id: the-input-layer
+    anchor:
+      node: Input
+    instruct: >-
+      Select Input. It is a ProcessingMechanism with five units, so it takes
+      an array of five numbers. Its function is Linear, the default for a
+      ProcessingMechanism: slope 1, intercept 0, so it passes its input on
+      unchanged.
+    say: >-
+      The input layer: five units, passing its input on unchanged.
+    done:
+      selectedNode: Input
+    act:
+      selectNode: Input
+
+  - id: the-hidden-layer
+    anchor:
+      node: hidden
+    instruct: >-
+      Select hidden. It has two units and a Logistic function, which squeezes
+      each unit's input into a number between 0 and 1. output is the same
+      with five units. In the code, the composition is one line:
+      pathways=[[input_layer, hidden_layer, output_layer]]. The order of the
+      list is the order of the layers, and no projection is written.
+    say: >-
+      The hidden layer: two Logistic units. The code lists the three layers,
+      and writes no projection.
+    done:
+      selectedNode: hidden
+    act:
+      selectNode: hidden
+
+  - id: the-projection-it-made
+    anchor:
+      testid: rf__edge-MappingProjection from Input[OutputPort-0] to hidden[InputPort-0]
+    instruct: >-
+      Yet there are two arrows. PsyNeuLink made a MappingProjection from each
+      layer to the next, sized to fit. Click the arrow from Input to hidden:
+      under Projection Parameters, its matrix has five rows, one per input
+      unit, each [1, 1], one column per hidden unit. That is the default,
+      full connectivity: every input unit joined to every hidden unit with a
+      weight of 1. The arrow from hidden to output is the same, two rows of
+      five 1s.
+    say: >-
+      Click the arrow. PsyNeuLink made it: every input unit joined to every
+      hidden unit, with a weight of 1.
+    done:
+      selectedNode: MappingProjection from Input[OutputPort-0] to hidden[InputPort-0]
+    act:
+      selectNode: MappingProjection from Input[OutputPort-0] to hidden[InputPort-0]
+
+  - id: run-the-primer
+    anchor:
+      testid: tab-run
+    instruct: >-
+      In the Run tab, the demo opens with the Primer's input, primer_input:
+      1, 4.7, 3.2, 6 and 2. Press Run Model. Each hidden unit gets the sum of
+      all five, 16.9, so both are about 1, and each output unit gets 1 plus
+      1: every output is about 0.881, as the Primer prints.
+    say: >-
+      Run the Primer's input. Every output is about 0.881.
+    done:
+      lastRunInputs:
+        Input: [[1, 4.7, 3.2, 6, 2]]
+    act:
+      pickSet:
+        tab: run
+        name: primer_input
+      runModel: true
+
+  - id: run-zeros
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Now give Input five zeros, 0, 0, 0, 0, 0, and run it. Both hidden units
+      get 0, and Logistic of 0 is 0.5; each output unit gets 0.5 plus 0.5,
+      so every output is about 0.731. With every weight 1, each layer hears
+      only the sum of the one before, so the five outputs are always the
+      same.
+    say: >-
+      Run five zeros. The hidden units give one half, and every output about
+      0.731.
+    done:
+      lastRunInputs:
+        Input: [[0, 0, 0, 0, 0]]
+    act:
+      setTrialInputs:
+        Input: [[0, 0, 0, 0, 0]]
+      runModel: true
+
+  - id: write-a-matrix
+    anchor:
+      testid: code-editor-pane
+    instruct: >-
+      The Primer's next step is to give a projection its own matrix by
+      putting it in the pathway list, between the two layers it joins, and
+      PsyNeuLink makes the projection from it. In the code, change
+      [[input_layer, hidden_layer, output_layer]] to [[input_layer, [[1, 0],
+      [-1, 0], [0, 1], [0, -1], [0, 0]], hidden_layer, output_layer]]. The
+      first hidden unit now hears the first input minus the second, the
+      second hidden unit the third minus the fourth, and the fifth input
+      neither. Click the arrow from Input to hidden to see the new matrix.
+    say: >-
+      Now write a matrix of your own into the pathway, between the input and
+      hidden layers.
+    done:
+      paramEquals:
+        node: MappingProjection from Input[OutputPort-0] to hidden[InputPort-0]
+        param: matrix
+        value: "[[1,0],[-1,0],[0,1],[0,-1],[0,0]]"
+    act:
+      replaceInCode:
+        find: "[[input_layer, hidden_layer, output_layer]]"
+        replace: "[[input_layer, [[1, 0], [-1, 0], [0, 1], [0, -1], [0, 0]], hidden_layer, output_layer]]"
+
+  - id: run-it-again
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Run the Primer's input again: 1, 4.7, 3.2, 6 and 2. The hidden units
+      now differ: 1 minus 4.7 is -3.7, which gives about 0.024, and 3.2 minus
+      6 is -2.8, about 0.057. Each output gets their sum, so every output is
+      about 0.520. The matrix decides what each unit hears.
+    say: >-
+      Run the Primer's input again. The two hidden units now differ, and
+      every output is about 0.520.
+    done:
+      lastRunInputs:
+        Input: [[1, 4.7, 3.2, 6, 2]]
+    act:
+      setTrialInputs:
+        Input: [[1, 4.7, 3.2, 6, 2]]
+      runModel: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: run-panel
+    instruct: >-
+      What this isn't: the Primer also executes output_layer on its own,
+      which the app doesn't, since it always runs a composition. Its
+      show_graph() is the canvas. Its add_linear_processing_pathway and
+      add_nodes, its random matrix, an explicit MappingProjection in the
+      pathway, and a projection from output back to hidden stay in the
+      Primer; how that loop runs is its Dynamics of Execution, lesson 9.
+    say: >-
+      Running one mechanism alone, the random matrix, and the loop back to
+      the hidden layer stay in the Primer.
+    done:
+      next: true
+    act:
+      next: true

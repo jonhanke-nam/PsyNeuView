@@ -39,7 +39,7 @@ rows with a `?tour=` are built.
 | 4 | The mini Stroop model | Tutorial: *Compositions*, *Mini-Stroop Model* | `pnl-mini-stroop` | **Build** from New Model: add a third node from the palette and **name** it words; give all three **two units**; make the response Logistic and words' slope 1.5; **join** words to the response with a MappingProjection from the palette; **run** a congruent and an incongruent trial |
 | 5 | The pre-trained Stroop model | Tutorial: *Pre-trained Complete Stroop Model* | | The Cohen et al. (1990) network with its weights written in; task demand; the eight input combinations |
 | 6 | Constructing compositions | Tutorial: *Constructing Compositions* | | Lines of two and three layers, a recurrent pathway, several hidden layers, and what each graph looks like |
-| 7 | Simple configurations | Primer: *Simple Configurations* | | A 5-2-5 feedforward network from a pathway; the projections PsyNeuLink adds for you |
+| 7 | Simple configurations — a network from a pathway | Primer: *Simple Configurations* | `pnl-simple-configurations` | **Open** the Simple Configurations demo, the Primer's 5-2-5 network from a pathway; click the arrow **PsyNeuLink made** (full connectivity, all 1s); **run** the Primer's input and five zeros; write a **matrix into the pathway** and run again |
 | 8 | More elaborate configurations | Primer: *More Elaborate Configurations* | | The Stroop model with two pathways and a decision mechanism |
 | 9 | Dynamics of execution | Primer: *Dynamics of Execution* | | The scheduler, conditions, and time scales |
 | 10 | Control | Primer: *Control* | | A `ControlMechanism` and what it modulates |
@@ -48,7 +48,8 @@ rows with a `?tour=` are built.
 | 13 | Learning | Primer: *Learning*, *LearningMechanisms* | | A learning pathway and backpropagation |
 | 14 | Customization | Primer: *Customization* | | A user-defined function |
 
-Lessons 5–14 are listed so the order is settled; they are not built yet. The
+Lessons 5, 6 and 8–14 are listed so the order is settled; they are not built
+yet, so lesson 7 follows lesson 4 in the menu for now. The
 notebook's own ending, *Constructing Compositions*, says "more content is
 being added weekly", so the list may grow with it.
 
@@ -215,6 +216,55 @@ that holds it, so the code still calls the word unit
 `New_TransferMechanism_1`. The pre-trained Stroop model that follows in the
 notebook is lesson 5.
 
+### 7. Simple configurations — a network from a pathway
+
+Basics and Primer, *Simple Configurations*. Validated against PsyNeuLink
+0.20.2.0.
+
+The Primer's first example is a 5-2-5 feedforward network: three
+`ProcessingMechanism`s, `Input` (five units, Linear, the default), `hidden`
+(two, `Logistic`) and `output` (five, `Logistic`), put in a composition with
+`Composition(pathways=[[input_layer, hidden_layer, output_layer]])` and no
+projection written. Its point is that PsyNeuLink adds the projections for
+you, so the walkthrough opens a bundled demo, **Simple Configurations**,
+which is that code with the Primer's names, rather than building it: a model
+built in the app always writes its projections out. Select `Input` and
+`hidden` to see their units and functions, and the code's one-line pathway.
+Then click the arrow from `Input` to `hidden`: the Inspector marks it
+*routed automatically*, and under **Projection Parameters** its matrix is
+five rows of **[1, 1]**, one row per input unit and one column per hidden
+unit, the Primer's `FULL_CONNECTIVITY_MATRIX`. The arrow on to `output` is
+two rows of five 1s.
+
+Then the runs, in the **Run** tab. The demo opens with the Primer's input,
+`primer_input`, **[1, 4.7, 3.2, 6, 2]**: each hidden unit gets the sum,
+16.9, so both are about **1**, and every output is **0.881**, as the Primer
+prints. Five **zeros** give **0.5** on both hidden units and **0.731** on
+every output: with every weight 1, each layer hears only the sum of the one
+before, so the five outputs are always equal. The Primer then gives a
+projection its own matrix by putting it in the pathway list between the
+layers it joins; the walkthrough edits the code to
+`[[input_layer, [[1, 0], [-1, 0], [0, 1], [0, -1], [0, 0]], hidden_layer, output_layer]]`
+(a fixed matrix, where the Primer's is random; the Primer also writes its
+matrix 2 by 5, which PsyNeuLink refuses, since a matrix has one row per
+sending unit), so the first hidden unit
+hears the first input minus the second and the other the third minus the
+fourth. The Primer's input again gives hidden units of **0.024** and
+**0.057** (Logistic of −3.7 and −2.8) and **0.520** on every output. The
+tutorial spec asserts the three runs and both matrices, and
+`backend/tests/test_demo_simple_configurations.py` pins the same numbers.
+
+![The arrow PsyNeuLink made, selected: routed automatically](assets/tour/pnl-simple-configurations-step-5.png)
+
+**What stays in the Primer.** `output_layer.execute([0, 2.5, 10.9, 2, 7.6])`,
+a mechanism executed on its own, since the app always runs a composition;
+`show_graph()`, which is the canvas; `add_linear_processing_pathway` and
+`add_nodes`, the other ways to build the same composition; the random
+matrix and the explicit `MappingProjection` object in the pathway; and the
+recurrent projection from `output` back to `hidden` (a fourth entry in the
+pathway, or `add_projection`), whose timing is the Primer's *Dynamics of
+Execution*, lesson 9. The walkthrough's last step says so.
+
 ---
 
 ## What you can expect
@@ -237,8 +287,13 @@ notebook is lesson 5.
       it adds and renames a node, joins it with a MappingProjection from the
       palette, and asserts both trials (congruent 0.5/0.924, incongruent
       0.731/0.818).
+- [x] Lesson 7 opens a bundled demo, the Primer's network made from a
+      pathway (`pnl-simple-configurations.tutorial.spec.ts`): it reads the
+      two projections PsyNeuLink made (all 1s) and the matrix written into
+      the pathway, and asserts the three runs (0.881; 0.5 and 0.731; 0.024,
+      0.057 and 0.520).
 - [x] Every step has a caption for narration.
-- [ ] **Not yet:** lessons 5–14. Each will be added in order, as a walkthrough
+- [ ] **Not yet:** lessons 5, 6 and 8–14. Each will be added in order, as a walkthrough
       with a bundled demo where the model is too big to build by hand.
 
 ## Further reading
@@ -250,4 +305,5 @@ notebook is lesson 5.
 - PsyNeuLink: [Basics and Primer](https://princetonuniversity.github.io/PsyNeuLink/BasicsAndPrimer.html),
   [`TransferMechanism`](https://princetonuniversity.github.io/PsyNeuLink/TransferMechanism.html),
   [`Logistic`](https://princetonuniversity.github.io/PsyNeuLink/TransferFunctions.html),
-  [`MappingProjection`](https://princetonuniversity.github.io/PsyNeuLink/MappingProjection.html).
+  [`MappingProjection`](https://princetonuniversity.github.io/PsyNeuLink/MappingProjection.html),
+  [`ProcessingMechanism`](https://princetonuniversity.github.io/PsyNeuLink/ProcessingMechanism.html).
