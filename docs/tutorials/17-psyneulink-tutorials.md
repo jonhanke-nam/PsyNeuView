@@ -41,14 +41,14 @@ rows with a `?tour=` are built.
 | 6 | Constructing compositions | Tutorial: *Constructing Compositions* | | Lines of two and three layers, a recurrent pathway, several hidden layers, and what each graph looks like |
 | 7 | Simple configurations — a network from a pathway | Primer: *Simple Configurations* | `pnl-simple-configurations` | **Open** the Simple Configurations demo, the Primer's 5-2-5 network from a pathway; click the arrow **PsyNeuLink made** (full connectivity, all 1s); **run** the Primer's input and five zeros; write a **matrix into the pathway** and run again |
 | 8 | More elaborate configurations — the Stroop model | Primer: *More Elaborate Configurations* | `pnl-elaborate-configurations` | **Open** the Elaborate Configurations demo, the Primer's Stroop model from five pathway lists; click the **color** and **word** arrows (weights 2 and 3); see how the **task** input's 4 cancels the hidden layers' bias; **run** the Primer's congruent and incongruent trials (decision times 1.41 and 2.75), then **read the word** green in red ink (1.38) |
-| 9 | Dynamics of execution | Primer: *Dynamics of Execution* | | The scheduler, conditions, and time scales |
+| 9 | Dynamics of execution — time scales and conditions | Primer: *Dynamics of Execution* | `pnl-dynamics-of-execution` | **Open** the Dynamics of Execution demo, the Stroop model with a step-by-step decision; see in the **Scheduler** that a trial ends when the decision is finished; **run** with noise (a different step count each time), then without (59 incongruent, 25 congruent); make the task an **LCAMechanism** the hidden layers **wait** 10 executions for, and watch the word win (−20 in 57) |
 | 10 | Control | Primer: *Control* | | A `ControlMechanism` and what it modulates |
 | 11 | Parameters | Primer: *Parameters* (accessing, setting, function and modulable parameters) | | Reading and changing parameters, in the Inspector and in code |
 | 12 | Displaying and logging values | Primer: *Displaying and Logging Values* | | Reports and logs, and the app's run results and trace |
 | 13 | Learning | Primer: *Learning*, *LearningMechanisms* | | A learning pathway and backpropagation |
 | 14 | Customization | Primer: *Customization* | | A user-defined function |
 
-Lessons 5, 6 and 9–14 are listed so the order is settled; they are not built
+Lessons 5, 6 and 10–14 are listed so the order is settled; they are not built
 yet, so lesson 7 follows lesson 4 in the menu for now. The
 notebook's own ending, *Constructing Compositions*, says "more content is
 being added weekly", so the list may grow with it.
@@ -314,6 +314,47 @@ canvas; the script's `termination_processing` and `animate` arguments to
 `run`; and the fuller Stroop model in the PsyNeuLink Library. What runs when,
 within a trial, is the Primer's *Dynamics of Execution*, lesson 9.
 
+### 9. Dynamics of execution — time scales and conditions
+
+Basics and Primer, *Dynamics of Execution*. Validated against PsyNeuLink
+0.20.2.0.
+
+The demo, **Dynamics of Execution**, is lesson 8's Stroop model with the
+decision changed as the Primer changes it: a `DriftDiffusionIntegrator`
+(noise 0.5, threshold 20), reset at the start of each trial. Where lesson 8's
+decision was computed in one go, this one adds up the evidence a step at a
+time until it reaches **+20** (red) or **−20** (green), and reports where it
+stopped and how many steps it took; the other mechanisms each finish in one
+execution, so the model runs on two time scales. The Primer ends a trial
+with `termination_processing={TimeScale.TRIAL: WhenFinished(decision)}` in
+its call to `run`; a model file has no `run` call, so the demo sets the
+scheduler's `termination_conds`, which the **Scheduler** tab shows
+(`TimeScale.TRIAL` is now named `ENVIRONMENT_STATE_UPDATE`).
+
+The Primer's trial, `primer_trial`, is red ink with the word green, naming
+the color. With noise it reaches 20 after some tens of steps, a different
+count each run, as the Primer says. Set `noise=0.0` and the counts stay put:
+**59** steps for that incongruent trial, **25** for the congruent one (the
+word red): the Stroop effect, counted in steps.
+
+Then the Primer's scheduler example. `TASK INPUT` becomes an `LCAMechanism`,
+whose two units compete, and the hidden layers get the condition
+`EveryNCalls(task_input, 10)`: they run only after every 10 executions of
+the task, so the instruction is processed before the stimuli. (The Primer
+calls it `EveryNExecutions`, which PsyNeuLink no longer has.) The trial now
+answers **−20**, green, in **57** steps: after its 10 executions the task
+unit has settled at **0.61** for color and **0.39** for word, not 1 and 0,
+too weak an instruction to hold off the stronger word pathway. The Primer
+prints [20, 126] and [20, 42], from an older PsyNeuLink and with noise. The
+tutorial spec and `backend/tests/test_demo_dynamics_of_execution.py` assert
+the termination condition and every number above.
+
+![The task settled first: the word wins](assets/tour/pnl-dynamics-of-execution-step-10.png)
+
+**What stays in the Primer.** Waiting for the task to settle rather than for
+a fixed count, with its `converge` function and a `When` condition, and the
+list of pre-defined Conditions. The walkthrough's last step says so.
+
 ---
 
 ## What you can expect
@@ -346,8 +387,13 @@ within a trial, is the Primer's *Dynamics of Execution*, lesson 9.
       matrices the pathway lists wrote, and asserts the decision times and
       chances of red (1.41 and 0.999, 2.75 and 0.940; reading, 1.38 and
       0.001).
+- [x] Lesson 9 opens a bundled demo, the Stroop model with a
+      DriftDiffusionIntegrator (`pnl-dynamics-of-execution.tutorial.spec.ts`):
+      it reads the trial's termination condition and asserts the four runs
+      (20 after some steps, with noise; 20 in 59 and in 25 without; −20 in 57,
+      with the task at 0.61 / 0.39, once the hidden layers wait for it).
 - [x] Every step has a caption for narration.
-- [ ] **Not yet:** lessons 5, 6 and 9–14. Each will be added in order, as a walkthrough
+- [ ] **Not yet:** lessons 5, 6 and 10–14. Each will be added in order, as a walkthrough
       with a bundled demo where the model is too big to build by hand.
 
 ## Further reading
