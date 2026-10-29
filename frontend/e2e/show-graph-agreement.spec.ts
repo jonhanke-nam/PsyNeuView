@@ -60,6 +60,7 @@ const DEMOS = [
   "neural_network_with_ddm.py",
   "rumelhart_semantic_network.py",
   "scheduling_demo.py",
+  "simple_configurations.py",
   "simple_stroop_learn.py",
   "simple_stroop.py",
   "stroop_basic.py",
