@@ -93,6 +93,18 @@ def apply_parameter_change(
     # Extract the declaration block
     block = "\n".join(lines[decl_start : decl_end + 1])
 
+    # `function=pnl.Logistic`, the class with no call, is the same function
+    # as `pnl.Logistic()`. Seen as no `function=` at all, it got a second one
+    # appended, `keyword argument repeated: function` (#9). Give it its
+    # parentheses, so the parameter goes inside them.
+    if context == "function":
+        bare = re.search(r"\bfunction\s*=\s*(?:\w+\.)*[A-Z]\w*(?=\s*(?:[,)#]|$))", block, re.M)
+        if bare:
+            called = block[: bare.end()] + "()" + block[bare.end() :]
+            if is_default:
+                return source  # the class's own default: nothing written to remove
+            block = called
+
     if is_default:
         # Remove the param from code if it exists (default values are suppressed)
         if context == "function":

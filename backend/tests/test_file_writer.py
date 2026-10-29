@@ -596,3 +596,25 @@ def test_no_op_set_on_a_bare_mechanism_still_materialises_once(tmp_path):
     )
     assert second.count("function=") == 1
     ast.parse(second)
+
+
+def test_function_param_on_a_bare_function_class(tmp_path):
+    """`function=pnl.Logistic`, the class with no call, gets its parentheses
+    and the parameter inside them (#9). It was taken for no `function=` at all,
+    and a second one was appended: `keyword argument repeated: function`."""
+    path = tmp_path / "bare.py"
+    path.write_text(
+        "import psyneulink as pnl\n"
+        "output = pnl.ProcessingMechanism(name='OUTPUT', input_shapes=2, function=pnl.Logistic)\n"
+        "hidden = pnl.ProcessingMechanism(name='HIDDEN', input_shapes=2, function=pnl.Logistic(bias=-4))\n"
+    )
+    result = apply_parameter_change(str(path), "output", "gain", "2", "function", function_class="Logistic")
+    compile(result, "bare.py", "exec")  # a repeated keyword fails here, not in ast.parse
+    lines = result.splitlines()
+    assert lines[1] == "output = pnl.ProcessingMechanism(name='OUTPUT', input_shapes=2, function=pnl.Logistic(gain=2))"
+    assert lines[2] == "hidden = pnl.ProcessingMechanism(name='HIDDEN', input_shapes=2, function=pnl.Logistic(bias=-4))"
+    # Setting it again is a no-op; back to the default leaves a valid call.
+    assert apply_parameter_change(str(path), "output", "gain", "2", "function", function_class="Logistic") == result
+    reset = apply_parameter_change(str(path), "output", "gain", "1", "function", is_default=True, function_class="Logistic")
+    compile(reset, "bare.py", "exec")
+    assert "gain" not in reset.splitlines()[1]

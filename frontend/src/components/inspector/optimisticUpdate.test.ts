@@ -40,4 +40,23 @@ describe("applyOptimisticUpdate", () => {
     const updated = applyOptimisticUpdate(SOURCE, "vector_b", "slope", "2", "function", false);
     expect(updated).toContain("function=pnl.Linear(slope=2),");
   });
+
+  /** #9: the Primer's Stroop model writes its mechanisms on one line each. */
+  const STROOP = [
+    "output = pnl.ProcessingMechanism(name='OUTPUT', input_shapes=2, function=pnl.Logistic)",
+    "color_pathway = [color_input, color_hidden, output]",
+    "word_hidden = pnl.ProcessingMechanism(name='WORD HIDDEN', input_shapes=2, function=pnl.Logistic(bias=-4))",
+  ].join("\n");
+
+  it("never edits the next mechanism: a bare function class goes to the backend", () => {
+    expect(applyOptimisticUpdate(STROOP, "output", "gain", "2", "function", false)).toBeNull();
+  });
+
+  it("puts a new function parameter inside the function's call, not the mechanism's", () => {
+    const updated = applyOptimisticUpdate(STROOP, "word_hidden", "gain", "2", "function", false)!;
+    expect(updated.split("\n")[2]).toBe(
+      "word_hidden = pnl.ProcessingMechanism(name='WORD HIDDEN', input_shapes=2, function=pnl.Logistic(bias=-4, gain=2))",
+    );
+    expect(updated.split("\n")[0]).toBe(STROOP.split("\n")[0]);
+  });
 });
