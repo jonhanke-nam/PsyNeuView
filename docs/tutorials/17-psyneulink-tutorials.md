@@ -44,11 +44,11 @@ rows with a `?tour=` are built.
 | 9 | Dynamics of execution — time scales and conditions | Primer: *Dynamics of Execution* | `pnl-dynamics-of-execution` | **Open** the Dynamics of Execution demo, the Stroop model with a step-by-step decision; see in the **Scheduler** that a trial ends when the decision is finished; **run** with noise (a different step count each time), then without (59 incongruent, 25 congruent); make the task an **LCAMechanism** the hidden layers **wait** 10 executions for, and watch the word win (−20 in 57) |
 | 10 | Control — a model that monitors its own conflict | Primer: *Control* | `pnl-control` | **Open** the Stroop With Control demo; see the **task** layer and the **Conflict Monitor** CONTROL listens to; **run** four incongruent trials (the chance of red creeps from 0.024 to 0.088), then **double** the conflict weight and run again (0.024, 0.136, 0.462, 0.682) |
 | 11 | Parameters — a mechanism's, its function's, and modulated ones | Primer: *Parameters* (accessing, setting, function and modulable parameters) | `pnl-parameters` | **Open** Stroop With Control again; see a mechanism's parameters and its **function's**; **run** and read every trial; set OUTPUT's **gain** to 2 in the Inspector and run again (conflict 0.26, control does less); see TASK's **base** gain |
-| 12 | Displaying and logging values | Primer: *Displaying and Logging Values* | | Reports and logs, and the app's run results and trace |
+| 12 | Displaying and logging values — every execution, step by step | Primer: *Displaying and Logging Values* | `pnl-displaying-and-logging` | **Open** Stroop With Control; **run** the four trials and read each trial's values; **step** the trace through every execution (TASK ten times a trial); open **Run State**; see the run record's **JSON/YAML** export |
 | 13 | Learning | Primer: *Learning*, *LearningMechanisms* | | A learning pathway and backpropagation |
 | 14 | Customization | Primer: *Customization* | | A user-defined function |
 
-Lessons 5, 6 and 12–14 are listed so the order is settled; they are not built
+Lessons 5, 6, 13 and 14 are listed so the order is settled; they are not built
 yet, so lesson 7 follows lesson 4 in the menu for now. The
 notebook's own ending, *Constructing Compositions*, says "more content is
 being added weekly", so the list may grow with it.
@@ -418,6 +418,29 @@ and the app doesn't show.
 in different compositions) with `get` and `set`, `history_max_length`, and
 reading a modulated value.
 
+### 12. Displaying and logging values — every execution, step by step
+
+Basics and Primer, *Displaying and Logging Values*. Validated against
+PsyNeuLink 0.20.2.0.
+
+The Primer prints values after each trial with a `call_after_trial`
+function, and logs `TASK` and `CONTROL` with `log.set_log_conditions(VALUE)`,
+printing the log as `run:trial:pass:time_step` and value. The app keeps that
+record with no code: every run logs every node. The walkthrough opens **Stroop
+With Control** and runs the four trials; the **Run** tab lists each trial's
+values for every node. The **trace bar** on the canvas steps through every
+execution, counting steps and trials: `TASK` runs ten times a trial before
+the hidden layers run once, `CONTROL` once at the end, as in the Primer's log.
+**Run State** shows the current step in detail. Each run is kept as a record
+under the results, with Re-run and export as **JSON** or **YAML**, the
+Primer's `nparray`, `nparray_dictionary` and `csv`. The tutorial spec asserts
+the log: every node, `TASK` 40 times, `OUTPUT` and the Conflict Monitor four.
+
+![Run State, partway through the run](assets/tour/pnl-displaying-and-logging-step-5.png)
+
+**What stays in the Primer.** `run()`'s other hooks, functions called before
+or after each run, trial or pass for custom operations.
+
 ---
 
 ## What you can expect
@@ -463,8 +486,12 @@ reading a modulated value.
       sets OUTPUT's Logistic gain through the Inspector and asserts both
       runs (OUTPUT 0.267/0.733 and conflict 0.49 …; with gain 2, 0.118/0.882,
       conflict 0.26 …, chance of red 0.002).
+- [x] Lesson 12 reuses it again (`pnl-displaying-and-logging.tutorial.spec.ts`):
+      it steps the trace and opens Run State, and asserts the run's log
+      holds every node, TASK 40 times (ten a trial) and OUTPUT and the
+      Conflict Monitor four.
 - [x] Every step has a caption for narration.
-- [ ] **Not yet:** lessons 5, 6 and 12–14. Each will be added in order, as a walkthrough
+- [ ] **Not yet:** lessons 5, 6, 13 and 14. Each will be added in order, as a walkthrough
       with a bundled demo where the model is too big to build by hand.
 
 ## Further reading
