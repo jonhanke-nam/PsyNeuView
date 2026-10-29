@@ -54,8 +54,11 @@ REFERENCE_NAME = "Giallanza2024_ego_study2"
 # (#1242 case 1). Measured from the rename that completes the save to the
 # ``file_changed`` message arriving on the socket. That covers the watcher's
 # 500 ms debounce plus re-reading EGO, which executes the model file. A few
-# seconds on a laptop; the budget leaves room for a slow CI runner.
-EDIT_TO_UPDATE_BUDGET_S = 10.0
+# seconds on a laptop (about 3s after the rest of the suite has run, which
+# grows PsyNeuLink's in-process registries); 10s is the promise there. A CI
+# runner is about 3.5x slower, which put the same step at 9-10.7s on devel
+# and the lesson PRs (#9): no room at all. CI gets 20s.
+EDIT_TO_UPDATE_BUDGET_S = 20.0 if os.environ.get("CI") else 10.0
 
 # How long to keep listening for a message that must NOT arrive: the code
 # watcher's 1 s debounce, then re-reading EGO before it broadcasts, with margin.
