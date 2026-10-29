@@ -37,8 +37,11 @@ test("the Tutorials, Open and Layout menus open above the walkthrough ring", { t
         const r = it.getBoundingClientRect();
         if (!r.width) continue;
         // Only items shown: one scrolled past the menu's own edge isn't drawn.
+        // The edge itself is outside: an item cut in half there has its
+        // middle on the menu's last row of pixels, where the page hit-tests
+        // whatever lies below the menu.
         const x = r.left + r.width / 2, y = r.top + r.height / 2;
-        if (y < box.top || y > box.bottom || y > window.innerHeight) continue;
+        if (y < box.top || y >= box.bottom || y >= window.innerHeight) continue;
         const top = document.elementFromPoint(x, y);
         if (top && overlay.contains(top)) bad.push((it.textContent ?? "").trim().slice(0, 40));
       }
