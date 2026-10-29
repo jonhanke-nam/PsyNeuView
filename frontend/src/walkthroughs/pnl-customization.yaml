@@ -1,0 +1,133 @@
+id: pnl-customization
+title: Customization — a Python function as a mechanism's function
+model: Customization
+psyneulink: 14
+minutes: 5
+docs:
+  - tutorials/17-psyneulink-tutorials.md
+
+# Lesson 14 of the PsyNeuLink Tutorials (#9): the Basics and Primer's
+# "Customization", its last section.
+#
+# Source: PsyNeuLink's docs/source/BasicsAndPrimer.rst,
+#   https://princetonuniversity.github.io/PsyNeuLink/BasicsAndPrimer.html
+#   (Customization).
+# Validated against PsyNeuLink 0.20.2.0.
+#
+# The demo is the Primer's code: my_sinusoidal_fct, plain Python, assigned
+# as a ProcessingMechanism's function, which PsyNeuLink wraps as a
+# UserDefinedFunction. Its first argument is the mechanism's input,
+# [[frequency], [time]], two input ports; its other arguments, phase and
+# amplitude, become the function's parameters. The Primer gives the
+# mechanism its two values directly; the Run tab sets only a node's first
+# input port, so two input nodes, FREQUENCY and TIME, feed one port each.
+# See
+# backend/demos/customization.py. The Inspector lists phase and amplitude
+# but doesn't edit a user-defined function's parameters, so the lesson
+# changes the amplitude in the code. Every number was measured in the app;
+# backend/tests/test_demo_customization.py and the tutorial spec pin them.
+#
+# What stays in the Primer: modulating phase and amplitude with a
+# ControlMechanism, and its Conclusion's pointers to the Tutorial and the
+# User's Guide. The last step says so.
+
+steps:
+  - id: open-the-demo
+    anchor:
+      testid: open-menu
+    instruct: >-
+      Open the Customization demo. A mechanism's function doesn't have to be
+      one of PsyNeuLink's: here it is a Python function the Primer writes,
+      the height of a sine wave.
+    say: >-
+      Open the Customization demo: a mechanism with a function of its own.
+    done:
+      nodeExists: my_wave_mech
+    act:
+      openModel: Customization
+
+  - id: the-function
+    anchor:
+      node: my_wave_mech
+    instruct: >-
+      Select my_wave_mech. Its function is my_sinusoidal_fct, which PsyNeuLink
+      wrapped as a UserDefinedFunction. The function's first argument is the
+      mechanism's input, two values, frequency and time, so the mechanism has
+      two input ports, fed here by FREQUENCY and TIME. Its other arguments, phase 0 and amplitude 1, became
+      the function's parameters, listed in the Inspector.
+    say: >-
+      A Python function, wrapped by PsyNeuLink. Its extra arguments became
+      parameters.
+    done:
+      selectedNode: my_wave_mech
+    act:
+      selectNode: my_wave_mech
+
+  - id: run-the-wave
+    anchor:
+      testid: tab-run
+    instruct: >-
+      In the Run tab, the demo opens with quarter_cycles: FREQUENCY 1, at
+      TIME 0.25, 0.5 and 0.75, a quarter, a half and three quarters of a
+      cycle. Run it: 1, about 0, and -1, the peak, the crossing and the
+      trough of the wave.
+    say: >-
+      Run three points of the wave: its peak, its crossing, and its trough.
+    done:
+      runsAtLeast: 1
+    act:
+      pickSet:
+        tab: run
+        name: quarter_cycles
+      runModel: true
+
+  - id: double-the-amplitude
+    anchor:
+      testid: code-editor-pane
+    instruct: >-
+      Change a parameter of your own function. In the code, change the
+      default amplitude=1 to amplitude=2, and the Inspector's amplitude reads
+      2. (It lists a user-defined function's parameters but doesn't edit
+      them, so this one is set in the code.)
+    say: >-
+      Set the amplitude to 2, in the code.
+    done:
+      paramEquals:
+        node: my_wave_mech
+        param: amplitude
+        value: "2"
+    act:
+      replaceInCode:
+        find: "amplitude=1):"
+        replace: "amplitude=2):"
+
+  - id: run-again
+    anchor:
+      testid: tab-run
+    instruct: >-
+      Run quarter_cycles again: 2, about 0, and -2. The wave is twice as
+      tall; the crossing hasn't moved.
+    say: >-
+      Run again. The wave is twice as tall.
+    done:
+      runsAtLeast: 2
+    act:
+      pickSet:
+        tab: run
+        name: quarter_cycles
+      runModel: true
+
+  - id: what-is-not-here
+    anchor:
+      testid: run-panel
+    instruct: >-
+      What this isn't: the Primer goes on to let a ControlMechanism modulate
+      phase and amplitude, as lesson 10's control set a gain. That is the
+      end of the Primer; its Conclusion points to the Tutorial notebook, the
+      first lessons here, and to PsyNeuLink's User's Guide.
+    say: >-
+      That's the end of the Primer.
+    done:
+      next: true
+    act:
+      next: true
