@@ -93,6 +93,12 @@ export interface TourState {
    * needs it and has no answer is not met.
    */
   nodeInputShapes?: Record<string, number[][]>;
+  /**
+   * Every projection's two ends, by node name (#9): `source` sends,
+   * `target` receives. Optional: a condition that needs it and has no
+   * answer is not met.
+   */
+  projectionEnds?: { source: string; target: string }[];
 }
 
 /**
@@ -171,6 +177,12 @@ export interface TourCondition {
    * only once it has reached the backend and come back.
    */
   inputShape?: { node: string; shape: number[] };
+  /**
+   * Finished once a projection runs from `sender` to `receiver` (#9), by
+   * node name: the learner drew the arrow, or wrote it into the code. The
+   * notebook's second `add_linear_processing_pathway` is this.
+   */
+  projectionExists?: { sender: string; receiver: string };
 }
 
 /** What the CI driver does to play the learner's part. The app ignores it. */
@@ -221,6 +233,17 @@ export interface TourAction {
    * row (#9): `[2]` gives a one-port mechanism two units.
    */
   setInputShape?: { node: string; shape: number[] };
+  /**
+   * Join two nodes with a new MappingProjection (#9), the way the app's
+   * default floating ports allow (#311): drag MappingProjection from the
+   * Components palette onto the receiver, then click the sender.
+   */
+  connect?: { sender: string; receiver: string };
+  /**
+   * Select a node and rename it in the Inspector's header (#9): double-click
+   * the name, type the new one, press Enter. Changes the node's `name=`.
+   */
+  renameNode?: { node: string; name: string };
 }
 
 /** One trial's value as a vector, whichever way the walkthrough wrote it. */
@@ -412,6 +435,12 @@ export function isDone(condition: TourCondition, state: TourState): boolean {
     // Inspector doesn't edit yet, so it isn't judged here either.
     const ports = shapes[owner];
     return ports.length === 1 && sameNumbers(ports[0], shape);
+  }
+  if (condition.projectionExists !== undefined) {
+    const { sender, receiver } = condition.projectionExists;
+    return (state.projectionEnds ?? []).some(
+      (e) => matchesNodeName(e.source, sender) && matchesNodeName(e.target, receiver),
+    );
   }
   return false;
 }

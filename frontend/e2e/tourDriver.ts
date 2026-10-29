@@ -20,7 +20,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import yaml from "js-yaml";
 
-import { clickCanvasNode } from "./test-base";
+import { canvasNode, clickCanvasNode, fitGraph } from "./test-base";
 
 export interface TourStep {
   id: string;
@@ -49,6 +49,7 @@ export interface TourStep {
     traceStepAtLeast?: number;
     fileNamed?: string;
     inputShape?: { node: string; shape: number[] };
+    projectionExists?: { sender: string; receiver: string };
   };
   act?: {
     selectNode?: string;
@@ -73,6 +74,8 @@ export interface TourStep {
     redo?: true;
     replaceInCode?: { find: string; replace: string };
     setInputShape?: { node: string; shape: number[] };
+    connect?: { sender: string; receiver: string };
+    renameNode?: { node: string; name: string };
   };
 }
 
@@ -260,6 +263,46 @@ async function act(page: Page, step: TourStep): Promise<void> {
     await committed;
     await expect(page.getByTestId("status-bar")).toHaveCount(0, { timeout: 30_000 });
     await expect(field).toHaveValue(value, { timeout: 10_000 });
+    return;
+  }
+  if (step.act?.renameNode) {
+    const { node, name } = step.act.renameNode;
+    // The Inspector's header (#612): double-click the name, type, Enter.
+    await clickCanvasNode(page, node);
+    await page.getByTestId("tab-inspector").click();
+    await page.getByTitle("Double-click to rename").first().dblclick();
+    const field = page.locator("input:focus");
+    await expect(field, `no rename field for "${node}"`).toBeVisible({ timeout: 10_000 });
+    await field.fill(name);
+    const renamed = page.waitForResponse(
+      (r) => r.url().includes("/api/model/rename-node") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await field.press("Enter");
+    await renamed;
+    await expect(page.getByTestId("status-bar")).toHaveCount(0, { timeout: 30_000 });
+    return;
+  }
+  if (step.act?.connect) {
+    const { sender, receiver } = step.act.connect;
+    // What a learner does with the app's default floating ports, where the
+    // fixed port dots are hidden (#311): drag a MappingProjection from the
+    // Components palette onto the receiver, then click the sender.
+    await fitGraph(page);
+    const palette = page.getByTestId("palette-sidebar");
+    if (!(await palette.isVisible())) await page.getByTitle("Show object palette").click();
+    await expect(palette).toBeVisible();
+    await palette.getByPlaceholder("Search components...").fill("MappingProjection");
+    const item = palette.getByTitle("MappingProjection \u2014 drag or click to add", { exact: true });
+    await item.dragTo(canvasNode(page, receiver).first());
+    await expect(page.getByText("Click the source node to connect into")).toBeVisible({ timeout: 10_000 });
+    const created = page.waitForResponse(
+      (r) => r.url().includes("/api/model/structural-change") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await clickCanvasNode(page, sender);
+    await created;
+    await expect(page.getByTestId("status-bar")).toHaveCount(0, { timeout: 30_000 });
     return;
   }
   if (step.act?.pickSet) {

@@ -100,6 +100,7 @@ than auto-advancing. Node names match exactly, or with a session suffix
 | `traceStepAtLeast: <n>` | the trace bar is on at least step *n* (0-based) |
 | `fileNamed: <name.py>` | the open model's file has that name, wherever it is: a new model was started, or a particular file opened |
 | `inputShape: { node, shape }` | the node's one input port has that shape, `[2]` for two units, as the model has been parsed. A mechanism with several input ports isn't judged (the Inspector doesn't edit those shapes yet) |
+| `projectionExists: { sender, receiver }` | a projection runs from `sender` to `receiver`, by node name: the learner joined them on the canvas, or wrote it into the code |
 
 `lastRunInputs` and `lastTraining` judge a **finished** run or training, not
 the form: typing the values isn't enough, and the learner has to run them.
@@ -118,6 +119,8 @@ feeds it inputs that stay different).
 | `setParameter: { node, param, value }` | selects the node (or projection) and types into its Inspector row (`param-<name>`); for a projection, the row under **Projection Parameters**, the one that edits the code |
 | `setFunction: { node, type }` | selects the node and picks the class in the Inspector's **Change function class** dropdown |
 | `setInputShape: { node, shape }` | selects the node and types the shape into the Inspector's **Inputs** row (`port-shape-<port>`), which rewrites `input_shapes=` in the code |
+| `connect: { sender, receiver }` | fits the graph, opens the Components palette if it is closed, drags **MappingProjection** onto the receiver and clicks the sender (#311), which writes a new `MappingProjection` into the code. The app's default floating ports hide the port dots, so this, not a port-to-port drag, is the gesture a learner has |
+| `renameNode: { node, name }` | selects the node, double-clicks its name in the Inspector's header, types the new one and presses Enter. That changes the node's `name=`, not the Python variable that holds it |
 | `runModel: true` | clicks **Run Model** and waits for the results |
 | `setTrialInputs: { <node>: [trials…] }` | fills each node's Run-panel **Paste CSV** box. Combine with `runModel: true` in the same step |
 | `train: { inputs, targets?, epochs }` | sets the Learn tab's trial count, fills every cell, sets epochs, starts learning, and waits for the step's own `done`. Leave `targets` out for a model with none |
@@ -258,10 +261,12 @@ page and `shots/`, then `audio/`), since one publish takes at most 255.
   answer gives 1.38, not 1, and the Episodic Memory notebook's STORE and MATCH
   nodes don't exist. Name what the app draws, and cite PsyNeuLink's own
   docstrings for what a node does.
-- **Build small models, open large ones.** Connecting projections needs
-  drag-to-connect, which a walkthrough can't script. The New Model starter
-  (`input_node → output_node`) or a single palette node is buildable; anything
-  with a loop or several projections is a demo to open.
+- **Build small models, open large ones.** The New Model starter
+  (`input_node → output_node`), a palette node or two, and a projection or
+  two joined with `connect` (the palette's MappingProjection dropped on the
+  receiver, then a click on the sender) are buildable: the mini Stroop lesson
+  adds a third node and joins it that way. Anything with a loop or many
+  projections is a demo to open.
 - **Let the demo carry its data.** A module-level dict in the shape
   `Composition.run` or `AutodiffComposition.learn` takes is offered in the Run
   or Learn tab's **From** menu, and the first opens preloaded. So a step says
