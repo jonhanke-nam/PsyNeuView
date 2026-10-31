@@ -7,13 +7,16 @@
  * the PsyNeuLink Library's EGO (the obvious pick in the Open menu) also passed
  * the step, though it is not the Coffee Shop demo the walkthrough is written for.
  */
-import { mutatingTest as test, expect } from "../test-base";
+import { mutatingTest as test, expect, showCourse } from "../test-base";
 import type { Page } from "@playwright/test";
 
 const OTHER = "Stroop — Basic";
 const EGO = "EGO Coffee Shop";
 
 test.use({ viewport: { width: 1600, height: 1000 } });
+
+// The course is hidden by default (#136); this spec needs it in the menu.
+test.beforeEach(async ({ page }) => showCourse(page));
 
 async function openFromMenu(page: Page, label: string) {
   if (!(await page.getByTestId("open-menu-list").isVisible())) await page.getByTestId("open-menu").click();

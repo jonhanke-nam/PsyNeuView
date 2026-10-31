@@ -1,6 +1,6 @@
 /**
  * Settings ▸ Tutorials and Voice ▸ Tutorials ▸ Hide the Cognitive
- * Neuroscience Course (#136): off by default, remembered per browser, and it
+ * Neuroscience Course (#136): on by default (the course is hidden), remembered per browser, and it
  * hides only the course's section of the Tutorials menu.
  */
 import { beforeEach, describe, expect, it } from "vitest";
@@ -34,8 +34,8 @@ describe("tutorialsMenuStore", () => {
     useTutorialsMenuStore.setState({ hideCourse: loadHideCourse() });
   });
 
-  it("shows the course by default, and the default is one constant", () => {
-    expect(DEFAULT_HIDE_COURSE).toBe(false);
+  it("hides the course by default, and the default is one constant", () => {
+    expect(DEFAULT_HIDE_COURSE).toBe(true);
     expect(loadHideCourse()).toBe(DEFAULT_HIDE_COURSE);
     expect(useTutorialsMenuStore.getState().hideCourse).toBe(DEFAULT_HIDE_COURSE);
   });
@@ -50,9 +50,9 @@ describe("tutorialsMenuStore", () => {
     expect(loadHideCourse()).toBe(false);
   });
 
-  it("ignores a value it does not recognise", () => {
+  it("reads a value it does not recognise as the default", () => {
     localStorage.setItem(HIDE_COURSE_KEY, "maybe");
-    expect(loadHideCourse()).toBe(false);
+    expect(loadHideCourse()).toBe(DEFAULT_HIDE_COURSE);
   });
 
   it("hides only the course's section, leaving every other section alone", () => {

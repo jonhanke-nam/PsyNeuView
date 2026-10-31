@@ -21,10 +21,10 @@ linked directly with `?tour=<id>`, e.g. `?tour=ddm`.
 The menu's sections fold: click a heading (▼/▶) to show or hide its
 walkthroughs. The first time, PsyNeuView First Steps is open and the rest are
 folded; after that the menu remembers your choice, and the section of a running
-walkthrough opens by itself. Not taking the course? Settings ▸ Tutorials and
-Voice ▸ Tutorials ▸ **Hide the Cognitive Neuroscience Course** leaves this
-section out of the menu (off by default); a `?tour=` link to a course
-walkthrough still works.
+walkthrough opens by itself. The course's section is hidden by default: to
+take the course, untick Settings ▸ Tutorials and Voice ▸ Tutorials ▸ **Hide
+the Cognitive Neuroscience Course**. A `?tour=` link to a course walkthrough
+works either way.
 
 ![The Tutorials menu](assets/tour/menu.png)
 

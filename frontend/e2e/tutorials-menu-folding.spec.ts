@@ -8,13 +8,17 @@
  * The shared fixture opens every section for other specs; these set the state
  * they need in their own init scripts, which run after the fixture's.
  */
-import { readOnlyTest, mutatingTest, expect, TUTORIALS_FOLDED_KEY } from "./test-base";
+import { readOnlyTest, mutatingTest, expect, TUTORIALS_FOLDED_KEY, showCourse } from "./test-base";
 import type { Page } from "@playwright/test";
 
 async function openMenu(page: Page) {
   await page.getByTestId("walkthrough-menu").click();
   await expect(page.getByTestId("walkthrough-menu-list")).toBeVisible();
 }
+
+// The course is hidden by default (#136); these specs fold and unfold it.
+readOnlyTest.beforeEach(async ({ page }) => showCourse(page));
+mutatingTest.beforeEach(async ({ page }) => showCourse(page));
 
 readOnlyTest.describe("Tutorials menu sections fold", { tag: "@ci" }, () => {
   readOnlyTest("first run: First Steps open, the others folded", async ({ page }) => {

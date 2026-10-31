@@ -62,9 +62,10 @@ steps:
   Tutorials** in lesson order, between Getting started and the course (#9;
   the lesson list is in [the PsyNeuLink Tutorials page](tutorials/17-psyneulink-tutorials.md));
   the rest under **Getting started**. A walkthrough belongs to one section. The
-  course's section can be left out of the menu from Settings ▸ Tutorials and
-  Voice ▸ Tutorials ▸ **Hide the Cognitive Neuroscience Course** (off by
-  default, #136); `?tour=<id>` still opens a course walkthrough then.
+  course's section is left out of the menu by default: Settings ▸ Tutorials
+  and Voice ▸ Tutorials ▸ **Hide the Cognitive Neuroscience Course** (on by
+  default, #136) brings it back when unticked; `?tour=<id>` opens a course
+  walkthrough either way.
 - `say:` is the caption: **the one sentence you'd say aloud**. The
   instruction is **what you'd point at**, with the exact control names. Every
   step has a caption (a unit test fails otherwise), with no code names, and

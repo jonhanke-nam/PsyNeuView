@@ -12,7 +12,7 @@
  *    speech (stubbed: nothing is heard, the call is what's asserted).
  */
 import type { Page } from "@playwright/test";
-import { readOnlyTest as test, expect, ORIENTATION_OFFER_KEY } from "../test-base";
+import { readOnlyTest as test, expect, ORIENTATION_OFFER_KEY, showCourse } from "../test-base";
 import { loadWalkthrough } from "../tourDriver";
 import path from "path";
 
@@ -20,6 +20,9 @@ const NARRATION_KEY = "psyneuview.tour.narration";
 const window1 = loadWalkthrough("orientation-window");
 
 test.use({ viewport: { width: 1600, height: 1000 } });
+
+// The course is hidden by default (#136); this spec needs it in the menu.
+test.beforeEach(async ({ page }) => showCourse(page));
 
 async function shot(page: Page, name: string) {
   if (process.env.SHOTS_DIR) await page.screenshot({ path: path.join(process.env.SHOTS_DIR, `${name}.png`) });

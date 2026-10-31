@@ -29,7 +29,7 @@ import {
 } from "@/stores/tourHighlightStore";
 import { NarrationVoiceSetting } from "./NarrationVoiceSetting";
 import { useTutorialsMenuStore } from "@/stores/tutorialsMenuStore";
-import { Group, SettingLabel, mutedStyle, selectStyle } from "./shared";
+import { Group, SettingLabel, linkStyle, mutedStyle, selectStyle } from "./shared";
 
 export function TutorialsVoiceSection() {
   return (
@@ -120,11 +120,17 @@ function OrientationReminderSetting() {
   );
 }
 
+/** Where the course comes from: its notebooks in PsyNeuLink's repository. */
+const COURSE_SOURCE_URL =
+  "https://github.com/PrincetonUniversity/PsyNeuLink/tree/docs/refactor-documentation/docs/source/tutorials/cognitive_neuroscience_course";
+
 /**
  * Whether the Tutorials menu lists the Cognitive Neuroscience Course (#136).
- * Off by default, so the course shows. Hiding it is about the menu only: a
- * course walkthrough opened by link still runs.
+ * On by default, so the course is hidden until someone taking it unticks the
+ * box. Hiding it is about the menu only: a course walkthrough opened by link
+ * still runs. The attribution says where the course comes from.
  */
+
 function HideCourseSetting() {
   const hideCourse = useTutorialsMenuStore((s) => s.hideCourse);
   const setHideCourse = useTutorialsMenuStore((s) => s.setHideCourse);
@@ -140,8 +146,15 @@ function HideCourseSetting() {
       <span>
         Hide the Cognitive Neuroscience Course
         <span style={{ ...mutedStyle, display: "block" }}>
-          Leaves the course's walkthroughs out of the Tutorials menu. A course walkthrough opened by link still runs.
-          Remembered in this browser.
+          Leaves the course's walkthroughs out of the Tutorials menu; untick it to take the course. A course
+          walkthrough opened by link still runs. Remembered in this browser.
+          <span style={{ display: "block", marginTop: 4 }} data-testid="course-attribution">
+            Based on the{" "}
+            <a href={COURSE_SOURCE_URL} target="_blank" rel="noreferrer" style={linkStyle}>
+              Cognitive Neuroscience Course
+            </a>{" "}
+            by Princeton University's PsyNeuLink team, in the PsyNeuLink repository on GitHub.
+          </span>
         </span>
       </span>
     </label>

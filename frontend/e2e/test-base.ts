@@ -128,6 +128,20 @@ export async function showSchedulingArrows(page: import("@playwright/test").Page
 }
 
 /**
+ * The Cognitive Neuroscience Course is hidden from the Tutorials menu by
+ * default (#136). A spec that picks a course walkthrough from the menu, or
+ * checks the menu's sections, shows it the way a user would, by unticking
+ * Settings ▸ Tutorials and Voice ▸ Hide the Cognitive Neuroscience Course.
+ * Only when unset, so a spec that hides it and reloads keeps its choice.
+ */
+const HIDE_COURSE_KEY = "psyneuview.tutorials.hideCourse";
+export async function showCourse(page: import("@playwright/test").Page) {
+  await page.addInitScript((key) => {
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, "off");
+  }, HIDE_COURSE_KEY);
+}
+
+/**
  * The test ids of the graph's view options that used to be More ▾ rows, by the
  * name the More menu gave them. They live in Advanced Graph View Options now
  * (#123): open it with `graph-view-options-button`, then click the checkbox.

@@ -8,7 +8,7 @@
  * Deliberately starts with **no** query parameter, because that is the whole
  * claim being tested.
  */
-import { readOnlyTest as test, expect } from "../test-base";
+import { readOnlyTest as test, expect, showCourse } from "../test-base";
 import { loadWalkthrough } from "../tourDriver";
 import { fileURLToPath } from "url";
 import path from "path";
@@ -24,6 +24,9 @@ const shot = (name: string) => path.join(ASSETS, name);
 const demo = loadWalkthrough("demo");
 
 test.use({ viewport: { width: 1600, height: 1000 } });
+
+// The course is hidden by default (#136); this spec needs it in the menu.
+test.beforeEach(async ({ page }) => showCourse(page));
 
 test.describe("Guided walkthroughs are discoverable", () => {
   test("the Tutorials menu lists them and starts one", async ({ page }) => {
