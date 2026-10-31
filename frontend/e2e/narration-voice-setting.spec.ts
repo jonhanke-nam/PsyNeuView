@@ -24,6 +24,8 @@ async function stubSpeech(page: Page) {
     const rates: number[] = [];
     (window as unknown as { __spoken: typeof spoken; __rates: number[] }).__spoken = spoken;
     (window as unknown as { __rates: number[] }).__rates = rates;
+    const w = window as unknown as { __cancels: number };
+    w.__cancels = 0;
     const voice = (name: string, lang: string, quality = "compact") => ({
       name,
       lang,
@@ -55,7 +57,9 @@ async function stubSpeech(page: Page) {
           spoken.push({ text: u.text, voice: u.voice?.name ?? null });
           rates.push(u.rate);
         },
-        cancel: () => {},
+        cancel: () => {
+          w.__cancels += 1;
+        },
         pause: () => {},
         resume: () => {},
         getVoices: () => voices,
@@ -69,6 +73,8 @@ async function stubSpeech(page: Page) {
 
 const spoken = (page: Page) => page.evaluate(() => (window as unknown as { __spoken: { text: string; voice: string | null }[] }).__spoken);
 
+const cancels = (page: Page) => page.evaluate(() => (window as unknown as { __cancels: number }).__cancels);
+
 async function openNarrationSettings(page: Page) {
   await page.getByTestId("settings-button").click();
   await expect(page.getByTestId("settings-panel")).toBeVisible();
@@ -77,6 +83,27 @@ async function openNarrationSettings(page: Page) {
 }
 
 test.describe("Narration voice setting", { tag: "@ci" }, () => {
+  test("closing Settings stops a sample still being read, and only a sample", async ({ page }) => {
+    await stubSpeech(page);
+    await page.goto("/");
+
+    // Opening and closing without a sample leaves speech alone, so a
+    // walkthrough's narration carries on.
+    await openNarrationSettings(page);
+    const before = await cancels(page);
+    await page.getByTestId("settings-close").click();
+    await expect(page.getByTestId("settings-panel")).toHaveCount(0);
+    expect(await cancels(page)).toBe(before);
+
+    await openNarrationSettings(page);
+    await page.getByTestId("narration-voice-sample").click();
+    await expect.poll(() => spoken(page).then((s) => s.length)).toBe(1);
+    const playing = await cancels(page);
+    await page.getByTestId("settings-close").click();
+    await expect(page.getByTestId("settings-panel")).toHaveCount(0);
+    expect(await cancels(page)).toBeGreaterThan(playing);
+  });
+
   test("lists the real voices, plays a sample in the chosen one, and remembers it", async ({ page }) => {
     await stubSpeech(page);
     await page.goto("/");

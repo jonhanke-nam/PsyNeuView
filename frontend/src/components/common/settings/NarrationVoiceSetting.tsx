@@ -10,7 +10,7 @@
  * bar; this is only the voice.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../Button";
 import { recordSettingChanged } from "@/utils/activityLog";
 import {
@@ -22,6 +22,7 @@ import {
   pickVoice,
   saveNarrationVoice,
   speakCaption,
+  stopSpeaking,
   type NarrationVoiceOption,
   type SpeechEngine,
 } from "@/utils/narration";
@@ -65,6 +66,16 @@ export function NarrationVoiceSetting() {
   const [chosen, setChosen] = useState<string | null>(() => loadNarrationVoice());
   const os = platform();
 
+  // Closing Settings (or leaving this section) stops a sample still being
+  // read. Only a sample: a walkthrough's own narration carries on.
+  const playedSample = useRef(false);
+  useEffect(
+    () => () => {
+      if (playedSample.current && narrationAvailable()) stopSpeaking(window.speechSynthesis as SpeechEngine);
+    },
+    [],
+  );
+
   if (!narrationAvailable()) {
     return (
       <div data-testid="narration-voice-unavailable" style={mutedStyle}>
@@ -84,6 +95,7 @@ export function NarrationVoiceSetting() {
   };
 
   const playSample = () => {
+    playedSample.current = true;
     speakCaption(SAMPLE_CAPTION, window.speechSynthesis as SpeechEngine, undefined, value || null, loadNarrationRate());
   };
 
