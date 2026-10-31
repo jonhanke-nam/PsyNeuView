@@ -2,9 +2,9 @@
  * What the Tutorials menu lists: Settings ▸ Tutorials and Voice ▸ Tutorials ▸
  * Hide the Cognitive Neuroscience Course (#136).
  *
- * The course's walkthroughs are one section of the menu. Someone who isn't
- * taking the course can hide that section; the setting is off by default, so
- * the course shows unless asked otherwise. Hiding is about the menu only: a
+ * The course's walkthroughs are one section of the menu, for people taking
+ * the course. Most aren't, so the section is hidden by default and someone
+ * taking the course turns it back on by unticking the box. Hiding is about the menu only: a
  * course walkthrough opened by link (`?tour=…`) still runs, since `?tour=`
  * looks the walkthrough up directly rather than through the menu.
  *
@@ -16,8 +16,8 @@
 import { create } from "zustand";
 import { recordSettingChanged } from "@/utils/activityLog";
 
-/** The one place the default lives: false shows the course, true hides it. */
-export const DEFAULT_HIDE_COURSE = false;
+/** The one place the default lives: true hides the course, false shows it. */
+export const DEFAULT_HIDE_COURSE = true;
 
 export const HIDE_COURSE_KEY = "psyneuview.tutorials.hideCourse";
 
@@ -27,7 +27,8 @@ export const COURSE_GROUP_ID = "course";
 export function loadHideCourse(): boolean {
   try {
     const v = localStorage.getItem(HIDE_COURSE_KEY);
-    return v === null ? DEFAULT_HIDE_COURSE : v === "on";
+    // Anything but an explicit choice reads as the default.
+    return v === "on" ? true : v === "off" ? false : DEFAULT_HIDE_COURSE;
   } catch {
     return DEFAULT_HIDE_COURSE;
   }

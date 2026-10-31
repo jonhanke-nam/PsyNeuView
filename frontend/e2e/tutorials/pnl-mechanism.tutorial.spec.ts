@@ -11,7 +11,7 @@
  * between Getting started and the course.
  */
 // mutatingTest: the walkthrough creates a model, so it needs a clean slate.
-import { mutatingTest as test, expect } from "../test-base";
+import { mutatingTest as test, expect, showCourse } from "../test-base";
 import { loadWalkthrough, runWalkthrough } from "../tourDriver";
 import { fileURLToPath } from "url";
 import path from "path";
@@ -30,6 +30,8 @@ test.use({ viewport: { width: 1600, height: 1000 } });
 
 test.describe(`PsyNeuLink Tutorials: ${lesson.title}`, () => {
   test("is listed under PsyNeuLink Tutorials, between Getting started and the course", async ({ page }) => {
+    // The course is hidden by default (#136); show it to check the order.
+    await showCourse(page);
     await page.goto("/");
     await page.getByTestId("walkthrough-menu").click();
     const list = page.getByTestId("walkthrough-menu-list");

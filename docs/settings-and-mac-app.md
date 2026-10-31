@@ -99,7 +99,7 @@ How the app looks and feels, remembered per browser:
 
 - **Voice**: the **Narration voice** that reads walkthrough captions — Automatic (the best English voice installed) or any installed English voice, with ▶ Play sample and how to download a free Premium voice — and the **Speaking rate**
 - **Tutorials**: the **PsyNeuView First Steps reminder** (offer again, remind in the Tutorials menu, or don't)
-- **Hide the Cognitive Neuroscience Course** (off by default; leaves the course's section out of the Tutorials menu, while a course walkthrough opened by link still runs, #136)
+- **Hide the Cognitive Neuroscience Course** (on by default; leaves the course's section out of the Tutorials menu until unticked, while a course walkthrough opened by link still runs; links to the course's source, #136)
   - Narration on/off stays on the walkthrough bar
 
 #### Open menu

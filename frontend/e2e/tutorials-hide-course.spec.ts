@@ -2,8 +2,9 @@
  * Settings ▸ Tutorials and Voice ▸ Tutorials ▸ Hide the Cognitive
  * Neuroscience Course (#136).
  *
- * Off by default, so the course's section is in the Tutorials menu. Turning
- * it on takes that one section out, the choice survives a reload, and a
+ * On by default, so the course's section is not in the Tutorials menu until
+ * someone taking the course unticks the box. Unticking brings that one section
+ * back, ticking takes it out again, each choice survives a reload, and a
  * course walkthrough opened by link still runs: hiding is about the menu only.
  */
 import { readOnlyTest, mutatingTest, expect } from "./test-base";
@@ -17,19 +18,34 @@ async function openMenu(page: Page) {
 }
 
 readOnlyTest.describe("Hide the Cognitive Neuroscience Course", { tag: "@ci" }, () => {
-  readOnlyTest("the course shows by default, and the setting hides it until a reload and after", async ({ page }) => {
+  readOnlyTest("the course is hidden by default, and the setting shows and hides it across reloads", async ({ page }) => {
     await page.goto("/");
     expect(await page.evaluate((k) => localStorage.getItem(k), HIDE_COURSE_KEY)).toBeNull();
     await openMenu(page);
-    await expect(page.getByTestId("walkthrough-group-course")).toBeVisible();
     await expect(page.getByTestId("walkthrough-group-general")).toBeVisible();
+    await expect(page.getByTestId("walkthrough-group-course")).toHaveCount(0);
     await page.keyboard.press("Escape");
 
+    // Unticking shows the course, and the choice survives a reload.
     await page.getByTestId("settings-button").click();
     await page.getByTestId("settings-section-tutorials-voice").click();
     const box = page.getByTestId("setting-hide-course");
-    await expect(box).not.toBeChecked();
-    await box.check();
+    await expect(box).toBeChecked();
+    await box.uncheck();
+    expect(await page.evaluate((k) => localStorage.getItem(k), HIDE_COURSE_KEY)).toBe("off");
+    await page.keyboard.press("Escape");
+    await openMenu(page);
+    await expect(page.getByTestId("walkthrough-group-course")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.reload();
+    await openMenu(page);
+    await expect(page.getByTestId("walkthrough-group-course")).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    // Ticking hides it again.
+    await page.getByTestId("settings-button").click();
+    await page.getByTestId("settings-section-tutorials-voice").click();
+    await page.getByTestId("setting-hide-course").check();
     expect(await page.evaluate((k) => localStorage.getItem(k), HIDE_COURSE_KEY)).toBe("on");
     await page.keyboard.press("Escape");
 

@@ -331,11 +331,13 @@ settings:
     storage: browser localStorage (psyneuview.tutorials.hideCourse); inside the Mac app, the app keeps it (PagePreferences, #218)
     control: setting-hide-course
     notes: >-
-      Off by default (DEFAULT_HIDE_COURSE in stores/tutorialsMenuStore.ts), so
-      the course's section shows in the Tutorials menu (#136). On leaves that
-      one section out of the menu and nothing else: a course walkthrough
-      opened by link (?tour=…) still runs, and the other sections are
-      untouched.
+      On by default (DEFAULT_HIDE_COURSE in stores/tutorialsMenuStore.ts), so
+      the course's section is left out of the Tutorials menu (#136); someone
+      taking the course unticks it. It hides that one section and nothing
+      else: a course walkthrough opened by link (?tour=…) still runs, and the
+      other sections are untouched. Its description links to the course's
+      source in PsyNeuLink's repository. e2e specs that need the course in
+      the menu call showCourse() from e2e/test-base.ts.
 
   - id: text-size
     label: Appearance ▸ Text size ▸ Text size
