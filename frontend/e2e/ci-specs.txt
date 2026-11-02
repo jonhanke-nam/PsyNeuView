@@ -86,6 +86,7 @@ text-size.spec.ts
 toolbar-menus-over-dividers.spec.ts
 toolbar-no-split-buttons.spec.ts
 tour-highlight-settings.spec.ts
+tour-menu-reopens.spec.ts
 tour-ring-behind-dialogs.spec.ts
 tour-ring-clear-of-text.spec.ts
 tour-ring-on-node.spec.ts

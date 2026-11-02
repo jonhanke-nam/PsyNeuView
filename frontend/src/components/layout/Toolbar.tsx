@@ -1602,6 +1602,10 @@ export function Toolbar() {
           // Stable handle for the entry point to every model: specs and guided
           // walkthroughs both start here, and "Open ▾" is free to be reworded.
           data-testid="open-menu"
+          // A walkthrough step inside the menu reopens it only while this says
+          // it is closed (#170), so it never clicks the menu shut.
+          aria-haspopup="menu"
+          aria-expanded={dropdownOpen}
           style={{
             fontSize: "var(--pnv-fs-13)",
             padding: "4px 12px",

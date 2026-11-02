@@ -44,6 +44,7 @@ steps:
     anchor:                     # what the ring points at: one of
       testid: tab-learn         #   a data-testid anywhere in the app
       # node: out_layer         #   or a canvas node, by model name
+    # within: open-menu         # optional: the anchor is in the menu this button opens
     pointer: true               # optional: glide the pointer there before the words
     instruct: >-                # what the learner reads
       Teach it AND. …
@@ -74,6 +75,13 @@ steps:
   from where it last was to the anchor (700 ms), and only then does the bar
   show the instruction. The ring is drawn at once either way. Replay sends it
   again.
+- `within: <testid>` is for a step whose anchor is an item in a menu: it
+  names the button that opens the menu (`within: open-menu`). If the menu
+  closes while the step shows (a click elsewhere, Escape), the walkthrough
+  opens it again after 400 ms, so the ring and pointer have something to go
+  round (#170). The button must carry `aria-expanded`, and is pressed only
+  while it says the menu is closed. Leave it off a step whose action is to
+  pick something from the menu, since picking closes it.
 - Quote node names that contain brackets: `node: "1 [QUERY]"`.
 - Then **register** the walkthrough in `frontend/src/utils/tourStep.ts`: add an
   `import …Yaml from "@/walkthroughs/<id>.yaml?raw"` and an entry in

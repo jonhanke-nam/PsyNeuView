@@ -30,6 +30,8 @@ export interface TourStep {
   say?: string;
   /** The pointer glides to the anchor before the instruction shows (#1310). */
   pointer?: boolean;
+  /** The button that opens the menu the anchor is in; the app reopens it (#170). */
+  within?: string;
   done: {
     selectedNode?: string;
     nodeExists?: string;
