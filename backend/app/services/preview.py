@@ -63,7 +63,7 @@ def write_preview(model_path: str | Path, source: str) -> Path:
 
 
 def clear_preview(model_path: str | Path) -> None:
-    """Drop a model's preview. Called once its edits reach the real file.
+    """Drop a model's preview. A save keeps it, in step (sync_preview, #160).
 
     Best-effort: a preview left behind is stale data in a scratch directory,
     never a correctness problem, because a preview is only ever executed when
@@ -72,3 +72,15 @@ def clear_preview(model_path: str | Path) -> None:
     slot = _slot(model_path)
     if slot.exists():
         shutil.rmtree(slot, ignore_errors=True)
+
+
+def sync_preview(model_path: str | Path, source: str) -> None:
+    """Bring an existing preview up to ``source``, the code just saved (#160).
+
+    A save used to delete the preview, but a request already on its way
+    still names it. Only a preview that exists is rewritten: a model never
+    previewed gets no slot.
+    """
+    path = preview_path(model_path)
+    if path.exists():
+        path.write_text(source)
