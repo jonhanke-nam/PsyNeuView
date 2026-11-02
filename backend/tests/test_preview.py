@@ -93,8 +93,11 @@ def test_invalid_source_reports_the_error_without_failing(client, model):
     assert model.read_text() == MODEL_SRC, "a broken buffer must not reach the file"
 
 
-def test_saving_clears_the_preview(client, model):
-    """Once the buffer reaches the file there is nothing left to preview."""
+def test_saving_brings_the_preview_up_to_the_saved_code(client, model):
+    """Once the buffer reaches the file, the preview holds the same code (#160).
+
+    It used to be deleted, but a request sent before the save answered still
+    names it."""
     client.post("/api/model/preview", json={"file_path": str(model), "source": EDITED_SRC})
     assert preview_path(model).exists()
 
@@ -104,7 +107,28 @@ def test_saving_clears_the_preview(client, model):
 
     assert resp.status_code == 200
     assert model.read_text() == EDITED_SRC, "save is what actually writes the file"
-    assert not preview_path(model).exists(), "a saved buffer leaves no stale preview"
+    assert preview_path(model).read_text() == EDITED_SRC, "the preview is the saved code"
+
+
+def test_a_preview_still_named_after_a_save_still_answers(client, model):
+    """#160: an Undo previews the restored code, an autosave then saves it, and
+    the show_graph layout asked for in between names the preview. It got
+    "File not found: ~/.psyneuview/previews/…" and fell back to Layered."""
+    resp = client.post("/api/model/preview", json={"file_path": str(model), "source": EDITED_SRC})
+    named = resp.json()["preview_path"]
+    client.post("/api/model/save-source", json={"file_path": str(model), "source": EDITED_SRC})
+
+    graph = client.post("/api/model/show-graph", json={
+        "file_path": named, "composition_name": "c", "format": "dot",
+    })
+
+    assert graph.status_code == 200, graph.text
+    assert "b" in graph.json()["dot"], "it shows the saved code"
+
+
+def test_saving_a_model_never_previewed_makes_no_preview(client, model):
+    client.post("/api/model/save-source", json={"file_path": str(model), "source": EDITED_SRC})
+    assert not preview_path(model).exists()
 
 
 def test_preview_of_a_missing_file_is_rejected(client, tmp_path):
