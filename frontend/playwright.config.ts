@@ -90,6 +90,9 @@ const harnessEnv: Record<string, string> = {
   // Both spellings are correct: PSYNEUVIEW_ here, PSYNEWVIEW_ above. The env
   // names are genuinely split; see #1025.
   PSYNEUVIEW_CONFIG_FILE: path.join(sessionTmp, "psynewview.json"),
+  // Unsaved edits run from a private preview copy (#1029), by default under
+  // ~/.psyneuview/previews. Keep this run's copies in its own temp dir (#160).
+  PSYNEUVIEW_PREVIEW_ROOT: path.join(sessionTmp, "previews"),
 };
 
 const prodWebServer = {
