@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { coveredByDialog, ringSides } from "./TourOverlay";
+import { coveredByDialog, menuToReopen, ringSides } from "./TourOverlay";
 
 /** A stand-in element: `contains` answers from a fixed set of descendants. */
 function fakeEl(...inside: object[]) {
@@ -29,6 +29,38 @@ describe("coveredByDialog (#1394)", () => {
 
   it("keeps an anchor inside any of several open modals", () => {
     expect(coveredByDialog(settingsRow, docWith([fakeEl(), fakeEl(settingsRow)]))).toBe(false);
+  });
+});
+
+describe("menuToReopen (#170)", () => {
+  const box = { getBoundingClientRect: () => ({ width: 40, height: 20 }) };
+  const button = (expanded: string | null) =>
+    ({ ...box, getAttribute: (n: string) => (n === "aria-expanded" ? expanded : null) }) as unknown as HTMLElement;
+  /** A page holding these elements, by test id, and these open modals. */
+  const page = (byId: Record<string, object>, modals: Element[] = []) =>
+    ({
+      querySelector: (sel: string) => byId[/data-testid="([^"]+)"/.exec(sel)![1]] ?? null,
+      querySelectorAll: () => modals,
+    }) as unknown as Document;
+  const step = { anchor: { testid: "open-menu-new-model" }, within: "open-menu" };
+
+  it("presses the Open button when the menu has closed under the step", () => {
+    const open = button("false");
+    expect(menuToReopen(step, page({ "open-menu": open }))).toBe(open);
+  });
+
+  it("leaves it alone while the anchor is showing", () => {
+    expect(menuToReopen(step, page({ "open-menu": button("false"), "open-menu-new-model": box }))).toBeNull();
+  });
+
+  it("never presses a button that says its menu is open, or doesn't say", () => {
+    expect(menuToReopen(step, page({ "open-menu": button("true") }))).toBeNull();
+    expect(menuToReopen(step, page({ "open-menu": button(null) }))).toBeNull();
+  });
+
+  it("leaves it alone behind a dialog, and for a step without within", () => {
+    expect(menuToReopen(step, page({ "open-menu": button("false") }, [fakeEl()]))).toBeNull();
+    expect(menuToReopen({ anchor: step.anchor }, page({ "open-menu": button("false") }))).toBeNull();
   });
 });
 

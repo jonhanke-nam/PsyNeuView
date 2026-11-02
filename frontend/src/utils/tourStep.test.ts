@@ -680,6 +680,14 @@ describe("parseWalkthrough — the orientation's fields (#1310)", () => {
     expect(() => parseWalkthrough(doc("", "    say: [a, b]\n"))).toThrow(/say must be text/);
   });
 
+  it("takes within only as a testid, on a step with a testid anchor (#170)", () => {
+    expect(parseWalkthrough(doc("", "    within: open-menu\n")).steps[0].within).toBe("open-menu");
+    expect(() => parseWalkthrough(doc("", "    within: [open-menu]\n"))).toThrow(/within must be/);
+    expect(() =>
+      parseWalkthrough("id: x\ntitle: X\nsteps:\n  - id: s\n    anchor: {node: n}\n    within: open-menu\n    instruct: i\n    done: {next: true}\n"),
+    ).toThrow(/needs a testid anchor/);
+  });
+
   it("takes say_phonemes only as text beside a say (#1407)", () => {
     expect(parseWalkthrough(doc("", "    say: Where it has been.\n    say_phonemes: Where it has [[ bˈɪn ]].\n")).steps[0].say_phonemes)
       .toBe("Where it has [[ bˈɪn ]].");

@@ -304,6 +304,14 @@ export interface TourStep {
    * for a step whose point is "look here". The ring is drawn either way.
    */
   pointer?: boolean;
+  /**
+   * The `data-testid` of the button that opens the menu this step's anchor is
+   * in (#170): `within: open-menu` for an item in the Open menu. Whenever the
+   * menu is closed (a click elsewhere, Escape), the walkthrough opens it
+   * again, so the ring has something to go round. The button must say
+   * whether its menu is open with `aria-expanded`.
+   */
+  within?: string;
   done: TourCondition;
   act?: TourAction;
 }
@@ -525,6 +533,9 @@ export function parseWalkthrough(text: string): Walkthrough {
     }
     if (step.pointer !== undefined && typeof step.pointer !== "boolean") {
       throw new Error(`walkthrough: step "${step.id}" pointer must be true or false`);
+    }
+    if (step.within !== undefined && (typeof step.within !== "string" || !step.anchor.testid)) {
+      throw new Error(`walkthrough: step "${step.id}" within must be a testid, and needs a testid anchor`);
     }
   });
   if (course !== undefined && !/^\d+\.\d+$/.test(String(course))) {

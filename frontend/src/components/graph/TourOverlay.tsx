@@ -92,6 +92,30 @@ export function coveredByDialog(el: Element, doc: Document = document): boolean 
   return !modals.some((m) => m.contains(el));
 }
 
+/** How long a menu step's anchor may be missing before its menu is reopened. */
+export const MENU_REOPEN_MS = 400;
+
+/**
+ * The button to press to bring a menu step's anchor back (#170), or null.
+ *
+ * Step 1 of "Opening a model" opens the Open menu and the next steps point at
+ * its items. Once anything closed the menu (a click elsewhere, Escape) those
+ * steps narrated New Model with nothing on screen to point at. A step marked
+ * `within` names the button that opens its menu; this answers it only while
+ * that button is on screen, not behind a dialog, and says its menu is closed,
+ * so pressing it can only open the menu, never close it.
+ */
+export function menuToReopen(
+  step: { anchor: { testid?: string }; within?: string },
+  doc: Document = document,
+): HTMLElement | null {
+  if (!step.within || !step.anchor.testid) return null;
+  if (shown(doc.querySelector(`[data-testid="${cssEscape(step.anchor.testid)}"]`))) return null;
+  const opener = doc.querySelector<HTMLElement>(`[data-testid="${cssEscape(step.within)}"]`);
+  if (!opener || !shown(opener) || coveredByDialog(opener, doc)) return null;
+  return opener.getAttribute("aria-expanded") === "false" ? opener : null;
+}
+
 function sameRect(a: Rect | null, b: Rect | null): boolean {
   if (!a || !b) return a === b;
   return a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height;
@@ -141,6 +165,25 @@ export function TourOverlay() {
       window.removeEventListener("resize", bump);
     };
   }, [step]);
+
+  // A step inside a menu opens the menu again if it has closed (#170). Not
+  // at once: a click on one of the menu's items closes it on the way to the
+  // next step, and the menu shouldn't flash open again in between.
+  const paused = useTourStore((s) => s.paused);
+  const missingSince = useRef<number | null>(null);
+  useEffect(() => {
+    const opener = step && !complete && !paused ? menuToReopen(step) : null;
+    if (!opener) {
+      missingSince.current = null;
+      return;
+    }
+    const now = Date.now();
+    if (missingSince.current === null) missingSince.current = now;
+    else if (now - missingSince.current >= MENU_REOPEN_MS) {
+      missingSince.current = null;
+      opener.click();
+    }
+  }, [step, complete, paused, tick]);
 
   // React Flow's pan/zoom, so the ring re-measures as the canvas moves.
   const transform = useStore((s) => s.transform.join(","));
