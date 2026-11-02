@@ -1304,6 +1304,23 @@ def describe_load_error(exc, file_path):
     }
 
 
+def exception_text(exc, file_path=None):
+    """An exception as a person can read it (#165).
+
+    ``str()`` alone loses the type, and for some exceptions it is all there
+    is: a KeyError's text is just the key, so the page showed nothing but
+    ``'TD_Learning_Figure_5A'``. Name the type, and when the model file
+    itself raised it, the line.
+    """
+    message = str(exc)
+    text = f"{type(exc).__name__}: {message}" if message else type(exc).__name__
+    if file_path:
+        line = describe_load_error(exc, file_path)["line"]
+        if line:
+            return f"The model file raised {text} (line {line})"
+    return text
+
+
 def missing_composition_error(module, comp_name):
     """The error for a Composition that isn't there, saying why when we know.
 
@@ -2135,7 +2152,7 @@ def _show_graph_source(pnl, comp, options):
                 "note": (f"show_graph shows learning for '{comp.name}', which has a nested "
                          "composition, only as its PyTorch picture."),
             }
-    return {"error": f"show_graph failed: {refusal}"}
+    return {"error": f"show_graph failed: {exception_text(refusal)}"}
 
 
 def task_show_graph(params):
@@ -2185,7 +2202,7 @@ def task_show_graph(params):
         svg_bytes = gv.Source(dot_source).pipe(format='svg')
         return {"svg": svg_bytes.decode('utf-8')}
     except Exception as e:
-        return {"error": f"show_graph failed: {e}"}
+        return {"error": f"show_graph failed: {exception_text(e)}"}
 
 
 def task_export_mdf(params):
@@ -4013,7 +4030,7 @@ def _handle_one_task(payload_str: str) -> str:
                         del sys.modules[mod_name]
                 result = handler(params)
             except Exception as e:
-                result = {"error": str(e)}
+                result = {"error": exception_text(e, params.get("file_path"))}
 
         if isinstance(result, dict) and caught:
             # Serialise only. Deciding which of these are worth showing needs
