@@ -1550,7 +1550,9 @@ def task_learn(params):
     learning_rate = params.get("learning_rate")
     requested_mode = params.get("execution_mode")
 
-    module = load_module(file_path)
+    # A model file's own driver code may raise once its runs are no-op'd;
+    # the Composition is built by then (#796, #161).
+    module = load_module(file_path, tolerate_exec_error=True)
 
     comp = _resolve_composition(module, comp_name)
     if comp is None or not isinstance(comp, pnl.Composition):
@@ -2151,8 +2153,10 @@ def task_show_graph(params):
     # A reload in this long-lived worker otherwise re-registers names with
     # suffixes, and show_graph of a model with a nested EMComposition (EGO)
     # then fails looking up its own nodes ("'STATE [VALUE]' is not in
-    # Component").
-    module = load_module(file_path, reset_registry=True)
+    # Component"). Tolerate the file's own driver code raising once its runs
+    # are no-op'd, as task_run does: the Botvinick model resets its layers
+    # with context=its composition after a run that never happened (#161).
+    module = load_module(file_path, reset_registry=True, tolerate_exec_error=True)
 
     comp = _resolve_composition(module, comp_name)
     if comp is None or not isinstance(comp, pnl.Composition):
@@ -2203,7 +2207,7 @@ def task_export_mdf(params):
     if fmt not in ("json", "yaml", "yml"):
         return {"error": f"Unsupported MDF format: {fmt!r}. Use 'json' or 'yaml'."}
 
-    module = load_module(file_path)
+    module = load_module(file_path, tolerate_exec_error=True)  # #161, as task_run
     comp = _resolve_composition(module, comp_name)
     if comp is None or not isinstance(comp, pnl.Composition):
         return missing_composition_error(module, comp_name)
@@ -2404,10 +2408,10 @@ def task_mdf_gaps(params):
 
     # A fresh name registry, so the warnings name components as the model
     # does ("shared", not "shared-1" after an earlier load in this worker).
-    module = load_module(params["file_path"], reset_registry=True)
+    module = load_module(params["file_path"], reset_registry=True, tolerate_exec_error=True)  # #161
     comp = _resolve_composition(module, params["composition_name"])
     if comp is None or not isinstance(comp, pnl.Composition):
-        return {"error": f"Composition '{params['composition_name']}' not found"}
+        return missing_composition_error(module, params["composition_name"])
     return {"gaps": find_mdf_gaps(module, comp)}
 
 
