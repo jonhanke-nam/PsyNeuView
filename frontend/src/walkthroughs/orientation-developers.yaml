@@ -179,6 +179,7 @@ steps:
   - id: dev-tests
     anchor:
       testid: open-menu-dev-tests
+    within: open-menu
     pointer: true
     instruct: >-
       Developer / Tests… opens one of PsyNeuLink's own tests as a model. It,
@@ -194,6 +195,7 @@ steps:
   - id: editing-psyneulink
     anchor:
       testid: open-menu-section-library
+    within: open-menu
     pointer: true
     instruct: >-
       The Library opens PsyNeuLink's own files in place. From a managed
@@ -214,6 +216,7 @@ steps:
   - id: mac-app
     anchor:
       testid: open-menu-section-library
+    within: open-menu
     instruct: >-
       In the Mac app, Settings ▸ Developer also chooses which PsyNeuView runs,
       the copy included with the app or a checkout of yours, which is how a

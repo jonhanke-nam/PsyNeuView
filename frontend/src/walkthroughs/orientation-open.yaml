@@ -6,7 +6,8 @@
 #
 # The menu stays open while the bar's Next is used (the toolbar treats the
 # walkthrough bar as part of the menu for that purpose), so the steps can walk
-# down it. Recent only appears once something has been opened, so it is
+# down it. If the menu closes anyway (a click elsewhere, Escape), the steps
+# marked `within: open-menu` open it again (#170). Recent only appears once something has been opened, so it is
 # described rather than ringed.
 
 id: orientation-open
@@ -31,6 +32,7 @@ steps:
   - id: new-model
     anchor:
       testid: open-menu-new-model
+    within: open-menu
     pointer: true
     instruct: >-
       At the top are actions. New Model starts a fresh model file in My Project
@@ -45,6 +47,7 @@ steps:
   - id: open-from-path
     anchor:
       testid: open-menu-open-from-path
+    within: open-menu
     pointer: true
     instruct: >-
       Open from path opens any PsyNeuLink .py file on this computer by its path.
@@ -60,6 +63,7 @@ steps:
   - id: my-project-folder
     anchor:
       testid: open-menu-section-myModels
+    within: open-menu
     pointer: true
     instruct: >-
       My Project Folder is the first catalog: your own models. New models are
@@ -75,6 +79,7 @@ steps:
   - id: the-library
     anchor:
       testid: open-menu-section-library
+    within: open-menu
     pointer: true
     instruct: >-
       PsyNeuLink Library lists the models that come with the PsyNeuLink in use.
@@ -92,6 +97,7 @@ steps:
   - id: under-development
     anchor:
       testid: open-menu-section-references
+    within: open-menu
     pointer: true
     instruct: >-
       Lower down are catalogs under development: Reference Models and Demo
