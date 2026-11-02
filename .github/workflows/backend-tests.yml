@@ -109,6 +109,13 @@ jobs:
           sudo docker image prune --all --force || true
           df -h /
 
+      # The Graphviz programs (`dot`) draw show_graph's picture for the
+      # show_graph tab. Without them the tests of that picture skip (#161).
+      - name: Install Graphviz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends graphviz
+
       - name: Set up Python
         uses: actions/setup-python@v6
         # #1368: no `cache: pip`. PsyNeuLink pulls torch and its CUDA wheels, so
@@ -174,6 +181,13 @@ jobs:
             /opt/hostedtoolcache/CodeQL /usr/local/share/boost
           sudo docker image prune --all --force || true
           df -h /
+
+      # The Graphviz programs (`dot`) draw show_graph's picture for the
+      # show_graph tab. Without them the tests of that picture skip (#161).
+      - name: Install Graphviz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends graphviz
 
       - name: Set up Python
         uses: actions/setup-python@v6

@@ -59,6 +59,7 @@ pnl-source-switch-refreshes-library.spec.ts
 pnl-version-choice.spec.ts
 preview-error-banner.spec.ts
 preview-not-save.spec.ts
+preview-survives-save.spec.ts
 project-folder-move.spec.ts
 pytorch-view.spec.ts
 read-only-badge-note.spec.ts
