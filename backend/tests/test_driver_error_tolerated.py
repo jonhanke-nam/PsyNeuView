@@ -58,6 +58,7 @@ def _library_model(name: str) -> Path | None:
 
 
 BOTVINICK = _library_model("Botvinick_conflict_monitoring_model.py")
+MONTAGUE = _library_model("MontagueDayanSejnowski96.py")
 
 
 def test_the_model_does_raise_after_its_runs_are_no_opd(driven):
@@ -107,3 +108,12 @@ def test_botvinick_show_graph_with_controller():
     r = show_graph(str(BOTVINICK), "CONFLICT MONITORING_SYSTEM", "dot")
     assert r.status_code == 200, r.text
     assert "COLOR HIDDEN" in r.json()["dot"]
+
+
+@pytest.mark.skipif(MONTAGUE is None, reason="PsyNeuLink library models not available")
+def test_montague_show_graph():
+    """The same cause, another face: the model reads its own results after
+    the no-op'd run and raises KeyError, shown as just 'TD_Learning_Figure_5A'."""
+    r = show_graph(str(MONTAGUE), "TD_Learning_Figure_5A", "dot")
+    assert r.status_code == 200, r.text
+    assert "Action Selection" in r.json()["dot"]
