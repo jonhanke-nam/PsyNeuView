@@ -17,7 +17,7 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 from app.services.introspector import load_and_introspect
-from app.services.preview import clear_preview, write_preview
+from app.services.preview import sync_preview, write_preview
 from app.services.dangling_check import find_dangling_projections
 from app.services.file_writer import (
     apply_function_change,
@@ -1656,8 +1656,12 @@ def save_source_endpoint(request: SaveSourceRequest):
             )
 
     save_source(request.file_path, request.source)
-    # The buffer and the file now agree, so any preview of it is stale.
-    clear_preview(request.file_path)
+    # The buffer and the file now agree. The page stops using the preview
+    # copy once this answers, but a show_graph, Run or Learn sent before then
+    # still names it (an undo during an autosave, #160). Deleting it made
+    # those fail with "File not found: ~/.psyneuview/previews/…"; bringing it
+    # up to the saved code keeps them working, on the same code as the file.
+    sync_preview(request.file_path, request.source)
 
     try:
         model = load_and_introspect(request.file_path)
