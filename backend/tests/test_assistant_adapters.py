@@ -8,7 +8,6 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
-
 from app.services.assistant import agents, tools
 
 SECRET = "sk-fake-key-for-the-adapter-test"

@@ -12,14 +12,18 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from app.services import deployment_mode
-from app.services.assistant import agents, keys, log as assistant_log, session as sessions, settings as assistant_settings, tools as assistant_tools
+from app.services.assistant import agents, keys
+from app.services.assistant import log as assistant_log
+from app.services.assistant import session as sessions
+from app.services.assistant import settings as assistant_settings
+from app.services.assistant import tools as assistant_tools
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +113,7 @@ async def delete_key():
 
 class MessageBody(BaseModel):
     text: str
-    context: Optional[dict[str, Any]] = None
+    context: dict[str, Any] | None = None
 
 
 @router.post("/sessions")

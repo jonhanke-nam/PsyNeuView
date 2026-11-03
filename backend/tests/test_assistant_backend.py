@@ -12,11 +12,12 @@ import threading
 import time
 
 import pytest
-from fastapi.testclient import TestClient
-
 from app.main import app
 from app.services import deployment_mode
-from app.services.assistant import agents, keys, log as assistant_log, session as sessions, settings as assistant_settings
+from app.services.assistant import agents, keys
+from app.services.assistant import session as sessions
+from app.services.assistant import settings as assistant_settings
+from fastapi.testclient import TestClient
 
 SECRET = "sk-test-secret-never-shown-0123456789"
 

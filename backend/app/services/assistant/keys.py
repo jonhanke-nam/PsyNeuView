@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 import subprocess
 import sys
-from typing import Optional, Protocol
+from typing import Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class NoSecureStore(Exception):
 
 
 class KeyStore(Protocol):
-    def get(self) -> Optional[str]: ...
+    def get(self) -> str | None: ...
     def set(self, key: str) -> None: ...
     def delete(self) -> None: ...
 
@@ -42,7 +42,7 @@ class MacKeychain:
         self._service = service
         self._account = account
 
-    def get(self) -> Optional[str]:
+    def get(self) -> str | None:
         result = subprocess.run(
             ["security", "find-generic-password", "-s", self._service, "-a", self._account, "-w"],
             capture_output=True, text=True, check=False,
@@ -72,9 +72,9 @@ class MemoryStore:
     """For tests: nothing leaves the process."""
 
     def __init__(self):
-        self._key: Optional[str] = None
+        self._key: str | None = None
 
-    def get(self) -> Optional[str]:
+    def get(self) -> str | None:
         return self._key
 
     def set(self, key: str) -> None:
@@ -87,7 +87,7 @@ class MemoryStore:
 class RefusingStore:
     """No secure store on this platform: reads find nothing, writes refuse."""
 
-    def get(self) -> Optional[str]:
+    def get(self) -> str | None:
         return None
 
     def set(self, key: str) -> None:
@@ -97,7 +97,7 @@ class RefusingStore:
         return None
 
 
-_store: Optional[KeyStore] = None
+_store: KeyStore | None = None
 
 
 def store() -> KeyStore:
@@ -107,7 +107,7 @@ def store() -> KeyStore:
     return _store
 
 
-def use_store(replacement: Optional[KeyStore]) -> None:
+def use_store(replacement: KeyStore | None) -> None:
     """Swap the store (tests); ``None`` goes back to the platform default."""
     global _store
     _store = replacement
@@ -117,7 +117,7 @@ def is_set() -> bool:
     return store().get() is not None
 
 
-def get_key() -> Optional[str]:
+def get_key() -> str | None:
     """Only the agent adapter should call this; the key must stay local."""
     return store().get()
 

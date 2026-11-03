@@ -15,14 +15,17 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
-try:  # the real modules, when the files part has landed
-    from app.services.assistant import files, review
+# The real modules, when the files part has landed; the stand-ins until
+# then. ``review`` is re-exported for the accept route.
+try:
+    from app.services.assistant import files, review  # noqa: F401
 except ImportError:  # pragma: no cover - depends on the branch state
     from app.services.assistant import stand_ins as files  # type: ignore[no-redef]
-    from app.services.assistant import stand_ins as review  # type: ignore[no-redef]
+    from app.services.assistant import stand_ins as review  # type: ignore[no-redef]  # noqa: F401
 
 PathRefused = getattr(files, "PathRefused", Exception)
 

@@ -22,7 +22,7 @@ import logging
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
-from typing import Any, Optional, Protocol
+from typing import Any, Protocol
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class Agent(Protocol):
     def reply(self, *, system: str, history: list[dict], tools: list[dict]) -> AgentReply: ...
 
 
-def make_agent(agent_settings: dict, *, key: Optional[str]) -> "Agent":
+def make_agent(agent_settings: dict, *, key: str | None) -> Agent:
     """Build the adapter the settings name. ``key`` stays inside the adapter."""
     kind = agent_settings.get("type", "none")
     if kind == "anthropic":
@@ -175,7 +175,7 @@ class AnthropicAgent:
 
 
 class OpenAICompatibleAgent:
-    def __init__(self, *, model: str, key: Optional[str], base_url: str):
+    def __init__(self, *, model: str, key: str | None, base_url: str):
         self.model = model
         self._key = key
         self._base_url = base_url.rstrip("/")

@@ -16,7 +16,7 @@ from __future__ import annotations
 import copy
 import threading
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from app.services.app_config import app_config_path
 from app.services.app_settings import _read_config, _write_config_atomic
@@ -64,7 +64,7 @@ def defaults() -> dict:
     return copy.deepcopy(DEFAULTS)
 
 
-def get_settings(*, config_file: Optional[Path] = None) -> dict:
+def get_settings(*, config_file: Path | None = None) -> dict:
     """The current settings, every field present, invalid parts defaulted."""
     path = config_file or app_config_path()
     with _lock:
@@ -72,7 +72,7 @@ def get_settings(*, config_file: Optional[Path] = None) -> dict:
     return _normalize(stored if isinstance(stored, dict) else {})
 
 
-def update_settings(changes: dict, *, confirm_raise: bool = False, config_file: Optional[Path] = None) -> dict:
+def update_settings(changes: dict, *, confirm_raise: bool = False, config_file: Path | None = None) -> dict:
     """Apply ``changes`` (a partial or full settings document) and return the result.
 
     Raises :class:`SettingsError` on a bad value and
@@ -95,7 +95,7 @@ def update_settings(changes: dict, *, confirm_raise: bool = False, config_file: 
     return copy.deepcopy(new)
 
 
-def is_enabled(*, config_file: Optional[Path] = None) -> bool:
+def is_enabled(*, config_file: Path | None = None) -> bool:
     return bool(get_settings(config_file=config_file)["enabled"])
 
 

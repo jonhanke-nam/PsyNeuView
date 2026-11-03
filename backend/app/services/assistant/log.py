@@ -14,7 +14,6 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Optional
 
 _LOG_ENV = "PSYNEUVIEW_ASSISTANT_LOG"
 _lock = threading.Lock()
@@ -37,7 +36,7 @@ def record(
     tool: str,
     args: dict,
     allowed: bool,
-    ok: Optional[bool] = None,
+    ok: bool | None = None,
     summary: str = "",
     approved_by: str = "",
     keep_log: bool = True,

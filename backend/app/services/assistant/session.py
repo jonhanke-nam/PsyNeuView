@@ -16,9 +16,12 @@ import logging
 import threading
 import time
 import uuid
-from typing import Any, Optional
+from typing import Any
 
-from app.services.assistant import agents, log as assistant_log, settings as assistant_settings, tools as assistant_tools
+from app.services.assistant import agents
+from app.services.assistant import log as assistant_log
+from app.services.assistant import settings as assistant_settings
+from app.services.assistant import tools as assistant_tools
 
 logger = logging.getLogger(__name__)
 
@@ -46,9 +49,9 @@ class Session:
         self._history: list[dict] = []
         self._proposals: dict[str, dict] = {}
         self._stop = threading.Event()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._running = False
-        self.turn_id: Optional[str] = None
+        self.turn_id: str | None = None
 
     # ── events ───────────────────────────────────────────────────────
 
@@ -91,7 +94,7 @@ class Session:
         self.emit("proposal", proposal=dict(proposal))
         return proposal
 
-    def proposal(self, proposal_id: str) -> Optional[dict]:
+    def proposal(self, proposal_id: str) -> dict | None:
         with self._lock:
             return self._proposals.get(proposal_id)
 
@@ -216,7 +219,7 @@ def _summarize(tool: str, result: dict) -> str:
     return "ok"
 
 
-def filter_context(context: Optional[dict], visibility: dict) -> dict:
+def filter_context(context: dict | None, visibility: dict) -> dict:
     """Drop whatever the user hasn't chosen to share. Unknown keys are dropped too."""
     context = context if isinstance(context, dict) else {}
     out: dict = {}
