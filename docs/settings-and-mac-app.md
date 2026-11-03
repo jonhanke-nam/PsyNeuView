@@ -210,7 +210,7 @@ a Problem calls ([#1287](https://github.com/jonhanke-nam/PsyNeuView/issues/1287)
 [PsyNeuView-MacApp#208](https://github.com/jonhanke-nam/PsyNeuView-MacApp/issues/208)):
 
 ```js
-const { version, state, activity } = await window.__pnvDiagnostics();
+const { version, state, activity, timeline, previousActivity, actionLogging } = await window.__pnvDiagnostics();
 ```
 
 It is built fresh on every call, so it is always current. An older page has
@@ -233,12 +233,19 @@ snapshot) and `frontend/src/utils/activityLog.ts` (the log).
 | `server` | the relevant parts of `/api/settings/info`, fetched fresh with a 3-second timeout: `versions` (PsyNeuView and its commit, PsyNeuLink, ModECI MDF), `deployment`, `health`, `features`, `githubAuth` (`source` and `hasRepoScope` only — never the user name), `updates`. When the fetch fails, `{error}` stands here instead and `app` and `psyneulink` fall back to the last answer the page saw; the call itself never fails for this |
 
 **`activity`**, the log since the page loaded: an array of
-`{t, kind, text, data?}` — `t` an ISO time, `kind` one of the below — the
-last 2,000 entries, oldest first.
+`{t, time, kind, text, data?}` — `t` and `time` the same ISO time (the Mac
+app reads `time`), `kind` one of the below — the last 2,000 entries, oldest
+first, with the wait log's entries (#176) merged in. When action logging is
+off (#177), the first entry is a `logging` one saying so. Which controls are
+logged, and which aren't and why, is the audit:
+[What the activity log records](activity-log-audit.md).
 
 | `kind` | Recorded for |
 |---|---|
-| `menu` | an item chosen in the Open, Tutorials or Layout menu (its label), a Settings section shown, a keyboard shortcut that did something |
+| `menu` | a menu opened; an item chosen in the Open, Tutorials or Layout menu (its label); a Settings section shown; a keyboard shortcut that did something |
+| `click` | a button or a tab pressed anywhere else, by its label and where it is: `Toolbar › Save`, `Bottom tabs › Run` (#177, one click listener: `frontend/src/utils/clickLog.ts`) |
+| `canvas` | a node or an edge selected on the graph, or the selection cleared (#177) |
+| `edit` | a change undo knows about — `Moved node a`, `Modified gain in a`, `Edited the code` — and undo and redo themselves (#177); the name of what changed, never the new text or value |
 | `model` | a model opened or reopened, saved, saved as, locked or unlocked, a checkout protected (`data.path`) |
 | `setting` | a setting changed: `data.key` is its inventory id (`developer-mode`, `graph-pointer`, `open-menu-sections`, `keyboard-shortcuts`, `pnl-auto-update`, `catalogs`, …) and `data.value` the new value, for non-sensitive settings only — the address reports go to is recorded as changed, never what to |
 | `run`, `learn` | started, then finished with `data.outcome` (`ok`, `failed`, `cancelled`), `durationMs` and, on failure, the `reason` |
@@ -248,6 +255,33 @@ last 2,000 entries, oldest first.
 | `notification` | every message shown to the user, with `data.type` (`error`, `warning`, `info`, `success`) |
 | `error` | a model error shown in the diagnostics bar (once per distinct error) |
 | `psyneulink` | a PsyNeuLink switch requested, succeeded, failed or cancelled; Check now; the Mac app switching which PsyNeuView runs |
+| `wait` | a wait from the wait log (#176): `data` has `label`, `waitKind` (`work`, `background`, `wheel`), `stop`, `durationMs`, `outcome`, `detail`, `action` and `actionCertain` |
+| `logging` | the log itself (#177): `Page loaded` (so the saved copy shows a reload), or action logging being off |
+
+**`actionLogging`** (#177): whether user actions are being recorded —
+Settings ▸ General ▸ Problem reports ▸ *Keep a log of my actions for problem
+reports*. Off, the `menu`, `click`, `canvas`, `edit` and `step` kinds are
+neither recorded nor saved, no wait is linked to an action, and the report
+says so.
+
+**`timeline`** (#177): this launch's actions, events, errors, messages and
+waits in time order, as `{t, source, text}` — `source` one of `action`,
+`event`, `error`, `message`, `wait`, `page` — built by
+`frontend/src/utils/timeline.ts` from the log, the wait log (a wait is a
+`start` line and a `stop` line, so a server line between them lands between
+them) and the saved copy's entries from this launch's earlier page loads.
+An error line carries `after: <wait> failed` when a wait had just failed,
+and `likely from: <action>` for the latest action within 30 s. The Mac app
+merges the server log's lines in, marked `server`, converts every time to
+local time and writes `timeline.txt`; the page's lines read on their own in
+a report from an older app or the About download.
+
+**`previousActivity`** (#177): the previous launch's saved log, the same
+shape as `activity`, or empty; `savedActivityError` says why the saved copy
+couldn't be read, when it couldn't. The copy lives under
+`~/.psyneuview/activity-log` (`backend/app/services/activity_log.py`),
+this launch's file and the previous launch's, each capped at 2 MB, written
+in batches by `frontend/src/utils/activitySaver.ts`.
 
 **Scope.** Only PsyNeuView and PsyNeuLink: their state, settings, installs
 and the system they run on. Names and paths are recorded, never a model's
