@@ -262,7 +262,8 @@ logged, and which aren't and why, is the audit:
 Settings ▸ General ▸ Problem reports ▸ *Keep a log of my actions for problem
 reports*. Off, the `menu`, `click`, `canvas`, `edit` and `step` kinds are
 neither recorded nor saved, no wait is linked to an action, and the report
-says so.
+says so. `run`, `learn` and `walkthrough` stay on either way, as the
+setting's wording says: they are what the app did, with an outcome.
 
 **`timeline`** (#177): this launch's actions, events, errors, messages and
 waits in time order, as `{t, source, text}` — `source` one of `action`,

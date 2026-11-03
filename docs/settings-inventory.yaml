@@ -268,11 +268,14 @@ settings:
     control: setting-activity-log-actions
     notes: >-
       On by default (#177). Covers user actions only: menus, buttons, tabs,
-      the canvas, edits. Errors, messages shown, waits and what the app did
-      (runs, learning, walkthroughs) are recorded whatever this says, and the
-      wording says so. Off: nothing a user does is recorded or saved, the
-      actions already recorded are dropped here and from the copy on disk
-      (~/.psyneuview/activity-log), and a report says logging was off.
+      the canvas, edits, trace stepping. Recorded whether it is on or off,
+      and the control's wording says so plainly: errors, messages shown,
+      every wait's timing, and runs, learning and walkthroughs with how they
+      ended (the owner's decision: they are what the app did, with an
+      outcome, and a report needs them). Off: nothing a user does is
+      recorded or saved, the actions already recorded are dropped here and
+      from the copy on disk (~/.psyneuview/activity-log), and a report says
+      logging was off.
 
   - id: tour-ring-thickness
     label: Tutorials and Voice ▸ Highlight ▸ Ring thickness

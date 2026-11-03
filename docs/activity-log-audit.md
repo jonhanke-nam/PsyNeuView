@@ -19,7 +19,12 @@ actions for problem reports* (on by default) covers the **user actions**
 below: `menu`, `click`, `canvas`, `edit` and `step`. Off, none of those is
 recorded or saved, the ones recorded are dropped (from the copy on disk too),
 no wait is linked to an action, and a report starts with "Action logging was
-off". Everything else stays on, because a report is hard to use without it.
+off". Everything else stays on, because a report is hard to use without it,
+and the setting's own wording says what that is: errors, messages shown,
+every wait's timing, and **runs, learning and walkthroughs** with how they
+ended. Those three are started by the user, but they are what the app then
+did, with an outcome, which is what a report needs to read a wait or an error
+against (the owner's decision on #177).
 
 ## How most of it is logged: one listener, not a call per button
 

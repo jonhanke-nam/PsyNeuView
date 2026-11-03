@@ -96,9 +96,9 @@ function ActionLoggingRow() {
           <span style={{ display: "block", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", marginTop: 2, maxWidth: 560 }}>
             Which menus, buttons and tabs you press, what you select on the graph and the edits you make, so a
             report can say what led up to a problem. Names and paths only: never a model's code, a file's contents
-            or anything you type. Errors, messages shown and how long each wait took are recorded either way.
-            Turning this off clears the actions recorded so far, including the copy kept on this computer; it
-            all stays here until you send a report.
+            or anything you type. Recorded either way, on or off: errors, messages shown, how long each wait took,
+            and runs, learning and walkthroughs with how they ended. Turning this off clears the actions recorded
+            so far, including the copy kept on this computer; it all stays here until you send a report.
           </span>
         </span>
       </label>
