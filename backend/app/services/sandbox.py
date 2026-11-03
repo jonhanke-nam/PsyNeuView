@@ -17,6 +17,7 @@ import subprocess
 import sys
 import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -297,6 +298,55 @@ def restart_warm_worker() -> bool:
     return True
 
 
+# ── Giving way ────────────────────────────────────────────────────────
+#
+# The worker takes one task at a time, so a task nobody is waiting for (the
+# probe of every PsyNeuLink example, #175) can hold up a model the user has
+# just opened. Work sent from inside ``giving_way()`` waits, before each of
+# its tasks, until no user-requested task is waiting for or using the worker.
+# A task already running is never interrupted: the user's task follows it.
+
+_user_tasks = 0  # user-requested tasks waiting for, or using, the worker
+_user_tasks_cond = threading.Condition()
+_giving_way = threading.local()
+
+
+@contextmanager
+def giving_way():
+    """Tasks sent from this thread while inside let user-requested work go first."""
+    before = getattr(_giving_way, "on", False)
+    _giving_way.on = True
+    try:
+        yield
+    finally:
+        _giving_way.on = before
+
+
+def gives_way() -> bool:
+    """Whether work sent from this thread lets user-requested work go first."""
+    return bool(getattr(_giving_way, "on", False))
+
+
+def wait_for_user_tasks() -> None:
+    """Block until no user-requested task is waiting for or using the worker."""
+    with _user_tasks_cond:
+        _user_tasks_cond.wait_for(lambda: _user_tasks == 0)
+
+
+@contextmanager
+def _user_task():
+    """Count a user-requested task from the moment it asks for the worker."""
+    global _user_tasks
+    with _user_tasks_cond:
+        _user_tasks += 1
+    try:
+        yield
+    finally:
+        with _user_tasks_cond:
+            _user_tasks -= 1
+            _user_tasks_cond.notify_all()
+
+
 def run_in_sandbox(task: str, params: dict, timeout: int | None = None) -> dict:
     """Run a task using the warm worker process.
 
@@ -310,8 +360,14 @@ def run_in_sandbox(task: str, params: dict, timeout: int | None = None) -> dict:
         else:
             timeout = INTROSPECT_TIMEOUT
 
-    worker = _get_warm_worker()
-    result = worker.send_task(task, params, timeout)
+    if gives_way():
+        wait_for_user_tasks()
+        worker = _get_warm_worker()
+        result = worker.send_task(task, params, timeout)
+    else:
+        with _user_task():
+            worker = _get_warm_worker()
+            result = worker.send_task(task, params, timeout)
 
     # If the warm worker failed, try a cold-start fallback
     if "error" in result and "Worker" in result["error"]:

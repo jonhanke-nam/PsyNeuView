@@ -23,7 +23,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from app.services import managed_layouts, source_history, working_copies
+from app.services import examples_status, managed_layouts, source_history, working_copies
 from app.services.app_config import app_config_path
 from app.services.catalogs import list_catalogs
 from app.services.clone_manager import _STATE_DIRNAME, clone_root
@@ -282,6 +282,10 @@ def list_locations() -> dict:
             "layouts": str(managed_layouts.layouts_dir()),
             "layoutsFixedBy": managed_layouts.LAYOUTS_DIR_ENV if managed_layouts.fixed_by_env() else None,
             "layoutsLastMigration": managed_layouts.last_migration(),
+            # Results that are only a convenience to keep, such as whether
+            # each PsyNeuLink example loads and runs (#175).
+            "cache": str(examples_status.cache_dir()),
+            "cacheFixedBy": examples_status.CACHE_DIR_ENV if examples_status.fixed_by_env() else None,
         },
         "managedCopies": managed_copies(),
         "releasesDir": str(__import__("app.services.pnl_releases", fromlist=["releases_dir"]).releases_dir()),

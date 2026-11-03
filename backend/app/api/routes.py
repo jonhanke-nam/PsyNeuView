@@ -75,7 +75,7 @@ from app.services.settings_info import active_psyneulink_package_dir, get_psyneu
 from app.services.pnl_freshness import check as check_pnl_freshness
 from app.services.execution_modes import get_execution_modes, DEFAULT_LEARN_MODE, DEFAULT_RUN_MODE
 from app.services.install_manager import get_install_manager, InstallJob
-from app.services import branch_lookup, bundle, file_history, github_files, source_history, working_copies
+from app.services import branch_lookup, bundle, examples_status, file_history, github_files, source_history, working_copies
 from app.services.clone_manager import artifact_path
 from typing import Literal, Optional
 
@@ -2991,72 +2991,35 @@ async def list_psyneulink_examples():
     return {"models": models, "available": True, "sourceDir": str(d)}
 
 
-# Per-source-commit cache of the (expensive) load probe. The corpus is the live
-# source's Scripts/Examples, which only changes when the source does.
-_examples_status_cache: dict[str, dict] = {}
+def _examples_status_key(d: Path) -> tuple[str, str]:
+    """The active commit and the key the status is kept under (#175)."""
+    commit = ((get_settings_info() or {}).get("psyneulink", {}) or {}).get("commit") or "unknown"
+    return commit, examples_status.fingerprint(d, commit)
 
 
 @router.get("/psyneulink-examples/status")
 def psyneulink_examples_status():
-    """Per-example load + run status for the live section (#843/#839).
+    """Per-example load status for the live section (#843/#839).
 
-    Probes each ``Scripts/Examples`` model with the app's introspector (load) and,
-    for those that load, runs it once with zero inputs (run). Cached by the active
-    source commit — the first call probes every model (this now includes a run
-    pass, so it takes longer), later calls are instant until the source changes.
+    Loads each ``Scripts/Examples`` model with the app's introspector, as
+    opening it would; there is no run pass (#175). The answer is kept
+    on disk (``examples_status``, #175), keyed by the active source's commit and
+    the example files themselves, so a launch doesn't start over: the first
+    call for a source probes every model, later calls are instant until the
+    source or one of its files changes. The probe gives way to user-requested
+    runner work between its steps. ``complete`` is False when the files or the
+    runner changed during the probe, in which case the answer isn't kept.
     Sync def so FastAPI threadpools it rather than blocking the event loop.
-
-    A *run* failure often just means the model needs real inputs — the reason is
-    carried in ``runError`` for the tooltip — so the UI downgrades it to "loads",
-    not "fails". Only a *load* failure is a hard "fails".
     """
     d = _pnl_scripts_dir()
     if d is None:
         return {"status": {}, "available": False}
-    commit = ((get_settings_info() or {}).get("psyneulink", {}) or {}).get("commit") or "unknown"
-    if commit in _examples_status_cache:
-        return {"status": _examples_status_cache[commit], "available": True, "cached": True}
-
-    status: dict[str, dict] = {}
-    for path in sorted(d.glob("*.py")):
-        if path.stem.startswith("__"):
-            continue
-        p = str(path)
-        try:
-            r = load_and_introspect(p, use_sandbox=True)
-            err = r.get("error") if isinstance(r, dict) else None
-            comps = (r.get("compositions") or []) if isinstance(r, dict) else []
-            nodes = len(comps[0].get("nodes", [])) if comps else 0
-            if err:
-                status[path.stem] = {"load": "fail", "error": str(err).splitlines()[0][:160]}
-                continue
-            if nodes == 0:
-                status[path.stem] = {"load": "fail", "error": "loaded but no nodes (construction failed)"}
-                continue
-            entry: dict = {"load": "ok", "nodes": nodes}
-            # Run pass: run once with zero inputs via the app's run path.
-            try:
-                comp_var = comps[0].get("varName")
-                info = get_input_nodes(p, comp_var, use_sandbox=True)
-                inputs = {
-                    n["varName"]: [[0.0] * ((n.get("shape") or [1])[-1] or 1)]
-                    for n in (info.get("inputNodes") or [])
-                }
-                rr = run_model(p, comp_var, inputs, use_sandbox=True)
-                if isinstance(rr, dict) and not rr.get("error"):
-                    entry["run"] = "ok"
-                else:
-                    entry["run"] = "fail"
-                    entry["runError"] = str((rr or {}).get("error", "run failed")).splitlines()[0][:160]
-            except Exception as e:  # noqa: BLE001 - run failure downgrades to "loads"
-                entry["run"] = "fail"
-                entry["runError"] = str(e).splitlines()[0][:160]
-            status[path.stem] = entry
-        except Exception as e:  # noqa: BLE001 - report any probe failure as fail
-            status[path.stem] = {"load": "fail", "error": str(e).splitlines()[0][:160]}
-
-    _examples_status_cache[commit] = status
-    return {"status": status, "available": True, "cached": False}
+    commit, key = _examples_status_key(d)
+    done = examples_status.cached(key)
+    if done is not None:
+        return {"status": done, "available": True, "cached": True, "complete": True}
+    status, complete = examples_status.probe(d, key, commit, key_now=lambda: _examples_status_key(d)[1])
+    return {"status": status, "available": True, "cached": False, "complete": complete}
 
 
 class LoadPnlExampleRequest(BaseModel):
