@@ -126,7 +126,7 @@ def _isolate_managed_layouts(tmp_path, monkeypatch):
 def _isolate_examples_status(tmp_path, monkeypatch):
     """Point every test at a throwaway cache folder (#175).
 
-    The PsyNeuLink examples' load-and-run status is kept under
+    The PsyNeuLink examples' load status is kept under
     ``~/.psyneuview/cache`` — the developer's real home — unless redirected,
     and what this process remembers is dropped so one test's result can't
     answer another's.

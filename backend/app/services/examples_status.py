@@ -1,11 +1,16 @@
-"""Whether each of PsyNeuLink's own examples loads and runs, kept on disk (#175).
+"""Whether each of PsyNeuLink's own examples loads, kept on disk (#175).
 
-The Open menu's PsyNeuLink Examples section marks each example: loads and
-runs, loads only, or fails. Finding that out means loading every model in
-the active source's ``Scripts/Examples`` and running each once with zero
-inputs, one at a time in the model runner, which took the better part of a
-minute on a full checkout. The result used to be kept in memory only, so
-every launch started over.
+The Open menu's PsyNeuLink Examples section marks each example: loads, or
+fails. Finding that out means loading every model in the active source's
+``Scripts/Examples``, one at a time in the model runner, which takes a while
+on a full checkout. The result used to be kept in memory only, so every
+launch started over.
+
+Loading is what opening the model does: the file's top-level code is
+executed in the runner with the model's own ``run`` and ``learn`` calls
+switched off. The probe used to go on to run each model once with zero
+inputs; the PsyNeuLink lead decided it must not, so there is no run pass and
+no "runs" mark. A result kept by the old probe is in format 1 and is ignored.
 
 The result now lives in ``~/.psyneuview/cache/examples-status.json``, under
 a key that changes whenever the answer could:
@@ -40,13 +45,15 @@ from collections.abc import Callable
 from pathlib import Path
 
 from app.services import sandbox
-from app.services.executor import get_input_nodes, run_model
 from app.services.introspector import load_and_introspect
 
 logger = logging.getLogger(__name__)
 
 CACHE_DIR_ENV = "PSYNEUVIEW_CACHE_DIR"
 _FILENAME = "examples-status.json"
+#: The file's format. 1 held the old probe's run results too; a file in any
+#: other format is read as empty, so its marks can't show.
+FORMAT = 2
 #: Results kept on disk: one per source the user has had the section open
 #: with. Few people switch between more sources than this.
 MAX_ENTRIES = 8
@@ -119,14 +126,16 @@ def _read_entries() -> dict[str, dict]:
         data = json.loads(_cache_file().read_text())
     except (OSError, ValueError):
         return {}
-    entries = data.get("entries") if isinstance(data, dict) else None
+    if not isinstance(data, dict) or data.get("version") != FORMAT:
+        return {}
+    entries = data.get("entries")
     return entries if isinstance(entries, dict) else {}
 
 
 def _write_entries(entries: dict[str, dict]) -> None:
     path = cache_dir(create=True) / _FILENAME
     tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps({"version": 1, "entries": entries}, indent=1))
+    tmp.write_text(json.dumps({"version": FORMAT, "entries": entries}, indent=1))
     os.replace(tmp, path)
 
 
@@ -167,19 +176,13 @@ def forget_all() -> None:
 
 def _runner_failed(entry: dict) -> bool:
     """Whether a result came from the runner dying, not from the model."""
-    return any("Worker" in str(entry.get(k) or "") for k in ("error", "runError"))
+    return "Worker" in str(entry.get("error") or "")
 
 
 def _probe_one(path: Path) -> dict:
-    """Load one example and, if it loads, run it once with zero inputs.
-
-    A *run* failure often just means the model needs real inputs: the reason
-    is carried in ``runError`` for the tooltip, and the UI shows "loads", not
-    "fails". Only a *load* failure is a hard "fails".
-    """
-    p = str(path)
+    """Load one example, as opening it would, and count its nodes."""
     try:
-        r = load_and_introspect(p, use_sandbox=True)
+        r = load_and_introspect(str(path), use_sandbox=True)
         err = r.get("error") if isinstance(r, dict) else None
         comps = (r.get("compositions") or []) if isinstance(r, dict) else []
         nodes = len(comps[0].get("nodes", [])) if comps else 0
@@ -187,24 +190,7 @@ def _probe_one(path: Path) -> dict:
             return {"load": "fail", "error": str(err).splitlines()[0][:160]}
         if nodes == 0:
             return {"load": "fail", "error": "loaded but no nodes (construction failed)"}
-        entry: dict = {"load": "ok", "nodes": nodes}
-        try:
-            comp_var = comps[0].get("varName")
-            info = get_input_nodes(p, comp_var, use_sandbox=True)
-            inputs = {
-                n["varName"]: [[0.0] * ((n.get("shape") or [1])[-1] or 1)]
-                for n in (info.get("inputNodes") or [])
-            }
-            rr = run_model(p, comp_var, inputs, use_sandbox=True)
-            if isinstance(rr, dict) and not rr.get("error"):
-                entry["run"] = "ok"
-            else:
-                entry["run"] = "fail"
-                entry["runError"] = str((rr or {}).get("error", "run failed")).splitlines()[0][:160]
-        except Exception as e:  # noqa: BLE001 - run failure downgrades to "loads"
-            entry["run"] = "fail"
-            entry["runError"] = str(e).splitlines()[0][:160]
-        return entry
+        return {"load": "ok", "nodes": nodes}
     except Exception as e:  # noqa: BLE001 - report any probe failure as fail
         return {"load": "fail", "error": str(e).splitlines()[0][:160]}
 

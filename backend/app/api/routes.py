@@ -2999,10 +2999,10 @@ def _examples_status_key(d: Path) -> tuple[str, str]:
 
 @router.get("/psyneulink-examples/status")
 def psyneulink_examples_status():
-    """Per-example load + run status for the live section (#843/#839).
+    """Per-example load status for the live section (#843/#839).
 
-    Probes each ``Scripts/Examples`` model with the app's introspector (load) and,
-    for those that load, runs it once with zero inputs (run). The answer is kept
+    Loads each ``Scripts/Examples`` model with the app's introspector, as
+    opening it would; there is no run pass (#175). The answer is kept
     on disk (``examples_status``, #175), keyed by the active source's commit and
     the example files themselves, so a launch doesn't start over: the first
     call for a source probes every model, later calls are instant until the
