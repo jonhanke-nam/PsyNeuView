@@ -52,7 +52,12 @@ is. The rules behind it are in issue #179; the threat model is in
 - `saving`: `always_ask`, `structured_without_asking`.
 - `folders[].access`: `read`, `read_write`. Every folder goes through
   `files.validate_folder` on PUT: home itself, system, app and install
-  folders, the PsyNeuLink install and hidden folders are refused with 400.
+  folders, the PsyNeuLink install, hidden folders, and any folder that is,
+  holds or sits inside a Python install or environment (`pyvenv.cfg`,
+  `conda-meta`, `site-packages`, `lib/pythonX.Y`) are refused with 400.
+- `agent.base_url` belongs to the type it was given for: changing the type
+  without giving an address clears it. Changing where messages go (type or
+  address) is a raise, named with the real destination.
 - `limits.max_tokens` is spending: the tokens the agent's service reports,
   input and output, summed over a session. A turn that reaches it ends with
   `done` reason `limit`. A service that reports no usage isn't limited this way.
@@ -171,7 +176,7 @@ plain data is a `refused` event and no proposal.
 | `propose_app_edit` | Creates an `app_edit` proposal of checked ops | `autonomy` isn't `answer` |
 | `list_files` | Lists model files in allowed folders | `visibility.files` |
 | `read_file` | Reads a model file's text, **without running it** | `visibility.files` |
-| `propose_file_write` | Creates a `file_write` proposal | A `read_write` folder holding the path |
+| `propose_file_write` | Creates a `file_write` proposal | `visibility.files`, and a `read_write` folder holding the path. A new `.py` must be a PsyNeuLink model by content; a name that would shadow a module (`numpy.py`, `os.py`, `__init__.py`, `sitecustomize.py`, any `_`-prefixed stem) is refused |
 | `propose_open_file` | Asks the user to open a file; only the user can accept | `visibility.files` |
 
 Permissions are read again on every call, so a setting lowered mid-turn
@@ -198,18 +203,30 @@ def require_runnable(path: str) -> None: ...  # raises UnreviewedAssistantCode
 `require_runnable` is consulted by every route that executes a model:
 `run_in_sandbox` and the in-process importers behind `/model/load`, run,
 learn, show-graph, export, the file watcher's reload, autosave's reload,
-undo and redo. A route that would execute unreviewed content answers 409
+undo and redo; `/model/load` consults it before the star-import conversion
+writes anything. It also refuses when a tracked, unreviewed `.py` sits in
+the same folder as the model, naming that file: a model can import a file
+beside it. With no state file, or nothing tracked, it costs one lookup. A route that would execute unreviewed content answers 409
 with `{"detail": <message>, "reason": "assistant_code_unreviewed", "path",
 "approve": {...}}` (top level, from the app's exception handler; the page
 reads `reason` from either the top level or under `detail`).
-`/model/save-source` and `/model/save-project` write first and then answer
-that 409, so the page treats the save as done and offers the review. A save
-body, a bundle or an MDF upload that is, byte for byte, unreviewed
-assistant-written content is tracked under its new path and refused the
-same way, so a copy under a new name needs the same review as the original.
+`/model/save-source`, `/model/save-project`, `/models/save-as` and
+`/model/save-copy` (`py`) write first and then answer that 409, so the page
+treats the save as done and offers the review. `/model/preview` refuses
+before writing anything: a tracked, unreviewed file can't be previewed
+until approved. A save body, a preview, a bundle or an MDF upload that is
+unreviewed assistant-written content, exactly or in normalised form (line
+endings, trailing whitespace, blank and comment-only lines set aside), is
+tracked under its new path and refused the same way, so a copy under a new
+name needs the same review as the original. A copy the user edits by hand
+is the user's: the normalised index catches accidents and the obvious
+trick, not a determined copy, and approval is always of the exact text.
 
 The state is `~/.psyneuview/assistant-review.json`, by real path and
-content hash. Tests and a second instance redirect it with
+content hash, with a `.bak` beside it. If neither can be read, the state is
+unknown and every execution guard refuses (`reason:
+"assistant_review_state_unreadable"`) until it is repaired or removed; no
+state file at all means nothing is tracked. Tests and a second instance redirect it with
 `PSYNEUVIEW_ASSISTANT_REVIEW_FILE`, previous versions with
 `PSYNEUVIEW_ASSISTANT_STATE_DIR`, the log with `PSYNEUVIEW_ASSISTANT_LOG`.
 
