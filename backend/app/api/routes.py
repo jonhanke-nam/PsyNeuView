@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
+from app.services.assistant.review import UnreviewedAssistantCode, require_runnable
 from app.services.introspector import load_and_introspect
 from app.services.preview import sync_preview, write_preview
 from app.services.dangling_check import find_dangling_projections
@@ -1665,6 +1666,9 @@ def save_source_endpoint(request: SaveSourceRequest):
 
     try:
         model = load_and_introspect(request.file_path)
+    except UnreviewedAssistantCode:
+        # Saved, but not executed: the page gets the 409 and the approve route (#179).
+        raise
     except Exception as e:
         # If the code is invalid, still save but return error in model.
         # Still surface dangling-projection info so the validation surface
@@ -2002,6 +2006,9 @@ async def export_project(request: LoadModelRequest):
     (YAML) mirror when the model serializes cleanly. See ``bundle.py`` and
     ``docs/file-handling.md`` for the spec.
     """
+    # Bundling an unreviewed assistant-written model would let it run from the
+    # bundle's working copy later (#179); refuse here as every other route does.
+    require_runnable(request.file_path)
     path = Path(request.file_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"File not found: {path}")

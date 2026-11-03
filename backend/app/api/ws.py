@@ -148,55 +148,67 @@ async def handle_websocket(websocket: WebSocket):
             message = json.loads(raw)
             msg_type = message.get("type")
 
-            if msg_type == "watch_file":
-                file_path = message["filePath"]
-                global _loop
-                _loop = asyncio.get_running_loop()
-                file_watcher.watch(file_path, _on_file_changed)
-                # Also follow PsyNeuLink's own code, if it's a local checkout.
-                # Checked on each open, so a source switch re-points it.
-                pnl_code_watcher.ensure(_on_psyneulink_changed, _is_open_model)
-                await websocket.send_json({"type": "watching", "filePath": file_path})
-
-            elif msg_type == "stop_watching":
-                file_watcher.stop()
-                await websocket.send_json({"type": "stopped_watching"})
-
-            elif msg_type == "load_model":
-                file_path = message["filePath"]
-                model = load_and_introspect(file_path)
-                await websocket.send_json({"type": "model_loaded", "model": model})
-
-            elif msg_type == "update_parameter":
-                file_path = message["filePath"]
-                node_id = message["nodeId"]
-                param_name = message["paramName"]
-                new_value = message["newValue"]
-                apply_parameter_change(file_path, node_id, param_name, new_value)
-                model = load_and_introspect(file_path)
-                await websocket.send_json({"type": "model_updated", "model": model})
-
-            elif msg_type == "update_structure":
-                file_path = message["filePath"]
-                changes = message["changes"]
-                apply_structural_change(file_path, changes)
-                model = load_and_introspect(file_path)
-                await websocket.send_json({"type": "model_updated", "model": model})
-
-            elif msg_type == "run_model":
-                await websocket.send_json({
-                    "type": "run_result",
-                    "status": "not_implemented",
-                })
-
-            else:
-                await websocket.send_json({
-                    "type": "error",
-                    "message": f"Unknown message type: {msg_type}",
-                })
+            try:
+                await _dispatch(websocket, message, msg_type)
+            except UnreviewedAssistantCode as e:
+                # Assistant-written content the user hasn't approved (#179):
+                # same reason the HTTP routes give, and the socket stays open.
+                await websocket.send_json({"type": "error", "reason": e.reason, "detail": str(e),
+                                           "filePath": message.get("filePath")})
     finally:
         _connected_clients.discard(websocket)
         presence.registry.unregister(websocket)
         # Someone leaving is as worth knowing as someone arriving.
         await _broadcast_presence()
         file_watcher.stop()
+
+
+async def _dispatch(websocket: WebSocket, message: dict, msg_type: str | None) -> None:
+    """One message from the page. Raises UnreviewedAssistantCode if it would
+    execute assistant-written content the user hasn't approved (#179)."""
+    if msg_type == "watch_file":
+        file_path = message["filePath"]
+        global _loop
+        _loop = asyncio.get_running_loop()
+        file_watcher.watch(file_path, _on_file_changed)
+        # Also follow PsyNeuLink's own code, if it's a local checkout.
+        # Checked on each open, so a source switch re-points it.
+        pnl_code_watcher.ensure(_on_psyneulink_changed, _is_open_model)
+        await websocket.send_json({"type": "watching", "filePath": file_path})
+
+    elif msg_type == "stop_watching":
+        file_watcher.stop()
+        await websocket.send_json({"type": "stopped_watching"})
+
+    elif msg_type == "load_model":
+        file_path = message["filePath"]
+        model = load_and_introspect(file_path)
+        await websocket.send_json({"type": "model_loaded", "model": model})
+
+    elif msg_type == "update_parameter":
+        file_path = message["filePath"]
+        node_id = message["nodeId"]
+        param_name = message["paramName"]
+        new_value = message["newValue"]
+        apply_parameter_change(file_path, node_id, param_name, new_value)
+        model = load_and_introspect(file_path)
+        await websocket.send_json({"type": "model_updated", "model": model})
+
+    elif msg_type == "update_structure":
+        file_path = message["filePath"]
+        changes = message["changes"]
+        apply_structural_change(file_path, changes)
+        model = load_and_introspect(file_path)
+        await websocket.send_json({"type": "model_updated", "model": model})
+
+    elif msg_type == "run_model":
+        await websocket.send_json({
+            "type": "run_result",
+            "status": "not_implemented",
+        })
+
+    else:
+        await websocket.send_json({
+            "type": "error",
+            "message": f"Unknown message type: {msg_type}",
+        })
