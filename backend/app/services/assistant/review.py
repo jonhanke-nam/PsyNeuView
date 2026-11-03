@@ -11,11 +11,23 @@ anything, and the app behaves exactly as it did before the assistant existed.
 
 The state is one small JSON file::
 
-    {"files": {"<real path>": {"approved": "<sha256>" | null, "written": "<sha256>"}}}
+    {"files": {"<real path>": {"approved": "<sha256>" | null, "written": "<sha256>", "written_norm": "<sha256>"}}}
 
 A tracked path is runnable only while its content hashes to ``approved``.
 Approving records the hash of what was approved; any later edit, by the
 assistant or by hand, no longer matches and the file is unreviewed again.
+
+``written_norm`` is the hash of a normalised form of what was written (line
+endings, trailing whitespace, blank and comment-only lines dropped), so a
+copy of unreviewed text that differs only in those is still recognised as
+unreviewed wherever it turns up. That is a convenience against accidents
+and the obvious trick, not a boundary: a copy the user edits by hand is the
+user's, and it runs as the user's own file does.
+
+A ``.bak`` of the state is kept beside it. If the state can't be parsed and
+neither can the backup, the state is unknown: nothing tracked can be told
+from untracked, so every route that executes a model refuses until the file
+is repaired or removed. A user who never had a state file is unaffected.
 """
 
 from __future__ import annotations
@@ -24,6 +36,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import threading
 from pathlib import Path
 
@@ -38,18 +51,30 @@ REASON = "assistant_code_unreviewed"
 _lock = threading.Lock()
 _cache: dict | None = None
 _cache_key: tuple | None = None
+#: Set when the state file exists but can't be read, and nor can its backup.
+_broken: bool = False
+
+#: Characters that change how text reads without changing how it runs, or
+#: the reverse: bidirectional overrides and isolates, zero-width characters,
+#: the byte-order mark. Flagged in warnings and shown visibly by the page.
+INVISIBLE_RE = re.compile("[\u200b\u200c\u200d\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff\u00ad]")
 
 
 class UnreviewedAssistantCode(Exception):
     """A route tried to execute assistant-written content the user hasn't
-    approved. Answered as 409 with ``reason: "assistant_code_unreviewed"``."""
+    approved. Answered as 409 with ``reason: "assistant_code_unreviewed"``.
+    ``path`` is the file to review, which may be a sibling of the one asked
+    for (see ``require_runnable``)."""
 
     reason = REASON
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, message: str | None = None, *, reason: str | None = None):
         self.path = path
+        if reason:
+            self.reason = reason
         super().__init__(
-            f"{Path(path).name} was written by the AI assistant and hasn't been "
+            message
+            or f"{Path(path).name} was written by the AI assistant and hasn't been "
             f"reviewed yet. Review it and approve it before opening or running it."
         )
 
@@ -65,6 +90,23 @@ def content_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def normalised(text: str) -> str:
+    """``text`` with line endings, trailing whitespace, blank lines and
+    comment-only lines taken out. Two texts with the same normalised form
+    run the same Python, give or take a comment."""
+    out = []
+    for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        line = line.rstrip()
+        if not line or line.lstrip().startswith("#"):
+            continue
+        out.append(line)
+    return "\n".join(out)
+
+
+def normalised_hash(text: str) -> str:
+    return content_hash(normalised(text))
+
+
 def _key(path: str) -> str:
     # The real path, so a symlink or a case variant can't name a tracked file
     # under a different key.
@@ -74,10 +116,29 @@ def _key(path: str) -> str:
         return str(path)
 
 
+def backup_path() -> Path:
+    p = state_path()
+    return p.with_name(p.name + ".bak")
+
+
+def _parse(p: Path) -> dict | None:
+    """The ``files`` mapping in ``p``, or None when it can't be read or parsed."""
+    try:
+        raw = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(raw, dict) or not isinstance(raw.get("files"), dict):
+        return None
+    return {str(k): v for k, v in raw["files"].items() if isinstance(v, dict)}
+
+
 def _load() -> dict:
     """The state, read from disk only when the file changed (or the override
-    moved). An absent file means nothing is tracked, which is the common case."""
-    global _cache, _cache_key
+    moved). An absent file means nothing is tracked, which is the common
+    case. A file that can't be parsed is read from its ``.bak``; if that
+    fails too the state is unknown (``state_broken()``), which every
+    execution guard treats as "refuse"."""
+    global _cache, _cache_key, _broken
     p = state_path()
     try:
         st = p.stat()
@@ -86,16 +147,26 @@ def _load() -> dict:
         key = (str(p), None, None)
     if _cache is not None and key == _cache_key:
         return _cache
-    files: dict = {}
+    files: dict | None = {}
+    broken = False
     if key[1] is not None:
-        try:
-            raw = json.loads(p.read_text(encoding="utf-8"))
-            if isinstance(raw, dict) and isinstance(raw.get("files"), dict):
-                files = {str(k): v for k, v in raw["files"].items() if isinstance(v, dict)}
-        except (OSError, ValueError) as e:
-            logger.warning("assistant review state unreadable (%s); treating as empty", e)
-    _cache, _cache_key = {"files": files}, key
+        files = _parse(p)
+        if files is None:
+            files = _parse(backup_path())
+            if files is None:
+                logger.error("assistant review state unreadable and no usable backup (%s); refusing to run models until it is repaired or removed", p)
+                broken = True
+                files = {}
+            else:
+                logger.warning("assistant review state unreadable; using its backup (%s)", backup_path())
+    _cache, _cache_key, _broken = {"files": files}, key, broken
     return _cache
+
+
+def state_broken() -> bool:
+    """True when a state file exists but neither it nor its backup can be read."""
+    _load()
+    return _broken
 
 
 def _save(state: dict) -> None:
@@ -104,7 +175,20 @@ def _save(state: dict) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_name(p.name + ".tmp")
     tmp.write_text(json.dumps(state, indent=2, sort_keys=True), encoding="utf-8")
+    # The backup is the last good state: written before the replace, so a
+    # crash mid-write leaves one of the two readable.
+    if p.exists() and _parse(p) is not None:
+        try:
+            os.replace(p, backup_path())
+            # The replace moved the live file; the new state lands below.
+        except OSError:
+            pass
     os.replace(tmp, p)
+    if not backup_path().exists():
+        try:
+            backup_path().write_text(p.read_text(encoding="utf-8"), encoding="utf-8")
+        except OSError:
+            pass
     _cache, _cache_key = None, None
 
 
@@ -114,7 +198,7 @@ def mark_unreviewed(path: str, text: str) -> None:
     with _lock:
         state = _load()
         files = dict(state["files"])
-        files[_key(path)] = {"approved": None, "written": content_hash(text)}
+        files[_key(path)] = {"approved": None, "written": content_hash(text), "written_norm": normalised_hash(text)}
         _save({"files": files})
 
 
@@ -149,17 +233,56 @@ def is_runnable(path: str, text: str) -> bool:
 
 
 def is_unreviewed_content(text: str) -> bool:
-    """True if ``text`` is, byte for byte, something the assistant wrote that
-    nobody has approved (under any path). For routes that take an upload,
-    where there is no server path to look up: a copy of unreviewed content
-    doesn't become runnable by being uploaded or bundled."""
+    """True if ``text`` is something the assistant wrote that nobody has
+    approved (under any path), exactly or in normalised form (see the
+    module docstring for what that covers and what it doesn't). For routes
+    that take text or an upload rather than a tracked path: a copy of
+    unreviewed content doesn't become runnable by being saved, uploaded or
+    bundled under another name."""
     files = _load()["files"]
     if not files:
         return False
     h = content_hash(text)
     if any(e.get("approved") == h for e in files.values()):
         return False
-    return any(e.get("written") == h for e in files.values())
+    if any(e.get("written") == h for e in files.values()):
+        return True
+    n = normalised_hash(text)
+    unreviewed = [e for e in files.values() if e.get("approved") != e.get("written")]
+    return any(e.get("written_norm") == n for e in unreviewed)
+
+
+def unreviewed_siblings(path: str) -> list[str]:
+    """Tracked, unreviewed ``.py`` files in the same folder as ``path``. A
+    model can put its own folder on ``sys.path`` and import a sibling, so a
+    sibling the assistant wrote has to be reviewed before anything in that
+    folder runs. Costs nothing when nothing is tracked."""
+    files = _load()["files"]
+    if not files:
+        return []
+    folder = os.path.dirname(_key(path))
+    out = []
+    for tracked, entry in files.items():
+        if tracked == _key(path) or os.path.dirname(tracked) != folder or not tracked.endswith(".py"):
+            continue
+        try:
+            text = Path(tracked).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue  # gone or unreadable: nothing to import
+        if entry.get("approved") != content_hash(text):
+            out.append(tracked)
+    return sorted(out)
+
+
+def refuse_unreviewed_text(path: str, text: str) -> None:
+    """For a route that takes text from the page and would execute it (a
+    save, a preview, a copy): refuse if ``text`` is unreviewed assistant
+    content. The path is tracked under it, so a copy under a new name needs
+    the same review as the original; the caller has usually written the
+    file already, which is fine: written, not run."""
+    if is_unreviewed_content(text):
+        mark_unreviewed(path, text)
+        raise UnreviewedAssistantCode(path)
 
 
 def status(path: str) -> dict:
@@ -182,12 +305,29 @@ def require_runnable(path: str) -> None:
     in-process importers), so the check costs one dict lookup when the
     assistant has never written anything, and never reads a user's own file.
     """
-    if not path or not is_tracked(path):
+    if not path:
         return
-    try:
-        text = Path(path).read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        # Unreadable content can't have been reviewed.
-        raise UnreviewedAssistantCode(str(path))
-    if not is_runnable(path, text):
-        raise UnreviewedAssistantCode(str(path))
+    if state_broken():
+        raise UnreviewedAssistantCode(
+            str(path),
+            f"The AI assistant's review state ({state_path()}) can't be read, so it isn't known whether "
+            f"{Path(path).name} was written by the assistant. Repair or remove that file (and its .bak) to go on.",
+            reason="assistant_review_state_unreadable",
+        )
+    if is_tracked(path):
+        try:
+            text = Path(path).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            # Unreadable content can't have been reviewed.
+            raise UnreviewedAssistantCode(str(path))
+        if not is_runnable(path, text):
+            raise UnreviewedAssistantCode(str(path))
+    siblings = unreviewed_siblings(path)
+    if siblings:
+        sibling = siblings[0]
+        raise UnreviewedAssistantCode(
+            sibling,
+            f"{Path(sibling).name}, in the same folder as {Path(path).name}, was written by the AI assistant and "
+            f"hasn't been reviewed yet. A model can import a file beside it, so review and approve "
+            f"{Path(sibling).name} (or move it away) before running anything in that folder.",
+        )

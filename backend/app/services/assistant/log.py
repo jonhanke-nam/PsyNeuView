@@ -9,6 +9,7 @@ attached to a problem report without carrying a model's source.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import threading
@@ -83,10 +84,18 @@ def clear() -> None:
             pass
 
 
+#: Arguments that carry a file's text or a model's source. The log records
+#: a hash and a length for these, never the text: the log is local, but
+#: source stays out of it as the docstring promises.
+_TEXT_ARGS = ("text", "after", "before", "source", "content")
+
+
 def _trim(args: dict) -> dict:
     out = {}
     for key, value in (args or {}).items():
-        if isinstance(value, str) and len(value) > _MAX_ARG_CHARS:
+        if key in _TEXT_ARGS and isinstance(value, str):
+            out[key] = f"sha256:{hashlib.sha256(value.encode('utf-8')).hexdigest()[:16]} ({len(value)} chars)"
+        elif isinstance(value, str) and len(value) > _MAX_ARG_CHARS:
             out[key] = value[:_MAX_ARG_CHARS] + f"… ({len(value)} chars)"
         else:
             out[key] = value

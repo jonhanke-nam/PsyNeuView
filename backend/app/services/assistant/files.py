@@ -31,6 +31,7 @@ import importlib.util
 import json
 import logging
 import os
+import re
 import stat
 import sys
 import time
@@ -40,13 +41,35 @@ from typing import Callable
 
 from app.services.app_config import app_config_path
 from app.services.assistant import review
-from app.services.file_types import FileType, classify_file
+from app.services.file_types import FileType, classify_file, classify_upload
 
 logger = logging.getLogger(__name__)
 
 MAX_FILE_BYTES = 2 * 1024 * 1024
 MAX_LIST = 500
 MAX_DEPTH = 6
+#: How far ``validate_folder`` looks for a Python install inside a folder.
+MAX_INSTALL_SCAN_ENTRIES = 4000
+MAX_INSTALL_SCAN_DEPTH = 5
+
+#: Marks of a Python install or environment: a folder that has one of these
+#: in it, or above it, can't be designated, since a ``.py`` written there
+#: could be imported by any interpreter using it.
+_INSTALL_FILES = ("pyvenv.cfg",)
+_INSTALL_DIRS = ("conda-meta", "site-packages", "dist-packages")
+_PNL_IMPORT = re.compile(r"^\s*(import\s+psyneulink\b|from\s+psyneulink(\.\w+)*\s+import\b)", re.MULTILINE)
+_INSTALL_SEGMENT = re.compile(r"^(site-packages|dist-packages|python\d+(\.\d+)?)$")
+
+#: ``.py`` names that would shadow a module an interpreter imports: the
+#: standard library, Python's start-up hooks, packaging, and the libraries
+#: the app and its models rely on.
+_SHADOW_STEMS = frozenset(sys.stdlib_module_names) | {
+    "__init__", "__main__", "sitecustomize", "usercustomize", "conftest", "setup", "setup_cfg",
+    "numpy", "scipy", "pandas", "matplotlib", "torch", "torchvision", "psyneulink", "graphviz", "modeci_mdf",
+    "llvmlite", "numba", "pytest", "setuptools", "pip", "wheel", "six", "typing_extensions", "yaml", "pyyaml",
+    "networkx", "sympy", "dill", "toposort", "graph_scheduler", "fastapi", "uvicorn", "starlette", "pydantic",
+    "app", "tests",
+}
 LAYOUT_SUFFIX = ".pnlview.json"
 MODEL_SUFFIXES = (".py", ".json", ".yaml", ".yml")
 
@@ -123,6 +146,44 @@ def _is_within(path: Path, root: Path) -> bool:
         return False
 
 
+def _python_install_in(real: Path) -> str | None:
+    """Why ``real`` is, or holds, or sits inside, a Python install; None if
+    it doesn't. Ancestors are checked by name and by marker file; the
+    subtree is scanned breadth first up to a cost limit, so a huge folder
+    costs a bounded number of directory reads."""
+    for part in real.parts[1:]:
+        if _INSTALL_SEGMENT.match(part.lower()):
+            return f"inside a Python install ({part})"
+    for ancestor in (real, *real.parents):
+        for name in _INSTALL_FILES:
+            if (ancestor / name).is_file():
+                return f"a Python environment ({ancestor / name})"
+        for name in _INSTALL_DIRS:
+            if (ancestor / name).is_dir():
+                return f"a Python environment ({ancestor / name})"
+    seen = 0
+    queue = [(real, 0)]
+    while queue:
+        folder, depth = queue.pop(0)
+        try:
+            with os.scandir(folder) as it:
+                for entry in it:
+                    seen += 1
+                    if seen > MAX_INSTALL_SCAN_ENTRIES:
+                        return None  # too big to be sure; the ancestors above are the real risk
+                    name = entry.name
+                    if name in _INSTALL_FILES and entry.is_file(follow_symlinks=False):
+                        return f"holds a Python environment ({entry.path})"
+                    if entry.is_dir(follow_symlinks=False):
+                        if name in _INSTALL_DIRS or _INSTALL_SEGMENT.match(name.lower()):
+                            return f"holds a Python install ({entry.path})"
+                        if not name.startswith(".") and depth + 1 <= MAX_INSTALL_SCAN_DEPTH:
+                            queue.append((Path(entry.path), depth + 1))
+        except OSError:
+            continue
+    return None
+
+
 def validate_folder(path: str) -> Path:
     """The real path of a folder the user may designate, or ``PathRefused``.
 
@@ -158,6 +219,9 @@ def validate_folder(path: str) -> Path:
             raise PathRefused(path, "app_folder", f"The app's own folders and installs can't be designated: {path}")
     if any(part.startswith(".") for part in real.parts[1:]):
         raise PathRefused(path, "hidden_folder", f"Hidden folders can't be designated: {path}")
+    why = _python_install_in(real)
+    if why:
+        raise PathRefused(path, "python_install", f"A Python install or environment can't be designated ({why}): {path}")
     return real
 
 
@@ -194,6 +258,9 @@ def _check_file_name(name: str) -> None:
         raise PathRefused(name, "wrong_type", f"Only model files (.py, .json, .yaml, .yml, {LAYOUT_SUFFIX}): {name}")
     if lower in ("setup.py", "conftest.py") or lower.startswith("test_"):
         raise PathRefused(name, "wrong_type", f"Not a model file: {name}")
+    stem = lower[:-3] if lower.endswith(".py") else None
+    if stem is not None and (stem in _SHADOW_STEMS or stem.startswith("_")):
+        raise PathRefused(name, "shadows_module", f"{name} would shadow a module Python imports; choose another name.")
 
 
 def _file_kind(real: Path) -> str:
@@ -443,6 +510,15 @@ def write_model_file(path: str, text: str, *, base_hash: str | None) -> Path:
                     json.loads(text)
                 except ValueError:
                     raise PathRefused(path, "wrong_type", "A layout file must be JSON.")
+            else:
+                # A new file has to be a model file by content too, not just
+                # by name: a .py that doesn't use PsyNeuLink is a module, not
+                # a model, and MDF has to classify as MDF.
+                c = classify_upload(name, data)
+                if c.file_type not in (FileType.PNL_PYTHON, FileType.MDF_JSON, FileType.MDF_YAML):
+                    raise PathRefused(path, "wrong_type", c.error or f"Not a model file: {name}")
+                if c.file_type is FileType.PNL_PYTHON and not _PNL_IMPORT.search(text):
+                    raise PathRefused(path, "wrong_type", f"Not a PsyNeuLink model (no psyneulink import): {name}")
         else:
             _file_kind(real)
             current = _read_fd(fd, path)

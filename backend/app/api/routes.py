@@ -1074,7 +1074,11 @@ def disk_source(request: DiskSourceRequest):
         raise HTTPException(status_code=400, detail="Only a model's .py file can be read here.")
     if not path.is_file():
         return {"exists": False, "source": None}
-    return {"exists": True, "source": path.read_text(errors="replace")}
+    text = path.read_text(errors="replace")
+    # Reading isn't running, but a page that adopts this text should know it
+    # needs a review before it can be previewed or saved (#179).
+    unreviewed = assistant_review.is_tracked(str(path)) and not assistant_review.is_runnable(str(path), text)
+    return {"exists": True, "source": text, "assistant_unreviewed": unreviewed}
 
 
 def _load_timings(introspect_ms: float, total_start: float, **extra) -> dict:
@@ -1147,6 +1151,11 @@ def load_model(request: LoadModelRequest):
         raise HTTPException(status_code=400, detail=detail)
 
     source = path.read_text()
+
+    # Unreviewed assistant-written content doesn't run, and isn't rewritten
+    # or backed up under another name either (#179): the guard comes before
+    # the conversion below, which writes a copy.
+    require_runnable(str(path))
 
     # Auto-convert star imports before introspection so the file_writer
     # can safely emit `pnl.`-prefixed code for any future edits.
@@ -1594,6 +1603,12 @@ def preview_source_endpoint(request: PreviewSourceRequest):
     path = Path(request.file_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"File not found: {path}")
+    # A preview executes the buffer. Unreviewed assistant-written text is
+    # refused before any copy of it is written (#179); the 409 names the file
+    # to review, and the buffer is left alone.
+    assistant_review.refuse_unreviewed_text(request.file_path, request.source)
+    if assistant_review.is_tracked(request.file_path) and not assistant_review.is_runnable(request.file_path, request.source):
+        raise UnreviewedAssistantCode(request.file_path)
 
     preview = write_preview(request.file_path, request.source)
 
@@ -1618,16 +1633,6 @@ def preview_source_endpoint(request: PreviewSourceRequest):
     )
 
 
-def _refuse_unreviewed_text(file_path: str, source: str) -> None:
-    """A save body that is, byte for byte, assistant-written text nobody has
-    approved (#179) is written, as every save is, but not executed: the path
-    is tracked, so a copy under a new name needs the same review as the
-    original, and the page gets the 409 with the approve route."""
-    if assistant_review.is_unreviewed_content(source):
-        assistant_review.mark_unreviewed(file_path, source)
-        raise UnreviewedAssistantCode(file_path)
-
-
 @router.post("/model/save-source", response_model=LoadModelResponse)
 def save_source_endpoint(request: SaveSourceRequest):
     """Save edited source from the code editor, then re-introspect."""
@@ -1649,6 +1654,11 @@ def save_source_endpoint(request: SaveSourceRequest):
     if request.base_source is not None:
         on_disk = path.read_text()
         if on_disk != request.base_source:
+            # What is on disk may be unreviewed assistant-written text (an
+            # accepted file write to the open file, #179). That is a review
+            # question, not a disk change to adopt: refuse with the review
+            # route instead of handing the text over as ``disk_source``.
+            require_runnable(str(path))
             try:
                 disk_model = load_and_introspect(str(path))
             except Exception as e:
@@ -1668,7 +1678,7 @@ def save_source_endpoint(request: SaveSourceRequest):
             )
 
     save_source(request.file_path, request.source)
-    _refuse_unreviewed_text(request.file_path, request.source)
+    assistant_review.refuse_unreviewed_text(request.file_path, request.source)
     # The buffer and the file now agree. The page stops using the preview
     # copy once this answers, but a show_graph, Run or Learn sent before then
     # still names it (an undo during an autosave, #160). Deleting it made
@@ -2230,9 +2240,15 @@ def save_copy(request: SaveCopyRequest):
             raise HTTPException(status_code=400, detail="Saving .py requires `source`.")
         # A copy starts unprotected (#1346): a "# PsyNeuView: protected" line
         # is about the original, not a copy made to work on.
-        target.write_text(protection_line.strip_from_source(request.source))
+        copied = protection_line.strip_from_source(request.source)
+        target.write_text(copied)
+        # Written, not run, if it is unreviewed assistant text (#179).
+        assistant_review.refuse_unreviewed_text(str(target), copied)
         sidecar_copy.apply(copies, path, target)
     elif request.fmt == "pnlproject":
+        # Bundling executes the model for the MDF mirror, and the bundle's
+        # working copy runs when opened: an unreviewed file isn't bundled (#179).
+        require_runnable(str(path))
         mdf_text, _ = _try_mdf_mirror(str(path))
         data, _ = bundle.build_bundle_bytes(
             str(path),
@@ -2362,6 +2378,9 @@ def open_project(request: OpenProjectRequest):
 
     working_py = extracted["working_py_path"]
     manifest = extracted["manifest"]
+    # The bundle may carry assistant-written content nobody approved (#179):
+    # extracted, tracked under its working path, and not executed until approved.
+    assistant_review.refuse_unreviewed_text(working_py, extracted["source"])
     model = load_and_introspect(working_py)
     layout = load_layout(working_py)
 
@@ -2394,7 +2413,7 @@ def save_project(request: SaveProjectRequest):
         raise HTTPException(status_code=404, detail=f"File not found: {working}")
 
     save_source(request.file_path, request.source)
-    _refuse_unreviewed_text(request.file_path, request.source)
+    assistant_review.refuse_unreviewed_text(request.file_path, request.source)
 
     # Preserve created/description/name from the bundle's prior manifest.
     prior = bundle.working_manifest(request.file_path) or {}
@@ -3505,6 +3524,8 @@ def save_as(request: SaveAsRequest):
     # (no source_path) is written exactly as given.
     source = protection_line.strip_from_source(request.source) if request.source_path else request.source
     target.write_text(source)
+    # Written, not run, if it is unreviewed assistant text under a new name (#179).
+    assistant_review.refuse_unreviewed_text(str(target), source)
     sidecar_copy.apply(copies, request.source_path or target, target)
     layout, labels, bundle, sidecars = _sidecar_payload(target)
 

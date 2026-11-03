@@ -22,6 +22,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import keyword
+import math
 import re
 from collections.abc import Callable
 from pathlib import Path
@@ -210,6 +211,7 @@ APP_EDIT_OPS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
 }
 
 _PORT_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_\-]*$")
+_DISPLAY_NAME = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_ .:\-\[\]()]*$")
 _LITERAL_NODES = (ast.Expression, ast.Constant, ast.List, ast.Tuple, ast.Dict, ast.Set, ast.UnaryOp, ast.USub, ast.UAdd, ast.Load)
 _LITERAL_CONSTANTS = (int, float, complex, str, bool, type(None))
 
@@ -254,9 +256,11 @@ def _check_arg(op: str, key: str, value: Any) -> Any:
             raise ToolRefused(f"{op}.is_default must be true or false")
         return value
     if op == "rename_node" and key == "new_name":
-        # A display name, written by the route as a quoted string literal (repr).
-        if not isinstance(value, str) or not value.strip() or len(value) > MAX_NAME_CHARS or not value.isprintable():
-            raise ToolRefused("rename_node.new_name must be a short printable name")
+        # A display name, written by the route as a quoted string literal
+        # (repr). Plain characters only: letters, digits, spaces, and the
+        # punctuation PsyNeuLink's own names use.
+        if not isinstance(value, str) or not value.strip() or len(value) > MAX_NAME_CHARS or not _DISPLAY_NAME.match(value):
+            raise ToolRefused("rename_node.new_name must be a short plain name: letters, digits, spaces, _ - . : ( ) [ ]")
         return value.strip()
     if key in ("new_name", "old_name", "port_name"):
         if not isinstance(value, str) or len(value) > MAX_NAME_CHARS or not _PORT_NAME.match(value):
@@ -315,7 +319,13 @@ def _check_plain_data(value: Any, depth: int, seen: list | None = None) -> None:
     seen[0] += 1
     if depth > 8 or seen[0] > MAX_VALUE_ITEMS:
         raise ToolRefused("new_value is too deep or too long")
-    if isinstance(value, _LITERAL_CONSTANTS):
+    if isinstance(value, bool) or value is None or isinstance(value, str):
+        return
+    if isinstance(value, (int, float, complex)):
+        # inf and nan have no literal: repr gives a name, which is code.
+        parts = (value.real, value.imag) if isinstance(value, complex) else (value,)
+        if any(math.isinf(part) or math.isnan(part) for part in parts):
+            raise ToolRefused("new_value must be a finite number")
         return
     if isinstance(value, (list, tuple, set, frozenset)):
         for item in value:
@@ -361,6 +371,7 @@ def read_file(ctx: ToolContext, args: dict) -> dict:
 
 
 def propose_file_write(ctx: ToolContext, args: dict) -> dict:
+    _need_files(ctx)
     if not any(f["access"] == "read_write" for f in ctx.settings["folders"]):
         raise ToolRefused("no folder allows writing (Settings: Allowed folders)")
     path = _need_str(args, "path")
@@ -434,4 +445,6 @@ def python_warnings(text: str) -> list[str]:
     for pattern, message in _WARNING_PATTERNS:
         if re.search(pattern, text, re.MULTILINE):
             warnings.append(message)
+    if review.INVISIBLE_RE.search(text):
+        warnings.append("contains invisible or direction-changing characters, so it may read differently from how it runs")
     return warnings

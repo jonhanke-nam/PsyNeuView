@@ -112,6 +112,24 @@ def make_agent(agent_settings: dict, *, key: str | None) -> Agent:
 # ── shared HTTP ──────────────────────────────────────────────────────────
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """A redirect would resend the key to whatever host the answer names,
+    https to http included. The request stops here and the user is told."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise AgentRedirected(code, newurl)
+
+
+class AgentRedirected(Exception):
+    def __init__(self, code: int, where: str):
+        self.code = code
+        self.where = where
+        super().__init__(f"the agent's server answered with a redirect (HTTP {code}); not followed, so the key stays where it was sent")
+
+
+_opener = urllib.request.build_opener(_NoRedirect())
+
+
 def _post_json(url: str, headers: dict, body: dict) -> dict:
     data = json.dumps(body).encode("utf-8")
     request = urllib.request.Request(url, data=data, method="POST")
@@ -119,8 +137,10 @@ def _post_json(url: str, headers: dict, body: dict) -> dict:
     for name, value in headers.items():
         request.add_header(name, value)
     try:
-        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+        with _opener.open(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
             return json.loads(response.read().decode("utf-8"))
+    except AgentRedirected as e:
+        raise AgentError(str(e)) from None
     except urllib.error.HTTPError as e:
         detail = ""
         try:

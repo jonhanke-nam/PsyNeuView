@@ -69,6 +69,17 @@ def defaults() -> dict:
     return copy.deepcopy(DEFAULTS)
 
 
+def destination(agent: dict) -> str:
+    """Where messages go for ``agent``, in plain words: the real address."""
+    from app.services.assistant.agents import ANTHROPIC_URL
+
+    if agent.get("type") == "anthropic":
+        return agent.get("base_url") or ANTHROPIC_URL
+    if agent.get("type") == "openai_compatible":
+        return agent.get("base_url") or "(no server address yet)"
+    return "nowhere (no agent)"
+
+
 def get_settings(*, config_file: Path | None = None) -> dict:
     """The current settings, every field present, invalid parts defaulted."""
     path = config_file or app_config_path()
@@ -109,6 +120,8 @@ def permission_raises(old: dict, new: dict) -> list[str]:
     raised: list[str] = []
     if new["enabled"] and not old["enabled"]:
         raised.append("turning the assistant on")
+    if (new["agent"]["type"], new["agent"]["base_url"]) != (old["agent"]["type"], old["agent"]["base_url"]) and new["agent"]["type"] != "none":
+        raised.append(f"sending messages to {destination(new['agent'])}")
     if AUTONOMY_LEVELS.index(new["autonomy"]) > AUTONOMY_LEVELS.index(old["autonomy"]):
         raised.append(f"autonomy from {old['autonomy']} to {new['autonomy']}")
     if new["saving"] != old["saving"] and new["saving"] == "structured_without_asking":
@@ -137,7 +150,15 @@ def _merge(current: dict, changes: dict) -> dict:
     for key, value in changes.items():
         if key == "confirm_raise":
             continue
-        if key in ("agent", "visibility", "limits") and isinstance(value, dict) and isinstance(merged.get(key), dict):
+        if key == "agent" and isinstance(value, dict) and isinstance(merged.get(key), dict):
+            # A base_url belongs to the type it was given for: changing the
+            # type without giving one drops it, so a custom address never
+            # applies to another agent silently.
+            kept = dict(merged[key])
+            if "type" in value and value["type"] != kept.get("type") and "base_url" not in value:
+                kept["base_url"] = ""
+            merged[key] = {**kept, **value}
+        elif key in ("visibility", "limits") and isinstance(value, dict) and isinstance(merged.get(key), dict):
             merged[key] = {**merged[key], **value}
         else:
             merged[key] = value

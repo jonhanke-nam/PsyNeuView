@@ -153,13 +153,21 @@ def test_state_persists_across_restart(state):
 
 
 def test_users_own_file_loads_as_before(state):
-    own = state["tmp"] / "Models" / "mine.py"
+    # In its own folder: a folder holding an unreviewed assistant file is
+    # blocked as a whole, since a model can import a file beside it.
+    own = state["tmp"] / "Mine" / "mine.py"
+    own.parent.mkdir()
     marker = state["tmp"] / "mine_ran.txt"
     own.write_text(marker_model(marker))
     assert review.status(str(own)) == {"tracked": False, "runnable": True}
     resp = client.post("/api/model/load", json={"file_path": str(own)})
     assert resp.status_code == 200, resp.text
     assert marker.read_text() == "ran"
+    beside = state["tmp"] / "Models" / "beside.py"
+    beside.write_text(marker_model(state["tmp"] / "beside_ran.txt"))
+    resp = client.post("/api/model/load", json={"file_path": str(beside)})
+    assert resp.status_code == 409 and resp.json()["path"] == str(state["model"]), resp.text
+    assert not (state["tmp"] / "beside_ran.txt").exists()
     # Approving a file the assistant never wrote changes nothing.
     resp = client.post("/api/assistant/review/approve", json={"path": str(own), "content_hash": "anything"})
     assert resp.json()["tracked"] is False
