@@ -10,8 +10,9 @@
  */
 import { mutatingTest as test, expect } from "./test-base";
 import { fixturePath } from "./fixtures";
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 import path from "path";
+import { formatTimeline } from "../src/utils/timeline";
 
 type Page = import("@playwright/test").Page;
 
@@ -166,6 +167,8 @@ test.describe("Diagnostics", { tag: "@ci" }, () => {
     );
     const times = snap.timeline.map((l) => Date.parse(l.t));
     expect([...times].sort((a, b) => a - b)).toEqual(times);
+    // The page's part of timeline.txt, as a sample beside the screenshots.
+    if (process.env.SHOTS_DIR) writeFileSync(path.join(process.env.SHOTS_DIR, "timeline.txt"), formatTimeline(snap.timeline));
     expect(snap.timeline.findIndex((l) => l.text.startsWith("start · POST /api/model/load"))).toBeLessThan(
       snap.timeline.findIndex((l) => l.text.startsWith("stop · POST /api/model/load")),
     );

@@ -15,6 +15,8 @@
  * Never recorded: text typed into a field (an input is not a control here;
  * a change to a setting is recorded by its store), a model's source, or a
  * file's contents. A label is a name or a verb, which the log may hold.
+ * Nor the button that opens a menu (`aria-haspopup="menu"`): the menu
+ * records its own opening, and one click shouldn't be two entries.
  */
 
 import { record } from "./activityLog";
@@ -53,7 +55,7 @@ export interface ClickDescription {
 export function describeClick(target: EventTarget | null): ClickDescription | null {
   const el = target as Element | null;
   const item = el?.closest?.(CLICKABLE) ?? null;
-  if (!item) return null;
+  if (!item || item.getAttribute("aria-haspopup") === "menu") return null;
   const label = clickLabel(item);
   if (!label) return null;
   const marked = item.closest(MARKED);

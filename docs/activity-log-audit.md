@@ -43,7 +43,9 @@ to say where it is.
 Not a control, so never recorded by the listener: text fields, the code
 editor, selects and checkboxes (a setting change is recorded by its store,
 with the value only when the key isn't sensitive), and plain clicks on the
-canvas or on text.
+canvas or on text. Nor the button that opens a menu (`aria-haspopup="menu"`):
+the menu records its own opening (`Open menu opened`), and one click
+shouldn't be two entries.
 
 ## The controls
 

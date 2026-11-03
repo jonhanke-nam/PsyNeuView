@@ -75,6 +75,12 @@ describe("what a click is", () => {
     expect(describeClick(el("a", { href: "#" }, "Docs") as unknown as Element)?.label).toBe("Docs");
   });
 
+  it("isn't the button that opens a menu: the menu records its own opening", () => {
+    const toolbar = el("div", { "data-pnv-where": "Toolbar" });
+    expect(describeClick(el("button", { "aria-haspopup": "menu", "aria-expanded": "false" }, "Open ▾", toolbar) as unknown as Element)).toBeNull();
+    expect(describeClick(el("button", { "aria-haspopup": "dialog" }, "Source", toolbar) as unknown as Element)?.text).toBe("Toolbar › Source");
+  });
+
   it("isn't a click on a field, the canvas or text: typed text is never recorded", () => {
     expect(describeClick(el("input", { type: "text", value: "secret words" }) as unknown as Element)).toBeNull();
     expect(describeClick(el("textarea", {}, "def model(): …") as unknown as Element)).toBeNull();

@@ -3321,6 +3321,8 @@ function WalkthroughMenu() {
           if (!open) recordActivity("menu", "Tutorials menu opened");
           setOpen((o) => !o);
         }}
+        aria-haspopup="menu"
+        aria-expanded={open}
         data-testid="walkthrough-menu"
         data-reminder={remind ? "true" : undefined}
         style={{
@@ -3535,6 +3537,8 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
           borderRadius: 4,
         }}
         title="Layout presets, panel visibility, and locking this model"
+        aria-haspopup="menu"
+        aria-expanded={open}
         data-testid="layout-menu-button"
       >
         Layout {"▾"}

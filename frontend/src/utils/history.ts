@@ -19,8 +19,9 @@ import type { MechanismData } from "@/stores/modelStore";
  */
 export function recordAction(description: string) {
   // Every undo point is an edit the user made, for problem reports (#177).
-  // The description names what changed, never the new text or value.
-  if (description !== "Model loaded") record("edit", description);
+  // The description names what changed, never the new text or value. A
+  // model loading or being rebuilt is the app's doing, and logged elsewhere.
+  if (description !== "Model loaded" && description !== "Model updated") record("edit", description);
   const store = useModelStore.getState();
   const { source, nodes, edges, filePath } = store;
 
