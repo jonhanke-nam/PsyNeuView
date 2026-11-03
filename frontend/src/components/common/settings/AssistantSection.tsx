@@ -94,6 +94,7 @@ export function AssistantSection() {
           </SettingLabel>
           <DraftInput
             id="setting-assistant-agent-model"
+            data-testid="setting-assistant-agent-model"
             value={settings.agent.model}
             disabled={saving}
             onCommit={(model) => change({ agent: { ...settings.agent, model } })}
@@ -106,6 +107,7 @@ export function AssistantSection() {
             </SettingLabel>
             <DraftInput
               id="setting-assistant-agent-base-url"
+              data-testid="setting-assistant-agent-base-url"
               value={settings.agent.base_url}
               disabled={saving}
               placeholder="http://localhost:11434/v1"
@@ -230,7 +232,22 @@ export function AssistantSection() {
  * it differs from what the backend holds. The draft follows the backend's
  * value when that changes (a reload, a refused save).
  */
-function DraftInput({ id, value, disabled, placeholder, onCommit }: { id: string; value: string; disabled: boolean; placeholder?: string; onCommit: (value: string) => void }) {
+function DraftInput({
+  id,
+  "data-testid": testId,
+  value,
+  disabled,
+  placeholder,
+  onCommit,
+}: {
+  id: string;
+  /** Written literally at each call site, so settingsInventory.test.ts can see it. */
+  "data-testid": string;
+  value: string;
+  disabled: boolean;
+  placeholder?: string;
+  onCommit: (value: string) => void;
+}) {
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
   const commit = () => {
@@ -239,7 +256,7 @@ function DraftInput({ id, value, disabled, placeholder, onCommit }: { id: string
   return (
     <input
       id={id}
-      data-testid={id}
+      data-testid={testId}
       value={draft}
       disabled={disabled}
       placeholder={placeholder}
