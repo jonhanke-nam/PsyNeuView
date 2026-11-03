@@ -72,7 +72,7 @@ import { onPnlSourceChanged } from "@/utils/pnlSourceEvents";
 import { RECENT_PATHS_CHANGED, addRecentPath, getRecentPaths } from "@/utils/recentPaths";
 import { pnlSourceLabel, sourceSwitchNote, type PsyNeuLinkInfo } from "@/utils/pnlSources";
 import { abbreviateHome } from "@/components/common/settings/shared";
-import { record as recordActivity, recordMenuClick } from "@/utils/activityLog";
+import { record as recordActivity } from "@/utils/activityLog";
 import { causedBy } from "@/utils/waitLog";
 import { noteModelOrigin } from "@/utils/diagnostics";
 import { SAVE_COPY_EVENT, requestSaveCopy } from "@/utils/saveRequest";
@@ -1541,6 +1541,8 @@ export function Toolbar() {
   return (
     <div
       data-testid="app-toolbar"
+      // Where a pressed button is, in the activity log (#177, utils/clickLog.ts).
+      data-pnv-where="Toolbar"
       role="toolbar"
       aria-label="Main toolbar"
       // #6: no control breaks onto two lines (index.css); when the row is
@@ -1629,7 +1631,7 @@ export function Toolbar() {
             className="open-menu-dropdown"
             role="menu"
             data-testid="open-menu-list"
-            onClickCapture={(e) => recordMenuClick("Open", e)}
+            data-pnv-menu="Open"
             style={{
               position: "absolute",
               top: "100%",
@@ -3342,7 +3344,7 @@ function WalkthroughMenu() {
         <div
           role="menu"
           data-testid="walkthrough-menu-list"
-          onClickCapture={(e) => recordMenuClick("Tutorials", e)}
+          data-pnv-menu="Tutorials"
           style={{
             position: "absolute",
             top: "calc(100% + 4px)",
@@ -3541,7 +3543,7 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
         <div
           role="menu"
           data-testid="layout-menu-list"
-          onClickCapture={(e) => recordMenuClick("Layout", e)}
+          data-pnv-menu="Layout"
           style={{
             position: "absolute",
             top: "calc(100% + 4px)",

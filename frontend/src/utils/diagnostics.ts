@@ -35,6 +35,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { loadOverrides } from "@/shortcuts/storage";
 import type { SettingsInfo } from "@/components/common/settings/types";
 import { activityEntries, record, scrub, type ActivityEntry } from "./activityLog";
+import { installClickLogging } from "./clickLog";
 import { waitEntries, waitsInProgress } from "./waitLog";
 import { pnlSourceName } from "./pnlSources";
 import { fetchRunning, isDevServer, pageBuild, runningDiagnostics, sameCommit, type PageBuild, type RunningInfo } from "./runningFrom";
@@ -440,6 +441,25 @@ export async function downloadDiagnostics(): Promise<void> {
 export function installDiagnostics(): () => void {
   window.__pnvDiagnostics = () => collectDiagnostics();
 
+  // Every button, tab and menu item pressed (#177), and selecting on the
+  // graph: the store holds the selection, so one subscription covers a
+  // click on a node or an edge, the Inspector, and a shortcut alike. A drag
+  // is recorded as the edit it makes ("Moved node a", utils/history.ts).
+  const uninstallClicks = installClickLogging();
+  const unsubscribeSelection = useModelStore.subscribe((s, prev) => {
+    if (s.selectedNodeId !== prev.selectedNodeId) {
+      if (s.selectedNodeId) {
+        const node = s.nodes.find((n) => n.id === s.selectedNodeId);
+        const name = (node?.data as { varName?: string } | undefined)?.varName || s.selectedNodeId;
+        record("canvas", `Selected node ${name}`, { node: name });
+      } else if (!s.selectedEdgeId) {
+        record("canvas", "Selection cleared");
+      }
+    } else if (s.selectedEdgeId !== prev.selectedEdgeId && s.selectedEdgeId) {
+      record("canvas", `Selected edge ${s.selectedEdgeId}`, { edge: s.selectedEdgeId });
+    }
+  });
+
   const unsubscribeTour = useTourStore.subscribe((s, prev) => {
     if (s.activeTourId !== prev.activeTourId || s.startCount !== prev.startCount) {
       if (prev.activeTourId && s.activeTourId !== prev.activeTourId) {
@@ -455,6 +475,8 @@ export function installDiagnostics(): () => void {
 
   return () => {
     unsubscribeTour();
+    unsubscribeSelection();
+    uninstallClicks();
     if (window.__pnvDiagnostics) delete window.__pnvDiagnostics;
   };
 }
