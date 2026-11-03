@@ -15,7 +15,7 @@
 #                                      (pnvSettings bridge present)
 #   section        the sidebar section it is in, one of the ids in
 #                  frontend/src/components/common/settings/sections.ts:
-#                  about | general | appearance | open-menu | folders | shortcuts | reports | developer
+#                  about | general | appearance | open-menu | folders | assistant | shortcuts | reports | developer
 #                  (reports is the Mac app's Problem reports, listed only inside it)
 #   storage        who stores it (the side that acts on it owns it)
 #   control        data-testid of its one control, always "setting-<…>", written
@@ -39,6 +39,7 @@ sections:
   - tutorials-voice
   - open-menu
   - folders
+  - assistant
   - shortcuts
   - reports
   - developer
