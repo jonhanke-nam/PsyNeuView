@@ -79,23 +79,23 @@ are "change a file in the watched folder" and "import a bundle".
 
 ## 4. Every route in, and its defence
 
-Each row names the test that must exist before the route ships. Test names
-are the planned ones; the review for each phase checks they exist and pass.
+Each row names the test that must exist before the route ships. Each test named exists in `backend/tests/test_assistant_*.py` or
+`frontend/e2e/`; the review for each phase checks they pass.
 
 ### 4.1 Through the assistant's tools
 
 | Route | Attacker | What could go wrong | Defence | Test |
 |---|---|---|---|---|
-| `read_open_model` | Rogue or misled agent | Sees more than the user allowed | Backend drops anything `visibility` doesn't allow before the agent sees it (contract: "context") | `test_visibility_filters_context` |
+| `read_open_model` | Rogue or misled agent | Sees more than the user allowed | Backend drops anything `visibility` doesn't allow before the agent sees it (contract: "context") | `test_visibility_filter` |
 | `read_docs` | Misled agent | Docs text carries planted instructions | Docs are the app's own; results are data, not instructions. The agent is untrusted anyway | `test_read_docs_only_bundled_docs` |
-| `propose_app_edit` | Rogue agent | Silent change to the model; a stale edit overwrites the user's work; a huge or malformed op | Proposal only; the page applies it through the user's own edit paths, as one History entry; `base_hash` check gives 409 when the user moved on; ops limited to a listed set | `test_app_edit_needs_accept`, `test_stale_proposal_409`, `test_app_edit_ops_allowlist` |
-| `list_files` | Rogue agent | Enumerates the home folder | Only designated folders, real path after symlinks, no hidden files, PsyNeuLink-style files only, count limit | `test_list_files_outside_folders_refused`, `test_list_files_hidden_skipped` |
-| `read_file` | Rogue agent; malicious file | Reads a credential file; a `.py` is executed to read it; a planted comment misleads the agent | Path rules as above; **reads text only, never imports or executes**; size limit | `test_read_file_never_executes`, `test_read_file_size_limit`, `test_paths_dotdot_symlink_hardlink_case` |
-| `propose_file_write` | Rogue agent | Writes a program; overwrites the user's work; writes outside folders; writes a `.zshrc` | Proposal only; `read_write` folder; `base_hash`; previous version kept; file type by classifier and extension; written content is **marked unreviewed** so nothing runs it | `test_file_write_needs_accept`, `test_file_write_keeps_previous`, `test_file_write_marks_unreviewed` |
-| `propose_open_file` | Rogue agent; malicious file | Opening runs it | Only the user can accept; `is_runnable` refuses unreviewed content; opening a file the assistant didn't write still asks, because the folder may hold anything | `test_open_proposal_user_only`, `test_unreviewed_not_runnable_via_load` |
-| Any tool not on `TOOL_ALLOWLIST` | Rogue agent | Reaches the general API, settings, shell | Tools are dispatched by name from the allowlist; an unknown name is a `refused` event and a log line | `test_unknown_tool_refused` |
-| Tool arguments | Rogue agent | Injection through arguments (paths, op names, huge strings) | Every argument validated by the backend; size limits; nothing passed to a shell | `test_tool_args_validated` |
-| Session limits | Rogue agent | Loops; cost | `limits.tool_calls` and `limits.minutes` end the turn with `done: limit`; Stop ends it at once | `test_tool_call_limit`, `test_stop_ends_turn` |
+| `propose_app_edit` | Rogue agent | Silent change to the model; a stale edit overwrites the user's work; a huge or malformed op | Proposal only; the page applies it through the user's own edit paths, as one History entry; `base_hash` check gives 409 when the user moved on; ops limited to a listed set | `test_app_edit_needs_accept`, `test_stale_app_edit_proposal`, `test_hole_a_unknown_op_with_source_is_refused` |
+| `list_files` | Rogue agent | Enumerates the home folder | Only designated folders, real path after symlinks, no hidden files, PsyNeuLink-style files only, count limit | `test_files_outside_folders_and_without_visibility`, `test_hidden_and_wrong_type_refused` |
+| `read_file` | Rogue agent; malicious file | Reads a credential file; a `.py` is executed to read it; a planted comment misleads the agent | Path rules as above; **reads text only, never imports or executes**; size limit | `test_reading_never_runs`, `test_oversized_refused`, `test_dot_dot_refused`, `test_symlink_to_file_outside_refused`, `test_symlinked_parent_refused`, `test_hard_link_refused_for_write_but_readable`, `test_case_variant_refused` |
+| `propose_file_write` | Rogue agent | Writes a program; overwrites the user's work; writes outside folders; writes a `.zshrc` | Proposal only; `read_write` folder; `base_hash`; previous version kept; file type by classifier and extension; written content is **marked unreviewed** so nothing runs it | `test_file_write_accept_keeps_previous_and_marks_unreviewed`, `test_write_keeps_previous_and_marks_unreviewed`, `test_write_keeps_previous_and_marks_unreviewed` |
+| `propose_open_file` | Rogue agent; malicious file | Opening runs it | Only the user can accept; `is_runnable` refuses unreviewed content; opening a file the assistant didn't write still asks, because the folder may hold anything | `test_open_proposal_user_only`, `test_route_refuses_unreviewed` |
+| Any tool not on `TOOL_ALLOWLIST` | Rogue agent | Reaches the general API, settings, shell | Tools are dispatched by name from the allowlist; an unknown name is a `refused` event and a log line | `test_non_allowlisted_tools_are_refused` |
+| Tool arguments | Rogue agent | Injection through arguments (paths, op names, huge strings) | Every argument validated by the backend; size limits; nothing passed to a shell | `test_hole_b_hostile_update_param_is_refused`, `test_hole_b_hostile_names_are_refused` |
+| Session limits | Rogue agent | Loops; cost | `limits.tool_calls` and `limits.minutes` end the turn with `done: limit`; Stop ends it at once | `test_tool_call_limit`, `test_stop_ends_the_turn_at_once` |
 
 ### 4.2 Through what the agent reads (prompt injection)
 
@@ -113,27 +113,27 @@ checks that following it is refused by the backend.
 
 | Route | Attacker | Defence | Test |
 |---|---|---|---|
-| Agent text shown in the panel | Rogue agent | Rendered as text, never HTML; no remote images or any remote content; links need a click and show the full address | `assistant-panel-renders-text-only.spec.ts` |
+| Agent text shown in the panel | Rogue agent | Rendered as text, never HTML; no remote images or any remote content; links need a click and show the full address | `ai-assistant.spec.ts` ("hostile text is inert") |
 | Data leaving through a URL in a reply | Rogue agent | No remote content loaded; link addresses shown in full | same |
 | Agent text reaching the Mac bridges | Rogue agent | Text is never evaluated as script; bridges are called only by the app's own code | same, plus a bridge guard test |
-| Applying a proposal | Page bug | Applied only after the user's accept, through existing edit paths, one History entry | `assistant-proposal-undo.spec.ts` |
+| Applying a proposal | Page bug | Applied only after the user's accept, through existing edit paths, one History entry | `ai-assistant-real.spec.ts` ("one undo reverses it") |
 
 ### 4.4 Through the local server
 
 | Route | Attacker | Defence | Test |
 |---|---|---|---|
-| Assistant routes | Another program, another account | **Assistant routes accept requests only from the app's own page**, with a per-session credential; off by default; off in `container` and `hosted` modes via the `assistant` capability | `test_assistant_off_by_default`, `test_assistant_off_in_remote_modes`, `test_assistant_routes_need_session_credential` |
-| Settings routes | Rogue agent | There is no tool that reaches `PUT /api/assistant/settings`; raising a permission needs `confirm_raise`, which only the page sends after asking the user | `test_agent_cannot_change_settings`, `test_raise_needs_confirm` |
-| Key routes | Rogue agent | `GET /api/assistant/key` returns `{"set": bool}` only; the key never appears in logs, reports or the runner's environment | `test_key_never_returned` |
-| `/model/load`, watcher reload, autosave reload, undo, redo | Rogue agent via write-then-open; malicious file | Every route that executes a model consults `is_runnable`; unreviewed content is refused everywhere | `test_unreviewed_not_runnable_via_load`, `..._via_watcher`, `..._via_autosave`, `..._via_undo` |
+| Assistant routes | Another program, another account | **Assistant routes accept requests only from the app's own page** (`same_site`); a per-session credential is not built yet (open item below); off by default; off in `container` and `hosted` modes via the `assistant` capability | `test_off_by_default`, `test_capability_off_in_container_and_hosted`, `test_same_site_check`, `test_review_routes_accept_only_the_apps_own_page` |
+| Settings routes | Rogue agent | There is no tool that reaches `PUT /api/assistant/settings`; raising a permission needs `confirm_raise`, which only the page sends after asking the user | `test_non_allowlisted_tools_are_refused`, `test_raising_needs_confirmation_lowering_does_not` |
+| Key routes | Rogue agent | `GET /api/assistant/key` returns `{"set": bool}` only; the key never appears in logs, reports or the runner's environment | `test_key_never_in_responses_logs_settings_or_environment` |
+| `/model/load`, watcher reload, autosave reload, undo, redo | Rogue agent via write-then-open; malicious file | Every route that executes a model consults `is_runnable`; unreviewed content is refused everywhere | `test_route_refuses_unreviewed`, `test_watchers_refuse_unreviewed`, `test_inprocess_and_sandbox_entry_points_refuse` |
 
 ### 4.5 Through files and folders
 
 | Route | Attacker | Defence | Test |
 |---|---|---|---|
-| Designating a folder | User only, in Settings | Home, root, app and install folders, the PsyNeuLink install and hidden folders are refused | `test_designate_refused_folders` |
-| `..`, symlinks, hard links, case | Rogue agent | Real path after resolution must be inside a designated folder; checked on every call; the file is opened by the resolved path, not re-resolved | `test_paths_dotdot_symlink_hardlink_case` |
-| Path swapped between check and use | Another program | Open the file first, then check the opened file's real path (`fstat` plus `realpath` of `/dev/fd`), or open relative to a folder descriptor | `test_path_swap_mid_operation` |
+| Designating a folder | User only, in Settings | Home, root, app and install folders, the PsyNeuLink install and hidden folders are refused | `test_refused_folders` |
+| `..`, symlinks, hard links, case | Rogue agent | Real path after resolution must be inside a designated folder; checked on every call; the file is opened by the resolved path, not re-resolved | `test_dot_dot_refused`, `test_symlink_to_file_outside_refused`, `test_symlinked_parent_refused`, `test_hard_link_refused_for_write_but_readable`, `test_case_variant_refused` |
+| Path swapped between check and use | Another program | Open the file first, then check the opened file's real path (`fstat` plus `realpath` of `/dev/fd`), or open relative to a folder descriptor | `test_swap_between_check_and_use_refused` |
 | A malicious file already in a folder | Malicious file | It is only text until the user opens it; opening asks; a file the assistant proposes to open is treated the same as one it wrote | `test_open_proposal_user_only` |
 | Bundle import | Malicious file | Bundles are handled so that they can't write outside their folder (requirement; covered by the import code's own tests) | existing bundle tests |
 | Deleting | Rogue agent | No delete tool exists; removing means Trash with approval, in a later phase | `test_no_delete_tool` |
@@ -142,8 +142,8 @@ checks that following it is refused by the backend.
 
 | Route | Attacker | Defence | Test |
 |---|---|---|---|
-| Custom `base_url` | Rogue agent; misled user | Only the user sets it, in Settings; the panel shows where data goes; the agent has no tool for it | `test_agent_cannot_change_settings` |
-| The service itself | The service | Consent at first use; a cloud agent's first use of each folder asks; model contents are what's sent, nothing more | `test_consent_before_first_send` |
+| Custom `base_url` | Rogue agent; misled user | Only the user sets it, in Settings; the panel shows where data goes; the agent has no tool for it | `test_non_allowlisted_tools_are_refused` |
+| The service itself | The service | Consent at first use (the explanation when it is turned on, and the raise confirmation for each folder); a per-folder consent at a cloud agent's first use of it is not built yet (open item below); model contents are what's sent, nothing more | `ai-assistant.spec.ts` ("turning it on asks, then explains what is shared") |
 | New dependencies for the connection | Supply chain | Reviewed in the phase review | checklist item |
 
 ## 5. The tools, one by one, and in combination
@@ -215,3 +215,23 @@ containment rather than a better approval view.
 - A model the user wrote and chose to run has always been able to do anything
   the user can. The assistant doesn't change that; it adds a second author.
 - Containment (Phase 4) is a separate decision; see `containment.md`.
+
+## 7. Open items after the parts were joined
+
+Named by the rows above as "not built yet". Each is tracked under #179 until
+it has its own issue.
+
+- **A per-session credential for the assistant routes.** The routes refuse a
+  request that isn't the app's own page (`same_site`); a credential the page
+  gets at startup and sends with each request is not built yet.
+- **Per-folder consent at a cloud agent's first use of it.** Designating a
+  folder asks (the raise confirmation), and turning the assistant on
+  explains what is shared; a further question the first time a cloud agent
+  reads each folder is not built yet.
+- **`saving: structured_without_asking`** is stored and shown, and raising it
+  asks, but the page still asks for every proposal. Nothing is saved without
+  an accept today, which is the safer side.
+- **Running models** (`limits` on run time, containment) is Phase 4; there
+  is no run tool.
+- **Removing a file** (Trash, with approval) is a later phase; there is no
+  delete tool.

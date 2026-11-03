@@ -99,6 +99,8 @@ def make_agent(agent_settings: dict, *, key: str | None) -> Agent:
             base_url=agent_settings.get("base_url") or ANTHROPIC_URL,
         )
     if kind == "openai_compatible":
+        if not agent_settings.get("base_url"):
+            raise AgentError("the OpenAI-compatible agent needs a server address (Settings: AI assistant)")
         return OpenAICompatibleAgent(
             model=agent_settings.get("model") or "",
             key=key,

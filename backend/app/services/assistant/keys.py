@@ -15,6 +15,7 @@ refused rather than falling back to a plain file.
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 import sys
 from typing import Protocol
@@ -100,10 +101,18 @@ class RefusingStore:
 _store: KeyStore | None = None
 
 
+#: Set to ``memory`` to keep keys in this process only (the browser tests,
+#: which must never reach the real Keychain).
+STORE_ENV = "PSYNEUVIEW_ASSISTANT_KEY_STORE"
+
+
 def store() -> KeyStore:
     global _store
     if _store is None:
-        _store = MacKeychain() if sys.platform == "darwin" else RefusingStore()
+        if os.environ.get(STORE_ENV, "").strip().lower() == "memory":
+            _store = MemoryStore()
+        else:
+            _store = MacKeychain() if sys.platform == "darwin" else RefusingStore()
     return _store
 
 

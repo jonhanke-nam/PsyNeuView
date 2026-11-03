@@ -25,7 +25,7 @@ const DEFAULTS = {
   autonomy: "suggest",
   saving: "always_ask",
   visibility: { model: true, selection: true, errors: true, results: false, files: false },
-  limits: { tool_calls: 25, minutes: 10 },
+  limits: { tool_calls: 25, minutes: 10, max_tokens: 100000 },
   keep_log: true,
 };
 
@@ -267,33 +267,35 @@ test.describe("AI assistant (#179)", { tag: "@ci" }, () => {
     await page.goto("/");
     await openFromPath(page, model);
     await page.getByTestId("tab-assistant").click();
-    await sendMessage(page, "Add a note");
-    const after = BASE + "# added by the assistant\n";
+    await sendMessage(page, "Set the slope to 2");
+    // A structured op, applied through the real /api/model/update-param; the
+    // proposal's text is a description and is never applied as source.
     reply(stub, [
       {
         t: "",
         type: "proposal",
         proposal: {
-          id: "p1", kind: "app_edit", summary: "Add a note at the end", state: "pending", base_hash: "x",
-          ops: [{ op: "append_comment", args: {} }], path: null, before: BASE, after, freeform_python: false, warnings: [],
+          id: "p1", kind: "app_edit", summary: "Set the slope of sender_mech to 2", state: "pending", base_hash: "x",
+          ops: [{ op: "update_param", args: { var_name: "sender_mech", param_name: "slope", new_value: "2", context: "function" } }],
+          path: model, before: null, after: "sender_mech.function.slope = 2\nimport os  # not applied", freeform_python: false, warnings: [],
         },
       },
     ]);
     const card = page.getByTestId("assistant-proposal");
     await expect(card).toBeVisible();
     await expect(card.getByTestId("assistant-proposal-state")).toHaveText("Waiting for you");
-    await expect(card.getByTestId("assistant-proposal-before")).toContainText("sender_mech");
-    await expect(card.getByTestId("assistant-proposal-after")).toContainText("# added by the assistant");
+    await expect(card.getByTestId("assistant-proposal-after")).toContainText("sender_mech.function.slope = 2");
     await shot(page, "05-proposal");
 
     await card.getByTestId("assistant-proposal-accept").click();
     await expect(card.getByTestId("assistant-proposal-state")).toHaveText("Accepted");
     expect(stub.accepted).toEqual(["p1"]);
-    await expect(page.locator(".cm-content")).toContainText("# added by the assistant");
-    await expect(page.getByTestId("undo-button")).toHaveAttribute("title", "Undo: Assistant: Add a note at the end (⌘Z)");
+    await expect(page.locator(".cm-content")).toContainText("slope=2");
+    await expect(page.locator(".cm-content")).not.toContainText("import os");
+    await expect(page.getByTestId("undo-button")).toHaveAttribute("title", "Undo: Assistant: Set the slope of sender_mech to 2 (⌘Z)");
 
     await page.getByTestId("undo-button").click();
-    await expect(page.locator(".cm-content")).not.toContainText("# added by the assistant");
+    await expect(page.locator(".cm-content")).not.toContainText("slope=2");
     await expect(page.getByTestId("undo-button")).not.toHaveAttribute("title", /Assistant/);
   });
 
@@ -308,7 +310,7 @@ test.describe("AI assistant (#179)", { tag: "@ci" }, () => {
         type: "proposal",
         proposal: {
           id: "p2", kind: "file_write", summary: "Write stroop.py", state: "pending", base_hash: "x",
-          ops: [], path: "~/Models/stroop.py", before: "", after: "import os\nos.system('ls')\n", freeform_python: true,
+          ops: [], path: "/Users/me/Models/stroop.py", before: "", after: "import os\nos.system('ls')\n", freeform_python: true,
           warnings: ["Calls os.system", "Imports os"],
         },
       },
@@ -323,7 +325,7 @@ test.describe("AI assistant (#179)", { tag: "@ci" }, () => {
 
     stub.acceptStatus = 409;
     await card.getByTestId("assistant-proposal-accept").click();
-    await expect(card.getByTestId("assistant-proposal-stale")).toContainText("The model changed since the assistant read it");
+    await expect(card.getByTestId("assistant-proposal-stale")).toContainText("The file changed since the assistant read it");
     await expect(card.getByTestId("assistant-proposal-state")).toHaveText("Out of date");
     await expect(card.getByTestId("assistant-proposal-accept")).toBeDisabled();
     expect(stub.accepted).toEqual([]);

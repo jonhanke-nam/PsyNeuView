@@ -136,7 +136,7 @@ def test_raising_needs_confirmation_lowering_does_not(client, tmp_path):
 
 def test_settings_reject_bad_values_and_folders(client):
     for body in [{"autonomy": "root"}, {"limits": {"tool_calls": 0}}, {"limits": {"tool_calls": 10_000}},
-                 {"agent": {"type": "openai_compatible"}}, {"agent": {"type": "openai_compatible", "base_url": "http://example.com"}},
+                 {"agent": {"type": "openai_compatible", "base_url": "http://example.com"}},
                  {"folders": [{"path": "~", "access": "read"}]}, {"folders": [{"path": "/", "access": "read"}]},
                  {"folders": [{"path": "~/.ssh", "access": "read"}]}, {"shell": True}]:
         r = client.put("/api/assistant/settings", json={**body, "confirm_raise": True})

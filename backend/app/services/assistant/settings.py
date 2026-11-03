@@ -169,8 +169,9 @@ def _validate(doc: dict) -> dict:
         from app.services.assistant.agents import check_base_url
 
         check_base_url(base_url)  # raises SettingsError
-    if agent_type == "openai_compatible" and not base_url:
-        raise SettingsError("an openai_compatible agent needs a base_url")
+    # An openai_compatible agent without a base_url is allowed to be stored
+    # (the address field appears once the type is chosen); sending a message
+    # is what needs the address, and make_agent says so then.
     out["agent"] = {"type": agent_type, "model": model.strip(), "base_url": base_url.strip()}
 
     folders = doc.get("folders", [])
