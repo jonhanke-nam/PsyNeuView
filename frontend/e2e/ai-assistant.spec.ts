@@ -131,9 +131,11 @@ function scratchModel(): string {
   return file;
 }
 
+/** Send, and wait until the turn is under way, so a test's `reply` lands after the stub saw the message. */
 async function sendMessage(page: Page, text: string) {
   await page.getByTestId("assistant-input").fill(text);
   await page.getByTestId("assistant-send").click();
+  await expect(page.getByTestId("assistant-turn-state")).toHaveText("Working…");
 }
 
 test.describe("AI assistant (#179)", { tag: "@ci" }, () => {
@@ -345,7 +347,13 @@ test.describe("AI assistant (#179)", { tag: "@ci" }, () => {
     await sendMessage(page, "Again");
     await expect(page.getByTestId("assistant-stop")).toBeEnabled();
     await page.getByTestId("assistant-input").focus();
-    await page.keyboard.press("ControlOrMeta+.");
+    // The registry reads Mod as Cmd on a Mac page and Ctrl elsewhere, by what
+    // the page's navigator says, which Playwright's emulation may not match
+    // to the host; ask the page which it is.
+    const pageIsMac = await page.evaluate(() =>
+      [(navigator as any).userAgentData?.platform, navigator.platform, navigator.userAgent].some((c) => c && /mac/i.test(c)),
+    );
+    await page.keyboard.press(pageIsMac ? "Meta+." : "Control+.");
     await expect.poll(() => stub.stopped).toBe(true);
     await expect(page.getByTestId("assistant-turn-state")).toHaveText("Stopped.");
 
