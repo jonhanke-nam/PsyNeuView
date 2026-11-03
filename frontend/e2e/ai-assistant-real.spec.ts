@@ -205,6 +205,8 @@ let agent: FakeAgent;
 let realBefore: { prefs: number | null; review: number | null };
 
 test.describe.configure({ mode: "serial" });
+// A tall page, so the conversation and its cards are in view in the screenshots.
+test.use({ viewport: { width: 1280, height: 1400 } });
 
 test.describe("AI assistant, for real (#179)", { tag: "@ci" }, () => {
   test.beforeAll(async () => {
