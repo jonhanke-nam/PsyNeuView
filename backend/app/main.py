@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app import __version__
+from app.api.assistant_routes import router as assistant_router
 from app.api.routes import router
 from app.api.ws import handle_websocket
 from app.frontend_files import FrontendFiles
@@ -168,6 +169,7 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+app.include_router(assistant_router, prefix="/api")
 
 
 @app.exception_handler(pnl_source_guard.PsyNeuLinkFileIsProtected)
