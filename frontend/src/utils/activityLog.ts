@@ -39,7 +39,9 @@ export type ActivityKind =
   /** The installed PsyNeuLink changing, or the Mac app's PsyNeuView install. */
   | "psyneulink"
   /** A wait, from the wait log (utils/waitLog.ts), merged in for a report. */
-  | "wait";
+  | "wait"
+  /** The AI assistant (#179): names only — a turn, a tool, a proposal's id — never prompts, replies or source. */
+  | "assistant";
 
 export interface ActivityEntry {
   /** When, as an ISO time. */
