@@ -1,8 +1,8 @@
 /**
  * Opening the Open menu asks the server for nothing slow (#175).
  *
- * The marks on the PsyNeuLink Examples section (runs / loads / fails) come
- * from a probe that loads and runs every example, which can take a minute.
+ * The marks on the PsyNeuLink Examples section (loads / fails) come from a
+ * probe that loads every example, which can take a while.
  * It used to start as soon as the menu opened, under a folded heading, and
  * spun the busy wheel through the first Open of every launch. Now it starts
  * only when the section is actually on show, and never shows the wheel.
@@ -25,7 +25,7 @@ async function stubExamples(page: Page, statusDelayMs: number): Promise<{ status
   await page.route("**/api/psyneulink-examples/status", async (route) => {
     count += 1;
     await new Promise((r) => setTimeout(r, statusDelayMs));
-    await route.fulfill({ json: { available: true, status: { stub: { load: "ok", run: "ok", nodes: 2 } } } });
+    await route.fulfill({ json: { available: true, status: { stub: { load: "ok", nodes: 2 } } } });
   });
   return { statusRequests: () => count };
 }
@@ -80,7 +80,7 @@ test.describe("Open menu: the examples probe (#175)", { tag: "@ci" }, () => {
     expect(during.activity.find((e) => e.kind === "menu" && e.text === "PsyNeuLink examples expanded")).toBeTruthy();
 
     // The marks arrive, and the wait is on record as background work.
-    await expect(page.getByRole("button", { name: "Stub" })).toContainText("runs", { timeout: 10_000 });
+    await expect(page.getByRole("button", { name: "Stub" })).toContainText("loads", { timeout: 10_000 });
     await expect(wheel).toHaveAttribute("data-visible", "false");
     const after = await snapshot(page);
     const wait = after.activity.find((e) => e.kind === "wait" && e.data?.label === STATUS);
@@ -102,6 +102,6 @@ test.describe("Open menu: the examples probe (#175)", { tag: "@ci" }, () => {
     await expect(page.getByTestId("open-menu")).toBeEnabled();
     await page.getByTestId("open-menu").click();
     await expect.poll(statusRequests).toBe(1);
-    await expect(page.getByRole("button", { name: "Stub" })).toContainText("runs");
+    await expect(page.getByRole("button", { name: "Stub" })).toContainText("loads");
   });
 });

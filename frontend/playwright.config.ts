@@ -84,7 +84,7 @@ const harnessEnv: Record<string, string> = {
   // of ~/.psyneuview/layouts, and the startup migration stays off.
   PSYNEUVIEW_LAYOUTS_DIR: sessionLayoutsDir,
   // #175: what the server keeps only for convenience (the PsyNeuLink examples'
-  // load-and-run status) goes here instead of ~/.psyneuview/cache.
+  // load status) goes here instead of ~/.psyneuview/cache.
   PSYNEUVIEW_CACHE_DIR: path.join(sessionTmp, "cache"),
   // #1025: user preferences (~/.psynewview.json) redirected into this session's
   // temp dir. Without it, any test touching a persisted setting — the global

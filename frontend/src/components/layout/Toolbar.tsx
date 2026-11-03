@@ -283,14 +283,9 @@ export function Toolbar() {
   const [libraryModels, setLibraryModels] = useState<LibraryModel[]>([]);
   // PsyNeuLink's own examples, live from the active source's Scripts/ (#843).
   const [pnlExamples, setPnlExamples] = useState<LibraryModel[]>([]);
-  // Per-example load status for the live-section badges (#843/#839), fetched
-  // lazily the first time the menu opens (the probe runs the whole corpus).
-  const [pnlStatus, setPnlStatus] = useState<
-    Record<
-      string,
-      { load: string; run?: string; error?: string; runError?: string; nodes?: number }
-    >
-  >({});
+  // Per-example load status for the live-section badges (#843/#839): loads,
+  // or fails. There is no run pass (#175).
+  const [pnlStatus, setPnlStatus] = useState<Record<string, { load: string; error?: string; nodes?: number }>>({});
   const pnlStatusFetched = useRef(false);
   // What put the examples on show, for the wait log: opening the menu with
   // the section already expanded, or expanding it (#175).
@@ -688,9 +683,9 @@ export function Toolbar() {
     }
   }, [dropdownOpen]);
 
-  // Ask for the live examples' load-and-run marks only once their section is
-  // actually on show (#843/#839, #175). To answer, the server loads and runs
-  // every example in the model runner, which can take a minute; asking as soon
+  // Ask for the live examples' load marks only once their section is
+  // actually on show (#843/#839, #175). To answer, the server loads every
+  // example in the model runner, which can take a while; asking as soon
   // as the menu opened spun the wheel through the first Open of every launch,
   // for marks under a folded heading. So: the menu is open, the section is
   // shown and unfolded — whether it was already unfolded when the menu opened
@@ -2033,29 +2028,18 @@ export function Toolbar() {
                           title={
                             status.load !== "ok"
                               ? `Fails to load: ${status.error ?? "error"}`
-                              : status.run === "ok"
-                                ? `Loads (${status.nodes} nodes) + runs`
-                                : `Loads (${status.nodes} nodes) but did not run with zero inputs: ${status.runError ?? "—"}`
+                              : `Loads (${status.nodes} nodes)`
                           }
                           style={{
                             marginLeft: "auto",
                             paddingLeft: 8,
                             fontSize: "var(--pnv-fs-11)",
                             fontWeight: 600,
-                            color:
-                              status.load !== "ok"
-                                ? "var(--pnv-danger)"
-                                : status.run === "ok"
-                                  ? "var(--pnv-success)"
-                                  : "var(--pnv-warning)",
+                            color: status.load !== "ok" ? "var(--pnv-danger)" : "var(--pnv-success)",
                             userSelect: "none",
                           }}
                         >
-                          {status.load !== "ok"
-                            ? "fails"
-                            : status.run === "ok"
-                              ? "runs"
-                              : "loads"}
+                          {status.load !== "ok" ? "fails" : "loads"}
                         </span>
                       )}
                     </button>
