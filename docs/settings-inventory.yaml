@@ -249,6 +249,17 @@ settings:
       asks for that runs longer shows the spinning wheel in the toolbar and
       over the graph, with a "progress" pointer.
 
+  - id: busy-timer
+    label: General ▸ Busy indicator ▸ Show how long it has been spinning
+    home: settings
+    section: general
+    storage: browser localStorage (psyneuview.busy.timerPlace); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-busy-timer
+    notes: >-
+      Off, In the toolbar (default), Over the graph or Both (#176). Shows the
+      time so far beside the wheel once it has spun for a second. Problem
+      reports record each wait's start and stop times whatever this says.
+
   - id: tour-ring-thickness
     label: Tutorials and Voice ▸ Highlight ▸ Ring thickness
     home: settings
