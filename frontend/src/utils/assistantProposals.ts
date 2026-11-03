@@ -16,6 +16,12 @@ const AUTONOMY_RANK = { answer: 0, suggest: 1, app_edits: 2 } as const;
 export function raisedPermissions(prev: AssistantSettings, next: AssistantSettings): string[] {
   const raised: string[] = [];
   if (!prev.enabled && next.enabled) raised.push("turn the assistant on");
+  if (
+    next.agent.type !== "none" &&
+    (next.agent.type !== prev.agent.type || next.agent.base_url !== prev.agent.base_url)
+  ) {
+    raised.push(`send messages to ${destination(next.agent)}`);
+  }
   if (AUTONOMY_RANK[next.autonomy] > AUTONOMY_RANK[prev.autonomy]) {
     raised.push(next.autonomy === "app_edits" ? "let it propose edits to the open model" : "let it make suggestions");
   }
@@ -88,11 +94,22 @@ export async function sha256Hex(text: string): Promise<string> {
     .join("");
 }
 
-/** Where a message goes, for the chosen agent: said in Settings, in plain words. */
+export const ANTHROPIC_URL = "https://api.anthropic.com";
+
+/** The real address messages go to for `agent`, as the backend sees it. */
+export function destination(agent: AssistantSettings["agent"]): string {
+  if (agent.type === "anthropic") return agent.base_url || ANTHROPIC_URL;
+  if (agent.type === "openai_compatible") return agent.base_url || "(no server address yet)";
+  return "nowhere (no agent)";
+}
+
+/** Where a message goes, for the chosen agent: said in Settings, in plain words, with the real address. */
 export function whereDataGoes(agent: AssistantSettings["agent"]): string {
   switch (agent.type) {
     case "anthropic":
-      return "Messages and the context you allow are sent to Anthropic's API over the internet, under your own API key and Anthropic's terms.";
+      return agent.base_url
+        ? `Messages and the context you allow are sent to ${agent.base_url}, not to Anthropic's own API, with your API key. Only use an address you trust with that key.`
+        : `Messages and the context you allow are sent to Anthropic's API (${ANTHROPIC_URL}) over the internet, under your own API key and Anthropic's terms.`;
     case "openai_compatible":
       return agent.base_url
         ? `Messages and the context you allow are sent to ${agent.base_url}. If that is on this machine, nothing leaves it; otherwise it goes wherever that server is.`

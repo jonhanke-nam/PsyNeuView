@@ -16,6 +16,7 @@ import type { AssistantEvent, Proposal } from "@/stores/assistantTypes";
 import { pendingProposals } from "@/utils/assistantProposals";
 import { Button } from "../common/Button";
 import { SafeText } from "./SafeText";
+import { hasInvisible, showInvisible } from "@/utils/safeText";
 
 const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
 
@@ -30,6 +31,7 @@ export function AssistantPanel() {
   const send = useAssistantStore((s) => s.send);
   const stop = useAssistantStore((s) => s.stop);
   const acceptProposal = useAssistantStore((s) => s.acceptProposal);
+  const acceptMany = useAssistantStore((s) => s.acceptMany);
   const rejectProposal = useAssistantStore((s) => s.rejectProposal);
   const reviewOffer = useAssistantStore((s) => s.reviewOffer);
   const [draft, setDraft] = useState("");
@@ -86,7 +88,7 @@ export function AssistantPanel() {
       {pending.length > 1 && (
         <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "4px 12px", borderTop: "1px solid var(--pnv-border-faint)", fontSize: "var(--pnv-fs-12)" }}>
           <span style={{ color: "var(--pnv-text-muted)" }}>{pending.length} proposals waiting</span>
-          <Button kind="small" data-testid="assistant-accept-all" onClick={() => void (async () => { for (const p of pending) await acceptProposal(p.id); })()}>
+          <Button kind="small" data-testid="assistant-accept-all" onClick={() => void acceptMany(pending.map((p) => p.id))}>
             Accept all
           </Button>
           <Button kind="small" data-testid="assistant-reject-all" onClick={() => void (async () => { for (const p of pending) await rejectProposal(p.id); })()}>
@@ -272,12 +274,19 @@ const STATE_WORDS: Record<Proposal["state"], string> = {
   stale: "Out of date",
 };
 
+/** Code shown for review: invisible and direction-changing characters are made visible, and said. */
 function Side({ label, text, testId }: { label: string; text: string; testId: string }) {
+  const invisible = hasInvisible(text);
   return (
     <div style={{ minWidth: 0, borderRight: label === "Before" ? "1px solid var(--pnv-border-faint)" : undefined }}>
       <div style={{ padding: "2px 10px", fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-hint)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
-      <pre data-testid={testId} style={{ margin: 0, padding: "4px 10px 8px", fontFamily: MONO, fontSize: "var(--pnv-fs-12)", whiteSpace: "pre-wrap", overflowWrap: "anywhere", maxHeight: 220, overflowY: "auto" }}>
-        {text}
+      {invisible && (
+        <div data-testid={`${testId}-invisible`} style={{ padding: "2px 10px", fontSize: "var(--pnv-fs-11)", color: "var(--pnv-warning-text-on-tint)", background: "var(--pnv-warning-tint)" }}>
+          Contains invisible or direction-changing characters, shown here as &lt;U+…&gt;.
+        </div>
+      )}
+      <pre data-testid={testId} dir="ltr" style={{ margin: 0, padding: "4px 10px 8px", fontFamily: MONO, fontSize: "var(--pnv-fs-12)", whiteSpace: "pre-wrap", overflowWrap: "anywhere", maxHeight: 220, overflowY: "auto", unicodeBidi: "isolate" }}>
+        {showInvisible(text)}
       </pre>
     </div>
   );
@@ -315,9 +324,17 @@ function ReviewOfferCard() {
           {offer.content_hash === null ? "Fetching the file…" : "The file can't be read."}
         </div>
       ) : (
-        <pre data-testid="assistant-review-content" style={{ margin: "6px 0 0", padding: "6px 8px", background: "var(--pnv-surface)", border: "1px solid var(--pnv-border-faint)", borderRadius: 4, fontFamily: MONO, fontSize: "var(--pnv-fs-12)", whiteSpace: "pre-wrap", overflowWrap: "anywhere", maxHeight: 260, overflowY: "auto" }}>
-          {offer.content}
-        </pre>
+        <>
+          {hasInvisible(offer.content) && (
+            <div data-testid="assistant-review-invisible" style={{ marginTop: 6, fontWeight: 600 }}>
+              This file contains invisible or direction-changing characters, shown below as &lt;U+…&gt;. Read it with care: it may
+              read differently from how it runs.
+            </div>
+          )}
+          <pre data-testid="assistant-review-content" dir="ltr" style={{ margin: "6px 0 0", padding: "6px 8px", background: "var(--pnv-surface)", border: "1px solid var(--pnv-border-faint)", borderRadius: 4, fontFamily: MONO, fontSize: "var(--pnv-fs-12)", whiteSpace: "pre-wrap", overflowWrap: "anywhere", maxHeight: 260, overflowY: "auto", unicodeBidi: "isolate" }}>
+            {showInvisible(offer.content)}
+          </pre>
+        </>
       )}
       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
         <Button kind="primary" size="compact" data-testid="assistant-review-approve" disabled={!offer.content_hash} onClick={() => void approve()}>

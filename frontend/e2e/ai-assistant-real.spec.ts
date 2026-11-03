@@ -241,11 +241,15 @@ test.describe("AI assistant, for real (#179)", { tag: "@ci" }, () => {
     await expect(page.getByTestId("setting-assistant-enabled")).toBeChecked();
 
     // The agent: an OpenAI-compatible server on this machine.
+    // Where messages go is a raise, confirmed with the real destination shown.
     await page.getByTestId("setting-assistant-agent-type").selectOption("openai_compatible");
+    await allowIfAsked(page);
     const url = page.getByTestId("setting-assistant-agent-base-url");
     await expect(url).toBeVisible();
     await url.fill(agent.url);
     await url.blur();
+    await expect(page.getByTestId("assistant-raise-confirm")).toContainText(agent.url);
+    await allowIfAsked(page);
     await expect(page.getByTestId("assistant-section")).toContainText(`sent to ${agent.url}`);
 
     // A folder it may write in, and files visible.

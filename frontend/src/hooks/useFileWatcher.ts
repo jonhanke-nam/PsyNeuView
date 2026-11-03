@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
+import { useAssistantStore } from "@/stores/assistantStore";
 import { useModelStore } from "@/stores/modelStore";
 import { usePresenceStore } from "@/stores/presenceStore";
 import { useExternalChangeStore } from "@/stores/externalChangeStore";
@@ -133,6 +134,18 @@ export function useFileWatcher() {
         }
         if (message.type === "stopped_watching") {
           useSyncStore.getState().setWatchedPath(null);
+          return;
+        }
+        // The file changed on disk to assistant-written code nobody has
+        // reviewed (#179): the backend didn't run it. Offer the review; once
+        // approved, the file is reloaded.
+        if (message.type === "reload_blocked") {
+          record("file", `Reload blocked, unreviewed assistant code: ${message.filePath}`, { path: message.filePath });
+          void useAssistantStore.getState().offerReview({
+            path: String(message.filePath ?? ""),
+            message: String(message.detail ?? "This file now holds code the assistant wrote that nobody has reviewed yet."),
+            openAfter: true,
+          });
           return;
         }
         // PsyNeuLink's own code changed in the local checkout (#1225). The

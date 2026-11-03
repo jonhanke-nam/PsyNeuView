@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { SafeText } from "@/components/assistant/SafeText";
-import { isSafeUrl, parseSafeText } from "./safeText";
+import { hasInvisible, isSafeUrl, parseSafeText, showInvisible } from "./safeText";
 
 const render = (text: string) => renderToStaticMarkup(createElement(SafeText, { text }));
 
@@ -71,5 +71,12 @@ describe("SafeText rendering (#179)", () => {
     const html = render("![x](https://evil.example/pixel.gif) <link rel=stylesheet href=https://evil.example/a.css>");
     expect(html).not.toMatch(/<(img|link|iframe|object|embed|video|audio|source)\b/);
     expect(html).not.toMatch(/\bsrc=/);
+  });
+
+  it("makes invisible and direction-changing characters visible", () => {
+    expect(hasInvisible("x = 1")).toBe(false);
+    expect(hasInvisible("x = 1\u202e")).toBe(true);
+    expect(showInvisible("a\u202eb\u200bc\ufeff")).toBe("a<U+202E>b<U+200B>c<U+FEFF>");
+    expect(showInvisible("plain")).toBe("plain");
   });
 });

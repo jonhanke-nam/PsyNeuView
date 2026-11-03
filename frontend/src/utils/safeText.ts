@@ -65,3 +65,22 @@ export function parseSafeText(text: string): TextSegment[] {
   }
   return out;
 }
+
+/**
+ * Characters that change how text reads without changing how it runs, or
+ * the reverse: bidirectional overrides and isolates, zero-width characters,
+ * the byte-order mark, the soft hyphen. The backend flags them in a
+ * proposal's warnings; the page shows each as its code point, so a reviewed
+ * file can't read differently from what it does.
+ */
+const INVISIBLE_RE = /[\u200b\u200c\u200d\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff\u00ad]/g;
+
+export function hasInvisible(text: string): boolean {
+  INVISIBLE_RE.lastIndex = 0;
+  return INVISIBLE_RE.test(text);
+}
+
+/** `text` with every invisible or direction-changing character replaced by a visible `<U+XXXX>`. */
+export function showInvisible(text: string): string {
+  return text.replace(INVISIBLE_RE, (ch) => `<U+${ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}>`);
+}

@@ -216,4 +216,21 @@ describe("assistantStore (#179)", () => {
     const accept = calls.find((c) => c.url.endsWith("/proposals/w1/accept"));
     expect(JSON.parse(String(accept?.init?.body)).current_hash).toBe("b");
   });
+
+  it("Accept all takes only what was on screen when pressed", async () => {
+    const make = (id: string) => ({ id, kind: "open_file" as const, summary: id, state: "pending" as const, base_hash: null, ops: [], path: "/m.py", before: null, after: null, freeform_python: false, warnings: [] });
+    useAssistantStore.setState({ proposals: { a: make("a"), b: make("b") } });
+    answers["POST /api/model/load"] = () => json({ source: "", model: { nodes: [] } });
+    answers["POST /api/assistant/proposals/a/accept"] = () => {
+      // A third proposal arrives while the first is being accepted.
+      useAssistantStore.setState((s) => ({ proposals: { ...s.proposals, c: make("c") } }));
+      return json({ state: "accepted" });
+    };
+    answers["POST /api/assistant/proposals/b/accept"] = () => json({ state: "accepted" });
+    answers["POST /api/assistant/proposals/c/accept"] = () => json({ state: "accepted" });
+    await useAssistantStore.getState().acceptMany(["a", "b"]);
+    const { proposals } = useAssistantStore.getState();
+    expect([proposals.a.state, proposals.b.state, proposals.c.state]).toEqual(["accepted", "accepted", "pending"]);
+    expect(calls.some((c) => c.url.endsWith("/proposals/c/accept"))).toBe(false);
+  });
 });

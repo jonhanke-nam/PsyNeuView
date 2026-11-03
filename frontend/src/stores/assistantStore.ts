@@ -84,6 +84,8 @@ interface AssistantState {
   poll: () => Promise<void>;
   stop: () => Promise<void>;
   acceptProposal: (id: string) => Promise<void>;
+  /** Accept exactly `ids`, the proposals on screen when "Accept all" was pressed; one that arrives meanwhile waits. */
+  acceptMany: (ids: string[]) => Promise<void>;
   rejectProposal: (id: string) => Promise<void>;
   /** Fetch the file's content for review and show the offer. */
   offerReview: (offer: { path: string; message: string; openAfter?: boolean }) => Promise<void>;
@@ -312,6 +314,12 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
       // unreviewed file answers 409 and the review offer appears instead.
       await openModelPath(proposal.path);
     }
+  },
+
+  acceptMany: async (ids) => {
+    const snapshot = [...ids];
+    record("assistant", `Accept all: ${snapshot.length} proposals`);
+    for (const id of snapshot) await get().acceptProposal(id);
   },
 
   rejectProposal: async (id) => {
