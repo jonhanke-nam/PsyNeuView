@@ -41,6 +41,7 @@ try:
     with open(model_path) as fh:
         src = fh.read()
     os.chdir(out_dir)  # models that write files write here or fail
+    sys.argv = [model_path]  # library models parse argv at module level
     import matplotlib
     matplotlib.use("Agg")
     exec(compile(src, model_path, "exec"), module.__dict__)
