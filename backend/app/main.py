@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app import __version__
+from app.api.assistant_review_routes import router as assistant_review_router
 from app.api.routes import router
 from app.api.ws import handle_websocket
 from app.frontend_files import FrontendFiles
@@ -24,6 +25,7 @@ from app.services import (
     startup_phases,
     working_copies,
 )
+from app.services.assistant import review as assistant_review
 from app.services.sandbox import _get_warm_worker
 
 
@@ -168,6 +170,7 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+app.include_router(assistant_review_router, prefix="/api")
 
 
 @app.exception_handler(pnl_source_guard.PsyNeuLinkFileIsProtected)
@@ -196,6 +199,17 @@ async def _model_is_view_only(request, exc: edit_lock.ModelIsViewOnly):
         # (the lock), "model_protected" and "model_protected_permanently" (the
         # protection line in the file) — all subclasses of ModelIsViewOnly.
         "detail": str(exc), "reason": exc.reason, "path": exc.model_path,
+    })
+
+@app.exception_handler(assistant_review.UnreviewedAssistantCode)
+async def _assistant_code_unreviewed(request, exc: assistant_review.UnreviewedAssistantCode):
+    """A route refused to execute assistant-written content the user hasn't
+    approved (#179). 409 with a reason the page recognises, and the route that
+    approves it, from wherever the execution began: open, reload, run, learn,
+    show_graph, export, import."""
+    return JSONResponse(status_code=409, content={
+        "detail": str(exc), "reason": exc.reason, "path": exc.path,
+        "approve": {"method": "POST", "url": "/api/assistant/review/approve", "body": {"path": exc.path}},
     })
 
 @app.exception_handler(Exception)

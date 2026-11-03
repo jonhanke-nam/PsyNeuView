@@ -14,6 +14,7 @@ import numpy as np
 from pathlib import Path
 
 from app.services.sandbox import run_in_sandbox
+from app.services.assistant.review import require_runnable
 from app.services.show_graph_guard import suppress_show_graph
 from app.services.execution_modes import composition_execution_modes
 
@@ -119,6 +120,8 @@ def _load_and_introspect_inprocess(
 
     See ``load_and_introspect`` for the meaning of ``developer_mode``.
     """
+    # Assistant-written content runs only once reviewed (#179).
+    require_runnable(file_path)
     import psyneulink as pnl
 
     # Read source for line mapping and header metadata

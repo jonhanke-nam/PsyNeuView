@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi import WebSocket
 
+from app.services.assistant.review import UnreviewedAssistantCode
 from app.services.introspector import load_and_introspect
 from app.services.file_writer import apply_parameter_change, apply_structural_change
 from app.services.watcher import file_watcher
@@ -58,8 +59,21 @@ def _on_file_changed(file_path: str) -> None:
             print("File watcher: no event loop available; dropping file_changed")
             return
         asyncio.run_coroutine_threadsafe(broadcast(message), loop)
+    except UnreviewedAssistantCode as e:
+        # Assistant-written content changed on disk and isn't reviewed (#179):
+        # don't execute it; tell the page why, so it can offer the review.
+        _tell_blocked(file_path, e)
     except Exception as e:
         print(f"File watcher error: {e}")
+
+
+def _tell_blocked(file_path: str, e: UnreviewedAssistantCode) -> None:
+    loop = _loop
+    if loop is None or loop.is_closed():
+        return
+    asyncio.run_coroutine_threadsafe(broadcast({
+        "type": "reload_blocked", "filePath": file_path, "reason": e.reason, "detail": str(e),
+    }), loop)
 
 
 def _is_open_model(path: str) -> bool:
@@ -87,6 +101,8 @@ def _on_psyneulink_changed(changed: list[str]) -> None:
         if loop is None or loop.is_closed():
             return
         asyncio.run_coroutine_threadsafe(broadcast(message), loop)
+    except UnreviewedAssistantCode as e:
+        _tell_blocked(file_path, e)
     except Exception as e:
         logger.warning("PsyNeuLink code watcher: couldn't reload the open model: %s", e)
 
