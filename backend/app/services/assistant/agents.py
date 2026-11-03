@@ -62,6 +62,20 @@ class AgentReply:
     tool_calls: list[ToolCall] = field(default_factory=list)
     #: The provider's own assistant message, replayed verbatim next turn.
     raw_message: Any = None
+    #: Tokens the service reported for this request, input and output, or 0
+    #: when it reported none. The session sums them against ``limits.max_tokens``.
+    tokens: int = 0
+
+
+def _usage_tokens(usage: Any, *keys: str) -> int:
+    if not isinstance(usage, dict):
+        return 0
+    total = 0
+    for key in keys:
+        value = usage.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0:
+            total += int(value)
+    return total
 
 
 class AgentError(Exception):
@@ -146,7 +160,10 @@ class AnthropicAgent:
         payload = _post_json(f"{self._base_url}/v1/messages", headers, body)
         if payload.get("stop_reason") == "refusal":
             raise AgentError("the agent declined this request")
-        reply = AgentReply(raw_message={"role": "assistant", "content": payload.get("content", [])})
+        reply = AgentReply(
+            raw_message={"role": "assistant", "content": payload.get("content", [])},
+            tokens=_usage_tokens(payload.get("usage"), "input_tokens", "output_tokens"),
+        )
         for block in payload.get("content", []):
             if block.get("type") == "text":
                 reply.text += block.get("text", "")
@@ -201,7 +218,9 @@ class OpenAICompatibleAgent:
             message = payload["choices"][0]["message"]
         except (KeyError, IndexError, TypeError):
             raise AgentError("the agent's answer had no message") from None
-        reply = AgentReply(text=message.get("content") or "", raw_message=message)
+        usage = payload.get("usage")
+        tokens = _usage_tokens(usage, "total_tokens") or _usage_tokens(usage, "prompt_tokens", "completion_tokens")
+        reply = AgentReply(text=message.get("content") or "", raw_message=message, tokens=tokens)
         for call in message.get("tool_calls") or []:
             function = call.get("function", {})
             try:

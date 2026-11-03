@@ -6,28 +6,29 @@ that isn't on the list doesn't exist for the agent; the session loop answers
 such a call with a ``refused`` event. No tool runs a model, runs a shell,
 reaches the network, or changes settings.
 
-File rules live in ``files.py`` and review state in ``review.py``, owned by
-another part; this module calls them through the contract's signatures, with
-``stand_ins`` filling in until they land.
+File rules live in ``files.py`` and review state in ``review.py``.
+
+An ``app_edit`` proposal carries only structured ops from ``APP_EDIT_OPS``,
+each argument checked here as plain data before a proposal exists: values
+must be literals (``ast.literal_eval``, no names and no calls), identifiers
+must be Python identifiers that aren't keywords, and everything else is a
+choice from a fixed list. The page applies the ops through the user's own
+edit routes and never applies text as source. Free-form Python reaches a file
+only through ``propose_file_write``, which is approved and reviewed.
 """
 
 from __future__ import annotations
 
+import ast
 import hashlib
+import keyword
 import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-# The real modules, when the files part has landed; the stand-ins until
-# then. ``review`` is re-exported for the accept route.
-try:
-    from app.services.assistant import files, review  # noqa: F401
-except ImportError:  # pragma: no cover - depends on the branch state
-    from app.services.assistant import stand_ins as files  # type: ignore[no-redef]
-    from app.services.assistant import stand_ins as review  # type: ignore[no-redef]  # noqa: F401
-
-PathRefused = getattr(files, "PathRefused", Exception)
+from app.services.assistant import files, review  # noqa: F401  (review is re-exported for the accept route)
+from app.services.assistant.files import PathRefused
 
 TOOL_ALLOWLIST: tuple[str, ...] = (
     "read_open_model",
@@ -79,7 +80,17 @@ TOOL_DEFINITIONS: list[dict] = [
     },
     {
         "name": "propose_app_edit",
-        "description": "Propose a structured edit to the open model for the user to accept, as a list of ops such as update_param or rename_node.",
+        "description": (
+            "Propose a structured edit to the open model for the user to accept, as a list of ops. "
+            "Allowed ops and their args: "
+            "update_param {var_name, param_name, new_value, context: mechanism|function, function_class?}; "
+            "rename_node {var_name, new_name}; "
+            "add_port {var_name, port_kind: input|output, new_name}; "
+            "remove_port {var_name, port_kind, port_name}; "
+            "rename_port {var_name, port_kind, old_name, new_name}. "
+            "new_value must be a plain literal (number, string, list, dict, True/False/None): no names, no calls. "
+            "To change code freely, use propose_file_write on the open file instead."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -165,17 +176,171 @@ def read_docs(ctx: ToolContext, args: dict) -> dict:
 def propose_app_edit(ctx: ToolContext, args: dict) -> dict:
     if ctx.settings["autonomy"] == "answer":
         raise ToolRefused("autonomy is 'answer only'; the assistant may not propose edits")
-    summary = _need_str(args, "summary")
+    summary = _need_str(args, "summary")[:MAX_NAME_CHARS]
     ops = args.get("ops")
-    if not isinstance(ops, list) or not ops or not all(
-        isinstance(op, dict) and isinstance(op.get("op"), str) and isinstance(op.get("args"), dict) for op in ops
-    ):
+    if not isinstance(ops, list) or not ops:
         raise ToolRefused("ops must be a non-empty list of {op, args}")
+    if len(ops) > MAX_OPS:
+        raise ToolRefused(f"at most {MAX_OPS} ops in one proposal")
+    checked = [check_app_edit_op(op) for op in ops]
     source = ctx.context.get("source") or ""
+    # ``after`` is a description of the ops, for the card. It is never source,
+    # and the page never applies it as such.
     proposal = ctx.session.add_proposal(
-        kind="app_edit", summary=summary, base_hash=sha256_text(source), ops=ops, path=None, before=None, after=None,
+        kind="app_edit", summary=summary, base_hash=sha256_text(source), ops=checked, path=ctx.context.get("file_path"),
+        before=None, after="\n".join(describe_op(op) for op in checked),
     )
     return {"proposal_id": proposal["id"], "state": proposal["state"]}
+
+
+# ── structured ops: the allowlist and its checks ─────────────────────────
+
+MAX_OPS = 20
+MAX_NAME_CHARS = 200
+MAX_VALUE_CHARS = 4000
+MAX_VALUE_ITEMS = 1000
+
+#: ``op -> (required args, optional args)``. Anything else is refused.
+APP_EDIT_OPS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+    "update_param": (("var_name", "param_name", "new_value"), ("context", "function_class", "is_default")),
+    "rename_node": (("var_name", "new_name"), ()),
+    "add_port": (("var_name", "port_kind", "new_name"), ()),
+    "remove_port": (("var_name", "port_kind", "port_name"), ()),
+    "rename_port": (("var_name", "port_kind", "old_name", "new_name"), ()),
+}
+
+_PORT_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_\-]*$")
+_LITERAL_NODES = (ast.Expression, ast.Constant, ast.List, ast.Tuple, ast.Dict, ast.Set, ast.UnaryOp, ast.USub, ast.UAdd, ast.Load)
+_LITERAL_CONSTANTS = (int, float, complex, str, bool, type(None))
+
+
+def check_app_edit_op(op: Any) -> dict:
+    """The op with every argument checked and put in canonical form, or
+    ``ToolRefused``. The result is what the proposal carries and the page sends."""
+    if not isinstance(op, dict) or not isinstance(op.get("op"), str) or not isinstance(op.get("args"), dict):
+        raise ToolRefused("each op must be {op, args}")
+    name = op["op"]
+    if name not in APP_EDIT_OPS:
+        raise ToolRefused(f"op {name!r} isn't one of the structured edits ({', '.join(APP_EDIT_OPS)}); free-form changes go through propose_file_write")
+    required, optional = APP_EDIT_OPS[name]
+    args = op["args"]
+    unknown = set(args) - set(required) - set(optional)
+    if unknown:
+        raise ToolRefused(f"{name}: unknown argument {sorted(unknown)[0]!r}")
+    missing = [a for a in required if a not in args]
+    if missing:
+        raise ToolRefused(f"{name}: missing argument {missing[0]!r}")
+    out: dict[str, Any] = {}
+    for key, value in args.items():
+        out[key] = _check_arg(name, key, value)
+    return {"op": name, "args": out}
+
+
+def _check_arg(op: str, key: str, value: Any) -> Any:
+    if key in ("var_name", "param_name", "function_class"):
+        return _identifier(value, f"{op}.{key}")
+    if key == "new_value":
+        return plain_literal(value)
+    if key == "context":
+        if value not in ("mechanism", "function"):
+            raise ToolRefused(f"{op}.context must be 'mechanism' or 'function'")
+        return value
+    if key == "port_kind":
+        if value not in ("input", "output"):
+            raise ToolRefused(f"{op}.port_kind must be 'input' or 'output'")
+        return value
+    if key == "is_default":
+        if not isinstance(value, bool):
+            raise ToolRefused(f"{op}.is_default must be true or false")
+        return value
+    if op == "rename_node" and key == "new_name":
+        # A display name, written by the route as a quoted string literal (repr).
+        if not isinstance(value, str) or not value.strip() or len(value) > MAX_NAME_CHARS or not value.isprintable():
+            raise ToolRefused("rename_node.new_name must be a short printable name")
+        return value.strip()
+    if key in ("new_name", "old_name", "port_name"):
+        if not isinstance(value, str) or len(value) > MAX_NAME_CHARS or not _PORT_NAME.match(value):
+            raise ToolRefused(f"{op}.{key} must be a port name: letters, digits, underscores or hyphens")
+        return value
+    raise ToolRefused(f"{op}: unknown argument {key!r}")  # pragma: no cover - keys are from the allowlist
+
+
+def _identifier(value: Any, what: str) -> str:
+    if (
+        not isinstance(value, str) or not value or len(value) > MAX_NAME_CHARS
+        or not value.isidentifier() or keyword.iskeyword(value) or value.startswith("__")
+    ):
+        raise ToolRefused(f"{what} must be a Python identifier that isn't a keyword")
+    return value
+
+
+def plain_literal(value: Any) -> str:
+    """``value`` as the text of a Python literal, or ``ToolRefused``.
+
+    A string is parsed as an expression that may hold only constants and
+    containers of them (no names, no calls, no operators but a sign), then
+    rebuilt with ``repr`` so a comment, a newline or an unbalanced quote in
+    it can't reach the file. A number, bool, list or dict from JSON is
+    checked the same way. The result is what ``file_writer`` writes.
+    """
+    if isinstance(value, str):
+        if not value.strip():
+            raise ToolRefused("new_value can't be empty")
+        if len(value) > MAX_VALUE_CHARS:
+            raise ToolRefused(f"new_value is longer than {MAX_VALUE_CHARS} characters")
+        try:
+            tree = ast.parse(value.strip(), mode="eval")
+        except (SyntaxError, ValueError):
+            raise ToolRefused("new_value must be a plain literal: a number, a string, a list, a dict, True, False or None") from None
+        for node in ast.walk(tree):
+            if not isinstance(node, _LITERAL_NODES):
+                raise ToolRefused(f"new_value must be a plain literal, not {type(node).__name__.lower()} (no names, no calls)")
+            if isinstance(node, ast.Constant) and not isinstance(node.value, _LITERAL_CONSTANTS):
+                raise ToolRefused("new_value must be a plain literal")
+        try:
+            literal = ast.literal_eval(tree)
+        except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+            raise ToolRefused("new_value must be a plain literal") from None
+    else:
+        literal = value
+    _check_plain_data(literal, 0)
+    text = repr(literal)
+    if len(text) > MAX_VALUE_CHARS:
+        raise ToolRefused(f"new_value is longer than {MAX_VALUE_CHARS} characters")
+    return text
+
+
+def _check_plain_data(value: Any, depth: int, seen: list | None = None) -> None:
+    seen = [0] if seen is None else seen
+    seen[0] += 1
+    if depth > 8 or seen[0] > MAX_VALUE_ITEMS:
+        raise ToolRefused("new_value is too deep or too long")
+    if isinstance(value, _LITERAL_CONSTANTS):
+        return
+    if isinstance(value, (list, tuple, set, frozenset)):
+        for item in value:
+            _check_plain_data(item, depth + 1, seen)
+        return
+    if isinstance(value, dict):
+        for k, v in value.items():
+            _check_plain_data(k, depth + 1, seen)
+            _check_plain_data(v, depth + 1, seen)
+        return
+    raise ToolRefused(f"new_value holds a {type(value).__name__}, which isn't plain data")
+
+
+def describe_op(op: dict) -> str:
+    a = op["args"]
+    if op["op"] == "update_param":
+        where = f"{a['var_name']}.function" if a.get("context") == "function" else a["var_name"]
+        return f"{where}.{a['param_name']} = {a['new_value']}" if not a.get("is_default") else f"{where}.{a['param_name']}: back to the default"
+    if op["op"] == "rename_node":
+        return f"rename {a['var_name']} to {a['new_name']!r}"
+    if op["op"] == "add_port":
+        return f"{a['var_name']}: add {a['port_kind']} port {a['new_name']}"
+    if op["op"] == "remove_port":
+        return f"{a['var_name']}: remove {a['port_kind']} port {a['port_name']}"
+    return f"{a['var_name']}: rename {a['port_kind']} port {a['old_name']} to {a['new_name']}"
 
 
 def list_files(ctx: ToolContext, args: dict) -> dict:

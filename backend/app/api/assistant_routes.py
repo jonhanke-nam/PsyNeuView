@@ -1,8 +1,7 @@
 """The AI assistant's routes (#179): settings, key, sessions, proposals, log.
 
-Every route here accepts requests only from the app's own page: a request
-whose ``Origin`` is another site is refused, and in the ``local`` and
-``mac_app`` modes so is a ``Host`` that isn't this machine. With the setting
+Every route here accepts requests only from the app's own page, through the
+``same_site`` dependency shared with the review routes. With the setting
 off, every route but settings and key answers that the assistant is off, and
 nothing is sent anywhere. Outside the deployment modes with the ``assistant``
 capability the same answer comes with ``reason: "unavailable"``.
@@ -13,38 +12,18 @@ from __future__ import annotations
 import hashlib
 import logging
 from typing import Any
-from urllib.parse import urlparse
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from app.services import deployment_mode
-from app.services.assistant import agents, keys
+from app.services.assistant import agents, files, keys
 from app.services.assistant import log as assistant_log
 from app.services.assistant import session as sessions
 from app.services.assistant import settings as assistant_settings
-from app.services.assistant import tools as assistant_tools
+from app.services.assistant.same_site import same_site
 
 logger = logging.getLogger(__name__)
-
-_LOCAL_HOSTS = {"127.0.0.1", "::1", "localhost", "[::1]"}
-
-
-def same_site(request: Request) -> None:
-    """Assistant routes accept requests only from the app's own page."""
-    origin = request.headers.get("origin")
-    host = request.headers.get("host", "")
-    host_name = urlparse(f"//{host}").hostname or host
-    if origin:
-        parsed = urlparse(origin)
-        origin_host = parsed.hostname or ""
-        own_hosts = {host_name}
-        if host_name in _LOCAL_HOSTS:
-            own_hosts |= _LOCAL_HOSTS
-        if parsed.scheme not in ("http", "https") or origin_host not in own_hosts:
-            raise HTTPException(status_code=403, detail="assistant routes accept requests only from the app's own page")
-    if deployment_mode.current_mode() in (deployment_mode.LOCAL, deployment_mode.MAC_APP) and host_name not in _LOCAL_HOSTS:
-        raise HTTPException(status_code=403, detail="assistant routes accept requests only from the app's own page")
 
 
 def available() -> None:
@@ -175,17 +154,16 @@ async def accept_proposal(proposal_id: str, body: dict = Body(default={}), setti
         session.set_proposal_state(proposal_id, "stale")
         raise HTTPException(status_code=409, detail={"reason": "stale", "message": "the source changed since the assistant looked; it has to look again"})
     if proposal["kind"] == "file_write":
-        files = assistant_tools.files
-        review = assistant_tools.review
         try:
+            # Checks the path again, keeps the previous version, and marks
+            # the result unreviewed so it doesn't run until approved.
             written = files.write_model_file(proposal["path"], proposal["after"], base_hash=proposal["base_hash"])
-        except assistant_tools.PathRefused as e:
-            session.set_proposal_state(proposal_id, "stale")
-            raise HTTPException(status_code=409, detail={"reason": "stale", "message": str(e)})
+        except files.PathRefused as e:
+            stale = e.reason in ("stale", "swapped")
+            session.set_proposal_state(proposal_id, "stale" if stale else "rejected")
+            raise HTTPException(status_code=409, detail={"reason": "stale" if stale else e.reason, "message": str(e)})
         except OSError as e:
             raise HTTPException(status_code=500, detail=f"couldn't write the file: {e.strerror or e}")
-        if proposal["freeform_python"]:
-            review.mark_unreviewed(str(written), proposal["after"])
         assistant_log.record(
             session_id=session.id, tool="accept_file_write", args={"path": str(written)}, allowed=True, ok=True,
             summary=proposal["summary"], approved_by="user", keep_log=settings["keep_log"],

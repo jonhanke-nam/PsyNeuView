@@ -20,6 +20,7 @@ from typing import Any
 
 from app.services.app_config import app_config_path
 from app.services.app_settings import _read_config, _write_config_atomic
+from app.services.assistant import files as assistant_files
 
 _KEY = "assistant"
 
@@ -32,6 +33,8 @@ VISIBILITY_KEYS = ("model", "selection", "errors", "results", "files")
 #: The highest limits a session may be given, whatever the file says.
 MAX_TOOL_CALLS = 200
 MAX_MINUTES = 120
+MAX_TOKENS = 10_000_000
+LIMIT_KEYS = ("tool_calls", "minutes", "max_tokens")
 
 DEFAULTS: dict[str, Any] = {
     "enabled": False,
@@ -40,7 +43,9 @@ DEFAULTS: dict[str, Any] = {
     "autonomy": "suggest",
     "saving": "always_ask",
     "visibility": {"model": True, "selection": True, "errors": True, "results": False, "files": False},
-    "limits": {"tool_calls": 25, "minutes": 10},
+    # max_tokens: the tokens the agent's service reports, input and output,
+    # summed over the session; the turn ends with ``done: limit`` when reached.
+    "limits": {"tool_calls": 25, "minutes": 10, "max_tokens": 100_000},
     "keep_log": True,
 }
 
@@ -118,7 +123,7 @@ def permission_raises(old: dict, new: dict) -> list[str]:
             raised.append(f"allowing folder {folder['path']} ({folder['access']})")
         elif before == "read" and folder["access"] == "read_write":
             raised.append(f"writing in folder {folder['path']}")
-    for key in ("tool_calls", "minutes"):
+    for key in LIMIT_KEYS:
         if new["limits"][key] > old["limits"][key]:
             raised.append(f"limit {key} from {old['limits'][key]} to {new['limits'][key]}")
     return raised
@@ -204,9 +209,9 @@ def _validate(doc: dict) -> dict:
         out["visibility"][key] = value
 
     limits = doc.get("limits", {})
-    if not isinstance(limits, dict) or set(limits) - {"tool_calls", "minutes"}:
-        raise SettingsError("limits keys are tool_calls and minutes")
-    for key, cap in (("tool_calls", MAX_TOOL_CALLS), ("minutes", MAX_MINUTES)):
+    if not isinstance(limits, dict) or set(limits) - set(LIMIT_KEYS):
+        raise SettingsError(f"limits keys are {', '.join(LIMIT_KEYS)}")
+    for key, cap in (("tool_calls", MAX_TOOL_CALLS), ("minutes", MAX_MINUTES), ("max_tokens", MAX_TOKENS)):
         value = limits.get(key, DEFAULTS["limits"][key])
         if not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= cap:
             raise SettingsError(f"limits.{key} must be a whole number from 1 to {cap}")
@@ -219,27 +224,12 @@ def _validate(doc: dict) -> dict:
 
 
 def _check_folder_allowed(path: str) -> None:
-    """Folder designation rules are owned by ``files.py``; use its check when
-    it is there, and a minimal one otherwise."""
+    """Folder designation rules are ``files.validate_folder``'s: home itself,
+    system, app and install folders and hidden folders are refused."""
     try:
-        from app.services.assistant import files  # noqa: WPS433
-
-        checker = getattr(files, "check_folder_designation", None)
-    except ImportError:
-        checker = None
-    if checker is not None:
-        try:
-            checker(path)
-        except Exception as e:  # the files module's own refusal type
-            raise SettingsError(str(e)) from e
-        return
-    expanded = Path(path).expanduser()
-    if not expanded.is_absolute():
-        raise SettingsError(f"folder must be an absolute path: {path}")
-    resolved = expanded.resolve()
-    home = Path.home().resolve()
-    if resolved in (home, Path("/")) or any(part.startswith(".") for part in resolved.parts):
-        raise SettingsError(f"folder can't be designated: {path}")
+        assistant_files.validate_folder(path)
+    except assistant_files.PathRefused as e:
+        raise SettingsError(str(e)) from e
 
 
 def _normalize(stored: dict) -> dict:
@@ -260,3 +250,8 @@ def _normalize(stored: dict) -> dict:
         except SettingsError:
             continue
     return out
+
+
+# ``files.py`` asks here for the designated folders, so the one place they
+# are stored is the one place they are read from.
+assistant_files.set_folders_provider(lambda: get_settings()["folders"])

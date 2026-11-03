@@ -1,7 +1,8 @@
 """Assistant sessions: the loop that talks to the agent and runs its tools (#179).
 
 A turn runs in a background thread and never blocks the server. The page
-polls events. Limits on tool calls and time are enforced here, in the loop,
+polls events. Limits on tool calls, time and tokens (the spending the
+service reports, summed over the session) are enforced here, in the loop,
 not by anything said to the agent; Stop ends the turn at the next step, and
 a turn already waiting on the agent is discarded when it comes back.
 
@@ -52,6 +53,8 @@ class Session:
         self._thread: threading.Thread | None = None
         self._running = False
         self.turn_id: str | None = None
+        #: Tokens the agent's service has reported for this session so far.
+        self.tokens_used = 0
 
     # ── events ───────────────────────────────────────────────────────
 
@@ -67,7 +70,7 @@ class Session:
         with self._lock:
             events = [e for e in self._events if e["seq"] > after]
             next_seq = self._events[-1]["seq"] if self._events else after
-            return {"events": events, "next": max(after, next_seq), "running": self._running}
+            return {"events": events, "next": max(after, next_seq), "running": self._running, "tokens_used": self.tokens_used}
 
     @property
     def running(self) -> bool:
@@ -131,6 +134,7 @@ class Session:
         reason = "finished"
         deadline = time.monotonic() + settings["limits"]["minutes"] * 60
         calls_left = settings["limits"]["tool_calls"]
+        max_tokens = settings["limits"].get("max_tokens") or 0
         try:
             while True:
                 if self._stop.is_set():
@@ -138,8 +142,14 @@ class Session:
                     break
                 if time.monotonic() > deadline:
                     reason = "limit"
+                    self.emit("refused", tool="", reason="the session's time limit is reached")
+                    break
+                if max_tokens and self.tokens_used >= max_tokens:
+                    reason = "limit"
+                    self.emit("refused", tool="", reason=f"the session's spending limit is reached ({self.tokens_used} of {max_tokens} tokens)")
                     break
                 reply = agent.reply(system=SYSTEM_PROMPT, history=list(self._history), tools=assistant_tools.TOOL_DEFINITIONS)
+                self.tokens_used += max(0, int(getattr(reply, "tokens", 0) or 0))
                 if self._stop.is_set():
                     reason = "stopped"
                     break

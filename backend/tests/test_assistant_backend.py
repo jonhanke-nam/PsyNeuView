@@ -100,7 +100,7 @@ def test_off_by_default(client):
     s = client.get("/api/assistant/settings").json()
     assert s["enabled"] is False and s["agent"]["type"] == "none" and s["folders"] == []
     assert s["autonomy"] == "suggest" and s["visibility"]["files"] is False
-    assert s["limits"] == {"tool_calls": 25, "minutes": 10}
+    assert s["limits"] == {"tool_calls": 25, "minutes": 10, "max_tokens": 100_000}
     for method, path in [("post", "/api/assistant/sessions"), ("get", "/api/assistant/sessions/x/events"),
                          ("post", "/api/assistant/sessions/x/stop"), ("post", "/api/assistant/proposals/x/accept")]:
         r = getattr(client, method)(path)
@@ -156,7 +156,7 @@ def test_same_site_check(tmp_path):
     try:
         other_site = TestClient(app, base_url="http://127.0.0.1")
         assert other_site.get("/api/assistant/settings", headers={"origin": "https://evil.example"}).status_code == 403
-        assert other_site.get("/api/assistant/settings", headers={"origin": "http://localhost:5173"}).status_code == 200
+        assert other_site.get("/api/assistant/settings", headers={"origin": "http://127.0.0.1"}).status_code == 200
         wrong_host = TestClient(app, base_url="http://psyneuview.example.com")
         assert wrong_host.get("/api/assistant/settings").status_code == 403
     finally:
@@ -285,7 +285,7 @@ def test_visibility_filter(client, tmp_path, fake):
 
 def test_stale_app_edit_proposal(client, tmp_path, fake):
     turn_on(client, tmp_path)
-    _, events = run_turn(client, fake, [("", [("propose_app_edit", {"summary": "Raise gain", "ops": [{"op": "update_param", "args": {"gain": 2}}]})])],
+    _, events = run_turn(client, fake, [("", [("propose_app_edit", {"summary": "Raise gain", "ops": [{"op": "update_param", "args": {"var_name": "a", "param_name": "gain", "new_value": "2"}}]})])],
                          context={"source": "v1"})
     proposal = [e for e in events if e["type"] == "proposal"][0]["proposal"]
     assert proposal["kind"] == "app_edit" and proposal["base_hash"] == sha("v1") and proposal["state"] == "pending"
@@ -317,11 +317,11 @@ def test_file_write_accept_keeps_previous_and_marks_unreviewed(client, tmp_path,
     r = client.post(f"/api/assistant/proposals/{proposal['id']}/accept", json={"current_hash": proposal["base_hash"]})
     assert r.status_code == 200 and r.json()["state"] == "accepted"
     assert target.read_text() == new_text
-    assert any(p.name.endswith(".assistant-previous") for p in folder.iterdir())
-    from app.services.assistant import tools as assistant_tools
+    from app.services.assistant import files as assistant_files
+    from app.services.assistant import review
 
-    assert assistant_tools.review.is_runnable(str(target), new_text) is False
-    assert assistant_tools.review.is_runnable(str(target), "old = 1\n") is True
+    assert any(v["name"].endswith(".bak") for v in assistant_files.previous_versions(str(target)))
+    assert review.is_tracked(str(target)) and review.is_runnable(str(target), new_text) is False
     log = client.get("/api/assistant/log").json()["entries"]
     assert log[-1]["tool"] == "accept_file_write" and log[-1]["approved_by"] == "user"
     assert new_text not in json.dumps(log)
@@ -329,7 +329,7 @@ def test_file_write_accept_keeps_previous_and_marks_unreviewed(client, tmp_path,
 
 def test_reject_and_no_accept_tool(client, tmp_path, fake):
     turn_on(client, tmp_path)
-    _, events = run_turn(client, fake, [("", [("propose_app_edit", {"summary": "s", "ops": [{"op": "x", "args": {}}]})])])
+    _, events = run_turn(client, fake, [("", [("propose_app_edit", {"summary": "s", "ops": [{"op": "rename_node", "args": {"var_name": "a", "new_name": "b"}}]})])])
     pid = [e for e in events if e["type"] == "proposal"][0]["proposal"]["id"]
     assert client.post(f"/api/assistant/proposals/{pid}/reject").json()["state"] == "rejected"
     from app.services.assistant.tools import TOOL_ALLOWLIST
