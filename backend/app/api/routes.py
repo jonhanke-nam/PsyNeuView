@@ -1618,6 +1618,16 @@ def preview_source_endpoint(request: PreviewSourceRequest):
     )
 
 
+def _refuse_unreviewed_text(file_path: str, source: str) -> None:
+    """A save body that is, byte for byte, assistant-written text nobody has
+    approved (#179) is written, as every save is, but not executed: the path
+    is tracked, so a copy under a new name needs the same review as the
+    original, and the page gets the 409 with the approve route."""
+    if assistant_review.is_unreviewed_content(source):
+        assistant_review.mark_unreviewed(file_path, source)
+        raise UnreviewedAssistantCode(file_path)
+
+
 @router.post("/model/save-source", response_model=LoadModelResponse)
 def save_source_endpoint(request: SaveSourceRequest):
     """Save edited source from the code editor, then re-introspect."""
@@ -1658,6 +1668,7 @@ def save_source_endpoint(request: SaveSourceRequest):
             )
 
     save_source(request.file_path, request.source)
+    _refuse_unreviewed_text(request.file_path, request.source)
     # The buffer and the file now agree. The page stops using the preview
     # copy once this answers, but a show_graph, Run or Learn sent before then
     # still names it (an undo during an autosave, #160). Deleting it made
@@ -2383,6 +2394,7 @@ def save_project(request: SaveProjectRequest):
         raise HTTPException(status_code=404, detail=f"File not found: {working}")
 
     save_source(request.file_path, request.source)
+    _refuse_unreviewed_text(request.file_path, request.source)
 
     # Preserve created/description/name from the bundle's prior manifest.
     prior = bundle.working_manifest(request.file_path) or {}

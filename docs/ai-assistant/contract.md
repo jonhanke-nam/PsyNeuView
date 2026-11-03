@@ -199,11 +199,14 @@ def require_runnable(path: str) -> None: ...  # raises UnreviewedAssistantCode
 `run_in_sandbox` and the in-process importers behind `/model/load`, run,
 learn, show-graph, export, the file watcher's reload, autosave's reload,
 undo and redo. A route that would execute unreviewed content answers 409
-with `detail: {"reason": "assistant_code_unreviewed", "path", "message"}`.
-`/model/save-source` writes first and then answers that 409, so the page
-treats the save as done and offers the review. Imports of a bundle or an
-MDF file that carry unreviewed content, byte for byte, are refused the same
-way.
+with `{"detail": <message>, "reason": "assistant_code_unreviewed", "path",
+"approve": {...}}` (top level, from the app's exception handler; the page
+reads `reason` from either the top level or under `detail`).
+`/model/save-source` and `/model/save-project` write first and then answer
+that 409, so the page treats the save as done and offers the review. A save
+body, a bundle or an MDF upload that is, byte for byte, unreviewed
+assistant-written content is tracked under its new path and refused the
+same way, so a copy under a new name needs the same review as the original.
 
 The state is `~/.psyneuview/assistant-review.json`, by real path and
 content hash. Tests and a second instance redirect it with

@@ -279,3 +279,21 @@ def test_open_proposal_user_only(client, fake, model):
     assert r.status_code == 200 and r.json()["state"] == "accepted"
     log = client.get("/api/assistant/log").json()["entries"]
     assert log[-1]["tool"] == "accept_open_file" and log[-1]["approved_by"] == "user"
+
+
+def test_unreviewed_text_saved_under_a_new_name_is_still_unreviewed(client, model):
+    """The page's own save body: assistant-written text nobody approved,
+    saved to a path the assistant never wrote. Written, not run, and the new
+    path is tracked, so it needs the same review as the original."""
+    from app.services.assistant import review
+
+    text = "from pathlib import Path\n" + f"Path({str(model['marker'])!r}).write_text('ran')\n" + "import psyneulink as pnl\n"
+    review.mark_unreviewed(str(model["folder"] / "assistant_wrote.py"), text)
+    copy = model["folder"] / "my_copy.py"
+    copy.write_text("x = 1\n")
+    r = client.post("/api/model/save-source", json={"file_path": str(copy), "source": text})
+    assert r.status_code == 409 and r.json()["reason"] == "assistant_code_unreviewed"
+    assert copy.read_text() == text and not model["marker"].exists()
+    assert review.is_tracked(str(copy))
+    assert client.post("/api/model/load", json={"file_path": str(copy)}).status_code == 409
+    assert not model["marker"].exists()

@@ -256,6 +256,8 @@ test.describe("AI assistant, for real (#179)", { tag: "@ci" }, () => {
     await page.getByTestId("setting-assistant-visibility-files").click();
     await allowIfAsked(page);
     await expect(page.getByTestId("setting-assistant-visibility-files")).toBeChecked();
+    // Limits are folded by default; the spending limit is there with its default.
+    await page.getByTestId("settings-group-assistant-limits").getByRole("button").first().click();
     await expect(page.getByTestId("setting-assistant-limit-max-tokens")).toHaveValue("100000");
     await shot(page, "10-settings-configured");
 
