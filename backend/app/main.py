@@ -209,7 +209,11 @@ async def _assistant_code_unreviewed(request, exc: assistant_review.UnreviewedAs
     show_graph, export, import."""
     return JSONResponse(status_code=409, content={
         "detail": str(exc), "reason": exc.reason, "path": exc.path,
-        "approve": {"method": "POST", "url": "/api/assistant/review/approve", "body": {"path": exc.path}},
+        # The page asks /status for the content and its hash, shows it, and
+        # approves exactly that hash.
+        "approve": {"method": "POST", "url": "/api/assistant/review/approve",
+                    "body": {"path": exc.path, "content_hash": "<sha256 of the content shown>"},
+                    "status": {"method": "POST", "url": "/api/assistant/review/status", "body": {"path": exc.path}}},
     })
 
 @app.exception_handler(Exception)

@@ -17,7 +17,15 @@ from app.services import executor, introspector, sandbox
 from app.services.assistant import review
 from app.services.assistant.review import REASON, UnreviewedAssistantCode
 
-client = TestClient(app)
+# The page's own requests: a browser sends the page's Origin, and the server
+# is reached on this machine.
+client = TestClient(app, base_url="http://127.0.0.1:8000", headers={"origin": "http://127.0.0.1:8000"})
+
+
+def approve_current(path: str):
+    """Approve what is on disk now, the way the page does: ask, then approve that hash."""
+    shown = client.post("/api/assistant/review/status", json={"path": path}).json()
+    return client.post("/api/assistant/review/approve", json={"path": path, "content_hash": shown["content_hash"]})
 
 
 def marker_model(marker) -> str:
@@ -111,9 +119,12 @@ def test_inprocess_and_sandbox_entry_points_refuse(state):
 def test_approve_allows_then_edit_blocks_again(state):
     p = str(state["model"])
     resp = client.post("/api/assistant/review/status", json={"path": p})
-    assert resp.json() == {"path": p, "tracked": True, "runnable": False}
+    shown = resp.json()
+    assert shown["tracked"] is True and shown["runnable"] is False
+    assert shown["content"] == state["model"].read_text()
+    assert shown["content_hash"] == review.content_hash(shown["content"])
 
-    resp = client.post("/api/assistant/review/approve", json={"path": p})
+    resp = client.post("/api/assistant/review/approve", json={"path": p, "content_hash": shown["content_hash"]})
     assert resp.status_code == 200 and resp.json()["runnable"] is True
     resp = client.post("/api/model/load", json={"file_path": p})
     assert resp.status_code == 200, resp.text
@@ -128,7 +139,7 @@ def test_approve_allows_then_edit_blocks_again(state):
     assert review.status(p) == {"tracked": True, "runnable": False}
 
     # Approving again, after looking, allows the edited content.
-    client.post("/api/assistant/review/approve", json={"path": p})
+    approve_current(p)
     assert client.post("/api/model/load", json={"file_path": p}).status_code == 200
 
 
@@ -136,7 +147,7 @@ def test_state_persists_across_restart(state):
     p = str(state["model"])
     review._cache = None  # as a fresh process would start
     assert review.is_runnable(p, state["model"].read_text()) is False
-    client.post("/api/assistant/review/approve", json={"path": p})
+    approve_current(p)
     review._cache = None
     assert review.is_runnable(p, state["model"].read_text()) is True
 
@@ -150,7 +161,8 @@ def test_users_own_file_loads_as_before(state):
     assert resp.status_code == 200, resp.text
     assert marker.read_text() == "ran"
     # Approving a file the assistant never wrote changes nothing.
-    assert client.post("/api/assistant/review/approve", json={"path": str(own)}).json()["tracked"] is False
+    resp = client.post("/api/assistant/review/approve", json={"path": str(own), "content_hash": "anything"})
+    assert resp.json()["tracked"] is False
 
 
 def test_no_state_file_means_no_cost_and_no_tracking(tmp_path, monkeypatch):
@@ -185,3 +197,60 @@ def test_mdf_import_of_unreviewed_content_refused(state):
     assert resp.status_code == 409 and resp.json()["reason"] == REASON
     review.mark_reviewed(str(mdf), text)
     assert not review.is_unreviewed_content(text)
+
+
+def test_approve_with_stale_hash_leaves_it_unrunnable(state):
+    """The file changed between being shown and being approved."""
+    p = str(state["model"])
+    shown = client.post("/api/assistant/review/status", json={"path": p}).json()
+    state["model"].write_text(state["model"].read_text() + "# changed after viewing\n")
+    resp = client.post("/api/assistant/review/approve", json={"path": p, "content_hash": shown["content_hash"]})
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["reason"] == "assistant_code_changed"
+    assert resp.json()["content_hash"] == review.content_hash(state["model"].read_text())
+    assert review.status(p) == {"tracked": True, "runnable": False}
+    assert client.post("/api/model/load", json={"file_path": p}).status_code == 409
+    assert not state["marker"].exists()
+    # A made-up or empty hash is no better.
+    for bad in ["", "0" * 64, "not a hash"]:
+        assert client.post("/api/assistant/review/approve", json={"path": p, "content_hash": bad}).status_code == 409
+    assert not state["marker"].exists()
+    # The right hash, after looking again, allows it.
+    assert approve_current(p).status_code == 200
+    assert client.post("/api/model/load", json={"file_path": p}).status_code == 200
+    assert state["marker"].read_text() == "ran"
+
+
+@pytest.mark.parametrize("route", ["/api/assistant/review/status", "/api/assistant/review/approve"])
+def test_review_routes_accept_only_the_apps_own_page(state, route):
+    p = str(state["model"])
+    body = {"path": p, "content_hash": review.content_hash(state["model"].read_text())}
+    own = {"host": "127.0.0.1:8000", "origin": "http://127.0.0.1:8000"}
+    foreign_origin = {"host": "127.0.0.1:8000", "origin": "http://evil.example"}
+    foreign_host = {"host": "evil.example:8000", "origin": "http://evil.example:8000"}
+    null_origin = {"host": "127.0.0.1:8000", "origin": "null"}
+    for headers in (foreign_origin, foreign_host, null_origin):
+        resp = client.post(route, json=body, headers=headers)
+        assert resp.status_code == 403, (headers, resp.text)
+        assert resp.json()["detail"]["reason"] == "not_app_page"
+    assert review.status(p) == {"tracked": True, "runnable": False}
+    assert not state["marker"].exists()
+    resp = client.post(route, json=body, headers=own)
+    assert resp.status_code == 200, resp.text
+    # Without an Origin (not a browser page), the Host still has to be this machine.
+    no_origin = TestClient(app, base_url="http://evil.example:8000")
+    assert no_origin.post(route, json=body).status_code == 403
+    assert TestClient(app, base_url="http://localhost:8000").post(route, json=body).status_code == 200
+
+
+def test_is_own_page_rules():
+    from app.services.assistant.same_site import is_own_page
+    assert is_own_page("localhost:8000", "http://localhost:8000", "local")
+    assert is_own_page("[::1]:8000", "http://[::1]:8000", "mac_app")
+    assert is_own_page("127.0.0.1:8000", None, "local")
+    assert not is_own_page("127.0.0.1:8000", "http://localhost:8000", "local")  # same machine, different site
+    assert not is_own_page("myhost.example:8000", "http://myhost.example:8000", "local")
+    assert is_own_page("myhost.example:8000", "http://myhost.example:8000", "hosted")
+    assert not is_own_page("myhost.example:8000", "http://other.example", "hosted")
+    assert not is_own_page("", None, "local")
+    assert not is_own_page("127.0.0.1:8000", "file://", "local")
