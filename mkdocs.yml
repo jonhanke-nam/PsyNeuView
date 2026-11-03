@@ -92,4 +92,9 @@ nav:
       - Deployments (inventory): deployments.md
       - MDF versioning: mdf-versioning.md
       - CI catches: ci/catches.md
+      - AI assistant:
+          - The contract: ai-assistant/contract.md
+          - Threat model: ai-assistant/threat-model.md
+          - Containment experiment: ai-assistant/containment.md
+          - Security review: ai-assistant/security-review.md
       - Updates (2026-04-28): updates-2026-04-28.md
