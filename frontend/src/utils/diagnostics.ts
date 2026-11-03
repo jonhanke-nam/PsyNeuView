@@ -172,17 +172,9 @@ export function actionLoggingOffEntry(now: number = Date.now()): ActivityEntry {
  * launch's earlier page loads (the saver marks each page with its id). An
  * entry saved by this page is already here, so it is left out.
  */
-export function timelineEntries(
-  activity: ActivityEntry[],
-  waits: ActivityEntry[],
-  saved: SavedActivity | null,
-  page: string | null,
-  logging: boolean,
-  now: number,
-): ActivityEntry[] {
+export function timelineEntries(activity: ActivityEntry[], waits: ActivityEntry[], saved: SavedActivity | null, page: string | null): ActivityEntry[] {
   const earlier = (saved?.current ?? []).filter((e) => e.page !== page).map(({ page: _page, ...e }) => e);
-  const all = [...earlier, ...activity, ...waits];
-  return logging ? all : [actionLoggingOffEntry(now), ...all];
+  return [...earlier, ...activity, ...waits];
 }
 
 declare global {
@@ -445,10 +437,13 @@ export async function collectDiagnostics(
   const logging = actionLoggingOn();
   const activity = activityEntries();
   const waits = waitEntries(now);
+  // When action logging is off, the report says so first, before anything
+  // is read as "the user did nothing" (#177).
+  const offNote = logging ? null : actionLoggingOffEntry(now);
   const snapshot: DiagnosticsSnapshot = {
     version: DIAGNOSTICS_VERSION,
     state,
-    activity: reportEntries(logging ? activity : [actionLoggingOffEntry(now), ...activity], waits),
+    activity: [...(offNote ? [{ ...offNote, time: offNote.t }] : []), ...reportEntries(activity, waits)],
     waitsInProgress: waitsInProgress(now).map((w) => ({
       label: w.kind === "wheel" ? "Busy wheel" : w.label,
       start: new Date(w.start).toISOString(),
@@ -456,7 +451,10 @@ export async function collectDiagnostics(
       action: w.action?.text ?? null,
     })),
     actionLogging: logging,
-    timeline: timelineFrom(timelineEntries(activity, waits, saved, saver?.page ?? null, logging, now), now),
+    timeline: [
+      ...(offNote ? [{ t: offNote.t, source: "page" as const, text: offNote.text }] : []),
+      ...timelineFrom(timelineEntries(activity, waits, saved, saver?.page ?? null), now),
+    ],
     previousActivity: (saved?.previous ?? []).map(({ page: _page, ...e }) => ({ ...e, time: e.t })),
     savedActivityError: savedError,
   };

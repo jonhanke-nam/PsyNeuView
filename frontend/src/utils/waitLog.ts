@@ -14,7 +14,7 @@
  * but never its query string, and the home folder as `~`.
  */
 
-import { latestAction, scrubText, type ActivityEntry } from "./activityLog";
+import { actionLoggingOn, latestAction, scrubText, type ActivityEntry } from "./activityLog";
 
 export type WaitOutcome = "ok" | "failed" | "cancelled";
 
@@ -69,6 +69,9 @@ export function causedBy<T>(text: string, work: () => T): T {
 }
 
 function actionFor(now: number): WaitAction | null {
+  // With action logging off (#177), a wait is recorded without its cause,
+  // known or likely: the cause is an action, which the user asked not to log.
+  if (!actionLoggingOn()) return null;
   if (knownCause !== null) return { text: knownCause, certain: true };
   const latest = latestAction();
   if (!latest || now - Date.parse(latest.t) > LIKELY_ACTION_MS) return null;
