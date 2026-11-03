@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
+from app.services.assistant import review as assistant_review
 from app.services.assistant.review import UnreviewedAssistantCode, require_runnable
 from app.services.introspector import load_and_introspect
 from app.services.preview import sync_preview, write_preview
@@ -2294,6 +2295,11 @@ async def import_project(file: UploadFile = File(...)):
         counter += 1
 
     target.write_text(source)
+    if assistant_review.is_unreviewed_content(source):
+        # The bundle carried assistant-written content nobody approved (#179):
+        # saved, tracked under its new path, and not executed until approved.
+        assistant_review.mark_unreviewed(str(target), source)
+        raise UnreviewedAssistantCode(str(target))
 
     # Save layout if present
     if layout_data:
@@ -2478,6 +2484,14 @@ async def import_mdf(file: UploadFile = File(...)):
     # Persist the uploaded MDF to a temp file so modeci_mdf can read by path
     # (it auto-detects format from extension).
     import tempfile
+    try:
+        uploaded_text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        uploaded_text = ""
+    if uploaded_text and assistant_review.is_unreviewed_content(uploaded_text):
+        # Assistant-written MDF nobody approved (#179): approve the file where
+        # the assistant wrote it, then import it.
+        raise UnreviewedAssistantCode(file.filename or "upload")
     suffix = ".json" if classification.file_type is FileType.MDF_JSON else ".yaml"
     with tempfile.NamedTemporaryFile(prefix="psyneuview_mdf_", suffix=suffix, delete=False) as tf:
         tmp_path = Path(tf.name)

@@ -158,3 +158,30 @@ def test_no_state_file_means_no_cost_and_no_tracking(tmp_path, monkeypatch):
     review._cache = None
     assert review.is_tracked("/anything/at/all.py") is False
     review.require_runnable("/anything/at/all.py")  # no read, no raise
+
+
+def test_project_import_of_unreviewed_content_refused(state, tmp_path, monkeypatch):
+    """A bundle carrying unreviewed assistant-written code is saved but not run."""
+    import io
+    import zipfile
+    from app.api import routes
+    monkeypatch.setattr(routes, "get_default_save_dir", lambda: tmp_path / "imported")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("manifest.json", '{"model": {"name": "m"}, "files": {"source": "m.py"}}')
+        z.writestr("m.py", state["model"].read_text())
+    resp = client.post("/api/model/import-project", files={"file": ("m.pnlproject", buf.getvalue(), "application/zip")})
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["reason"] == REASON
+    assert not state["marker"].exists()
+
+
+def test_mdf_import_of_unreviewed_content_refused(state):
+    mdf = state["tmp"] / "Models" / "m.mdf.json"
+    text = '{"m": {"format": "ModECI MDF v0.4", "graphs": {}}}'
+    mdf.write_text(text)
+    review.mark_unreviewed(str(mdf), text)
+    resp = client.post("/api/model/import-mdf", files={"file": ("m.mdf.json", text.encode(), "application/json")})
+    assert resp.status_code == 409 and resp.json()["reason"] == REASON
+    review.mark_reviewed(str(mdf), text)
+    assert not review.is_unreviewed_content(text)

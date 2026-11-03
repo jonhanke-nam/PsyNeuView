@@ -148,6 +148,20 @@ def is_runnable(path: str, text: str) -> bool:
     return approved is not None and approved == content_hash(text)
 
 
+def is_unreviewed_content(text: str) -> bool:
+    """True if ``text`` is, byte for byte, something the assistant wrote that
+    nobody has approved (under any path). For routes that take an upload,
+    where there is no server path to look up: a copy of unreviewed content
+    doesn't become runnable by being uploaded or bundled."""
+    files = _load()["files"]
+    if not files:
+        return False
+    h = content_hash(text)
+    if any(e.get("approved") == h for e in files.values()):
+        return False
+    return any(e.get("written") == h for e in files.values())
+
+
 def status(path: str) -> dict:
     """What the page needs to show: tracked, and runnable as the file is now."""
     entry = _load()["files"].get(_key(path))
