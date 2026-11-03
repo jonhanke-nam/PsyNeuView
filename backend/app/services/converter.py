@@ -15,6 +15,7 @@ import shutil
 import tokenize
 from pathlib import Path
 
+from app.services.assistant.review import require_runnable
 from app.services.clone_manager import artifact_path
 from app.services.file_writer import write_model_source
 
@@ -202,6 +203,8 @@ def convert_to_standard_format(
     import sys
 
     path = Path(file_path)
+    # Assistant-written content runs only once reviewed (#179).
+    require_runnable(file_path)
     original_source = path.read_text()
 
     # Back up original (redirected out of tree for managed clones — #349)

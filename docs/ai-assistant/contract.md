@@ -120,7 +120,13 @@ def mark_reviewed(path: str, text: str) -> None: ...
 def is_runnable(path: str, text: str) -> bool: ...  # False only for unreviewed assistant-written content
 ```
 
-`is_runnable` must be consulted by every route that executes a model: `/model/load`, reload from the file watcher, autosave's reload, undo and redo.
+`is_runnable` must be consulted by every route that executes a model: `/model/load`, reload from the file watcher, autosave's reload, undo and redo. A route that would execute unreviewed content answers 409 with `reason: "assistant_code_unreviewed"`, `path`, and under `approve` the two calls below.
+
+### Reviewing assistant-written files
+
+- `POST /api/assistant/review/status` takes `{"path"}` and returns `{"path", "tracked", "runnable"}`; for a tracked file also `content` and `content_hash` (sha256), so the page shows exactly what an approval covers.
+- `POST /api/assistant/review/approve` takes `{"path", "content_hash"}` and approves only if the file on disk still hashes to `content_hash`. Otherwise 409 with `reason: "assistant_code_changed"` and the current `content_hash`, and the file stays unreviewed. Any later change to an approved file makes it unreviewed again.
+- Every assistant route, these included, accepts requests only from the app's own page (`same_site` dependency); anything else gets 403 with `reason: "not_app_page"`.
 
 ## Log
 
