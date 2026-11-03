@@ -127,6 +127,7 @@ my_model.add_projection(input_to_output)
 
 /** Opening the Open menu, in the activity log and as the cause of its requests (#176). */
 const OPEN_MENU_OPENED = "Open menu opened";
+const EXAMPLES_SECTION_EXPANDED = "PsyNeuLink examples expanded";
 const EXPANDED_FOLDERS_KEY = "psyneuview.loadModelDropdown.expandedFolders";
 const REFERENCE_ORDER_KEY = "psyneuview.referenceModels.order";
 
@@ -282,15 +283,13 @@ export function Toolbar() {
   const [libraryModels, setLibraryModels] = useState<LibraryModel[]>([]);
   // PsyNeuLink's own examples, live from the active source's Scripts/ (#843).
   const [pnlExamples, setPnlExamples] = useState<LibraryModel[]>([]);
-  // Per-example load status for the live-section badges (#843/#839), fetched
-  // lazily the first time the menu opens (the probe runs the whole corpus).
-  const [pnlStatus, setPnlStatus] = useState<
-    Record<
-      string,
-      { load: string; run?: string; error?: string; runError?: string; nodes?: number }
-    >
-  >({});
+  // Per-example load status for the live-section badges (#843/#839): loads,
+  // or fails. There is no run pass (#175).
+  const [pnlStatus, setPnlStatus] = useState<Record<string, { load: string; error?: string; nodes?: number }>>({});
   const pnlStatusFetched = useRef(false);
+  // What put the examples on show, for the wait log: opening the menu with
+  // the section already expanded, or expanding it (#175).
+  const pnlStatusCause = useRef(OPEN_MENU_OPENED);
   const [userModels, setUserModels] = useState<UserModel[]>([]);
   const [currentDemo, setCurrentDemo] = useState<string | null>(null);
   const [pristineSource, setPristineSource] = useState<string | null>(null);
@@ -441,6 +440,10 @@ export function Toolbar() {
   };
   const isSectionCollapsed = (id: string) => collapsedSections.has(id);
   const toggleSection = (id: string) => {
+    if (id === "examples" && collapsedSections.has(id)) {
+      recordActivity("menu", EXAMPLES_SECTION_EXPANDED);
+      pnlStatusCause.current = EXAMPLES_SECTION_EXPANDED;
+    }
     setCollapsedSections((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -623,6 +626,9 @@ export function Toolbar() {
         pnlBeforeSwitchRef.current = catalogSourcesRef.current.pnl;
         setSwitchNoteArmed(true);
         refreshPnlCatalogs();
+        // The marks belonged to the old source's examples (#175).
+        pnlStatusFetched.current = false;
+        setPnlStatus({});
       }),
     [],
   );
@@ -677,17 +683,24 @@ export function Toolbar() {
     }
   }, [dropdownOpen]);
 
-  // Lazily probe live-example load status the first time the menu opens with
-  // examples present — the probe runs the whole corpus, so don't do it on mount
-  // or on every open. Backend caches by source commit (#843/#839).
+  // Ask for the live examples' load marks only once their section is
+  // actually on show (#843/#839, #175). To answer, the server loads every
+  // example in the model runner, which can take a while; asking as soon
+  // as the menu opened spun the wheel through the first Open of every launch,
+  // for marks under a folded heading. So: the menu is open, the section is
+  // shown and unfolded — whether it was already unfolded when the menu opened
+  // or the user unfolds it now — and once per source. The server keeps the
+  // answer on disk, so a later launch has it at once.
+  const examplesOnShow = dropdownOpen && sectionVisible("examples") && !isSectionCollapsed("examples");
   useEffect(() => {
-    if (!dropdownOpen || pnlStatusFetched.current || pnlExamples.length === 0) return;
+    if (!examplesOnShow || pnlStatusFetched.current || pnlExamples.length === 0) return;
     pnlStatusFetched.current = true;
-    causedBy(OPEN_MENU_OPENED, () => fetch("/api/psyneulink-examples/status"))
+    causedBy(pnlStatusCause.current, () => fetch("/api/psyneulink-examples/status"))
       .then((r) => r.json())
       .then((data) => setPnlStatus(data.status || {}))
       .catch(() => {});
-  }, [dropdownOpen, pnlExamples.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [examplesOnShow, pnlExamples.length]);
 
   const moveReference = (from: number, to: number) => {
     setReferenceModels((prev) => {
@@ -1601,6 +1614,7 @@ export function Toolbar() {
             setDropdownOpen(!dropdownOpen);
             if (!dropdownOpen) {
               recordActivity("menu", OPEN_MENU_OPENED);
+              pnlStatusCause.current = OPEN_MENU_OPENED;
               causedBy(OPEN_MENU_OPENED, () => {
                 refreshUserModels();
                 void refreshCatalogs();
@@ -2016,29 +2030,18 @@ export function Toolbar() {
                           title={
                             status.load !== "ok"
                               ? `Fails to load: ${status.error ?? "error"}`
-                              : status.run === "ok"
-                                ? `Loads (${status.nodes} nodes) + runs`
-                                : `Loads (${status.nodes} nodes) but did not run with zero inputs: ${status.runError ?? "—"}`
+                              : `Loads (${status.nodes} nodes)`
                           }
                           style={{
                             marginLeft: "auto",
                             paddingLeft: 8,
                             fontSize: "var(--pnv-fs-11)",
                             fontWeight: 600,
-                            color:
-                              status.load !== "ok"
-                                ? "var(--pnv-danger)"
-                                : status.run === "ok"
-                                  ? "var(--pnv-success)"
-                                  : "var(--pnv-warning)",
+                            color: status.load !== "ok" ? "var(--pnv-danger)" : "var(--pnv-success)",
                             userSelect: "none",
                           }}
                         >
-                          {status.load !== "ok"
-                            ? "fails"
-                            : status.run === "ok"
-                              ? "runs"
-                              : "loads"}
+                          {status.load !== "ok" ? "fails" : "loads"}
                         </span>
                       )}
                     </button>
