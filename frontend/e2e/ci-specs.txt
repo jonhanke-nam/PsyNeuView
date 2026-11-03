@@ -1,5 +1,5 @@
-ai-assistant.spec.ts
 about-release-dates.spec.ts
+ai-assistant.spec.ts
 app-shell.spec.ts
 app-update-notice.spec.ts
 arrowheads-at-end.spec.ts
