@@ -191,6 +191,11 @@ containment rather than a better approval view.
 - **Assistant write to the file that is open.** The watcher sees a change the
   app didn't make and calls `load_and_introspect` on the server side today.
   `is_runnable` must be checked inside that callback, before any execution.
+  The watcher recognises the app's own writes by content hash
+  (`file_writer.write_model_source` calls `note_internal_write`), so if
+  `files.write_model_file` reuses that path the watcher stays quiet and the
+  page sees the new text only when it next loads; either way the load route
+  is the gate.
 - **Assistant write, then autosave.** Autosave saves the page's text, which
   the user may have edited; `is_runnable` runs on the content being saved.
 - **Structured edits through `file_writer`.** These write code the app
