@@ -6,8 +6,9 @@ this machine on 2026-11-03. The script and profile are in
 [`containment/`](containment/); nothing in the real runner was changed.
 
 **Short answer: yes, on macOS.** A model runner under `sandbox-exec` imports
-PsyNeuLink (with torch), loads and runs every end-to-end fixture and the
-bundled library models tested, with no network, no reads outside a listed
+PsyNeuLink (with torch), loads and runs every end-to-end fixture and five of
+the six bundled library models tested (the sixth calls `show_graph`, which
+needs a Graphviz child process), with no network, no reads outside a listed
 set, writes only to one scratch folder, no child processes and a clean
 environment. The cost in start-up time is within the run-to-run noise
 (2.2 to 2.7 s either way). Every escape attempt the threat model lists was
@@ -102,10 +103,48 @@ Two things the table makes plain:
 
 ## Results: bundled PsyNeuLink library models
 
-Run sandboxed only, with a 240 s limit each. Filled in from
-`containment/` results; see the pull request for the raw JSON.
+Six of the models bundled in `psyneulink/library/models`, each run with a
+240 s limit. These files run their whole experiment at module level, so
+"Load" here is the experiment, not just construction.
 
-LIBRARY_RESULTS_PLACEHOLDER
+| Model | Sandboxed | Import (s) | Load (s) | Run (s) | Wall (s) | Loaded | Ran | Escapes blocked |
+|---|---|---|---|---|---|---|---|---|
+| Cohen_Huston1994.py | yes | 2.01 | 57.06 | 0.03 | 59.61 | yes | 1/1 | 11/12 |
+| Botvinick_conflict_monitoring_model.py | yes | 2.01 | 51.77 | 0.03 | 54.26 | yes | 1/1 | 11/12 |
+| Nieuwenhuis2005Model.py | yes | 1.88 | 6.88 | 0.01 | 9.21 | yes | 1/1 | 11/12 |
+| GilzenratModel.py | yes | 2.24 | 6.51 | - | 9.16 | error | - | 11/12 |
+| MontagueDayanSejnowski96.py | yes | 1.84 | 3.42 | 0.03 | 5.77 | yes | 3/3 | 11/12 |
+| Kalanthroff_PCTC_2018.py | yes | 1.86 | 26.54 | 0.03 | 28.98 | yes | 1/1 | 11/12 |
+
+Two of them run again both ways, for the comparison:
+
+| Model | Sandboxed | Import (s) | Load (s) | Run (s) | Wall (s) | Loaded | Ran | Escapes blocked |
+|---|---|---|---|---|---|---|---|---|
+| Nieuwenhuis2005Model.py | yes | 1.97 | 7.45 | 0.02 | 9.88 | yes | 1/1 | 11/12 |
+| Nieuwenhuis2005Model.py | no | 1.9 | 6.91 | 0.01 | 9.27 | yes | 1/1 | 1/12 |
+| MontagueDayanSejnowski96.py | yes | 1.84 | 3.45 | 0.03 | 5.83 | yes | 3/3 | 11/12 |
+| MontagueDayanSejnowski96.py | no | 1.88 | 3.47 | 0.03 | 5.92 | yes | 3/3 | 1/12 |
+
+- Five of six load, run their experiment and run once more under the
+  sandbox, with every escape refused. The two long ones (Cohen-Huston at
+  57 s, Botvinick at 52 s) are the experiments themselves, not sandbox
+  overhead; the two-way comparison shows the sandbox within 0.6 s on a 9 s
+  model and 0.1 s on a 6 s model.
+- **GilzenratModel fails under the sandbox**, with
+  `ShowGraphError: Problem displaying graph for Composition-0: [Errno 1]
+  Operation not permitted`. It calls `show_graph()` at module level, which
+  starts Graphviz's `dot` as a child process, and `(deny process-fork)`
+  refuses that. This is the one PsyNeuLink feature found that needs a
+  child process. The real worker already patches `show_graph` during
+  loading (`_apply_graphics_patches`, `_suppress_show_graph_fallback` in
+  `sandbox_worker.py`), and the app renders graphs itself from the
+  introspected model, so Phase 4 can keep forking denied and treat
+  `show_graph` inside a contained run as unavailable. If a contained run
+  must render with Graphviz, the profile would need to allow forking plus
+  exec of `dot`, which is a wider boundary and should be its own decision.
+- The remaining bundled models (the EGO study, the horse-race variant) were
+  not run for lack of time; nothing suggests they differ, but they are
+  untested.
 
 ## What it took to get PsyNeuLink running inside
 
@@ -155,6 +194,8 @@ home folder.
   off in `container` and `hosted` modes until that is reviewed separately.
 - **Older macOS and Intel Macs.** Tested on one Apple-silicon Mac on
   macOS 26.7.1 only.
+- **`show_graph` and Graphviz.** Any model that renders with Graphviz at
+  module level fails under `(deny process-fork)`; see GilzenratModel above.
 - **Compiled execution modes.** PsyNeuLink's LLVM paths (`ExecutionMode.LLVM`
   and the PyTorch mode) weren't exercised; the models ran in Python mode.
   Those modes may need extra reads (for example `/private/var/folders` for
