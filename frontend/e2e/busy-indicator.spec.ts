@@ -175,7 +175,10 @@ test.describe("Busy wheel (#38)", { tag: "@ci" }, () => {
 
   test("a problem report has each wait's start and stop, and the action it came from", async ({ page }) => {
     test.setTimeout(120_000);
-    // The menu asks for the status only when the source has examples.
+    // The menu asks for the status only when the source has examples and
+    // their section is on show (#175): the shared fixture starts every
+    // section unfolded, so here the request goes out as the menu opens.
+    // open-menu-examples-probe.spec.ts covers the folded case.
     await page.route("**/api/psyneulink-examples", (route) =>
       route.fulfill({ json: { available: true, models: [{ name: "stub", label: "Stub", path: "/stub.py" }] } }),
     );
@@ -192,12 +195,14 @@ test.describe("Busy wheel (#38)", { tag: "@ci" }, () => {
       page.evaluate(() => (window as unknown as { __pnvDiagnostics: () => Promise<unknown> }).__pnvDiagnostics()) as Promise<Snap>;
     const status = "GET /api/psyneulink-examples/status";
 
-    // Clicking Open is logged, and the request it starts is reported while it runs.
+    // Clicking Open is logged, and the request it starts is reported while it
+    // runs: as background work, so it is on record without showing the wheel.
     await page.getByTestId("open-menu").click();
     await expect.poll(async () => (await snapshot()).waitsInProgress.map((w) => w.label), { timeout: 15_000 }).toContain(status);
     const during = await snapshot();
     expect(during.activity.find((e) => e.kind === "menu" && e.text === "Open menu opened")).toBeTruthy();
     expect(during.waitsInProgress.find((w) => w.label === status)?.action).toBe("Open menu opened");
+    await expect(page.getByTestId("busy-indicator")).toHaveAttribute("data-visible", "false");
 
     // Once it stops, it has both times and its cause; everything has a time, in order.
     await expect
