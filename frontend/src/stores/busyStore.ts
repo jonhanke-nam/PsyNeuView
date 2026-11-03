@@ -196,6 +196,10 @@ const BACKGROUND = [
   /^\/api\/execution-modes\b/,
   /^\/api\/settings\/pnl-freshness/,
   /^\/api\/settings\/pnl-updates/,
+  // The marks on the Open menu's PsyNeuLink Examples: the server loads and
+  // runs every example to find them, which can take a minute, and nobody is
+  // waiting for it (#175).
+  /^\/api\/psyneulink-examples\/status\b/,
   /^\/api\/settings\/install\/[^/?]+$/, // polling an install job
   /^\/api\/jobs\/[^/?]+$/, // polling a job
   /^\/rendering-defaults\.json/,
