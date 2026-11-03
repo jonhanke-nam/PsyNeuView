@@ -75,7 +75,7 @@ from app.services.settings_info import active_psyneulink_package_dir, get_psyneu
 from app.services.pnl_freshness import check as check_pnl_freshness
 from app.services.execution_modes import get_execution_modes, DEFAULT_LEARN_MODE, DEFAULT_RUN_MODE
 from app.services.install_manager import get_install_manager, InstallJob
-from app.services import branch_lookup, bundle, file_history, github_files, source_history, working_copies
+from app.services import activity_log, branch_lookup, bundle, file_history, github_files, source_history, working_copies
 from app.services.clone_manager import artifact_path
 from typing import Literal, Optional
 
@@ -863,6 +863,17 @@ class AutosaveRequest(BaseModel):
     seconds: Optional[int] = None
 
 
+class ActivityBatch(BaseModel):
+    """A batch of the page's activity log to keep on disk (#177)."""
+    page: str
+    entries: list
+
+
+class ActivityRemoveRequest(BaseModel):
+    """Drop the saved entries of these kinds (action logging turned off, #177)."""
+    kinds: list[str]
+
+
 class UpdateParamRequest(BaseModel):
     file_path: str
     var_name: str
@@ -1360,6 +1371,33 @@ async def set_autosave_setting(request: AutosaveRequest):
     try:
         return app_settings.set_autosave(enabled=request.enabled, seconds=request.seconds)
     except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/activity-log")
+async def get_activity_log():
+    """The page's saved activity log (#177): this launch's entries, from
+    every page load, and the previous launch's, for a problem report."""
+    return activity_log.read()
+
+
+@router.post("/activity-log")
+async def append_activity_log(batch: ActivityBatch):
+    """Keep a batch of the page's activity log on disk. The page sends it
+    already scrubbed; this stores it as sent, capped."""
+    try:
+        return {"kept": activity_log.append(batch.page, batch.entries)}
+    except activity_log.ActivityLogError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/activity-log/remove")
+async def remove_from_activity_log(request: ActivityRemoveRequest):
+    """Drop the saved entries of the given kinds, from this launch's file and
+    the previous launch's: what turning action logging off asks for."""
+    try:
+        return {"removed": activity_log.remove_kinds(request.kinds)}
+    except activity_log.ActivityLogError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
