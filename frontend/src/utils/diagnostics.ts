@@ -35,6 +35,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { loadOverrides } from "@/shortcuts/storage";
 import type { SettingsInfo } from "@/components/common/settings/types";
 import { activityEntries, record, scrub, type ActivityEntry } from "./activityLog";
+import { waitEntries, waitsInProgress } from "./waitLog";
 import { pnlSourceName } from "./pnlSources";
 import { fetchRunning, isDevServer, pageBuild, runningDiagnostics, sameCommit, type PageBuild, type RunningInfo } from "./runningFrom";
 
@@ -126,7 +127,23 @@ export type ServerPart =
 export interface DiagnosticsSnapshot {
   version: typeof DIAGNOSTICS_VERSION;
   state: DiagnosticsState;
-  activity: ActivityEntry[];
+  /**
+   * The activity log and the wait log (#176), in time order. `time` repeats
+   * `t` under the name the Mac app's Report a Problem reads for `activity.txt`.
+   */
+  activity: ReportEntry[];
+  /** Waits running when the snapshot was taken, which may be the problem. */
+  waitsInProgress: { label: string; start: string; waitedMs: number; action: string | null }[];
+}
+
+export type ReportEntry = ActivityEntry & { time: string };
+
+/** The activity log and the wait log merged in time order, each with `time`. */
+export function reportEntries(activity: ActivityEntry[], waits: ActivityEntry[]): ReportEntry[] {
+  return [...activity, ...waits]
+    .map((e, i) => ({ e, i, at: Date.parse(e.t) }))
+    .sort((a, b) => a.at - b.at || a.i - b.i)
+    .map(({ e }) => ({ ...e, time: e.t }));
 }
 
 declare global {
@@ -369,10 +386,18 @@ export async function collectDiagnostics(
   } catch (e) {
     server = { error: errorText(e) };
   }
+  const state = buildDiagnosticsState(info, server, await runningPart);
+  const now = Date.now();
   const snapshot: DiagnosticsSnapshot = {
     version: DIAGNOSTICS_VERSION,
-    state: buildDiagnosticsState(info, server, await runningPart),
-    activity: activityEntries(),
+    state,
+    activity: reportEntries(activityEntries(), waitEntries(now)),
+    waitsInProgress: waitsInProgress(now).map((w) => ({
+      label: w.kind === "wheel" ? "Busy wheel" : w.label,
+      start: new Date(w.start).toISOString(),
+      waitedMs: now - w.start,
+      action: w.action?.text ?? null,
+    })),
   };
   // The one place the scope rules are applied to the snapshot as a whole:
   // every path as ~, every sensitive key redacted, whoever put it there.
