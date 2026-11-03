@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import { DialogHeader } from "@/components/common/dialog/DialogHeader";
 import { useDismiss } from "@/components/common/dialog/useDismiss";
 import { useTourStore } from "@/stores/tourStore";
+import { chooseTutorialStart } from "@/utils/tutorialGuard";
 import { readOfferChoice, shouldOfferOrientation, writeOfferChoice } from "@/utils/orientationOffer";
 import { orientationWalkthroughs } from "@/utils/tourStep";
 import { Button } from "@/components/common/Button";
@@ -28,7 +29,6 @@ const OFFER_DELAY_MS = 1500;
 export function OrientationOffer() {
   const [show, setShow] = useState(false);
   const activeTourId = useTourStore((s) => s.activeTourId);
-  const startTour = useTourStore((s) => s.startTour);
   const parts = orientationWalkthroughs();
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export function OrientationOffer() {
   const start = () => {
     writeOfferChoice("started");
     setShow(false);
-    if (parts[0]) startTour(parts[0].id);
+    if (parts[0]) void chooseTutorialStart(parts[0].id);
   };
 
   useDismiss(show, later);

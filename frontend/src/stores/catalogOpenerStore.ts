@@ -20,6 +20,8 @@ interface CatalogOpenerState {
    * walkthrough can ring the section while it is folded (#1392).
    */
   sectionOf: ((label: string) => string | null) | null;
+  /** Whether the open model is a bundled one, as it shipped (#172). */
+  isUntouched: (() => boolean) | null;
   /**
    * The catalog lists have loaded. A walkthrough started from `?tour=` begins
    * before they have, and asking earlier would find nothing to open.
@@ -29,6 +31,7 @@ interface CatalogOpenerState {
     open: (label: string) => Promise<boolean>;
     isOpen: (label: string) => boolean;
     sectionOf: (label: string) => string | null;
+    isUntouched: () => boolean;
     ready: boolean;
   }) => void;
 }
@@ -37,6 +40,7 @@ export const useCatalogOpener = create<CatalogOpenerState>((set) => ({
   open: null,
   isOpen: null,
   sectionOf: null,
+  isUntouched: null,
   ready: false,
-  register: ({ open, isOpen, sectionOf, ready }) => set({ open, isOpen, sectionOf, ready }),
+  register: ({ open, isOpen, sectionOf, isUntouched, ready }) => set({ open, isOpen, sectionOf, isUntouched, ready }),
 }));
