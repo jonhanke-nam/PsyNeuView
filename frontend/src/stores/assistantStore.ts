@@ -338,8 +338,9 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
  */
 export async function noteUnreviewedResponse(path: string, resp: Response): Promise<boolean> {
   if (resp.status !== 409 || !path.startsWith("/api/model/")) return false;
-  const body = (await readJson(resp.clone())) as { detail?: unknown; reason?: unknown };
-  const detail = body.detail && typeof body.detail === "object" ? (body.detail as Record<string, unknown>) : body;
+  const body = await readJson(resp.clone());
+  const detail: Record<string, unknown> =
+    body.detail && typeof body.detail === "object" ? (body.detail as Record<string, unknown>) : body;
   if (detail.reason !== "assistant_code_unreviewed") return false;
   useAssistantStore.getState().offerReview({
     path: String(detail.path ?? ""),
