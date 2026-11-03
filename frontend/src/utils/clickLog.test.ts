@@ -76,9 +76,9 @@ describe("what a click is", () => {
   });
 
   it("isn't a click on a field, the canvas or text: typed text is never recorded", () => {
-    expect(describeClick(el("input", { type: "text", value: "secret words" }))).toBeNull();
-    expect(describeClick(el("textarea", {}, "def model(): …"))).toBeNull();
-    expect(describeClick(el("div", {}, "a paragraph of the model's code"))).toBeNull();
+    expect(describeClick(el("input", { type: "text", value: "secret words" }) as unknown as Element)).toBeNull();
+    expect(describeClick(el("textarea", {}, "def model(): …") as unknown as Element)).toBeNull();
+    expect(describeClick(el("div", {}, "a paragraph of the model's code") as unknown as Element)).toBeNull();
     expect(describeClick(null)).toBeNull();
   });
 

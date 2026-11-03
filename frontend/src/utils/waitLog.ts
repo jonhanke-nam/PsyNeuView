@@ -50,6 +50,9 @@ export const BACKGROUND_WAIT_MIN_MS = 1000;
 export const LIKELY_ACTION_MS = 30_000;
 
 const finished: WaitRecord[] = [];
+/** The sequence number of the last finished wait, so the saver can ask for what's new (#177). */
+let finishedSeq = 0;
+const finishedSeqs: number[] = [];
 const inProgress = new Map<number, { record: WaitRecord; minMs: number }>();
 let nextId = 1;
 let knownCause: string | null = null;
@@ -97,7 +100,11 @@ export function beginWait(
     // Only when asked: the clock moving back mustn't lose a wait.
     if (minMs > 0 && now - start < minMs) return;
     finished.push({ ...record, stop: now, outcome, ...(detail ? { detail } : {}) });
-    if (finished.length > WAIT_CAP) finished.splice(0, finished.length - WAIT_CAP);
+    finishedSeqs.push(++finishedSeq);
+    if (finished.length > WAIT_CAP) {
+      finished.splice(0, finished.length - WAIT_CAP);
+      finishedSeqs.splice(0, finishedSeqs.length - WAIT_CAP);
+    }
   };
 }
 
@@ -115,7 +122,19 @@ export function finishedWaits(): WaitRecord[] {
 
 export function clearWaits(): void {
   finished.length = 0;
+  finishedSeqs.length = 0;
+  finishedSeq = 0;
   inProgress.clear();
+}
+
+/** The sequence number of the last finished wait, for `finishedWaitsSince`. */
+export function waitSequence(): number {
+  return finishedSeq;
+}
+
+/** The waits that finished after sequence number `seq`, as activity entries. */
+export function finishedWaitsSince(seq: number): ActivityEntry[] {
+  return finished.filter((_, i) => finishedSeqs[i] > seq).map((w) => waitEntry(w, w.stop ?? w.start));
 }
 
 function seconds(ms: number): string {
@@ -135,9 +154,9 @@ function describe(w: WaitRecord, now: number): string {
   return parts.join(" · ");
 }
 
-/** Every wait as an activity entry, timed at its start, for a problem report. */
-export function waitEntries(now: number = Date.now()): ActivityEntry[] {
-  return [...finished, ...waitsInProgress(now)].map((w) => ({
+/** One wait as an activity entry, timed at its start. */
+export function waitEntry(w: WaitRecord, now: number): ActivityEntry {
+  return {
     t: new Date(w.start).toISOString(),
     kind: "wait" as const,
     text: describe(w, now),
@@ -151,5 +170,10 @@ export function waitEntries(now: number = Date.now()): ActivityEntry[] {
       action: w.action?.text ?? null,
       actionCertain: w.action?.certain ?? null,
     },
-  }));
+  };
+}
+
+/** Every wait as an activity entry, timed at its start, for a problem report. */
+export function waitEntries(now: number = Date.now()): ActivityEntry[] {
+  return [...finished, ...waitsInProgress(now)].map((w) => waitEntry(w, now));
 }

@@ -19,6 +19,7 @@ import {
   type BusyTimerPlace,
 } from "@/stores/busyStore";
 import { useNotificationStore } from "@/stores/notificationStore";
+import { actionLoggingOn, onActionLoggingChanged, setActionLogging } from "@/utils/activityLog";
 import { AUTOSAVE_MAX_SECONDS, AUTOSAVE_MIN_SECONDS, clampAutosaveSeconds } from "@/utils/autosave";
 import { hasSettingsBridge } from "@/utils/macAppSettings";
 import type { PsyNeuLinkInfo } from "@/utils/pnlSources";
@@ -65,7 +66,43 @@ export function GeneralSection({
         <BusyThresholdRow />
         <BusyTimerRow />
       </Group>
+      <Group id="activity-log" title="Problem reports">
+        <ActionLoggingRow />
+      </Group>
     </>
+  );
+}
+
+/**
+ * Whether what the user does goes in the activity log (#177). Errors,
+ * messages shown and the timing of every wait are recorded whatever this
+ * says, and the wording says so: the switch doesn't turn off diagnostics.
+ */
+function ActionLoggingRow() {
+  const [on, setOn] = useState(actionLoggingOn);
+  useEffect(() => onActionLoggingChanged(setOn), []);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <label style={{ display: "flex", alignItems: "flex-start", gap: 6, cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          data-testid="setting-activity-log-actions"
+          checked={on}
+          onChange={(e) => setActionLogging(e.target.checked)}
+          style={{ marginTop: 2 }}
+        />
+        <span>
+          <span style={{ fontWeight: 500 }}>Keep a log of my actions for problem reports</span>
+          <span style={{ display: "block", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", marginTop: 2, maxWidth: 560 }}>
+            Which menus, buttons and tabs you press, what you select on the graph and the edits you make, so a
+            report can say what led up to a problem. Names and paths only: never a model's code, a file's contents
+            or anything you type. Errors, messages shown and how long each wait took are recorded either way.
+            Turning this off clears the actions recorded so far, including the copy kept on this computer; it
+            all stays here until you send a report.
+          </span>
+        </span>
+      </label>
+    </div>
   );
 }
 

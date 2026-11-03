@@ -34,8 +34,10 @@ import { useTourStore } from "@/stores/tourStore";
 import { useUIStore } from "@/stores/uiStore";
 import { loadOverrides } from "@/shortcuts/storage";
 import type { SettingsInfo } from "@/components/common/settings/types";
-import { activityEntries, record, scrub, type ActivityEntry } from "./activityLog";
+import { ACTION_LOGGING_OFF_NOTE, actionLoggingOn, activityEntries, record, scrub, type ActivityEntry } from "./activityLog";
+import { fetchSavedActivity, installActivitySaver, type SavedActivity } from "./activitySaver";
 import { installClickLogging } from "./clickLog";
+import { timelineFrom, type TimelineLine } from "./timeline";
 import { waitEntries, waitsInProgress } from "./waitLog";
 import { pnlSourceName } from "./pnlSources";
 import { fetchRunning, isDevServer, pageBuild, runningDiagnostics, sameCommit, type PageBuild, type RunningInfo } from "./runningFrom";
@@ -131,10 +133,23 @@ export interface DiagnosticsSnapshot {
   /**
    * The activity log and the wait log (#176), in time order. `time` repeats
    * `t` under the name the Mac app's Report a Problem reads for `activity.txt`.
+   * When action logging is off, the first entry says so (#177).
    */
   activity: ReportEntry[];
   /** Waits running when the snapshot was taken, which may be the problem. */
   waitsInProgress: { label: string; start: string; waitedMs: number; action: string | null }[];
+  /** Whether what the user does is being recorded (Settings ▸ General, #177). */
+  actionLogging: boolean;
+  /**
+   * This page's activity and waits, with the saved copy's entries from
+   * earlier page loads of this launch, as timeline lines in time order
+   * (#177, utils/timeline.ts). The Mac app merges the server log in.
+   */
+  timeline: TimelineLine[];
+  /** The previous launch's saved activity, oldest first, or empty (#177). */
+  previousActivity: ReportEntry[];
+  /** Why the saved copy is missing, when it is. */
+  savedActivityError: string | null;
 }
 
 export type ReportEntry = ActivityEntry & { time: string };
@@ -145,6 +160,29 @@ export function reportEntries(activity: ActivityEntry[], waits: ActivityEntry[])
     .map((e, i) => ({ e, i, at: Date.parse(e.t) }))
     .sort((a, b) => a.at - b.at || a.i - b.i)
     .map(({ e }) => ({ ...e, time: e.t }));
+}
+
+/** The entry a report starts with when action logging is off (#177). */
+export function actionLoggingOffEntry(now: number = Date.now()): ActivityEntry {
+  return { t: new Date(now).toISOString(), kind: "logging", text: ACTION_LOGGING_OFF_NOTE };
+}
+
+/**
+ * The timeline's entries: this page's, plus the saved copy's from this
+ * launch's earlier page loads (the saver marks each page with its id). An
+ * entry saved by this page is already here, so it is left out.
+ */
+export function timelineEntries(
+  activity: ActivityEntry[],
+  waits: ActivityEntry[],
+  saved: SavedActivity | null,
+  page: string | null,
+  logging: boolean,
+  now: number,
+): ActivityEntry[] {
+  const earlier = (saved?.current ?? []).filter((e) => e.page !== page).map(({ page: _page, ...e }) => e);
+  const all = [...earlier, ...activity, ...waits];
+  return logging ? all : [actionLoggingOffEntry(now), ...all];
 }
 
 declare global {
@@ -180,6 +218,9 @@ export function noteModelOrigin(path: string, origin: Partial<ModelOrigin> & { k
 }
 
 let lastServerInfo: SettingsInfo | null = null;
+
+/** The saver, while installed: its page id tells saved entries of this page from earlier ones. */
+let saver: ReturnType<typeof installActivitySaver> | null = null;
 
 /** Keep the last `/api/settings/info` answer, for `app` when a fresh fetch fails. */
 export function rememberServerInfo(info: SettingsInfo): void {
@@ -369,7 +410,11 @@ export async function fetchServerInfo(timeoutMs = 3000): Promise<SettingsInfo> {
  * and `psyneulink` fall back to the last answer the page saw, if any.
  */
 export async function collectDiagnostics(
-  opts: { fetchInfo?: () => Promise<SettingsInfo>; fetchRunning?: () => Promise<RunningInfo> } = {},
+  opts: {
+    fetchInfo?: () => Promise<SettingsInfo>;
+    fetchRunning?: () => Promise<RunningInfo>;
+    fetchSaved?: () => Promise<SavedActivity>;
+  } = {},
 ): Promise<DiagnosticsSnapshot> {
   const fetchInfo = opts.fetchInfo ?? (() => fetchServerInfo());
   // What's running (#1356), asked at the same time, with its own timeout.
@@ -387,18 +432,33 @@ export async function collectDiagnostics(
   } catch (e) {
     server = { error: errorText(e) };
   }
+  // The saved copy (#177): earlier page loads of this launch, and the
+  // previous launch. Asked at the same time as the server's part; without
+  // it the report still has this page's log.
+  const savedPart = (opts.fetchSaved ?? (() => fetchSavedActivity(3000)))().then(
+    (s) => ({ saved: s, error: null as string | null }),
+    (e) => ({ saved: null, error: errorText(e) }),
+  );
   const state = buildDiagnosticsState(info, server, await runningPart);
+  const { saved, error: savedError } = await savedPart;
   const now = Date.now();
+  const logging = actionLoggingOn();
+  const activity = activityEntries();
+  const waits = waitEntries(now);
   const snapshot: DiagnosticsSnapshot = {
     version: DIAGNOSTICS_VERSION,
     state,
-    activity: reportEntries(activityEntries(), waitEntries(now)),
+    activity: reportEntries(logging ? activity : [actionLoggingOffEntry(now), ...activity], waits),
     waitsInProgress: waitsInProgress(now).map((w) => ({
       label: w.kind === "wheel" ? "Busy wheel" : w.label,
       start: new Date(w.start).toISOString(),
       waitedMs: now - w.start,
       action: w.action?.text ?? null,
     })),
+    actionLogging: logging,
+    timeline: timelineFrom(timelineEntries(activity, waits, saved, saver?.page ?? null, logging, now), now),
+    previousActivity: (saved?.previous ?? []).map(({ page: _page, ...e }) => ({ ...e, time: e.t })),
+    savedActivityError: savedError,
   };
   // The one place the scope rules are applied to the snapshot as a whole:
   // every path as ~, every sensitive key redacted, whoever put it there.
@@ -446,6 +506,9 @@ export function installDiagnostics(): () => void {
   // click on a node or an edge, the Inspector, and a shortcut alike. A drag
   // is recorded as the edit it makes ("Moved node a", utils/history.ts).
   const uninstallClicks = installClickLogging();
+  // And a copy of the log on disk, through the server (#177), so a report
+  // made after a restart still has what led up to it.
+  saver = installActivitySaver();
   const unsubscribeSelection = useModelStore.subscribe((s, prev) => {
     if (s.selectedNodeId !== prev.selectedNodeId) {
       if (s.selectedNodeId) {
@@ -477,6 +540,8 @@ export function installDiagnostics(): () => void {
     unsubscribeTour();
     unsubscribeSelection();
     uninstallClicks();
+    saver?.uninstall();
+    saver = null;
     if (window.__pnvDiagnostics) delete window.__pnvDiagnostics;
   };
 }
