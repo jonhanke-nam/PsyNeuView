@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import http.server
 import json
+import os
 import threading
 from pathlib import Path
 
@@ -276,32 +277,140 @@ def test_new_files_are_classified_by_content(st):
     assert helper.exists() and review.is_tracked(str(helper))
 
 
-# ── 7. a sibling the assistant wrote ─────────────────────────────────────
+# ── 7. a file the assistant wrote, imported by a model ───────────────────
+#
+# Through the real runner (the warm worker behind /model/load), so the
+# import guard is the one the app uses, with its per-task refresh.
 
 
-def test_unreviewed_sibling_blocks_the_folder_and_names_itself(st):
+def _model_importing(what: str, marker_hint: str = "") -> str:
+    return (
+        "import sys, os\n"
+        "sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\n"
+        f"{what}\n"
+        "import psyneulink as pnl\n"
+        "comp = pnl.Composition(name='h2')\n"
+    )
+
+
+def _helper(marker) -> str:
+    return f"from pathlib import Path\nPath({str(marker)!r}).write_text('ran')\nimport psyneulink as pnl\n"
+
+
+def load(path):
+    return client.post("/api/model/load", json={"file_path": str(path)})
+
+
+def approve(path):
+    shown = client.post("/api/assistant/review/status", json={"path": str(path)}).json()
+    r = client.post("/api/assistant/review/approve", json={"path": str(path), "content_hash": shown["content_hash"]})
+    assert r.status_code == 200, r.text
+
+
+@pytest.mark.parametrize("layout", ["subfolder_module", "package_init", "importlib", "abs_sys_path"])
+def test_unreviewed_import_is_refused_and_named(st, layout):
+    marker2 = st["tmp"] / "ran2.txt"
+    models = st["models"]
+    if layout == "subfolder_module":
+        helper = models / "pkg" / "helper.py"
+        helper.parent.mkdir()
+        (models / "pkg" / "__init__.py").write_text("")
+        importer = "import pkg.helper"
+    elif layout == "package_init":
+        helper = models / "pkg2" / "__init__.py"
+        helper.parent.mkdir()
+        importer = "import pkg2"
+    elif layout == "importlib":
+        helper = models / "helper_mod.py"
+        importer = "import importlib\nimportlib.import_module('helper_mod')"
+    else:
+        elsewhere = st["tmp"] / "Elsewhere"
+        elsewhere.mkdir()
+        helper = elsewhere / "far_helper.py"
+        importer = f"sys.path.insert(0, {str(elsewhere)!r})\nimport far_helper"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    model = models / "uses_it.py"
+    model.write_text(_model_importing(importer))
+    r = load(model)
+    assert unreviewed(r), r.text
+    assert r.json()["path"] == str(helper.resolve()), r.json()
+    assert "imports it" in r.json()["detail"]
+    assert not marker2.exists()
+    # Approving the helper lets the model run, through the same runner.
+    approve(helper)
+    r = load(model)
+    assert r.status_code == 200, r.text
+    assert marker2.exists()
+
+
+def test_helper_approved_then_edited_across_two_tasks_in_the_same_worker(st):
+    """Task 1 imports the approved helper (now cached in the worker). The
+    helper is edited. Task 2 must import it again, through the guard."""
     marker2 = st["tmp"] / "ran2.txt"
     helper = st["models"] / "helper_mod.py"
-    helper_text = f"from pathlib import Path\nPath({str(marker2)!r}).write_text('ran')\nimport psyneulink as pnl\n"
-    helper.write_text(helper_text)
-    review.mark_unreviewed(str(helper), helper_text)
-    hacked = st["models"] / "uses_helper_syspath.py"
-    hacked.write_text("import sys, os\nsys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\nimport helper_mod\nimport psyneulink as pnl\ncomp = pnl.Composition(name='h2')\n")
-    r = client.post("/api/model/load", json={"file_path": str(hacked)})
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    approve(helper)
+    model = st["models"] / "uses_it.py"
+    model.write_text(_model_importing("import helper_mod"))
+    assert load(model).status_code == 200
+    assert marker2.exists()
+    marker2.unlink()
+    marker3 = st["tmp"] / "ran3.txt"
+    helper.write_text(_helper(marker3))  # edited: no longer the approved text
+    r = load(model)
     assert unreviewed(r), r.text
-    assert not marker2.exists()
-    # The 409 names a sibling to review, not the file asked for.
-    assert r.json()["path"] in (str(helper), str(st["agent_file"]))
-    assert "same folder" in r.json()["detail"]
-    # The user's own model in a folder with no tracked siblings is untouched.
-    assert client.post("/api/model/load", json={"file_path": str(st["victim"])}).status_code == 200
+    assert r.json()["path"] == str(helper.resolve())
+    assert not marker3.exists() and not marker2.exists()
+    approve(helper)
+    assert load(model).status_code == 200
+    assert marker3.exists()
 
 
-def test_sibling_check_costs_nothing_without_state(tmp_path, monkeypatch):
+def test_a_model_beside_an_unapproved_file_runs_if_it_does_not_import_it(st):
+    beside = st["models"] / "beside.py"
+    marker2 = st["tmp"] / "beside_ran.txt"
+    beside.write_text("from pathlib import Path\n" + f"Path({str(marker2)!r}).write_text('ran')\n" + "import psyneulink as pnl\ncomp = pnl.Composition(name='b')\n")
+    assert review.is_tracked(str(st["agent_file"])) and not review.is_runnable(str(st["agent_file"]), st["text"])
+    r = load(beside)
+    assert r.status_code == 200, r.text
+    assert marker2.exists() and not st["marker"].exists()
+
+
+def test_nothing_tracked_means_no_change(tmp_path, monkeypatch):
+    from app.services.assistant import import_guard
+
     monkeypatch.setenv(review.STATE_ENV, str(tmp_path / "none" / "review.json"))
     review._cache = None
-    assert review.unreviewed_siblings(str(tmp_path / "m.py")) == []
-    assert not review.state_broken()
+    import_guard.refresh()
+    assert import_guard.tracked_count() == 0 and not import_guard.is_broken()
+    own = tmp_path / "own.py"
+    helper = tmp_path / "plain_helper.py"
+    helper.write_text("VALUE = 1\n")
+    own.write_text(_model_importing("import plain_helper"))
+    assert client.post("/api/model/load", json={"file_path": str(own)}).status_code == 200
+
+
+def test_library_paths_are_never_vetted():
+    from app.services.assistant import import_guard
+    import psyneulink
+
+    assert import_guard.is_library_path(os.path.realpath(psyneulink.__file__))
+    assert import_guard.is_library_path(os.path.realpath(json.__file__))
+    assert not import_guard.is_library_path("/Users/someone/Models/helper.py")
+
+
+def test_state_unreadable_fails_closed_at_import_time(st):
+    from app.services.assistant import import_guard
+
+    review.state_path().write_text("{not json")
+    review.backup_path().write_text("{not json either")
+    review._cache = None
+    import_guard.refresh()
+    assert import_guard.is_broken()
+    r = load(st["victim"])
+    assert r.status_code == 409 and r.json()["reason"] == "assistant_review_state_unreadable"
 
 
 # ── 8. redirects ─────────────────────────────────────────────────────────

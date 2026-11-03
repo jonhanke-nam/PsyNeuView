@@ -216,7 +216,25 @@ containment rather than a better approval view.
   the user can. The assistant doesn't change that; it adds a second author.
 - Containment (Phase 4) is a separate decision; see `containment.md`.
 
-## 7. Open items after the parts were joined
+## 7. What the execution guard does and doesn't cover
+
+- **Imports** are vetted at import time (`import_guard.py`): a model that
+  imports a tracked, unapproved file, directly, from a subfolder or
+  package, through `importlib`, or from a folder it put on `sys.path`,
+  stops with the 409 naming that file. This defends against accidental or
+  agent-written imports.
+- **Not covered:** a reviewed model that runs code by other means,
+  `exec(open(...).read())`, `runpy`, a subprocess, or that reads and
+  evaluates a file. Approving a model means trusting what it does; the
+  review card says so.
+- **The state file** (`~/.psyneuview/assistant-review.json`) is the record
+  of what is tracked. Deleting or truncating it reads as nothing tracked
+  (fail open). Accepted: only something already running as the user can
+  do that, the agent's tools can't reach it (hidden folder, app folder),
+  and a file that can't be parsed fails closed instead (its `.bak` is read
+  first).
+
+## 8. Open items after the parts were joined
 
 Named by the rows above as "not built yet". Each is tracked under #179 until
 it has its own issue.

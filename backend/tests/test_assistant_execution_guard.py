@@ -153,8 +153,6 @@ def test_state_persists_across_restart(state):
 
 
 def test_users_own_file_loads_as_before(state):
-    # In its own folder: a folder holding an unreviewed assistant file is
-    # blocked as a whole, since a model can import a file beside it.
     own = state["tmp"] / "Mine" / "mine.py"
     own.parent.mkdir()
     marker = state["tmp"] / "mine_ran.txt"
@@ -163,11 +161,17 @@ def test_users_own_file_loads_as_before(state):
     resp = client.post("/api/model/load", json={"file_path": str(own)})
     assert resp.status_code == 200, resp.text
     assert marker.read_text() == "ran"
+    # Beside the unreviewed file: runs as before unless it imports it.
     beside = state["tmp"] / "Models" / "beside.py"
     beside.write_text(marker_model(state["tmp"] / "beside_ran.txt"))
     resp = client.post("/api/model/load", json={"file_path": str(beside)})
+    assert resp.status_code == 200, resp.text
+    assert (state["tmp"] / "beside_ran.txt").exists()
+    importer = state["tmp"] / "Models" / "imports_it.py"
+    importer.write_text("import sys, os\nsys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\nimport assistant_wrote\n" + marker_model(state["tmp"] / "importer_ran.txt"))
+    resp = client.post("/api/model/load", json={"file_path": str(importer)})
     assert resp.status_code == 409 and resp.json()["path"] == str(state["model"]), resp.text
-    assert not (state["tmp"] / "beside_ran.txt").exists()
+    assert not (state["tmp"] / "importer_ran.txt").exists() and not state["marker"].exists()
     # Approving a file the assistant never wrote changes nothing.
     resp = client.post("/api/assistant/review/approve", json={"path": str(own), "content_hash": "anything"})
     assert resp.json()["tracked"] is False

@@ -40,6 +40,8 @@ import re
 import threading
 from pathlib import Path
 
+from app.services.assistant import import_guard
+
 logger = logging.getLogger(__name__)
 
 #: Redirects the review-state file (tests, or two app instances).
@@ -123,13 +125,7 @@ def backup_path() -> Path:
 
 def _parse(p: Path) -> dict | None:
     """The ``files`` mapping in ``p``, or None when it can't be read or parsed."""
-    try:
-        raw = json.loads(p.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    if not isinstance(raw, dict) or not isinstance(raw.get("files"), dict):
-        return None
-    return {str(k): v for k, v in raw["files"].items() if isinstance(v, dict)}
+    return import_guard._parse(str(p))
 
 
 def _load() -> dict:
@@ -147,18 +143,15 @@ def _load() -> dict:
         key = (str(p), None, None)
     if _cache is not None and key == _cache_key:
         return _cache
-    files: dict | None = {}
+    files: dict = {}
     broken = False
     if key[1] is not None:
-        files = _parse(p)
-        if files is None:
-            files = _parse(backup_path())
-            if files is None:
-                logger.error("assistant review state unreadable and no usable backup (%s); refusing to run models until it is repaired or removed", p)
-                broken = True
-                files = {}
-            else:
-                logger.warning("assistant review state unreadable; using its backup (%s)", backup_path())
+        # The same reader the sandbox worker uses, so both see one state.
+        files, broken = import_guard.read_state(str(p))
+        if broken:
+            logger.error("assistant review state unreadable and no usable backup (%s); refusing to run models until it is repaired or removed", p)
+        elif _parse(p) is None:
+            logger.warning("assistant review state unreadable; using its backup (%s)", backup_path())
     _cache, _cache_key, _broken = {"files": files}, key, broken
     return _cache
 
@@ -252,28 +245,6 @@ def is_unreviewed_content(text: str) -> bool:
     return any(e.get("written_norm") == n for e in unreviewed)
 
 
-def unreviewed_siblings(path: str) -> list[str]:
-    """Tracked, unreviewed ``.py`` files in the same folder as ``path``. A
-    model can put its own folder on ``sys.path`` and import a sibling, so a
-    sibling the assistant wrote has to be reviewed before anything in that
-    folder runs. Costs nothing when nothing is tracked."""
-    files = _load()["files"]
-    if not files:
-        return []
-    folder = os.path.dirname(_key(path))
-    out = []
-    for tracked, entry in files.items():
-        if tracked == _key(path) or os.path.dirname(tracked) != folder or not tracked.endswith(".py"):
-            continue
-        try:
-            text = Path(tracked).read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            continue  # gone or unreadable: nothing to import
-        if entry.get("approved") != content_hash(text):
-            out.append(tracked)
-    return sorted(out)
-
-
 def refuse_unreviewed_text(path: str, text: str) -> None:
     """For a route that takes text from the page and would execute it (a
     save, a preview, a copy): refuse if ``text`` is unreviewed assistant
@@ -322,12 +293,29 @@ def require_runnable(path: str) -> None:
             raise UnreviewedAssistantCode(str(path))
         if not is_runnable(path, text):
             raise UnreviewedAssistantCode(str(path))
-    siblings = unreviewed_siblings(path)
-    if siblings:
-        sibling = siblings[0]
-        raise UnreviewedAssistantCode(
-            sibling,
-            f"{Path(sibling).name}, in the same folder as {Path(path).name}, was written by the AI assistant and "
-            f"hasn't been reviewed yet. A model can import a file beside it, so review and approve "
-            f"{Path(sibling).name} (or move it away) before running anything in that folder.",
-        )
+
+
+def guard_imports():
+    """A context for an in-process model load: the import guard sees the
+    state as it is now, and a tracked, unapproved import becomes the 409
+    naming that file. The sandbox worker does the same at its task boundary."""
+    return _GuardImports()
+
+
+class _GuardImports:
+    def __enter__(self):
+        import_guard.refresh()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if isinstance(exc, import_guard.UnreviewedImport):
+            raise UnreviewedAssistantCode(
+                exc.path, str(exc),
+                reason="assistant_review_state_unreadable" if exc.state_unreadable else None,
+            ) from None
+        return False
+
+
+# The server's own importers go through the same finder as the worker's,
+# fed from this module's view of the state.
+import_guard.install(provider=lambda: (_load()["files"], _broken))

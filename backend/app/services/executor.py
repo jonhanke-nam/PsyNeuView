@@ -14,6 +14,7 @@ import numpy as np
 from pathlib import Path
 
 from app.services.sandbox import run_in_sandbox
+from app.services.assistant import review as assistant_review
 from app.services.assistant.review import require_runnable
 from app.services.show_graph_guard import suppress_show_graph
 
@@ -134,7 +135,8 @@ def run_model(
             "execution_mode": execution_mode,
             "log_nodes": log_nodes,
         })
-    return _run_model_inprocess(file_path, composition_name, inputs, execution_mode)
+    with assistant_review.guard_imports():
+        return _run_model_inprocess(file_path, composition_name, inputs, execution_mode)
 
 
 def _resolve_composition(module, comp_name):
@@ -307,10 +309,11 @@ def learn_model(
             "learning_rate": learning_rate,
             "execution_mode": execution_mode,
         })
-    return _learn_model_inprocess(
-        file_path, composition_name, inputs, targets, epochs, learning_rate,
-        execution_mode,
-    )
+    with assistant_review.guard_imports():
+        return _learn_model_inprocess(
+            file_path, composition_name, inputs, targets, epochs, learning_rate,
+            execution_mode,
+        )
 
 
 # Capability id -> ExecutionMode member name, where they differ (#764).
@@ -563,7 +566,8 @@ def get_input_nodes(file_path: str, composition_name: str, use_sandbox: bool = T
             "file_path": file_path,
             "composition_name": composition_name,
         })
-    return _get_input_nodes_inprocess(file_path, composition_name)
+    with assistant_review.guard_imports():
+        return _get_input_nodes_inprocess(file_path, composition_name)
 
 
 def _get_input_nodes_inprocess(file_path: str, composition_name: str) -> dict:

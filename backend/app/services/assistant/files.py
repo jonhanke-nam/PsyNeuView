@@ -26,6 +26,7 @@ read from the app's preferences file under ``assistant.folders``.
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib.util
 import json
@@ -57,7 +58,6 @@ MAX_INSTALL_SCAN_DEPTH = 5
 #: could be imported by any interpreter using it.
 _INSTALL_FILES = ("pyvenv.cfg",)
 _INSTALL_DIRS = ("conda-meta", "site-packages", "dist-packages")
-_PNL_IMPORT = re.compile(r"^\s*(import\s+psyneulink\b|from\s+psyneulink(\.\w+)*\s+import\b)", re.MULTILINE)
 _INSTALL_SEGMENT = re.compile(r"^(site-packages|dist-packages|python\d+(\.\d+)?)$")
 
 #: ``.py`` names that would shadow a module an interpreter imports: the
@@ -137,6 +137,22 @@ def _app_roots() -> list[Path]:
     except Exception:
         pass
     return roots
+
+
+def imports_psyneulink(text: str) -> bool:
+    """A real ``import psyneulink`` or ``from psyneulink... import`` statement
+    anywhere in the module (not one inside a string), found by parsing. Text
+    that doesn't parse isn't a model."""
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError):
+        return False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import) and any(a.name == "psyneulink" or a.name.startswith("psyneulink.") for a in node.names):
+            return True
+        if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module and (node.module == "psyneulink" or node.module.startswith("psyneulink.")):
+            return True
+    return False
 
 
 def _is_within(path: Path, root: Path) -> bool:
@@ -517,7 +533,7 @@ def write_model_file(path: str, text: str, *, base_hash: str | None) -> Path:
                 c = classify_upload(name, data)
                 if c.file_type not in (FileType.PNL_PYTHON, FileType.MDF_JSON, FileType.MDF_YAML):
                     raise PathRefused(path, "wrong_type", c.error or f"Not a model file: {name}")
-                if c.file_type is FileType.PNL_PYTHON and not _PNL_IMPORT.search(text):
+                if c.file_type is FileType.PNL_PYTHON and not imports_psyneulink(text):
                     raise PathRefused(path, "wrong_type", f"Not a PsyNeuLink model (no psyneulink import): {name}")
         else:
             _file_kind(real)

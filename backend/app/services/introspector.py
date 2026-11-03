@@ -14,6 +14,7 @@ import numpy as np
 from pathlib import Path
 
 from app.services.sandbox import run_in_sandbox
+from app.services.assistant import review as assistant_review
 from app.services.assistant.review import require_runnable
 from app.services.show_graph_guard import suppress_show_graph
 from app.services.execution_modes import composition_execution_modes
@@ -62,7 +63,8 @@ def load_and_introspect(
         if "compositions" not in result and "error" in result:
             raise RuntimeError(result["error"])
         return result
-    return _load_and_introspect_inprocess(file_path, developer_mode=developer_mode)
+    with assistant_review.guard_imports():
+        return _load_and_introspect_inprocess(file_path, developer_mode=developer_mode)
 
 # Parameters to skip — these are internal/computed, not user-facing
 _SKIP_MECH_PARAMS = {

@@ -204,9 +204,21 @@ def require_runnable(path: str) -> None: ...  # raises UnreviewedAssistantCode
 `run_in_sandbox` and the in-process importers behind `/model/load`, run,
 learn, show-graph, export, the file watcher's reload, autosave's reload,
 undo and redo; `/model/load` consults it before the star-import conversion
-writes anything. It also refuses when a tracked, unreviewed `.py` sits in
-the same folder as the model, naming that file: a model can import a file
-beside it. With no state file, or nothing tracked, it costs one lookup. A route that would execute unreviewed content answers 409
+writes anything. With no state file, or nothing tracked, it costs one lookup.
+
+**Imports.** A model can import other files: a helper beside it, a package
+in a subfolder, a folder it puts on `sys.path`. `import_guard.py` puts a
+finder first on `sys.meta_path`, in the server process and in the sandbox
+worker (which loads it by path and refreshes it from the state file named
+in every task, dropping tracked modules from its cache). A module about to
+load from a tracked `.py` whose content isn't the approved content fails to
+import, and the route answers the same 409 naming that file, so the review
+card reviews it. The standard library and site-packages are never vetted,
+and with nothing tracked the finder does one check per import and nothing
+else. A model beside an unapproved file runs unless it imports it. What
+this doesn't cover: a model that runs code by other means
+(`exec(open(...).read())`, `runpy`, a subprocess); approving a model means
+trusting what it does. A route that would execute unreviewed content answers 409
 with `{"detail": <message>, "reason": "assistant_code_unreviewed", "path",
 "approve": {...}}` (top level, from the app's exception handler; the page
 reads `reason` from either the top level or under `detail`).
