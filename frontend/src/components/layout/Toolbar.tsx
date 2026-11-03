@@ -73,6 +73,7 @@ import { RECENT_PATHS_CHANGED, addRecentPath, getRecentPaths } from "@/utils/rec
 import { pnlSourceLabel, sourceSwitchNote, type PsyNeuLinkInfo } from "@/utils/pnlSources";
 import { abbreviateHome } from "@/components/common/settings/shared";
 import { record as recordActivity, recordMenuClick } from "@/utils/activityLog";
+import { causedBy } from "@/utils/waitLog";
 import { noteModelOrigin } from "@/utils/diagnostics";
 import { SAVE_COPY_EVENT, requestSaveCopy } from "@/utils/saveRequest";
 import { stripProtectionLine } from "@/utils/protectionLine";
@@ -124,6 +125,8 @@ my_model.add_projection(input_to_output)
 `;
 }
 
+/** Opening the Open menu, in the activity log and as the cause of its requests (#176). */
+const OPEN_MENU_OPENED = "Open menu opened";
 const EXPANDED_FOLDERS_KEY = "psyneuview.loadModelDropdown.expandedFolders";
 const REFERENCE_ORDER_KEY = "psyneuview.referenceModels.order";
 
@@ -628,7 +631,7 @@ export function Toolbar() {
   // label and paths until the window was reloaded. The Library header and its
   // tooltip only show with the menu open, so this is when they need to be right.
   useEffect(() => {
-    if (dropdownOpen) refreshPnlCatalogs();
+    if (dropdownOpen) causedBy(OPEN_MENU_OPENED, refreshPnlCatalogs);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dropdownOpen]);
   // Settings rewrites the recent paths when the project folder moves (#1295).
@@ -680,7 +683,7 @@ export function Toolbar() {
   useEffect(() => {
     if (!dropdownOpen || pnlStatusFetched.current || pnlExamples.length === 0) return;
     pnlStatusFetched.current = true;
-    fetch("/api/psyneulink-examples/status")
+    causedBy(OPEN_MENU_OPENED, () => fetch("/api/psyneulink-examples/status"))
       .then((r) => r.json())
       .then((data) => setPnlStatus(data.status || {}))
       .catch(() => {});
@@ -1595,8 +1598,11 @@ export function Toolbar() {
           onClick={() => {
             setDropdownOpen(!dropdownOpen);
             if (!dropdownOpen) {
-              refreshUserModels();
-              void refreshCatalogs();
+              recordActivity("menu", OPEN_MENU_OPENED);
+              causedBy(OPEN_MENU_OPENED, () => {
+                refreshUserModels();
+                void refreshCatalogs();
+              });
             }
           }}
           // Stable handle for the entry point to every model: specs and guided
@@ -3309,7 +3315,10 @@ function WalkthroughMenu() {
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (!open) recordActivity("menu", "Tutorials menu opened");
+          setOpen((o) => !o);
+        }}
         data-testid="walkthrough-menu"
         data-reminder={remind ? "true" : undefined}
         style={{
@@ -3512,7 +3521,10 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (!open) recordActivity("menu", "Layout menu opened");
+          setOpen((o) => !o);
+        }}
         style={{
           fontSize: "var(--pnv-fs-13)",
           padding: "4px 10px",
