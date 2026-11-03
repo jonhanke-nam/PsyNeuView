@@ -32,6 +32,7 @@ export function raisedPermissions(prev: AssistantSettings, next: AssistantSettin
   }
   if (next.limits.tool_calls > prev.limits.tool_calls) raised.push("allow more tool calls per turn");
   if (next.limits.minutes > prev.limits.minutes) raised.push("allow longer turns");
+  if (next.limits.max_tokens > prev.limits.max_tokens) raised.push("allow more spending (tokens) per session");
   return raised;
 }
 

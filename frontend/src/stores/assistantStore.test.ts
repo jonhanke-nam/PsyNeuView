@@ -23,7 +23,7 @@ beforeEach(() => {
   useAssistantStore.setState({
     available: null, settings: DEFAULT_ASSISTANT_SETTINGS, keySet: false, loadError: null, saving: false,
     pendingRaise: null, explanation: null, sessionId: null, items: [], proposals: {}, next: 0, turn: "idle",
-    lastDone: null, reviewOffer: null,
+    lastDone: null, tokensUsed: 0, reviewOffer: null,
   });
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
@@ -146,5 +146,74 @@ describe("assistantStore (#179)", () => {
     expect(useAssistantStore.getState().reviewOffer?.path).toBe("/m.py");
     useAssistantStore.getState().dismissReview();
     expect(useAssistantStore.getState().reviewOffer).toBeNull();
+  });
+
+  it("is unavailable when the backend says so in a 200, and a PUT never carries `available`", async () => {
+    answers["GET /api/assistant/settings"] = () => json({ ...DEFAULT_ASSISTANT_SETTINGS, available: false });
+    await useAssistantStore.getState().load();
+    expect(useAssistantStore.getState().available).toBe(false);
+
+    answers["GET /api/assistant/settings"] = () => json({ ...DEFAULT_ASSISTANT_SETTINGS, available: true });
+    answers["GET /api/assistant/key"] = () => json({ set: false });
+    answers["PUT /api/assistant/settings"] = (init) => {
+      const body = JSON.parse(String(init?.body));
+      if ("available" in body) return json({ detail: "unknown settings: available" }, 400);
+      return json({ ...body, available: true });
+    };
+    await useAssistantStore.getState().load();
+    expect(useAssistantStore.getState().available).toBe(true);
+    expect("available" in useAssistantStore.getState().settings).toBe(false);
+    expect(await useAssistantStore.getState().save({ ...useAssistantStore.getState().settings, keep_log: false })).toBe(true);
+    expect(useAssistantStore.getState().settings.keep_log).toBe(false);
+  });
+
+  it("review: fetches the content, approves the hash of what was shown, and shows the file again when it changed", async () => {
+    let content = "x = 1\n";
+    answers["POST /api/assistant/review/status"] = () => json({ path: "/m.py", tracked: true, runnable: false, content, content_hash: `hash-of-${content.length}` });
+    answers["POST /api/assistant/review/approve"] = (init) => {
+      const body = JSON.parse(String(init?.body));
+      if (body.content_hash !== `hash-of-${content.length}`) return json({ reason: "assistant_code_changed", content_hash: `hash-of-${content.length}` }, 409);
+      return json({ path: "/m.py", tracked: true, runnable: true });
+    };
+    answers["POST /api/model/load"] = () => json({ source: content, model: { nodes: [] } });
+    await noteUnreviewedResponse("/api/model/load", json({ detail: { reason: "assistant_code_unreviewed", path: "/m.py" } }, 409));
+    await vi.waitFor(() => expect(useAssistantStore.getState().reviewOffer?.content).toBe("x = 1\n"));
+
+    // The file changes after it was shown: the approval is refused and the new text shown.
+    content = "x = 1\nimport os\n";
+    await useAssistantStore.getState().approveReviewed();
+    const offer = useAssistantStore.getState().reviewOffer;
+    expect(offer?.changed).toBe(true);
+    expect(offer?.content).toBe("x = 1\nimport os\n");
+    expect(calls.filter((c) => c.url.endsWith("/api/model/load"))).toHaveLength(0);
+
+    // Approving what is shown now: recorded, and the file opens.
+    await useAssistantStore.getState().approveReviewed();
+    expect(useAssistantStore.getState().reviewOffer).toBeNull();
+    const approve = calls.filter((c) => c.url.endsWith("/review/approve"));
+    expect(JSON.parse(String(approve[approve.length - 1].init?.body))).toEqual({ path: "/m.py", content_hash: "hash-of-16" });
+    expect(calls.filter((c) => c.url.endsWith("/api/model/load"))).toHaveLength(1);
+  });
+
+  it("an accepted open_file opens the file through the model route, and a refused write rejects the proposal", async () => {
+    useModelStore.setState({ source: "x = 1" } as never);
+    useAssistantStore.setState({
+      proposals: {
+        o1: { id: "o1", kind: "open_file", summary: "Open m.py", state: "pending", base_hash: null, ops: [], path: "/m.py", before: null, after: null, freeform_python: false, warnings: [] },
+        w1: { id: "w1", kind: "file_write", summary: "Write", state: "pending", base_hash: "b", ops: [], path: "/m.py", before: "", after: "y", freeform_python: true, warnings: [] },
+      },
+    });
+    answers["POST /api/assistant/proposals/o1/accept"] = () => json({ state: "accepted" });
+    answers["POST /api/model/load"] = () => json({ source: "x = 1", model: { nodes: [] } });
+    await useAssistantStore.getState().acceptProposal("o1");
+    expect(useAssistantStore.getState().proposals.o1.state).toBe("accepted");
+    expect(calls.some((c) => c.url.endsWith("/api/model/load"))).toBe(true);
+
+    answers["POST /api/assistant/proposals/w1/accept"] = () => json({ detail: { reason: "hard_linked", message: "m.py has more than one hard link" } }, 409);
+    await useAssistantStore.getState().acceptProposal("w1");
+    expect(useAssistantStore.getState().proposals.w1.state).toBe("rejected");
+    expect(useAssistantStore.getState().loadError).toContain("hard link");
+    const accept = calls.find((c) => c.url.endsWith("/proposals/w1/accept"));
+    expect(JSON.parse(String(accept?.init?.body)).current_hash).toBe("b");
   });
 });

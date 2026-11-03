@@ -31,8 +31,19 @@ export interface AssistantSettings {
   autonomy: Autonomy;
   saving: Saving;
   visibility: AssistantVisibility;
-  limits: { tool_calls: number; minutes: number };
+  /** max_tokens: the tokens the agent's service reports, summed over the session. */
+  limits: { tool_calls: number; minutes: number; max_tokens: number };
   keep_log: boolean;
+}
+
+/** The keys a PUT may carry: what the backend stores, and nothing it adds to a GET (`available`). */
+export const ASSISTANT_SETTINGS_KEYS = ["enabled", "agent", "folders", "autonomy", "saving", "visibility", "limits", "keep_log"] as const;
+
+/** `settings` reduced to the keys the backend takes. */
+export function settingsBody(settings: AssistantSettings): AssistantSettings {
+  const out = {} as Record<string, unknown>;
+  for (const key of ASSISTANT_SETTINGS_KEYS) out[key] = settings[key];
+  return out as unknown as AssistantSettings;
 }
 
 export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
@@ -42,11 +53,17 @@ export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
   autonomy: "suggest",
   saving: "always_ask",
   visibility: { model: true, selection: true, errors: true, results: false, files: false },
-  limits: { tool_calls: 25, minutes: 10 },
+  limits: { tool_calls: 25, minutes: 10, max_tokens: 100000 },
   keep_log: true,
 };
 
-export type ProposalKind = "app_edit" | "file_write";
+/**
+ * `app_edit`: structured ops the page applies through the user's own edit
+ * routes; `after` is a description, never source. `file_write`: the backend
+ * writes `after` to `path` on accept, and a `.py` stays unreviewed until
+ * approved. `open_file`: the agent asks; only the user opens it.
+ */
+export type ProposalKind = "app_edit" | "file_write" | "open_file";
 export type ProposalState = "pending" | "accepted" | "rejected" | "stale";
 
 export interface ProposalOp {
@@ -59,11 +76,11 @@ export interface Proposal {
   kind: ProposalKind;
   summary: string;
   state: ProposalState;
-  base_hash: string;
+  base_hash: string | null;
   ops: ProposalOp[];
   path: string | null;
-  before: string;
-  after: string;
+  before: string | null;
+  after: string | null;
   freeform_python: boolean;
   warnings: string[];
 }

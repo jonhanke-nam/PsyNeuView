@@ -24,6 +24,8 @@ export function AssistantPanel() {
   const proposals = useAssistantStore((s) => s.proposals);
   const turn = useAssistantStore((s) => s.turn);
   const lastDone = useAssistantStore((s) => s.lastDone);
+  const tokensUsed = useAssistantStore((s) => s.tokensUsed);
+  const maxTokens = useAssistantStore((s) => s.settings.limits.max_tokens);
   const loadError = useAssistantStore((s) => s.loadError);
   const send = useAssistantStore((s) => s.send);
   const stop = useAssistantStore((s) => s.stop);
@@ -114,8 +116,15 @@ export function AssistantPanel() {
           Stop
         </Button>
       </div>
-      <div data-testid="assistant-turn-state" style={{ padding: "2px 12px 6px", fontSize: "var(--pnv-fs-11)", color: loadError ? "var(--pnv-danger)" : "var(--pnv-text-muted)", background: "var(--pnv-surface-muted)" }}>
-        {loadError ?? state}
+      <div style={{ display: "flex", gap: 12, padding: "2px 12px 6px", fontSize: "var(--pnv-fs-11)", background: "var(--pnv-surface-muted)" }}>
+        <span data-testid="assistant-turn-state" style={{ flex: 1, minWidth: 0, color: loadError ? "var(--pnv-danger)" : "var(--pnv-text-muted)" }}>
+          {loadError ?? state}
+        </span>
+        {tokensUsed > 0 && (
+          <span data-testid="assistant-tokens-used" style={{ color: "var(--pnv-text-hint)" }} title="Tokens the agent's service has reported for this session, against the limit in Settings">
+            {tokensUsed.toLocaleString()} of {maxTokens.toLocaleString()} tokens
+          </span>
+        )}
       </div>
     </div>
   );
@@ -123,7 +132,7 @@ export function AssistantPanel() {
 
 function doneText(ev: AssistantEvent): string {
   if (ev.type !== "done") return "Ready";
-  return ev.reason === "stopped" ? "Stopped." : ev.reason === "limit" ? "Stopped at the limit set in Settings." : "Done.";
+  return ev.reason === "stopped" ? "Stopped." : ev.reason === "limit" ? "Stopped at a limit set in Settings." : "Done.";
 }
 
 function EventLine({
@@ -181,7 +190,7 @@ function ProposalCard({ proposal, onAccept, onReject }: { proposal: Proposal; on
   return (
     <div data-testid="assistant-proposal" data-state={p.state} style={{ margin: "8px 0", border: `1px solid ${border}`, borderRadius: 6, overflow: "hidden" }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "6px 10px", background: "var(--pnv-surface-muted)", borderBottom: "1px solid var(--pnv-border-faint)" }}>
-        <span style={{ fontWeight: 600 }}>{p.kind === "file_write" ? "Write a file" : "Edit the open model"}:</span>
+        <span style={{ fontWeight: 600 }}>{KIND_WORDS[p.kind] ?? "Proposal"}:</span>
         <span style={{ flex: 1, minWidth: 0 }}>
           <SafeText text={p.summary} testId="assistant-proposal-summary" />
         </span>
@@ -196,7 +205,13 @@ function ProposalCard({ proposal, onAccept, onReject }: { proposal: Proposal; on
       )}
       {p.state === "stale" && (
         <div data-testid="assistant-proposal-stale" style={{ padding: "6px 10px", background: "var(--pnv-warning-tint)", color: "var(--pnv-warning-text-on-tint)", fontSize: "var(--pnv-fs-12)" }}>
-          The model changed since the assistant read it, so this can't be applied as is. Ask it to look again.
+          {p.kind === "file_write" ? "The file" : "The model"} changed since the assistant read it, so this can't be applied as is. Ask it to look again.
+        </div>
+      )}
+      {p.kind === "open_file" && (
+        <div style={{ padding: "6px 10px", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)" }}>
+          Opening a model runs its code. A file the assistant wrote is shown for review first; any other file opens as
+          it would from the Open menu.
         </div>
       )}
       {p.freeform_python && (
@@ -215,13 +230,20 @@ function ProposalCard({ proposal, onAccept, onReject }: { proposal: Proposal; on
           )}
         </div>
       )}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
-        <Side label="Before" text={p.before} testId="assistant-proposal-before" />
-        <Side label="After" text={p.after} testId="assistant-proposal-after" />
-      </div>
+      {p.kind === "file_write" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
+          <Side label="Before" text={p.before ?? "(a new file)"} testId="assistant-proposal-before" />
+          <Side label="After" text={p.after ?? ""} testId="assistant-proposal-after" />
+        </div>
+      )}
+      {p.kind === "app_edit" && (
+        // Structured ops only: described here, applied through the user's own
+        // edit routes on accept. The text is never applied as source.
+        <Side label="Changes" text={p.ops.length ? (p.after ?? describeOps(p)) : "(no changes)"} testId="assistant-proposal-after" />
+      )}
       <div style={{ display: "flex", gap: 8, padding: "6px 10px", borderTop: "1px solid var(--pnv-border-faint)" }}>
         <Button kind="primary" size="compact" data-testid="assistant-proposal-accept" disabled={!pending} onClick={() => onAccept(p.id)}>
-          {p.freeform_python ? "Approve and apply" : "Accept"}
+          {p.freeform_python ? "Approve and apply" : p.kind === "open_file" ? "Open" : "Accept"}
         </Button>
         <Button kind="secondary" size="compact" data-testid="assistant-proposal-reject" disabled={p.state !== "pending" && p.state !== "stale"} onClick={() => onReject(p.id)}>
           Reject
@@ -229,6 +251,16 @@ function ProposalCard({ proposal, onAccept, onReject }: { proposal: Proposal; on
       </div>
     </div>
   );
+}
+
+const KIND_WORDS: Record<Proposal["kind"], string> = {
+  app_edit: "Edit the open model",
+  file_write: "Write a file",
+  open_file: "Open a file",
+};
+
+function describeOps(p: Proposal): string {
+  return p.ops.map((op) => `${op.op} ${JSON.stringify(op.args)}`).join("\n");
 }
 
 const STATE_WORDS: Record<Proposal["state"], string> = {
@@ -267,11 +299,26 @@ function ReviewOfferCard() {
           </>
         )}
       </div>
+      {offer.changed && (
+        <div data-testid="assistant-review-changed" style={{ marginTop: 4, fontWeight: 600 }}>
+          The file changed since it was shown. This is what it holds now; read it again before approving.
+        </div>
+      )}
       <div style={{ marginTop: 4 }}>
-        Read it in the code editor first. Approving means it may run on this machine with your permissions.
+        This is the whole file. Approving means exactly this text may run on this machine with your permissions; any
+        later change to the file needs a new review.
       </div>
+      {offer.content === null ? (
+        <div data-testid="assistant-review-content" style={{ marginTop: 6, color: "var(--pnv-text-muted)" }}>
+          {offer.content_hash === null ? "Fetching the file…" : "The file can't be read."}
+        </div>
+      ) : (
+        <pre data-testid="assistant-review-content" style={{ margin: "6px 0 0", padding: "6px 8px", background: "var(--pnv-surface)", border: "1px solid var(--pnv-border-faint)", borderRadius: 4, fontFamily: MONO, fontSize: "var(--pnv-fs-12)", whiteSpace: "pre-wrap", overflowWrap: "anywhere", maxHeight: 260, overflowY: "auto" }}>
+          {offer.content}
+        </pre>
+      )}
       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <Button kind="primary" size="compact" data-testid="assistant-review-approve" onClick={() => void approve()}>
+        <Button kind="primary" size="compact" data-testid="assistant-review-approve" disabled={!offer.content_hash} onClick={() => void approve()}>
           I have reviewed it: approve
         </Button>
         <Button kind="secondary" size="compact" data-testid="assistant-review-dismiss" onClick={dismiss}>

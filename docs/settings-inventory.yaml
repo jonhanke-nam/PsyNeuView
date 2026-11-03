@@ -665,6 +665,16 @@ settings:
     storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
     control: setting-assistant-limit-minutes
 
+  - id: assistant-limit-max-tokens
+    label: AI assistant ▸ Limits and log ▸ Tokens per session
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-limit-max-tokens
+    notes: >
+      Spending: the tokens the agent's service reports (input and output), summed over a session; the turn ends
+      with done reason "limit" when reached. Default 100000. Raising it asks for confirmation.
+
   - id: assistant-keep-log
     label: AI assistant ▸ Limits and log ▸ Keep a log of tool calls
     home: settings
