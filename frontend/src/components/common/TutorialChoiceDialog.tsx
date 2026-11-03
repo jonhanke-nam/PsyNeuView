@@ -53,7 +53,7 @@ function Frame({
           background: "var(--pnv-surface)",
           borderRadius: 12,
           width: "92%",
-          maxWidth: 560,
+          maxWidth: 600,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",

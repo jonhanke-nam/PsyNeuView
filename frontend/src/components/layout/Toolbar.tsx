@@ -75,7 +75,7 @@ import { abbreviateHome } from "@/components/common/settings/shared";
 import { record as recordActivity, recordMenuClick } from "@/utils/activityLog";
 import { noteModelOrigin } from "@/utils/diagnostics";
 import { windowRequest } from "@/utils/appWindow";
-import { chooseTutorialStart, guardOpen, type OpenTarget } from "@/utils/tutorialGuard";
+import { chooseTutorialStart, guardOpen, useTutorialChoice } from "@/utils/tutorialGuard";
 import { SAVE_COPY_EVENT, requestSaveCopy } from "@/utils/saveRequest";
 import { stripProtectionLine } from "@/utils/protectionLine";
 import { AutosaveStatus } from "./AutosaveStatus";
@@ -785,11 +785,11 @@ export function Toolbar() {
   const { setStatus, clearStatus } = useStatusStore();
 
   // A walkthrough in progress gets a say before its model is replaced (#172).
-  const passesTutorial = async (target: OpenTarget) => {
-    const ok = await guardOpen(target);
-    if (!ok) setDropdownOpen(false);
-    return ok;
-  };
+  // The Open menu draws above dialogs, so it closes when the question comes up.
+  const tutorialQuestion = useTutorialChoice((s) => s.pending);
+  useEffect(() => {
+    if (tutorialQuestion) setDropdownOpen(false);
+  }, [tutorialQuestion]);
 
   // Open a local .pnlproject bundle in place (#348): the backend extracts it
   // to a working dir and reports the origin, so Save re-zips back into it.
@@ -846,7 +846,7 @@ export function Toolbar() {
    * which is the flow most likely to be used for a deliberate re-open.
    */
   const loadFromPath = async (path: string, { fresh = true }: { fresh?: boolean } = {}) => {
-    if (fresh && !(await passesTutorial({ kind: "path", path }))) return;
+    if (fresh && !(await guardOpen({ kind: "path", path }))) return;
     if (!confirmDiscard()) return;
     if (fresh) useModelStore.getState().markFreshOpen(); // #906
     if (path.endsWith(".pnlproject")) {
@@ -945,7 +945,7 @@ export function Toolbar() {
   };
 
   const loadDemo = async (demo: DemoModel, { byTutorial = false }: { byTutorial?: boolean } = {}) => {
-    if (!byTutorial && !(await passesTutorial({ kind: "catalog", label: demo.label, file: demo.pristine_path }))) return;
+    if (!byTutorial && !(await guardOpen({ kind: "catalog", label: demo.label, file: demo.pristine_path }))) return;
     if (!confirmDiscard()) return;
     setDropdownOpen(false);
     clearNotifications();
@@ -1108,7 +1108,7 @@ export function Toolbar() {
     rm: ReferenceModel,
     { restore = false, byTutorial = false }: { restore?: boolean; byTutorial?: boolean } = {},
   ) => {
-    if (!restore && !byTutorial && !(await passesTutorial({ kind: "catalog", label: rm.label, file: rm.pristine_path }))) return;
+    if (!restore && !byTutorial && !(await guardOpen({ kind: "catalog", label: rm.label, file: rm.pristine_path }))) return;
     if (restore) {
       if (!window.confirm(`Put ${rm.label} back to the bundled version? Your edits to it will be lost.`)) return;
     } else if (!confirmDiscard()) return;
@@ -1183,7 +1183,7 @@ export function Toolbar() {
   // source file into a working dir before loading, so the open reflects the
   // live source yet edits never mutate the PsyNeuLink source clone.
   const loadPnlExample = async (m: LibraryModel) => {
-    if (!(await passesTutorial({ kind: "file", name: m.label }))) return;
+    if (!(await guardOpen({ kind: "file", name: m.label }))) return;
     if (!confirmDiscard()) return;
     setDropdownOpen(false);
     clearNotifications();
