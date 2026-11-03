@@ -298,6 +298,7 @@ test.describe("AI assistant, for real (#179)", { tag: "@ci" }, () => {
     await expect(card.getByTestId("assistant-proposal-summary")).toHaveText("Set the slope of sender_mech to 2");
     await expect(card.getByTestId("assistant-proposal-after")).toHaveText("sender_mech.function.slope = 2");
     await expect(page.locator(".cm-content")).not.toContainText("slope=2");
+    await card.scrollIntoViewIfNeeded();
     await shot(page, "12-proposal");
 
     await card.getByTestId("assistant-proposal-accept").click();
@@ -349,6 +350,7 @@ test.describe("AI assistant, for real (#179)", { tag: "@ci" }, () => {
     await expect(offer.getByTestId("assistant-review-content")).toContainText("write_text('ran')");
     expect(existsSync(marker)).toBe(false);
     await expect(page.locator(".react-flow__node", { hasText: "wrote_mech" })).toHaveCount(0);
+    await offer.scrollIntoViewIfNeeded();
     await shot(page, "15-review-offer");
 
     await offer.getByTestId("assistant-review-approve").click();
@@ -377,6 +379,7 @@ test.describe("AI assistant, for real (#179)", { tag: "@ci" }, () => {
     await expect(page.getByTestId("assistant-proposal")).toHaveCount(0);
     expect(existsSync(hostileMarker)).toBe(false);
     expect(readFileSync(model, "utf8")).not.toContain("owned");
+    await page.getByTestId("assistant-refused").last().scrollIntoViewIfNeeded();
     await shot(page, "17-refused");
   });
 

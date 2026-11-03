@@ -45,10 +45,12 @@ export function AssistantPanel() {
     [stop],
   );
 
+  // Keep the newest thing in view: a new line, or the review offer, which
+  // comes after the conversation.
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [items.length]);
+  }, [items.length, reviewOffer]);
 
   const submit = () => {
     const text = draft.trim();
