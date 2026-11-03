@@ -10,7 +10,14 @@
 
 import { useEffect, useState } from "react";
 import { useAutosaveStore } from "@/stores/autosaveStore";
-import { BUSY_THRESHOLDS, DEFAULT_BUSY_THRESHOLD_MS, useBusyStore } from "@/stores/busyStore";
+import {
+  BUSY_THRESHOLDS,
+  BUSY_TIMER_PLACES,
+  DEFAULT_BUSY_THRESHOLD_MS,
+  DEFAULT_BUSY_TIMER_PLACE,
+  useBusyStore,
+  type BusyTimerPlace,
+} from "@/stores/busyStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { AUTOSAVE_MAX_SECONDS, AUTOSAVE_MIN_SECONDS, clampAutosaveSeconds } from "@/utils/autosave";
 import { hasSettingsBridge } from "@/utils/macAppSettings";
@@ -56,6 +63,7 @@ export function GeneralSection({
       </Group>
       <Group id="busy-indicator" title="Busy indicator">
         <BusyThresholdRow />
+        <BusyTimerRow />
       </Group>
     </>
   );
@@ -227,6 +235,34 @@ function BusyThresholdRow() {
           <option key={t.ms} value={t.ms}>
             {t.label}
             {t.ms === DEFAULT_BUSY_THRESHOLD_MS ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/** Where the wheel says how long it has been spinning (#176). */
+function BusyTimerRow() {
+  const place = useBusyStore((s) => s.timerPlace);
+  const setPlace = useBusyStore((s) => s.setTimerPlace);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)", marginTop: 10 }}>
+      <SettingLabel title="Show how long it has been spinning" htmlFor="setting-busy-timer">
+        Where the wheel shows the time so far, once it has spun for a second.
+        Problem reports record how long each wait took either way.
+      </SettingLabel>
+      <select
+        id="setting-busy-timer"
+        data-testid="setting-busy-timer"
+        value={place}
+        onChange={(e) => setPlace(e.target.value as BusyTimerPlace)}
+        style={{ marginTop: 6, fontSize: "var(--pnv-fs-12)", padding: "3px 6px" }}
+      >
+        {BUSY_TIMER_PLACES.map((p) => (
+          <option key={p.place} value={p.place}>
+            {p.label}
+            {p.place === DEFAULT_BUSY_TIMER_PLACE ? " (default)" : ""}
           </option>
         ))}
       </select>

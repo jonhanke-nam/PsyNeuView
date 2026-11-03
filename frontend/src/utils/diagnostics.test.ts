@@ -13,6 +13,7 @@ import { useTourStore } from "@/stores/tourStore";
 import type { SettingsInfo } from "@/components/common/settings/types";
 import type { RunningInfo } from "./runningFrom";
 import { clearActivity, record } from "./activityLog";
+import { beginWait, clearWaits } from "./waitLog";
 import { pageAgainstServer,
   DIAGNOSTICS_VERSION,
   classifyModel,
@@ -20,6 +21,7 @@ import { pageAgainstServer,
   diagnosticsFilename,
   noteModelOrigin,
   rememberServerInfo,
+  reportEntries,
 } from "./diagnostics";
 
 const INFO: SettingsInfo = {
@@ -286,5 +288,53 @@ describe("pageAgainstServer (#2)", () => {
   it("can't tell without a page build, and never flags the dev server", () => {
     expect(pageAgainstServer("0.6.0", null, null, false).pageMatchesServer).toBeNull();
     expect(pageAgainstServer("0.6.0", null, page("0.5.0", null), true).versionWarning).toBeNull();
+  });
+});
+
+describe("activity and waits in a report (#176)", () => {
+  beforeEach(() => {
+    clearActivity();
+    clearWaits();
+  });
+
+  it("gives every entry the `time` field the Mac app's activity.txt reads", async () => {
+    record("menu", "Open menu opened");
+    const snap = await collectDiagnostics({
+      fetchInfo: () => Promise.reject(new Error("offline")),
+      fetchRunning: () => Promise.reject(new Error("offline")),
+    });
+    expect(snap.activity[0].time).toBe(snap.activity[0].t);
+    expect(snap.activity[0].time).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("merges waits and activity in time order, oldest entry first on a tie", () => {
+    const at = (ms: number) => new Date(ms).toISOString();
+    const merged = reportEntries(
+      [
+        { t: at(100), kind: "menu", text: "first" },
+        { t: at(300), kind: "menu", text: "third" },
+      ],
+      [
+        { t: at(100), kind: "wait", text: "tied" },
+        { t: at(200), kind: "wait", text: "second" },
+      ],
+    );
+    expect(merged.map((e) => e.text)).toEqual(["first", "tied", "second", "third"]);
+  });
+
+  it("includes finished waits, and lists the ones still running", async () => {
+    beginWait("GET /finished")();
+    const end = beginWait("GET /api/psyneulink-examples/status", { now: Date.now() - 54_000 });
+    const snap = await collectDiagnostics({
+      fetchInfo: () => Promise.reject(new Error("offline")),
+      fetchRunning: () => Promise.reject(new Error("offline")),
+    });
+    end();
+    const waits = snap.activity.filter((e) => e.kind === "wait").map((e) => e.text);
+    expect(waits[0]).toMatch(/^GET \/api\/psyneulink-examples\/status · still waiting after 54\.\d{3} s$/);
+    expect(waits[1]).toMatch(/^GET \/finished · stopped /);
+    expect(snap.waitsInProgress).toEqual([
+      expect.objectContaining({ label: "GET /api/psyneulink-examples/status", waitedMs: expect.any(Number) }),
+    ]);
   });
 });

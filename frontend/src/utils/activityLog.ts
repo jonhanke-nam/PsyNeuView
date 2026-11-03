@@ -19,7 +19,7 @@
  */
 
 export type ActivityKind =
-  /** A menu item chosen, or a keyboard shortcut fired. */
+  /** A menu opened, a menu item chosen, or a keyboard shortcut fired. */
   | "menu"
   /** A model opened, reopened or saved. */
   | "model"
@@ -37,7 +37,9 @@ export type ActivityKind =
   /** A model error shown in the diagnostics bar (not a notification). */
   | "error"
   /** The installed PsyNeuLink changing, or the Mac app's PsyNeuView install. */
-  | "psyneulink";
+  | "psyneulink"
+  /** A wait, from the wait log (utils/waitLog.ts), merged in for a report. */
+  | "wait";
 
 export interface ActivityEntry {
   /** When, as an ISO time. */
@@ -77,6 +79,17 @@ export function recordSettingChanged(key: string, value?: unknown, text?: string
     key,
     ...(safe ? { value } : {}),
   });
+}
+
+/** The kinds that are the user doing something, so may have started a wait. */
+const ACTION_KINDS: ReadonlySet<ActivityKind> = new Set<ActivityKind>(["menu", "run", "learn", "step", "walkthrough"]);
+
+/** The latest thing the user did, or null. */
+export function latestAction(): ActivityEntry | null {
+  for (let i = entries.length - 1; i >= 0; i--) {
+    if (ACTION_KINDS.has(entries[i].kind)) return entries[i];
+  }
+  return null;
 }
 
 /** A copy of the log, oldest first. */
