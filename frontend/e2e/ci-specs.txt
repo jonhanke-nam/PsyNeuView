@@ -1,3 +1,4 @@
+ai-assistant.spec.ts
 about-release-dates.spec.ts
 app-shell.spec.ts
 app-update-notice.spec.ts

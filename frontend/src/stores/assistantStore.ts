@@ -77,6 +77,8 @@ interface AssistantState {
 
 let itemSeq = 0;
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
+/** One poll at a time: a second caller joins the one in flight. */
+let pollInFlight: Promise<void> | null = null;
 
 async function readJson(resp: Response): Promise<Record<string, unknown>> {
   try {
@@ -224,52 +226,13 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
     void get().poll();
   },
 
-  poll: async () => {
-    if (pollTimer) {
-      clearTimeout(pollTimer);
-      pollTimer = null;
-    }
-    const { sessionId, next } = get();
-    if (!sessionId) return;
-    let running = false;
-    try {
-      const resp = await fetch(`/api/assistant/sessions/${sessionId}/events?after=${next}`);
-      if (!resp.ok) {
-        set({ turn: "idle", loadError: `Lost the conversation: HTTP ${resp.status}` });
-        return;
-      }
-      const body = (await readJson(resp)) as { events?: AssistantEvent[]; next?: number; running?: boolean };
-      const events = body.events ?? [];
-      running = Boolean(body.running);
-      set((s) => {
-        let proposals = s.proposals;
-        let lastDone = s.lastDone;
-        for (const ev of events) {
-          if (ev.type === "proposal") {
-            proposals = withProposal(proposals, ev.proposal);
-            record("assistant", `Proposal ${ev.proposal.kind}: ${ev.proposal.id}`);
-          } else if (ev.type === "tool_call") record("assistant", `Tool call: ${ev.tool}`);
-          else if (ev.type === "refused") record("assistant", `Tool refused: ${ev.tool}`);
-          else if (ev.type === "done") {
-            lastDone = ev;
-            record("assistant", `Turn ${ev.reason}`);
-          }
-        }
-        return {
-          items: [...s.items, ...events.map((event) => ({ kind: "event" as const, id: `e${event.seq}`, event }))],
-          proposals,
-          next: body.next ?? s.next,
-          turn: running ? (s.turn === "stopping" ? "stopping" : "running") : "idle",
-          lastDone,
-        };
-      });
-    } catch (e) {
-      set({ turn: "idle", loadError: String(e) });
-      return;
-    }
-    if (running) pollTimer = setTimeout(() => void get().poll(), 500);
+  poll: () => {
+    if (pollInFlight) return pollInFlight;
+    pollInFlight = pollOnce().finally(() => {
+      pollInFlight = null;
+    });
+    return pollInFlight;
   },
-
   stop: async () => {
     const { sessionId, turn } = get();
     if (!sessionId || turn === "idle") return;
@@ -330,6 +293,56 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
 
   dismissReview: () => set({ reviewOffer: null }),
 }));
+
+
+async function pollOnce(): Promise<void> {
+  const get = useAssistantStore.getState;
+  const set = useAssistantStore.setState;
+  if (pollTimer) {
+    clearTimeout(pollTimer);
+    pollTimer = null;
+  }
+  const { sessionId, next } = get();
+  if (!sessionId) return;
+  let running = false;
+  try {
+    const resp = await fetch(`/api/assistant/sessions/${sessionId}/events?after=${next}`);
+    if (!resp.ok) {
+      set({ turn: "idle", loadError: `Lost the conversation: HTTP ${resp.status}` });
+      return;
+    }
+    const body = (await readJson(resp)) as { events?: AssistantEvent[]; next?: number; running?: boolean };
+    // Only what is new: an answer that overlaps (a retry, a slow one) is not shown twice.
+    const events = (body.events ?? []).filter((ev) => ev.seq > next);
+    running = Boolean(body.running);
+    set((s) => {
+      let proposals = s.proposals;
+      let lastDone = s.lastDone;
+      for (const ev of events) {
+        if (ev.type === "proposal") {
+          proposals = withProposal(proposals, ev.proposal);
+          record("assistant", `Proposal ${ev.proposal.kind}: ${ev.proposal.id}`);
+        } else if (ev.type === "tool_call") record("assistant", `Tool call: ${ev.tool}`);
+        else if (ev.type === "refused") record("assistant", `Tool refused: ${ev.tool}`);
+        else if (ev.type === "done") {
+          lastDone = ev;
+          record("assistant", `Turn ${ev.reason}`);
+        }
+      }
+      return {
+        items: [...s.items, ...events.map((event) => ({ kind: "event" as const, id: `e${event.seq}`, event }))],
+        proposals,
+        next: body.next ?? s.next,
+        turn: running ? (s.turn === "stopping" ? "stopping" : "running") : "idle",
+        lastDone,
+      };
+    });
+  } catch (e) {
+    set({ turn: "idle", loadError: String(e) });
+    return;
+  }
+  if (running) pollTimer = setTimeout(() => void get().poll(), 500);
+}
 
 /**
  * The 409 every model route may answer with (#179): unreviewed
