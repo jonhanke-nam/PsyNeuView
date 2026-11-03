@@ -92,16 +92,11 @@ export function AssistantSection() {
           <SettingLabel title="Model" htmlFor="setting-assistant-agent-model">
             The model name the agent's service expects. Blank uses the service's default.
           </SettingLabel>
-          <input
+          <DraftInput
             id="setting-assistant-agent-model"
-            data-testid="setting-assistant-agent-model"
             value={settings.agent.model}
             disabled={saving}
-            onChange={(e) => useAssistantStore.setState({ settings: { ...settings, agent: { ...settings.agent, model: e.target.value } } })}
-            onBlur={(e) => {
-              if (e.target.value !== settings.agent.model) change({ agent: { ...settings.agent, model: e.target.value } });
-            }}
-            style={{ ...inputStyle, marginTop: 6, width: "100%" }}
+            onCommit={(model) => change({ agent: { ...settings.agent, model } })}
           />
         </div>
         {settings.agent.type === "openai_compatible" && (
@@ -109,17 +104,12 @@ export function AssistantSection() {
             <SettingLabel title="Server address" htmlFor="setting-assistant-agent-base-url">
               Where messages go. A server on this machine keeps everything local.
             </SettingLabel>
-            <input
+            <DraftInput
               id="setting-assistant-agent-base-url"
-              data-testid="setting-assistant-agent-base-url"
               value={settings.agent.base_url}
               disabled={saving}
               placeholder="http://localhost:11434/v1"
-              onChange={(e) => useAssistantStore.setState({ settings: { ...settings, agent: { ...settings.agent, base_url: e.target.value } } })}
-              onBlur={(e) => {
-                if (e.target.value !== settings.agent.base_url) change({ agent: { ...settings.agent, base_url: e.target.value } });
-              }}
-              style={{ ...inputStyle, marginTop: 6, width: "100%" }}
+              onCommit={(base_url) => change({ agent: { ...settings.agent, base_url } })}
             />
           </div>
         )}
@@ -232,6 +222,34 @@ export function AssistantSection() {
         </div>
       </Group>
     </div>
+  );
+}
+
+/**
+ * A text setting typed into a local draft and saved on blur or Enter, when
+ * it differs from what the backend holds. The draft follows the backend's
+ * value when that changes (a reload, a refused save).
+ */
+function DraftInput({ id, value, disabled, placeholder, onCommit }: { id: string; value: string; disabled: boolean; placeholder?: string; onCommit: (value: string) => void }) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+  const commit = () => {
+    if (draft.trim() !== value) onCommit(draft.trim());
+  };
+  return (
+    <input
+      id={id}
+      data-testid={id}
+      value={draft}
+      disabled={disabled}
+      placeholder={placeholder}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+      }}
+      style={{ ...inputStyle, marginTop: 6, width: "100%" }}
+    />
   );
 }
 
