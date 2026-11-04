@@ -297,6 +297,8 @@ function BlankLoadPanelsRow() {
               <span>
                 {o.label}
                 {o.id === "graph" ? <span style={mutedStyle}> (default)</span> : null}
+                {/* It is drawn inside the graph, so it can't show on its own. */}
+                {o.id === "palette" ? <span style={mutedStyle}> (shows inside the graph, so tick the graph too)</span> : null}
               </span>
             </label>
           );
