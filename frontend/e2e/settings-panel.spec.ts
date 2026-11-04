@@ -81,6 +81,7 @@ test.describe("Settings: sections", { tag: "@ci" }, () => {
       "Tutorials and Voice",
       "Open menu",
       "Folders",
+      "AI assistant",
       "Keyboard shortcuts",
       "Developer (advanced)",
     ]);
