@@ -135,12 +135,13 @@
 
   /* Node roles, from docs/icon-ontology.md: the colour a mechanism's role
      has in PsyNeuLink's own show_graph, as show_graph's own PDF and PNG draw
-     it. show_graph names its colours ("green", "red", "blue"), and Graphviz
-     draws each name with its X11 value: green is #00ff00 (a browser would
-     read the same name in an SVG as #008000, so the app's show_graph tab is
-     made to agree with the PDF, not the other way round). Red and green must
-     match show_graph exactly (#190). Their own set: a button is never
-     "INPUT green", and a role is never "the primary blue". */
+     it. show_graph names its colours ("green", "red", "blue", "purple"), and
+     Graphviz draws each name with its X11 value: green is #00ff00 and purple
+     #a020f0 (a browser would read the same names in an SVG as #008000 and
+     #800080, so the app's show_graph tab is made to agree with the PDF, not
+     the other way round). Red, green and purple must match show_graph exactly
+     (#190). Their own set: a button is never "INPUT green", and a role is
+     never "the primary blue". */
   --pnv-role-input: #00ff00;
   --pnv-role-output: #ff0000;
   --pnv-role-control: #0000ff;
@@ -156,14 +157,15 @@
      it a shape, not a colour), and one in a cycle (black, like any ordinary
      node: show_graph marks a cycle with a double ring). */
   --pnv-role-singleton: #a52a2a;
-  --pnv-role-controller: #800080;
+  --pnv-role-controller: #a020f0;
   --pnv-role-feedback-sender: #000;
   --pnv-role-cycle: #000;
   /* The same roles as text (a node's type tag) and behind white text (its
      role tag), where the outline colour is too light to read: a darker green
      (#00ff00 on white is 1.4:1, unreadable; this is CSS green, 5.1:1), red,
      orange and pink. The other roles' outline colours read as text as they
-     are. ROLE_TEXT_COLORS in constants/pnlTypes.ts names these. */
+     are (controller purple is 5.3:1 on white, either way round: purple text
+     on white, or a white role tag on purple). ROLE_TEXT_COLORS in constants/pnlTypes.ts names these. */
   --pnv-role-input-text: #008000;
   --pnv-role-output-text: #dd0000;
   --pnv-role-learning-text: #e65100;
