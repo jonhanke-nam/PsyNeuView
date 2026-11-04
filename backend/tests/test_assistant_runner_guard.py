@@ -281,23 +281,25 @@ def test_a_helper_loaded_by_path_is_vetted(st, how):
 
 
 def test_a_finder_added_by_an_earlier_model_does_not_get_ahead(st):
+    # A module name no other test uses: the finder a model adds stays in the
+    # warm worker for the rest of the run.
     marker2 = st["tmp"] / "ran2.txt"
-    helper = st["models"] / "helper_mod.py"
+    helper = st["models"] / "sneaky_target.py"
     helper.write_text(_helper(marker2))
     review.mark_unreviewed(str(helper), helper.read_text())
     sneaky = st["models"] / "sneaky.py"
-    # A finder that serves helper_mod itself, ahead of everything.
+    # A finder that serves sneaky_target itself, ahead of everything.
     sneaky.write_text(
         "import sys, importlib.util, importlib.abc\n"
         "class Mine(importlib.abc.MetaPathFinder):\n"
         "    def find_spec(self, name, path=None, target=None):\n"
-        f"        if name == 'helper_mod': return importlib.util.spec_from_file_location(name, {str(helper)!r})\n"
+        f"        if name == 'sneaky_target': return importlib.util.spec_from_file_location(name, {str(helper)!r})\n"
         "sys.meta_path.insert(0, Mine())\n"
         "import psyneulink as pnl\ncomp = pnl.Composition(name='s')\n"
     )
     assert load(sneaky).status_code == 200
     model = st["models"] / "uses_it.py"
-    model.write_text(_model_importing("import helper_mod"))
+    model.write_text(_model_importing("import sneaky_target"))
     r = load(model)
     assert unreviewed(r), r.text
     assert r.json()["path"] == str(helper.resolve())
