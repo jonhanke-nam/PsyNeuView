@@ -132,6 +132,23 @@ def _isolate_managed_layouts(tmp_path, monkeypatch):
     yield
 
 
+@pytest.fixture(autouse=True)
+def _isolate_examples_status(tmp_path, monkeypatch):
+    """Point every test at a throwaway cache folder (#175).
+
+    The PsyNeuLink examples' load status is kept under
+    ``~/.psyneuview/cache`` — the developer's real home — unless redirected,
+    and what this process remembers is dropped so one test's result can't
+    answer another's.
+    """
+    from app.services import examples_status
+
+    monkeypatch.setenv(examples_status.CACHE_DIR_ENV, str(tmp_path / "cache"))
+    examples_status.forget_all()
+    yield
+    examples_status.forget_all()
+
+
 @pytest.fixture(autouse=True, scope="session")
 def _disable_show_graph():
     # Library model files (e.g. GilzenratModel.py) call Composition.show_graph()

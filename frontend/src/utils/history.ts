@@ -6,6 +6,7 @@
  */
 
 import { useModelStore } from "@/stores/modelStore";
+import { record } from "@/utils/activityLog";
 import { useHistoryStore, type SaveMark, type Snapshot } from "@/stores/historyStore";
 import type { MechanismData } from "@/stores/modelStore";
 
@@ -17,6 +18,10 @@ import type { MechanismData } from "@/stores/modelStore";
  * @param description - Human-readable description ("Modified gain in hidden_layer")
  */
 export function recordAction(description: string) {
+  // Every undo point is an edit the user made, for problem reports (#177).
+  // The description names what changed, never the new text or value. A
+  // model loading or being rebuilt is the app's doing, and logged elsewhere.
+  if (description !== "Model loaded" && description !== "Model updated") record("edit", description);
   const store = useModelStore.getState();
   const { source, nodes, edges, filePath } = store;
 

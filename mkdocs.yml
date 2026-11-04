@@ -85,6 +85,7 @@ nav:
       - Icon ontology: icon-ontology.md
       - UI interaction conventions: ui-interaction-conventions.md
       - Settings and the Mac app: settings-and-mac-app.md
+      - What the activity log records (audit): activity-log-audit.md
       - Settings etiquette (draft): settings-etiquette.md
       - Execution modes and stepping: execution-modes-and-stepping.md
       - Deployment modes: deployment-modes.md

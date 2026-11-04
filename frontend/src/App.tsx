@@ -197,6 +197,7 @@ export default function App() {
                   >
                     {/* Tab bar */}
                     <div
+                      data-pnv-where="Bottom tabs"
                       style={{
                         display: "flex",
                         alignItems: "center",

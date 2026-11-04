@@ -49,11 +49,9 @@ def test_status_returns_shape_and_cache():
             if s["load"] == "fail":
                 assert s.get("error")
             else:
-                # A model that loads is also probed for run success; the
-                # badge distinguishes "runs" (green) from "loads" (amber).
-                assert s.get("run") in ("ok", "fail")
-                if s["run"] == "fail":
-                    assert s.get("runError")
+                # Loads only: there is no run pass (#175).
+                assert s.get("nodes")
+                assert "run" not in s
         # Second call is served from the per-commit cache.
         again = client.get("/api/psyneulink-examples/status").json()
         assert again.get("cached") is True

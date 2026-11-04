@@ -1,5 +1,18 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { clearActivity, record } from "./activityLog";
+import { clearActivity, record, setActionLogging } from "./activityLog";
+
+// The action-logging setting is remembered in localStorage (#177); the suite
+// runs on node, so stub it.
+const stored = new Map<string, string>();
+Object.defineProperty(globalThis, "localStorage", {
+  configurable: true,
+  value: {
+    getItem: (k: string) => (stored.has(k) ? stored.get(k)! : null),
+    setItem: (k: string, v: string) => void stored.set(k, String(v)),
+    removeItem: (k: string) => void stored.delete(k),
+    clear: () => stored.clear(),
+  },
+});
 import {
   BACKGROUND_WAIT_MIN_MS,
   LIKELY_ACTION_MS,
@@ -90,5 +103,22 @@ describe("waitLog (#176)", () => {
     end();
     end();
     expect(finishedWaits()).toHaveLength(1);
+  });
+
+  it("records a wait without its cause, known or likely, when action logging is off (#177)", () => {
+    stored.clear();
+    clearActivity();
+    clearWaits();
+    record("menu", "Open menu opened");
+    setActionLogging(false);
+    const endLikely = beginWait("GET /api/a", { now: 1000 });
+    endLikely("ok", undefined, 1500);
+    causedBy("Open menu opened", () => beginWait("GET /api/b", { now: 1000 })("ok", undefined, 1200));
+    expect(finishedWaits().map((w) => w.action)).toEqual([null, null]);
+    setActionLogging(true);
+    causedBy("Open menu opened", () => beginWait("GET /api/c", { now: 1000 })("ok", undefined, 1200));
+    expect(finishedWaits()[2].action).toEqual({ text: "Open menu opened", certain: true });
+    stored.clear();
+    clearActivity();
   });
 });
