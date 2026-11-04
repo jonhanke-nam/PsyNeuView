@@ -9,9 +9,9 @@
  *    on that member, as show_graph draws it, rather than stopping at the
  *    frame's edge (#209).
  *
- * Both are checked again after the open frame is dragged, after Undo and Redo
- * through the steps, and after the model is opened afresh with the positions
- * that were saved along the way. Tried in Like show_graph (the layout the
+ * Both are checked again after the open frame is dragged, including onto outer
+ * nodes, after Undo and Redo through the steps, and after the model is opened
+ * afresh with the positions that were saved along the way. Tried in Like show_graph (the layout the
  * report came from; the page's own Graphviz build, so no `dot` is needed) and
  * in Layered.
  */
@@ -201,6 +201,19 @@ async function geometry(page: Page): Promise<Geometry> {
   });
 }
 
+/** Where each outer node and the EM frame sit on the graph, whatever the zoom. */
+async function placed(page: Page): Promise<Record<string, { x: number; y: number }>> {
+  const names = [...OUTER, "EM"];
+  const at: Record<string, { x: number; y: number }> = {};
+  for (const name of names) {
+    const transform = await canvasNode(page, name).first().evaluate((el) => (el as HTMLElement).style.transform);
+    const m = /translate\(([-\d.]+)px, *([-\d.]+)px\)/.exec(transform);
+    expect(m, `${name} has a position (${transform})`).toBeTruthy();
+    at[name] = { x: Number(m![1]), y: Number(m![2]) };
+  }
+  return at;
+}
+
 const nodeBox = (g: Geometry, name: string): Box | undefined =>
   g.nodes[name] ?? Object.entries(g.nodes).find(([id]) => new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-\\d+$`).test(id))?.[1];
 
@@ -213,11 +226,17 @@ const SLACK = 6;
 const touches = (p: { x: number; y: number }, b: Box) =>
   p.x >= b.x - SLACK && p.x <= b.x + b.w + SLACK && p.y >= b.y - SLACK && p.y <= b.y + b.h + SLACK;
 
-/** The open EM frame overlaps no outer node (#208). */
+/** The open EM frame holds its members and overlaps no outer node (#208). */
 async function expectFrameClear(page: Page, when: string) {
   const g = await geometry(page);
   const frame = nodeBox(g, "EM");
   expect(frame, `${when}: the EM frame is drawn`).toBeTruthy();
+  const outerBoxes = OUTER.map((name) => nodeBox(g, name));
+  const outside = Object.entries(g.nodes).filter(([, b]) => {
+    if (b === frame || outerBoxes.includes(b)) return false;
+    return b.x < frame!.x - 1 || b.y < frame!.y - 1 || b.x + b.w > frame!.x + frame!.w + 1 || b.y + b.h > frame!.y + frame!.h + 1;
+  });
+  expect(outside.map(([id]) => id), `${when}: members sticking out of the EM frame`).toEqual([]);
   const over = OUTER.filter((name) => {
     const b = nodeBox(g, name);
     return b && overlap(frame!, b);
@@ -302,6 +321,47 @@ test.describe("expanding a folded, moved composition (#208, #209)", { tag: "@ci"
     await showNested(page);
     await press(page, /^Expand composition EM$/);
     await expectAllGood(page, "after opening afresh");
+  });
+
+  test("dragging: an open frame dropped on outer nodes moves them aside, and a node dropped on it lands beside it", async ({ page }) => {
+    test.setTimeout(180_000);
+    const EGO = egoCopy();
+    await openFromPath(page, EGO);
+    await chooseLayout(page, "showgraph");
+    await press(page, /^Collapse composition EM$/);
+    await ensureCustomLayout(page);
+    await press(page, /^Expand composition EM$/);
+
+    // The open frame, by its header, onto the outer nodes.
+    await drag(page, "EM", { beside: "CONTEXT [NORMALIZED]", dx: -0.2, dy: 0 });
+    await expectAllGood(page, "after dropping the open frame on outer nodes");
+
+    // An outer node, onto the open frame's middle.
+    const frame = nodeBox(await geometry(page), "EM")!;
+    const state = nodeBox(await geometry(page), "STATE")!;
+    await drag(page, "STATE", { dx: frame.x + frame.w / 2 - state.x, dy: frame.y + frame.h / 2 - state.y });
+    await expectAllGood(page, "after dropping STATE on the open frame");
+
+    // The report's closing steps: fold, move a neighbour, open, move the frame.
+    await press(page, /^Collapse composition EM$/);
+    await drag(page, "STATE", { dx: 40, dy: -30 });
+    await press(page, /^Expand composition EM$/);
+    await expectAllGood(page, "after a second fold, move and expand");
+    await drag(page, "EM", { dx: 25, dy: 15 });
+    await expectAllGood(page, "after moving the frame again");
+
+    // Where things were moved to is what was saved: opening afresh agrees.
+    const before = await placed(page);
+    await openFromPath(page, EGO);
+    await chooseLayout(page, "showgraph");
+    await showNested(page);
+    await press(page, /^Expand composition EM$/);
+    await expectAllGood(page, "after opening afresh, with the moves saved");
+    const after = await placed(page);
+    for (const name of [...OUTER, "EM"]) {
+      expect(Math.abs(after[name].x - before[name].x), `${name} across a reopen, x`).toBeLessThan(2);
+      expect(Math.abs(after[name].y - before[name].y), `${name} across a reopen, y`).toBeLessThan(2);
+    }
   });
 
   test("Layered: the same, after fold, move and expand", async ({ page }) => {
