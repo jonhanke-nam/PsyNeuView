@@ -3567,7 +3567,8 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
             left: 0,
             // Above the panel dividers (Allotment sashes, z-index 35), like the Open menu (#1391).
             zIndex: Z_MENU,
-            minWidth: 190,
+            // Wide enough for "Components panel" and its key on one line (#191).
+            minWidth: 240,
             background: "var(--pnv-surface)",
             border: "1px solid var(--pnv-border)",
             borderRadius: 6,
@@ -3624,7 +3625,7 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
                 if (!panel.visible) e.currentTarget.style.background = "transparent";
               }}
             >
-              <span>{panel.label}</span>
+              <span style={{ whiteSpace: "nowrap" }}>{panel.label}</span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                 {panel.shortcut && (
                   <span style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", whiteSpace: "nowrap" }}>
