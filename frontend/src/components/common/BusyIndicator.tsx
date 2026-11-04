@@ -72,7 +72,7 @@ export function BusyIndicator({ placement }: { placement: "toolbar" | "canvas" }
   const visible = useBusyVisible();
   const isToolbar = placement === "toolbar";
   const timerPlace = useBusyStore((s) => s.timerPlace);
-  const showTimer = timerPlace === "both" || timerPlace === placement;
+  const showTimer = timerPlace !== "off";
   const seconds = useBusySeconds(visible && showTimer);
 
   useEffect(() => {
