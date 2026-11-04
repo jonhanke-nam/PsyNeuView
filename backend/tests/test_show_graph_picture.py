@@ -9,7 +9,9 @@ version, so a picture kept before the change is not shown again.
 import shutil
 
 import pytest
+from fastapi.testclient import TestClient
 
+from app.main import app
 from app.services import show_graph_cache, show_graph_picture
 from app.services.show_graph_picture import GRAPHVIZ_COLOURS, as_graphviz_draws_it
 
@@ -53,6 +55,26 @@ def test_graphviz_output_for_a_green_node_is_redrawn():
     assert '"green"' not in redrawn
     assert redrawn.count('"#00ff00"') == svg.count('"green"')
     assert 'stroke="red"' in redrawn
+
+
+def test_the_tab_gets_the_redrawn_picture_of_a_real_model(tmp_path):
+    """The route the tab calls hands it an INPUT node drawn #00ff00."""
+    model = tmp_path / "three_layer.py"
+    model.write_text(
+        "import psyneulink as pnl\n"
+        'colour = pnl.TransferMechanism(name="colour")\n'
+        'response = pnl.TransferMechanism(name="response")\n'
+        'comp = pnl.Composition(name="three_layer")\n'
+        "comp.add_linear_processing_pathway([colour, response])\n"
+    )
+    response = TestClient(app).post(
+        "/api/model/show-graph",
+        json={"file_path": str(model), "composition_name": "three_layer", "options": {}},
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert '"#00ff00"' in result["svg"]
+    assert '"green"' not in result["svg"]
 
 
 def test_a_picture_kept_before_the_redraw_changed_is_not_shown_again(tmp_path, monkeypatch):
