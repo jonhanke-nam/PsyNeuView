@@ -16,6 +16,7 @@ import { formatTraceValue } from "@/utils/traceValues";
 import { ValueGrid, poolValues, useNodeGrid } from "@/components/common/ValueGrid";
 import { useValueViews, valueViewFor } from "@/stores/valueViewStore";
 import { NODE_OUTLINE_EMPHASIS_EXTRA, NODE_OUTLINE_SELECTED_EXTRA, useNodeOutlineWidth } from "@/stores/nodeOutlineStore";
+import { useViewOnlyTagsStore } from "@/stores/viewOnlyTagsStore";
 import {
   resolveOutputLabels,
   formatLabeledValue,
@@ -251,6 +252,12 @@ export const MechanismNode = memo(function MechanismNode({
   // Check if this node is view-only (not in lineMap, so params can't be edited)
   const lineMap = useModelStore((s) => s.lineMap);
   const isViewOnly = d.varName ? !(d.varName in lineMap) : false;
+  // #211: its "view only" tag is hidden by default, as show_graph draws no
+  // such tag (Settings ▸ Appearance ▸ Node tags); the hover text below and
+  // the Inspector's notice say it either way.
+  const showViewOnlyTag = useViewOnlyTagsStore((s) => s.tags === "shown") && isViewOnly;
+  const viewOnlyNote = "View only: this node's declaration can't be edited from the GUI.";
+  const nodeTooltip = [shapeTooltip(shape), isViewOnly ? viewOnlyNote : undefined].filter(Boolean).join(" ") || undefined;
 
   const typeColor = TYPE_COLORS[d.type] || "var(--pnv-role-internal)";
   const customRoleColors = useGraphSettings((s) => s.customRoleColors);
@@ -404,7 +411,7 @@ export const MechanismNode = memo(function MechanismNode({
     <div
       onDoubleClick={onDoubleClick}
       data-node-shape={shape}
-      title={shapeTooltip(shape)}
+      title={nodeTooltip}
       style={{
         padding,
         borderRadius: shape === "rectangle" ? 0 : "50%",
@@ -551,7 +558,7 @@ export const MechanismNode = memo(function MechanismNode({
       {/* Type + Role badges. With Elements off (the default, #122) and no
           other tag, the row is left out so the name sits centred in the oval,
           as show_graph() draws it. */}
-      {(showNodeElements || isViewOnly || isCollapsedComposition) && (
+      {(showNodeElements || showViewOnlyTag || isCollapsedComposition) && (
       <div data-testid="node-tags" style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
         {showNodeElements && (
           <span
@@ -584,8 +591,9 @@ export const MechanismNode = memo(function MechanismNode({
             {roleLabel}
           </span>
         )}
-        {isViewOnly && (
+        {showViewOnlyTag && (
           <span
+            data-testid="node-view-only-tag"
             style={{
               fontSize: 8,
               color: "var(--pnv-text-faint)",
@@ -594,7 +602,7 @@ export const MechanismNode = memo(function MechanismNode({
               borderRadius: 2,
               border: "1px solid var(--pnv-border-light)",
             }}
-            title="This node's source pattern isn't editable from the GUI"
+            title={viewOnlyNote}
           >
             view only
           </span>
