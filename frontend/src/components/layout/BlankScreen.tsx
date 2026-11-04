@@ -16,14 +16,17 @@ import { useLayoutStore } from "@/stores/layoutStore";
 import { displayBinding } from "@/shortcuts/binding";
 import { useResolvedShortcuts } from "@/shortcuts/useAppShortcuts";
 
-/** The hint's text, for the test that reads it. */
+/** The hint's text. A panel whose key was unbound in Settings is left out of the keys. */
 export function blankScreenHint(keys: { graph: string; code: string; bottom: string }): string {
-  const withKey = (name: string, key: string) => (key ? `${key} for ${name}` : name);
-  return (
-    "Every panel is hidden. Bring one back from the Layout menu, or press " +
-    `${withKey("the graph", keys.graph)}, ${withKey("the code editor", keys.code)} or ` +
-    `${withKey("the Inspector panel", keys.bottom)}.`
-  );
+  const named = [
+    keys.graph && `${keys.graph} for the graph`,
+    keys.code && `${keys.code} for the code editor`,
+    keys.bottom && `${keys.bottom} for the Inspector panel`,
+  ].filter(Boolean);
+  const lead = "Every panel is hidden. Bring one back from the Layout menu";
+  if (named.length === 0) return `${lead}.`;
+  const last = named.pop();
+  return `${lead}, or press ${named.length ? `${named.join(", ")} or ${last}` : last}.`;
 }
 
 export function BlankScreen() {
@@ -60,9 +63,6 @@ export function BlankScreen() {
     >
       <div style={{ maxWidth: 480, textAlign: "center", color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-13)", lineHeight: 1.5 }}>
         <div data-testid="blank-screen-hint">{hint}</div>
-        <div style={{ marginTop: 8, fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-hint)" }}>
-          To keep a panel on screen always, turn off Allow a blank screen in Settings ▸ Appearance.
-        </div>
       </div>
     </div>
   );
