@@ -11,6 +11,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { polygonPoints, type NodeShape } from "@/utils/nodeShape";
+import { DOUBLE_OUTLINE_GAP as DOUBLE_GAP } from "@/utils/nodeBox";
 
 interface Props {
   shape: NodeShape;
@@ -22,9 +23,6 @@ interface Props {
   /** A `drop-shadow(...)` filter, following the shape where a box-shadow would not. */
   shadow?: string;
 }
-
-/** Space between the two lines of a double outline. */
-const DOUBLE_GAP = 3;
 
 export function NodeShapeOutline({ shape, stroke, strokeWidth, fill, ring, shadow }: Props) {
   const ref = useRef<SVGSVGElement>(null);
