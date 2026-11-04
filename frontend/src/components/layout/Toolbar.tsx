@@ -21,8 +21,10 @@ import { PresenceIndicator } from "@/components/common/PresenceIndicator";
 import { AppUpdateNotice } from "@/components/common/AppUpdateNotice";
 import { importModelFiles, IMPORT_ACCEPT_ATTR } from "@/utils/importModelFiles";
 import { useStatusStore } from "@/stores/statusStore";
-import { useLayoutStore, type LayoutPreset } from "@/stores/layoutStore";
+import { useLayoutStore, type AnyPanel, type LayoutPreset } from "@/stores/layoutStore";
 import { usePaletteStore } from "@/stores/paletteStore";
+import { displayBinding } from "@/shortcuts/binding";
+import { useResolvedShortcuts } from "@/shortcuts/useAppShortcuts";
 import { focusComposition } from "@/utils/nodeActions";
 import { hasFileBridge, pickOpenPath, pickSavePath } from "@/utils/fileBridge";
 import { logLoadPerf } from "@/utils/loadPerf";
@@ -3515,14 +3517,22 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   }, [open]);
   useDismiss(open, () => setOpen(false));
 
+  // #191: each row shows its shortcut, read from the same resolved set the
+  // keys fire from, so a rebinding in Settings shows here at once.
+  const shortcuts = useResolvedShortcuts();
+  const keyFor = (id: string) => {
+    const s = shortcuts.find((x) => x.id === id);
+    return s ? displayBinding(s.binding) : "";
+  };
+
   // Hiding the last visible of code/graph/bottom is blocked by the store, so
   // grey out that row's toggle to signal it can't be turned off right now.
   const lastTopLevel = [codeVisible, graphVisible, bottomVisible].filter(Boolean).length === 1;
-  const panels: { label: string; visible: boolean; locked: boolean; onToggle: () => void }[] = [
-    { label: "Code editor", visible: codeVisible, locked: lastTopLevel && codeVisible, onToggle: () => setPanelVisible("code", !codeVisible) },
-    { label: "Graph canvas", visible: graphVisible, locked: lastTopLevel && graphVisible, onToggle: () => setPanelVisible("graph", !graphVisible) },
-    { label: "Inspector / tabs", visible: bottomVisible, locked: lastTopLevel && bottomVisible, onToggle: () => setPanelVisible("bottom", !bottomVisible) },
-    { label: "Object palette", visible: paletteOpen, locked: false, onToggle: () => usePaletteStore.getState().setOpen(!paletteOpen) },
+  const panels: { id: AnyPanel; label: string; visible: boolean; locked: boolean; shortcut: string; onToggle: () => void }[] = [
+    { id: "graph", label: "Graph canvas", visible: graphVisible, locked: lastTopLevel && graphVisible, shortcut: keyFor("layout.toggleGraph"), onToggle: () => setPanelVisible("graph", !graphVisible) },
+    { id: "code", label: "Code editor", visible: codeVisible, locked: lastTopLevel && codeVisible, shortcut: keyFor("layout.toggleCode"), onToggle: () => setPanelVisible("code", !codeVisible) },
+    { id: "bottom", label: "Inspector / tabs", visible: bottomVisible, locked: lastTopLevel && bottomVisible, shortcut: keyFor("layout.toggleBottom"), onToggle: () => setPanelVisible("bottom", !bottomVisible) },
+    { id: "palette", label: "Components panel", visible: paletteOpen, locked: false, shortcut: keyFor("layout.togglePalette"), onToggle: () => usePaletteStore.getState().setOpen(!paletteOpen) },
   ];
 
   return (
@@ -3589,10 +3599,15 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
           </div>
           {panels.map((panel) => (
             <button
-              key={panel.label}
+              key={panel.id}
+              data-testid={`layout-menu-panel-${panel.id}`}
               onClick={panel.onToggle}
               disabled={panel.locked}
-              title={panel.locked ? "Can't hide the last visible panel" : `Show/hide ${panel.label}`}
+              title={
+                panel.locked
+                  ? "Can't hide the last visible panel"
+                  : `Show/hide ${panel.label}${panel.shortcut ? ` (${panel.shortcut})` : ""}`
+              }
               style={{
                 ...menuRowStyle(panel.visible),
                 cursor: panel.locked ? "not-allowed" : "pointer",
@@ -3610,7 +3625,14 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
               }}
             >
               <span>{panel.label}</span>
-              <span style={{ opacity: panel.visible ? 1 : 0.25 }}>{panel.visible ? "✓" : "·"}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                {panel.shortcut && (
+                  <span style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", whiteSpace: "nowrap" }}>
+                    {panel.shortcut}
+                  </span>
+                )}
+                <span style={{ opacity: panel.visible ? 1 : 0.25 }}>{panel.visible ? "✓" : "·"}</span>
+              </span>
             </button>
           ))}
           <span style={{ display: "block", height: 1, background: "var(--pnv-border-faint)", margin: "4px 4px" }} />
