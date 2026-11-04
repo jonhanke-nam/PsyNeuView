@@ -30,9 +30,9 @@ const controlStyle: React.CSSProperties = {
   cursor: "pointer",
   fontSize: 15,
   lineHeight: 1,
-  minWidth: 30,
+  minWidth: 28,
   height: 26,
-  padding: "0 8px",
+  padding: "0 6px",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -183,7 +183,7 @@ export const CompositionNode = memo(function CompositionNode({
           </span>
         )}
         {d.childCount > 0 && (
-          <span style={{ fontSize: 10, color: "var(--pnv-text-faint)" }}>
+          <span style={{ fontSize: 10, color: "var(--pnv-text-faint)", whiteSpace: "nowrap", flexShrink: 0 }}>
             ({d.childCount} nodes)
           </span>
         )}
