@@ -11,105 +11,34 @@ import { generateDefaultVarName } from "@/utils/defaultNaming";
 import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { withBusy } from "@/stores/busyStore";
-import { errorDetail } from "@/utils/errorDetail";
-
-// Which of the three graph views is showing (#717): a frame button's reload
-// has to carry the same flags as any other reload, or the canvas silently
-// changes view (#194).
-interface ViewFlags {
-  flat: boolean;
-  pytorch: boolean;
-}
-
-// Everything a frame button changes before the graph is rebuilt, so a rebuild
-// that fails can put it all back exactly (#194).
-interface ViewSnapshot extends ViewFlags {
-  collapsed: Set<string>;
-  inset: Set<string>;
-  focused: string | null;
-  viewBeforeEntering: ViewFlags | null;
-}
-
-// The view (flattened or PyTorch) that was showing when a composition was
-// entered, so leaving it returns there. Entering shows the composition on its
-// own in the nested view (the flattened views have no such thing as a single
-// composition), and the view menu says so while it lasts.
-let viewBeforeEntering: ViewFlags | null = null;
-
-function snapshotView(): ViewSnapshot {
-  const gs = useGraphSettings.getState();
-  return {
-    flat: gs.flat,
-    pytorch: gs.pytorch,
-    collapsed: new Set(gs.collapsedCompositions),
-    inset: new Set(gs.insetCompositions),
-    focused: useModelStore.getState().focusedComposition,
-    viewBeforeEntering,
-  };
-}
-
-function restoreView(snap: ViewSnapshot) {
-  useGraphSettings.setState({
-    flat: snap.flat,
-    pytorch: snap.pytorch,
-    collapsedCompositions: snap.collapsed,
-    insetCompositions: snap.inset,
-  });
-  useModelStore.getState().setFocusedComposition(snap.focused);
-  viewBeforeEntering = snap.viewBeforeEntering;
-}
-
-// Rebuild the graph from the open file with the view settings as they now
-// stand. modelStore reads collapsedCompositions, insetCompositions and
-// focusedComposition at dispatch time, so flipping them isn't enough — the
-// graph has to be rebuilt, and refetching /api/model/load is the cheapest way
-// to do that today without caching raw modelData in the store. Returns null
-// when the graph was rebuilt, else the reason it wasn't.
-async function rebuildGraph(): Promise<string | null> {
-  const { filePath, setSource, loadModelFromServer } = useModelStore.getState();
-  if (!filePath) return null;
-  const gs = useGraphSettings.getState();
-  try {
-    const resp = await fetch("/api/model/load", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        file_path: filePath,
-        flat: gs.flat,
-        pytorch: gs.pytorch,
-        ...showGraphLoadRequest(),
-      }),
-    });
-    if (!resp.ok) return await errorDetail(resp);
-    const data = await resp.json();
-    setSource(data.source);
-    // The labels, bundle and sidecars too: leaving them out clears the
-    // sidecar's port labels on every rebuild (#611).
-    loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
-    return null;
-  } catch (e) {
-    return (e as Error).message || "the server could not be reached";
-  }
-}
+import {
+  applyView,
+  captureView,
+  getViewBeforeEntering,
+  rebuildGraph,
+  setViewBeforeEntering,
+} from "@/utils/graphView";
 
 /**
  * Change how a composition is shown and rebuild the graph (#194).
  *
  * `apply` makes the change to the stores; `what` names it for the status bar,
- * the busy wheel and the notice. A rebuild that fails shows the reason and
- * puts every setting back, so the canvas and the settings still agree: before,
- * the setting stayed changed while the graph showed nothing of it, and the
- * next unrelated rebuild applied it by surprise.
+ * the busy wheel and the notice, and `done` is what the History step is
+ * called once it has happened, in the Undo and Redo tooltips (#204). A
+ * rebuild that fails shows the reason and puts every setting back, so the
+ * canvas and the settings still agree: before, the setting stayed changed
+ * while the graph showed nothing of it, and the next unrelated rebuild
+ * applied it by surprise.
  */
-async function changeCompositionView(what: string, apply: () => void): Promise<void> {
-  const before = snapshotView();
+async function changeCompositionView(what: string, done: string, apply: () => void): Promise<void> {
+  const before = captureView();
   const { setStatus, clearStatus } = useStatusStore.getState();
   apply();
   setStatus(`${what}...`);
   try {
-    const failure = await withBusy(what, rebuildGraph());
+    const failure = await withBusy(what, rebuildGraph(done));
     if (failure !== null) {
-      restoreView(before);
+      applyView(before);
       useNotificationStore.getState().addNotification(
         "error",
         `${what} failed: ${failure}. The graph is as it was.`,
@@ -139,40 +68,56 @@ function leaveFlattenedViews() {
 export async function toggleCompositionCollapse(label: string) {
   const gs = useGraphSettings.getState();
   const folding = gs.flat || gs.pytorch || !gs.collapsedCompositions.has(label);
-  await changeCompositionView(folding ? `Collapsing ${label}` : `Expanding ${label}`, () => {
-    if (folding) leaveFlattenedViews();
-    if (folding === !useGraphSettings.getState().collapsedCompositions.has(label)) {
-      useGraphSettings.getState().toggleCollapsedComposition(label);
-    }
-  });
+  await changeCompositionView(
+    folding ? `Collapsing ${label}` : `Expanding ${label}`,
+    folding ? `Collapsed ${label}` : `Expanded ${label}`,
+    () => {
+      if (folding) leaveFlattenedViews();
+      if (folding === !useGraphSettings.getState().collapsedCompositions.has(label)) {
+        useGraphSettings.getState().toggleCollapsedComposition(label);
+      }
+    },
+  );
 }
 
 // #427 INSET mode: render a nested composition as a framed inset (internals
-// laid out independently, treated as one unit by the parent).
+// laid out independently, treated as one unit by the parent). Pressed again,
+// the composition is shown nested as before.
 export async function toggleCompositionInset(label: string) {
   const insetting = !useGraphSettings.getState().insetCompositions.has(label);
-  await changeCompositionView(insetting ? `Insetting ${label}` : `Un-insetting ${label}`, () => {
-    useGraphSettings.getState().toggleInsetComposition(label);
-  });
+  await changeCompositionView(
+    insetting ? `Insetting ${label}` : `Un-insetting ${label}`,
+    insetting ? `Inset ${label}` : `Un-inset ${label}`,
+    () => {
+      useGraphSettings.getState().toggleInsetComposition(label);
+    },
+  );
 }
 
 // #426 Focus mode, now "Enter" (#194): show a single nested composition on its
 // own as the graph root (pass its cleaned label), or leave it (pass null) and
 // return to the view that was showing before it was entered.
 export async function focusComposition(label: string | null) {
-  await changeCompositionView(label ? `Entering ${label}` : "Leaving the composition", () => {
-    const gs = useGraphSettings.getState();
-    const model = useModelStore.getState();
-    if (label) {
-      if (!model.focusedComposition) viewBeforeEntering = { flat: gs.flat, pytorch: gs.pytorch };
-      leaveFlattenedViews();
-    } else if (viewBeforeEntering) {
-      gs.setFlat(viewBeforeEntering.flat);
-      gs.setPytorch(viewBeforeEntering.pytorch);
-      viewBeforeEntering = null;
-    }
-    model.setFocusedComposition(label);
-  });
+  // The step is named for the composition entered, or the one being left.
+  const leaving = useModelStore.getState().focusedComposition;
+  await changeCompositionView(
+    label ? `Entering ${label}` : "Leaving the composition",
+    label ? `Entered ${label}` : leaving ? `Left ${leaving}` : "Left the composition",
+    () => {
+      const gs = useGraphSettings.getState();
+      const model = useModelStore.getState();
+      const from = getViewBeforeEntering();
+      if (label) {
+        if (!model.focusedComposition) setViewBeforeEntering({ flat: gs.flat, pytorch: gs.pytorch });
+        leaveFlattenedViews();
+      } else if (from) {
+        gs.setFlat(from.flat);
+        gs.setPytorch(from.pytorch);
+        setViewBeforeEntering(null);
+      }
+      model.setFocusedComposition(label);
+    },
+  );
 }
 
 // #612/#737: rename a node's display name (the PsyNeuLink `name=`) via the

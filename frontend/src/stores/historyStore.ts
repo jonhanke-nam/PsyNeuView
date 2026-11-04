@@ -51,6 +51,7 @@
  */
 
 import { create } from "zustand";
+import { sameView, type GraphView } from "@/utils/graphView";
 import type { Node, Edge } from "@xyflow/react";
 
 export interface Snapshot {
@@ -75,6 +76,14 @@ export interface Snapshot {
    * save memory, and is rebuilt from `source` when undo reaches it.
    */
   compact?: boolean;
+  /**
+   * The view the graph was built in (#194): nested, flattened or PyTorch,
+   * the composition entered, those folded and those shown as insets. Undo
+   * and redo put it back along with the step, so a frame button's press is
+   * undone as a whole; without it the earlier nodes came back under the
+   * later settings, with no breadcrumb or frame buttons to leave by.
+   */
+  view?: GraphView;
 }
 
 /** How a save came about. */
@@ -426,6 +435,9 @@ function rebaseOnto(past: Snapshot[], old: Snapshot, next: Snapshot): void {
 
 function snapshotsEqual(a: Snapshot, b: Snapshot): boolean {
   if (a.filePath !== b.filePath || !sameSource(a, b.source)) return false;
+  // The same code drawn another way is a step of its own (#194): an inset
+  // keeps every node and edge, and only the view tells the two apart.
+  if (a.view && b.view && !sameView(a.view, b.view)) return false;
   // A compact step's graph is rebuilt from its code, so the code decides.
   if (a.compact) return true;
   return a.nodes.length === b.nodes.length && a.edges.length === b.edges.length;
