@@ -3,7 +3,9 @@
  *
  * One setting, the outline width of an ordinary node, in whole pixels; the
  * others follow from it, so they stay heavier at every width:
- *  - INPUT, OUTPUT and CONTROL nodes (when coloured by role): width + 2 px;
+ *  - INPUT, OUTPUT and CONTROL nodes (when coloured by role): width + 4 px
+ *    (was + 2; #190 moved the contrast between roles toward show_graph's,
+ *    which draws them 3 to 1);
  *  - a selected or running node: its own outline + 2 px.
  * Whole pixels because Chrome draws a border at whole pixels, rounding down
  * even on Retina: a 3.5 px outline shows as 3 px.
@@ -30,7 +32,7 @@ export const NODE_OUTLINE_WIDTHS: number[] = Array.from(
   (_, i) => NODE_OUTLINE_MIN + i,
 );
 /** How much heavier an INPUT/OUTPUT/CONTROL node's outline is. */
-export const NODE_OUTLINE_EMPHASIS_EXTRA = 2;
+export const NODE_OUTLINE_EMPHASIS_EXTRA = 4;
 /** How much heavier a selected or running node's outline is than its own. */
 export const NODE_OUTLINE_SELECTED_EXTRA = 2;
 
