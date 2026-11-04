@@ -21,6 +21,8 @@ import {
   formatLabeledValue,
   labeledValueLines,
 } from "@/utils/labels";
+import { boundaryDir, boundaryInward, isDrawnOutline, nodeShapeFor, shapeTooltip, type NodeShape } from "@/utils/nodeShape";
+import { NodeShapeOutline } from "./NodeShapeOutline";
 
 /** How tall the value pill's grid is (#1387): its 10px line of text. */
 const PILL_GRID_HEIGHT = 10;
@@ -61,10 +63,11 @@ type EllipseArc = "top" | "bottom" | "left" | "right";
 //     pulls vertically toward the center as you approach the corners.
 //   For left/right arcs: pct walks the vertical axis 0%→100%, the result
 //     pulls horizontally inward at the top and bottom.
-function ellipseBoundaryStyle(arc: EllipseArc, pct: number): React.CSSProperties {
+// A node of another shape (#192, #193) pulls in by that shape's outline
+// instead: not at all for a rectangle, down the cut corners for an octagon.
+function ellipseBoundaryStyle(shape: NodeShape, arc: EllipseArc, pct: number): React.CSSProperties {
   const t = (pct - 50) / 50;            // -1..1
-  const r = Math.sqrt(Math.max(0, 1 - t * t)); // 0..1
-  const inward = (1 - r) * 50;          // distance from edge toward center, in %
+  const inward = boundaryInward(shape, t) * 50; // distance from edge toward center, in %
   switch (arc) {
     case "top":    return { left: `${pct}%`, top: `${inward}%`,         right: "auto", bottom: "auto", transform: "translate(-50%, -50%)" };
     case "bottom": return { left: `${pct}%`, top: `${100 - inward}%`,   right: "auto", bottom: "auto", transform: "translate(-50%, -50%)" };
@@ -74,11 +77,13 @@ function ellipseBoundaryStyle(arc: EllipseArc, pct: number): React.CSSProperties
 }
 
 // #282: place a port at an arbitrary angle around the node oval (the ellipse
-// parameter, radians). Point on the inscribed ellipse in box-percent units.
-function anglePortStyle(angle: number): React.CSSProperties {
+// parameter, radians). Point on the inscribed ellipse in box-percent units,
+// or on the node's own outline for another shape.
+function anglePortStyle(shape: NodeShape, angle: number): React.CSSProperties {
+  const [x, y] = boundaryDir(shape, Math.cos(angle), Math.sin(angle));
   return {
-    left: `${50 + 50 * Math.cos(angle)}%`,
-    top: `${50 + 50 * Math.sin(angle)}%`,
+    left: `${50 + 50 * x}%`,
+    top: `${50 + 50 * y}%`,
     right: "auto",
     bottom: "auto",
     transform: "translate(-50%, -50%)",
@@ -205,9 +210,16 @@ export const MechanismNode = memo(function MechanismNode({
     },
     [id],
   );
+  // show_graph's shape for this node (#192, #193): an oval, or an octagon
+  // for a feedback sender, a double octagon for a controller, a double
+  // outline for a node on a cycle, a rectangle for a collapsed composition.
+  // The oval and the rectangle are CSS borders; the rest are drawn.
+  const shape = nodeShapeFor(d);
+  const drawnOutline = isDrawnOutline(shape);
+
   const portStyle = (arc: EllipseArc, pct: number, portKey: string): React.CSSProperties => {
     const ov = portOverrides?.[portKey];
-    return ov != null ? anglePortStyle(ov) : ellipseBoundaryStyle(arc, pct);
+    return ov != null ? anglePortStyle(shape, ov) : ellipseBoundaryStyle(shape, arc, pct);
   };
 
   const isCollapsedComposition = d.type === "Composition";
@@ -238,11 +250,9 @@ export const MechanismNode = memo(function MechanismNode({
     ? getRoleBorderWidth(d.roles || [], nodeBorderWidth, nodeBorderWidthEmphasis)
     : nodeBorderWidth;
 
-  // Special node styling based on roles
-  const isSpecial = d.isController || d.isObjectiveMechanism;
-  const isFeedback = (d.roles || []).includes("FEEDBACK_SENDER");
-  const isCycle = (d.roles || []).includes("CYCLE");
-  const borderStyle = isSpecial ? "double" : isFeedback ? "dashed" : isCycle ? "double" : "solid";
+  // A feedback sender, a cycle node and a controller now carry their meaning
+  // in their shape (#192); the objective mechanism keeps its double oval.
+  const borderStyle = d.isObjectiveMechanism && shape === "oval" ? "double" : "solid";
 
   // Role label for role-coloring mode
   const roleLabel = colorByRole && d.roles?.length
@@ -363,15 +373,35 @@ export const MechanismNode = memo(function MechanismNode({
   const ovalBorderWidth = isActiveStep || selected ? borderWidth + NODE_OUTLINE_SELECTED_EXTRA : borderWidth;
   const ovalBorderStyle = isActiveStep || selected ? "solid" : borderStyle;
 
+  // A drawn outline (octagon, double octagon, double outline) takes the
+  // border's place: the box itself has none, and the SVG below draws the
+  // shape in the border's colour and width with the ring and shadow the oval
+  // would have. The cut corners of an octagon, and the second line of a
+  // double outline, need more room round the name.
+  const background = isActiveStep ? "var(--pnv-trace-tint)" : "var(--pnv-surface)";
+  const ring = isActiveStep
+    ? undefined
+    : selected
+    ? `color-mix(in srgb, ${accentColor} 20%, transparent)`
+    : isCursorHighlighted
+    ? "var(--pnv-cursor-highlight)"
+    : undefined;
+  const padding =
+    shape === "doubleoctagon" ? "16px 48px" : shape === "octagon" ? "12px 40px" : shape === "doublecircle" ? "14px 30px" : "10px 24px";
+
   return (
     <div
       onDoubleClick={onDoubleClick}
+      data-node-shape={shape}
+      title={shapeTooltip(shape)}
       style={{
-        padding: "10px 24px",
-        borderRadius: "50%",
-        border: `${ovalBorderWidth}px ${ovalBorderStyle} ${ovalBorderColor}`,
-        background: isActiveStep ? "var(--pnv-trace-tint)" : "var(--pnv-surface)",
-        boxShadow: isActiveStep
+        padding,
+        borderRadius: shape === "rectangle" ? 0 : "50%",
+        border: drawnOutline ? "none" : `${ovalBorderWidth}px ${ovalBorderStyle} ${ovalBorderColor}`,
+        background: drawnOutline ? "transparent" : background,
+        boxShadow: drawnOutline
+          ? "none"
+          : isActiveStep
           ? "var(--pnv-trace-glow), var(--pnv-shadow-node-raised)"
           : selected
           ? `0 0 0 2px color-mix(in srgb, ${accentColor} 20%, transparent), var(--pnv-shadow-node-raised)`
@@ -391,6 +421,25 @@ export const MechanismNode = memo(function MechanismNode({
         position: "relative",
       }}
     >
+      {drawnOutline && (
+        <NodeShapeOutline
+          shape={shape}
+          stroke={ovalBorderColor}
+          strokeWidth={ovalBorderWidth}
+          fill={background}
+          ring={ring}
+          shadow={
+            isActiveStep
+              ? "drop-shadow(var(--pnv-trace-glow))"
+              : selected
+              ? "drop-shadow(var(--pnv-shadow-node-raised))"
+              : isCursorHighlighted
+              ? "drop-shadow(var(--pnv-cursor-glow))"
+              : "drop-shadow(var(--pnv-shadow-node))"
+          }
+        />
+      )}
+
       {/* Port hover tooltip — name, role, shape */}
       {hoveredPort && (
         <div
