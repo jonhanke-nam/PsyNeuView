@@ -53,7 +53,8 @@ export function BlankScreen() {
       style={{
         position: "absolute",
         inset: 0,
-        zIndex: 1,
+        // Above the split panes' own dividers, which stay drawn when all are hidden.
+        zIndex: 101,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
