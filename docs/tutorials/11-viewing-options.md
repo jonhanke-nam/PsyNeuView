@@ -27,6 +27,25 @@ The graph toolbar controls how the model is drawn:
 - The **view selector** (the composition dropdown) — switch between a single
   composition, the whole nested model, and the **flattened** view (below).
 
+## Which panels show
+
+The **Layout** menu shows or hides the graph, the code editor, the Inspector
+panel and the Components panel, and each has its own key. One of the graph, the
+code editor and the Inspector panel normally stays on screen; a notice says so
+if you try to hide the last one.
+
+To be able to clear the window, turn on **Allow a blank screen** in Settings ▸
+Appearance ▸ Panels. Then the last panel goes too: the toolbar stays, and a
+short hint says how to bring a panel back. Opening a model on a blank screen
+brings the graph with it, or whichever panels you tick under **Panels to open
+when a model loads on a blank screen**, just below that setting. The Components
+panel shows inside the graph, so tick the graph along with it. With any panel
+showing, opening a model leaves your layout alone.
+
+Turn the setting off while the screen is blank and the graph comes back. A
+guided walkthrough shows every panel while it runs and goes back to your blank
+screen when it ends.
+
 ## Nested vs. flat
 
 By default a nested composition is drawn as a container you can drill into — here
@@ -56,6 +75,8 @@ node has been flattened out of a nested composition, the Inspector shows its
 - [x] **Flatten** inlines nested compositions into one graph; toggling it off
       restores the nested view.
 - [x] Flattened nodes carry **provenance** back to their source composition.
+- [x] With **Allow a blank screen** on, every panel can be hidden and a model
+      you open brings the panels you chose, the graph by default.
 
 > The flat view is especially useful for learning models like EGO, where the
 > interesting computation lives inside a nested composition.

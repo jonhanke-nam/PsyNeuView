@@ -532,7 +532,8 @@ settings:
       code editor and the Inspector panel stays ticked. Applies only when
       the screen is blank at the moment a model is opened, by any route;
       with panels showing, opening changes nothing. The Components panel
-      opens only when ticked, otherwise it stays as it was. A stored value
+      opens only when ticked, otherwise it stays as it was; it is drawn
+      inside the graph, so it shows only with the graph. A stored value
       that is not a list, or names none of the three, falls back to the
       graph; unknown entries are dropped.
 
