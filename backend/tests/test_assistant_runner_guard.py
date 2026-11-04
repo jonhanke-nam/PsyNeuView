@@ -180,20 +180,42 @@ def test_a_direct_worker_task_with_unreadable_state_fails_closed(st):
 
 
 def test_every_spawn_and_exec_site_is_listed():
-    """A new way of starting the worker or executing model code has to be
-    added here, with its guard, or this fails. Exact counts per file, so a
-    second site in a listed file is caught too."""
+    """A tripwire for reviewers, not a boundary: a new way of starting a
+    process or executing code in ``backend/app``, under any of the spellings
+    below, changes a count here and fails, so a reviewer looks at it and
+    either adds its guard or lists it. Exact counts of matching lines per
+    file (import statements and the WORKER_PATH definition set aside), so a
+    second site in a listed file is caught too. Existing sites that aren't
+    model execution (git, pip, the Keychain's ``security`` tool, the keyword
+    ``eval`` of a parameter) are listed by count for the same reason.
+    """
     allowed = {
-        # file: (worker spawns, by-path loads)
-        "services/sandbox.py": (2, 0),          # warm worker + cold fallback: run_in_sandbox → require_runnable; payload carries the state
-        "services/jobs.py": (1, 0),             # job worker: create_job → require_runnable; payload carries the state
-        "services/sandbox_worker.py": (0, 4),   # the guard's own load, load_module, load_module_resilient (+ its exec): check_model_path + hooks
-        "services/introspector.py": (0, 1),     # in-process: require_runnable + guard_imports()
-        "services/executor.py": (0, 3),         # in-process run, learn, input nodes: require_runnable + guard_imports()
-        "services/converter.py": (0, 1),        # convert: require_runnable + guard_imports()
+        # file: (process starts, code loads)
+        "api/routes.py": (1, 0),                 # git (subprocess.check_output)
+        "services/assistant/keys.py": (3, 0),    # the Keychain's `security` tool
+        "services/checkout_updates.py": (1, 0),  # git
+        "services/clone_manager.py": (3, 0),     # git
+        "services/converter.py": (0, 1),         # in-process load: require_runnable + guard_imports()
+        "services/executor.py": (0, 4),          # in-process run, learn, input nodes: require_runnable + guard_imports(); one keyword eval of a parameter
+        "services/github_auth.py": (1, 0),       # git credential helper
+        "services/install_manager.py": (2, 0),   # pip
+        "services/introspector.py": (0, 2),      # in-process load: require_runnable + guard_imports(); one keyword eval of a parameter
+        "services/jobs.py": (2, 0),              # the job worker: create_job → require_runnable; payload carries the state
+        "services/locations.py": (1, 1),         # git; a dynamic import of an app module
+        "services/running_from.py": (1, 0),      # which process runs the app
+        "services/sandbox.py": (4, 0),           # warm worker + cold fallback: run_in_sandbox → require_runnable; payload carries the state
+        "services/sandbox_worker.py": (0, 6),    # the guard's own load, load_module, load_module_resilient and its exec: check_model_path + hooks; two keyword evals
+        "services/settings_info.py": (2, 0),     # git
+        "services/working_copies.py": (2, 0),    # which files are open
     }
-    spawn = "[sys.executable, WORKER_PATH"  # with or without "--persistent"
-    load = re.compile(r"spec_from_file_location\(|SourceFileLoader\(|runpy\.|(?<![\w.])exec\(")
+    spawn = re.compile(
+        r"WORKER_PATH|sandbox_worker\.py|Popen\(|subprocess\.run\(|subprocess\.check_output\(|subprocess\.call\(|"
+        r"subprocess\.check_call\(|os\.system|os\.popen|os\.exec|os\.spawn|multiprocessing"
+    )
+    load = re.compile(
+        r"spec_from_file_location\(|SourceFileLoader\(|SourcelessFileLoader\(|ExtensionFileLoader\(|runpy|"
+        r"(?<![\w.])exec\(|\.exec\(|(?<![\w.])eval\(|\.eval\(|__import__\(|import_module\("
+    )
     found: dict[str, tuple[int, int]] = {}
     for py in sorted(APP_DIR.rglob("*.py")):
         rel = str(py.relative_to(APP_DIR))
@@ -201,17 +223,19 @@ def test_every_spawn_and_exec_site_is_listed():
             continue  # the guard itself
         spawns = loads = 0
         for line in py.read_text(encoding="utf-8").splitlines():
-            code = line.split("#", 1)[0]
-            if spawn in code:
+            code = line.split("#", 1)[0].strip()
+            if code.startswith(("from ", "import ")) or code.startswith("WORKER_PATH ="):
+                continue
+            if spawn.search(code):
                 spawns += 1
             if load.search(code):
                 loads += 1
         if spawns or loads:
             found[rel] = (spawns, loads)
     unexpected = {k: v for k, v in found.items() if k not in allowed}
-    assert not unexpected, f"a worker spawn or by-path load outside the guarded list: {unexpected}"
+    assert not unexpected, f"a process start or code load outside the listed, guarded sites: {unexpected}"
     for rel, expected in allowed.items():
-        assert found.get(rel, (0, 0)) == expected, f"{rel}: {found.get(rel)} (spawns, loads), listed as {expected}"
+        assert found.get(rel, (0, 0)) == expected, f"{rel}: {found.get(rel)} (starts, loads) matching lines, listed as {expected}"
 
 
 # ── 2. a tracked path under a site-packages name ─────────────────────────

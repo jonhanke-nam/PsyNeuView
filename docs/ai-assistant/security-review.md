@@ -90,6 +90,7 @@ One entry per review. Add the newest at the top.
 
 | Date | Phase | What was reviewed (branch, commit) | Reviewer (role) | Result | Follow-ups |
 |---|---|---|---|---|---|
+| 2026-11-03 | 1, 2, 3 | Re-check of the runner enforcement at `7ec8aa79` (#187) | Independent reviewer (adversarial, not the author) | **Phases 1, 2 and 3 safe to ship off by default**, subject to the outside review required before a release that lets the assistant write files. Residuals carried below | Widen the spawn tripwire (done); outside review |
 | 2026-11-03 | 1, 2, 3 | Narrow re-check at `9fb29e6a` (#187) | Independent reviewer (adversarial, not the author) | **A High everyone missed**: `POST /api/jobs` started the worker outside `run_in_sandbox`, so an unreviewed model ran through a queued Learn job. Plus: a tracked path under a `site-packages` name was exempt; a helper loaded by path wasn't caught though the docs said `importlib` was; a finder a model adds could get ahead of the guard; the in-process path served a stale helper; a PsyNeuLink checkout would be purged every task. All fixed below; **Phase 3 pending** the reviewer's re-check | The findings below |
 | 2026-11-03 | 1, 2, 3 | Re-check of the fixes at `f90f6499` | Independent reviewer (adversarial, not the author) | 13 of 14 findings closed. **Phases 1 and 2 safe to ship, off by default. Phase 3 pending**: finding 7's whole-folder rule missed a subfolder (`pkg/helper.py` imported through `sys.path`); replaced by the import-time guard below | The reviewer's check of the import guard |
 | 2026-11-03 | 1, 2, 3 | The joined feature, PR #186 (`feature/ai-integrated-179`) | Independent reviewer (adversarial, not the author) | Phases 1 and 2 safe after the fixes below; **Phase 3 not safe as reviewed**: three routes ran unreviewed code. Fixed on the same branch; needs the reviewer's re-check | The findings below; the open items in the threat model |
@@ -134,6 +135,26 @@ fails: the marker never appears.
 | R4 | Low | A finder a model added stays ahead of the guard in the warm worker | `refresh()` puts the finder back at `sys.meta_path[0]` before every task |
 | R5 | Low | In-process (`use_sandbox=False`): a helper approved, then edited, was served stale from `sys.modules` | The purge runs in the server too; the app's own modules are under the repo root, which is never purged |
 | R6 | Low | A PsyNeuLink checkout (`~/.psyneuview/sources/...` or a user's own) counted as user-land: once anything was tracked, every task would purge and re-import all of `psyneulink.*` | The active checkout travels with every task as an exempt root and is never purged; a tracked file under it is still checked, since tracked is looked up first |
+
+### Verdict and residuals, 2026-11-03
+
+Phases 1, 2 and 3 are safe to ship off by default, per the independent
+review of `7ec8aa79`. An outside review is still required before a release
+that lets the assistant write files (issue #179, review step 4). What is
+accepted and carried, not fixed:
+
+- **Stale bytecode:** a `__pycache__` entry compiled from an earlier text
+  with the same size and whole-second mtime is what Python runs; it reaches
+  only text that was approved at the time.
+- **`exec`, `runpy` and subprocesses** aren't covered by the import guard: a
+  reviewed model that runs code by those means is trusted as the user's
+  own. Approving a model means trusting what it does.
+- **No per-session credential** for the assistant routes yet; `same_site`
+  is what there is.
+- **`saving: structured_without_asking`** is stored and shown but not acted
+  on; the page asks for every proposal.
+- **Phase 4** (running models with containment) is not built; there is no
+  run tool.
 
 Still open after this review (also in the threat model's open items): a
 per-session credential for the assistant routes; per-folder consent at a

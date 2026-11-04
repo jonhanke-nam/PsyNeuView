@@ -246,8 +246,12 @@ containment rather than a better approval view.
 | `introspector.py`, `executor.py` (run, learn, input nodes), `converter.py` | In-process loads by path | `require_runnable` + `guard_imports()` (the same hooks, the server's view of the state) |
 
 `backend/tests/test_assistant_runner_guard.py::test_every_spawn_and_exec_site_is_listed`
-fails when a new spawn of the worker or a new by-path load appears in
-`backend/app` outside this list.
+is a tripwire for reviewers, not a boundary: it counts, per file, the lines
+in `backend/app` that start a process (`Popen`, `subprocess.run`,
+`os.system`, `multiprocessing` and the rest) or load code
+(`spec_from_file_location`, the file loaders, `runpy`, `exec`, `eval`,
+`__import__`), and fails when a count changes, so a reviewer looks at the
+new site and either adds its guard or lists it.
 - **The state file** (`~/.psyneuview/assistant-review.json`) is the record
   of what is tracked. Deleting or truncating it reads as nothing tracked
   (fail open). Accepted: only something already running as the user can
