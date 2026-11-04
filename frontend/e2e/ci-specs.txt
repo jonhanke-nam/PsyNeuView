@@ -100,6 +100,7 @@ tutorials-menu-folding.spec.ts
 undo-depth.spec.ts
 undo-notices.spec.ts
 value-grid.spec.ts
+view-only-tags-setting.spec.ts
 walkthrough-layout-restore.spec.ts
 watch-status-in-bar.spec.ts
 where-things-live.spec.ts
