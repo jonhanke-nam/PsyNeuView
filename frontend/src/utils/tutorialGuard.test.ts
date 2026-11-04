@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useCatalogOpener } from "@/stores/catalogOpenerStore";
 import { useModelStore } from "@/stores/modelStore";
+import { useNotificationStore } from "@/stores/notificationStore";
 import { useTourStore } from "@/stores/tourStore";
 import { shouldOfferOrientation } from "./orientationOffer";
 import { windowRequest } from "./appWindow";
@@ -18,7 +19,14 @@ import {
 import { WALKTHROUGHS, type TourStep } from "./tourStep";
 
 // The app's window: opening one is checked in the browser, by the e2e spec.
-vi.stubGlobal("window", { location: { origin: "", pathname: "/" }, open: vi.fn() });
+const openWindow = vi.fn(() => null as unknown);
+vi.stubGlobal("window", { location: { origin: "", pathname: "/" }, open: openWindow });
+const stored = new Map<string, string>();
+vi.stubGlobal("localStorage", {
+  getItem: (k: string) => stored.get(k) ?? null,
+  setItem: (k: string, v: string) => void stored.set(k, v),
+  removeItem: (k: string) => void stored.delete(k),
+});
 
 const step = (act: TourStep["act"]) => ({ act }) as TourStep;
 const pending = () => useTutorialChoice.getState().pending as PendingChoice;
@@ -58,11 +66,19 @@ describe("what the guard looks at", () => {
 
   it("round-trips a target through a new window's address", () => {
     const path = "/Users/me/my model.py";
-    expect(windowRequest(windowUrlFor({ kind: "path", path })!)).toEqual({ path });
+    const address = windowUrlFor({ kind: "path", path })!;
+    expect(address).not.toContain("model.py");
+    expect(windowRequest(address)).toEqual({ path });
+    // Once only, so reloading that window doesn't open it again.
+    expect(windowRequest(address)).toBeNull();
     expect(windowRequest(windowUrlFor({ kind: "catalog", label: "Stroop — Basic" })!)).toEqual({ model: "Stroop — Basic" });
     expect(windowRequest(windowUrlFor({ kind: "newModel" })!)).toEqual({ newModel: true });
     expect(windowUrlFor({ kind: "file", name: "dropped.py" })).toBeNull();
     expect(windowRequest("?tour=ddm")).toBeNull();
+  });
+
+  it("won't open a file named in the address", () => {
+    expect(windowRequest(`?open=${encodeURIComponent("/tmp/from-a-link.py")}`)).toBeNull();
   });
 
   it("doesn't make the first-launch offer over a window with a job to do", () => {
@@ -107,6 +123,21 @@ describe("opening something during a walkthrough", () => {
     expect(p).toMatchObject({ type: "leave", step: 3, what: "dropped.py", canOpenWindow: false });
     await answer("stay");
     await result;
+  });
+});
+
+describe("when a browser blocks the new window", () => {
+  it("says so, and leaves the walkthrough where it was", async () => {
+    useTutorialChoice.setState({ pending: null });
+    useTourStore.setState({ activeTourId: "stroop", stepIndex: 2 });
+    openModel("/work/stroop_basic.py");
+    openWindow.mockReturnValueOnce(null);
+    const result = guardOpen({ kind: "newModel" });
+    await answer("newWindow");
+    await expect(result).resolves.toBe(false);
+    expect(openWindow).toHaveBeenCalledWith("/?newModel=1", "_blank");
+    expect(useNotificationStore.getState().notifications.slice(-1)[0]?.message).toMatch(/didn't open/);
+    expect(useTourStore.getState().activeTourId).toBe("stroop");
   });
 });
 

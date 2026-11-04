@@ -19,7 +19,8 @@ import { create } from "zustand";
 import { useCatalogOpener } from "@/stores/catalogOpenerStore";
 import { useModelStore } from "@/stores/modelStore";
 import { useTourStore } from "@/stores/tourStore";
-import { canOpenAppWindow, openAppWindow } from "./appWindow";
+import { useNotificationStore } from "@/stores/notificationStore";
+import { canOpenAppWindow, openAppWindow, openPathAddress } from "./appWindow";
 import { getWalkthrough, type TourStep, type Walkthrough } from "./tourStep";
 
 /** What the learner is about to open. */
@@ -82,7 +83,7 @@ export function isSameFile(target: OpenTarget, filePath: string | null | undefin
 /** The address that opens the target in a window of its own, if one can. */
 export function windowUrlFor(target: OpenTarget): string | null {
   if (target.kind === "catalog") return `?openModel=${encodeURIComponent(target.label)}`;
-  if (target.kind === "path") return `?open=${encodeURIComponent(target.path)}`;
+  if (target.kind === "path") return openPathAddress(target.path);
   if (target.kind === "newModel") return "?newModel=1";
   return null;
 }
@@ -104,6 +105,12 @@ function ask<C>(build: (resolve: (choice: C) => void) => PendingChoice): Promise
   });
 }
 
+/** Opens the window. A browser can block one, and the learner chose this, so say so. */
+function openWindowOrSay(search: string | null) {
+  if (search !== null && openAppWindow(search)) return;
+  useNotificationStore.getState().addNotification("error", "The new window didn't open. Your browser may have blocked it.");
+}
+
 /**
  * Asks before something replaces the model a walkthrough is using. True means
  * go ahead and open it here; false means it was handled or declined.
@@ -117,17 +124,16 @@ export async function guardOpen(target: OpenTarget): Promise<boolean> {
   if (!step) return true;
   if (stepAsksFor(step, target) || isSameFile(target, useModelStore.getState().filePath)) return true;
 
-  const url = windowUrlFor(target);
   const choice = await ask<LeaveChoice>((resolve) => ({
     type: "leave",
     tutorial: walkthrough.title,
     step: stepIndex + 1,
     steps: walkthrough.steps.length,
     what: nameOf(target),
-    canOpenWindow: url !== null && canOpenAppWindow(),
+    canOpenWindow: target.kind !== "file" && canOpenAppWindow(),
     resolve,
   }));
-  if (choice === "newWindow" && url) openAppWindow(url);
+  if (choice === "newWindow") openWindowOrSay(windowUrlFor(target));
   if (choice !== "here") return false;
   stopTour();
   return true;
@@ -169,6 +175,6 @@ export async function chooseTutorialStart(id: string): Promise<void> {
     noWindowReason,
     resolve,
   }));
-  if (choice === "newWindow") openAppWindow(`?tour=${encodeURIComponent(id)}`);
+  if (choice === "newWindow") openWindowOrSay(`?tour=${encodeURIComponent(id)}`);
   else if (choice === "here") startTour(id);
 }

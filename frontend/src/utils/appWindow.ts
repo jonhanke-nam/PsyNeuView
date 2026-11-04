@@ -26,10 +26,33 @@ export function openAppWindow(search: string): boolean {
   return window.open(url, "_blank") !== null;
 }
 
+const PATH_REQUEST_KEY = "pnv-window-open-path:";
+
+/**
+ * The address that opens a file in a new window. A model file is a program and
+ * opening one runs it, so the path can't be in the address: any site could then
+ * link to this server and have a file on this machine run. It waits in storage,
+ * which only this origin's pages can write, under an id the address carries.
+ * The key is outside the prefixes the Mac app keeps across launches.
+ */
+export function openPathAddress(path: string): string {
+  const id = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+  localStorage.setItem(PATH_REQUEST_KEY + id, path);
+  return `?open=${id}`;
+}
+
+/** Takes the path an address asks for. Once only, so a reload can't repeat it. */
+function takeRequestedPath(id: string): string | null {
+  const path = localStorage.getItem(PATH_REQUEST_KEY + id);
+  if (path !== null) localStorage.removeItem(PATH_REQUEST_KEY + id);
+  return path;
+}
+
 /** What a new window was opened to do, from its address. */
 export function windowRequest(search: string): { path?: string; model?: string; newModel?: boolean } | null {
   const p = new URLSearchParams(search);
-  const path = p.get("open");
+  const id = p.get("open");
+  const path = id && takeRequestedPath(id);
   if (path) return { path };
   const model = p.get("openModel");
   if (model) return { model };
