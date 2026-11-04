@@ -246,19 +246,9 @@ settings:
     control: setting-busy-threshold
     notes: >-
       At once, 0.1 s, 0.2 s (default), 0.5 s or 1 s (#38). Anything the user
-      asks for that runs longer shows the spinning wheel in the toolbar and
-      over the graph, with a "progress" pointer.
-
-  - id: busy-timer
-    label: General ▸ Busy indicator ▸ Show how long it has been spinning
-    home: settings
-    section: general
-    storage: browser localStorage (psyneuview.busy.timerPlace); inside the Mac app, the app keeps it (PagePreferences, #218)
-    control: setting-busy-timer
-    notes: >-
-      Off, In the toolbar (default), Over the graph or Both (#176). Shows the
-      time so far beside the wheel once it has spun for a second. Problem
-      reports record each wait's start and stop times whatever this says.
+      asks for that runs longer shows one spinning wheel, over the graph or,
+      with the graph hidden, over the workspace (#220), with a "progress"
+      pointer.
 
   - id: activity-log-actions
     label: General ▸ Problem reports ▸ Keep a log of my actions for problem reports
@@ -474,6 +464,21 @@ settings:
       legend's own Show/Hide folds it for the open model without changing
       this setting; only the legend's position is remembered by the legend
       (psynewview-gsc-legend).
+
+  - id: busy-timer
+    label: Appearance ▸ Busy wheel ▸ Show how long it has been spinning
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.busy.timerPlace); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-busy-timer
+    notes: >-
+      Off, Below the wheel (default) or In the centre of the wheel (#176,
+      #220). Shows the time so far once a second has passed, on the one busy
+      wheel. In the centre the wheel is larger, with its spokes round the rim
+      and the time in the clear space. Values stored before there was one
+      wheel: "off" stays Off; "toolbar", "canvas", "both" and anything else
+      not recognised read as Below the wheel. Problem reports record each
+      wait's start and stop times whatever this says.
 
   - id: graph-scheduling-arrows
     label: Appearance ▸ Scheduling arrows ▸ Scheduling-condition arrows
