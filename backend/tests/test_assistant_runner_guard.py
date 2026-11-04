@@ -192,7 +192,7 @@ def test_every_spawn_and_exec_site_is_listed():
         "services/executor.py": (0, 3),         # in-process run, learn, input nodes: require_runnable + guard_imports()
         "services/converter.py": (0, 1),        # convert: require_runnable + guard_imports()
     }
-    spawn = "[sys.executable, WORKER_PATH]"
+    spawn = "[sys.executable, WORKER_PATH"  # with or without "--persistent"
     load = re.compile(r"spec_from_file_location\(|SourceFileLoader\(|runpy\.|(?<![\w.])exec\(")
     found: dict[str, tuple[int, int]] = {}
     for py in sorted(APP_DIR.rglob("*.py")):
@@ -229,13 +229,23 @@ def test_a_tracked_file_under_a_site_packages_name_is_still_vetted(st):
     assert unreviewed(r), r.text
     assert r.json()["path"] == str(vend.resolve())
     assert not marker2.exists()
-    # And the assistant can't write there in the first place.
+    # And the assistant can't write there in the first place: a folder that
+    # holds a site-packages can't be designated at all (so the write is
+    # outside every allowed folder), and a path with such a part inside an
+    # allowed folder is refused by name even before it exists.
     st["monkeypatch"].setattr(files, "folders_provider", lambda: [{"path": str(st["models"]), "access": "read_write"}])
     with pytest.raises(files.PathRefused) as e:
         files.resolve_allowed(str(st["models"] / "zz" / "site-packages" / "vend3.py"), write=True)
-    assert e.value.reason == "python_install"
-    with pytest.raises(files.PathRefused):
-        files.resolve_allowed(str(st["models"] / "lib" / "python3.12" / "x.py"), write=True)
+    assert e.value.reason in ("python_install", "outside_allowed_folders")
+    clean = st["tmp"] / "Clean"
+    clean.mkdir()
+    st["monkeypatch"].setattr(files, "folders_provider", lambda: [{"path": str(clean), "access": "read_write"}])
+    for bad in ("lib/python3.12/x.py", "site-packages/y.py", "conda-meta/z.py", "dist-packages/w.py"):
+        with pytest.raises(files.PathRefused) as e:
+            files.resolve_allowed(str(clean / bad), write=True)
+        assert e.value.reason == "python_install", bad
+    (clean / "sub").mkdir()
+    assert files.resolve_allowed(str(clean / "sub" / "fine.py"), write=True) == clean / "sub" / "fine.py"
 
 
 # ── 3. a helper loaded by path ───────────────────────────────────────────
