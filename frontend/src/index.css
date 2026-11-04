@@ -230,7 +230,10 @@ button:hover {
 
 
 /* The spinning wheel of patience (#38, BusyIndicator): twelve spokes that
-   step round like the Mac's; still under reduced motion. While it shows, the
+   step round like the Mac's. Settings can choose another style (#169): a
+   ring or a PsyNeuLink-style network that turns, nodes that light up in turn,
+   or a bar with a sliding segment. Everything that moves carries
+   .pnv-busy-anim and stands still under reduced motion. While it shows, the
    pointer says "working" everywhere. */
 .pnv-busy-wheel {
   animation: pnv-busy-spin 0.9s steps(12) infinite;
@@ -238,8 +241,23 @@ button:hover {
 @keyframes pnv-busy-spin {
   to { transform: rotate(360deg); }
 }
+.pnv-busy-turn { animation: pnv-busy-spin 1s linear infinite; }
+.pnv-busy-turn-orbit { animation: pnv-busy-spin 1.4s linear infinite; }
+.pnv-busy-turn-slow { animation: pnv-busy-spin 6s linear infinite; }
+/* A node lighting up: three of them with staggered delays pass the light along. */
+.pnv-busy-pulse { animation: pnv-busy-pulse 1.2s ease-in-out infinite; }
+@keyframes pnv-busy-pulse {
+  0%, 55%, 100% { fill-opacity: 0.15; }
+  20% { fill-opacity: 1; }
+}
+/* The bar's segment slides across the track; the frame clips it at both ends. */
+.pnv-busy-slide { animation: pnv-busy-slide 1.2s ease-in-out infinite; }
+@keyframes pnv-busy-slide {
+  from { transform: translateX(-8px); }
+  to { transform: translateX(24px); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .pnv-busy-wheel { animation: none; }
+  .pnv-busy-anim { animation: none; }
 }
 html.pnv-busy,
 html.pnv-busy * {
