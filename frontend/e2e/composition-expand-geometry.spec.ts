@@ -237,6 +237,10 @@ async function expectFrameClear(page: Page, when: string) {
     return b.x < frame!.x - 1 || b.y < frame!.y - 1 || b.x + b.w > frame!.x + frame!.w + 1 || b.y + b.h > frame!.y + frame!.h + 1;
   });
   expect(outside.map(([id]) => id), `${when}: members sticking out of the EM frame`).toEqual([]);
+  // Inputs keep their row inside the frame, whichever outer node feeds each (#212).
+  const inputs = ["STATE [VALUE]", "PREVIOUS STATE [QUERY]", "CONTEXT [QUERY]"].map((name) => nodeBox(g, name)!);
+  const rows = inputs.map((b) => b.y + b.h / 2);
+  expect(Math.max(...rows) - Math.min(...rows), `${when}: EM's inputs on one row`).toBeLessThan(inputs[0].h / 2);
   const over = OUTER.filter((name) => {
     const b = nodeBox(g, name);
     return b && overlap(frame!, b);
