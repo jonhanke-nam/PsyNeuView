@@ -84,7 +84,19 @@ async function shot(page: Page, name: string) {
   await page.getByTestId("graph-canvas").screenshot({ path: path.join(SHOTS, name) });
 }
 
+/** For review: the node by itself, at rest and selected. */
+async function nodeShots(page: Page, name: string, file: string) {
+  if (!SHOTS) return;
+  const node = canvasNode(page, name).first();
+  await node.screenshot({ path: path.join(SHOTS, `${file}-node.png`) });
+  await node.click();
+  await node.screenshot({ path: path.join(SHOTS, `${file}-node-selected.png`) });
+  await page.keyboard.press("Escape");
+}
+
 test.describe("node shapes follow show_graph (#192, #193)", { tag: "@ci" }, () => {
+  // Crisp close-ups for review; CI renders at the usual scale.
+  test.use({ deviceScaleFactor: SHOTS ? 3 : 1 });
   test.beforeEach(async ({ page }) => {
     await page.addInitScript((key) => {
       if (localStorage.getItem(key) === null) localStorage.setItem(key, "true");
@@ -128,6 +140,7 @@ test.describe("node shapes follow show_graph (#192, #193)", { tag: "@ci" }, () =
     await expect(page.getByTestId("legend-shape-rectangle")).toContainText("collapsed composition");
     await expect(page.getByTestId("legend-shape-octagon")).toHaveCount(0);
     await shot(page, "ego-collapsed-ours.png");
+    await nodeShots(page, "EM", "em-rectangle");
 
     // Expand EM: inside, the one feedback sender is the one octagon, and
     // hovering it explains the shape.
@@ -159,6 +172,7 @@ test.describe("node shapes follow show_graph (#192, #193)", { tag: "@ci" }, () =
     await expect(page.getByTestId("legend-shape-octagon")).toContainText("feedback sender");
     await expect(page.getByTestId("legend-shape-rectangle")).toHaveCount(0);
     await shot(page, "ego-nested-ours.png");
+    await nodeShots(page, "COMBINED SCORES", "combined-scores-octagon");
 
     // Collapse brings the rectangle back.
     await page.getByRole("button", { name: "Collapse composition EM" }).click();
@@ -181,5 +195,6 @@ test.describe("node shapes follow show_graph (#192, #193)", { tag: "@ci" }, () =
     await expect(driven).toHaveCSS("border-top-left-radius", /%/);
     await fitGraph(page);
     await shot(page, "with-controller-ours.png");
+    await nodeShots(page, "ctrl", "ctrl-doubleoctagon");
   });
 });
