@@ -2202,7 +2202,7 @@ def task_show_graph(params):
         dot_source = comp.show_graph(output_fmt='source', **options)
         svg_bytes = gv.Source(dot_source).pipe(format='svg')
         # Graphviz keeps show_graph's colour names in the SVG, and a browser
-        # reads "green" darker than show_graph's own PDF draws it (#190).
+        # reads "green" and "purple" darker than show_graph's own PDF draws them (#190).
         return {"svg": as_graphviz_draws_it(svg_bytes.decode('utf-8'))}
     except Exception as e:
         return {"error": f"show_graph failed: {exception_text(e)}"}
