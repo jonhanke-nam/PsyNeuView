@@ -22,7 +22,7 @@
 // time, so this spec's isolation was being supplied by a product bug; now that
 // reopening preserves edits, it has to reset for itself. The fixture resets
 // *before* each test, so it belongs on the spec that needs the clean slate.
-import { mutatingTest as test, expect, canvasNode } from "../test-base";
+import { mutatingTest as test, expect, canvasNode, LAYOUT_BOTTOM_VISIBLE_KEY, LAYOUT_CODE_VISIBLE_KEY } from "../test-base";
 import { fileURLToPath } from "url";
 import path from "path";
 import { mkdirSync } from "fs";
@@ -51,6 +51,16 @@ async function openModelMenu(page: import("@playwright/test").Page) {
 
 test.describe("Tutorial: Loading a model", () => {
   test("the Open menu offers every model source", async ({ page }) => {
+    // The first-launch picture shows the window as it really opens: the
+    // graph alone (#189). The shared setup turns the other panels on for the
+    // rest of the suite, so this test turns them off again.
+    await page.addInitScript(
+      ([code, bottom]) => {
+        localStorage.setItem(code, "false");
+        localStorage.setItem(bottom, "false");
+      },
+      [LAYOUT_CODE_VISIBLE_KEY, LAYOUT_BOTTOM_VISIBLE_KEY] as const,
+    );
     await page.goto("/");
     await page.screenshot({ path: shot("01-initial.png") });
 

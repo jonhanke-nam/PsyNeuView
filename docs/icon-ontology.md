@@ -179,14 +179,23 @@ PsyNeuLink's `show_graph()` uses these shapes and colors in GraphViz:
 | Nested composition | rectangle | pink |
 | agent_rep (OCM) | egg | purple |
 
-| Role | Color |
-|------|-------|
-| INPUT | green (#2e7d32) |
-| OUTPUT | red (#c62828) |
-| CONTROL | blue (#1565c0) |
-| LEARNING | orange (#e65100) |
-| PROBE | pink (#e91e63) |
-| INTERNAL | gray (#555) |
+show_graph names its colours (`green`, `red`, `blue`, `purple`, `orange`,
+`pink`, `brown`, `black`), and a browser draws its SVG with the CSS meaning of
+each name. PsyNeuView's role tokens (`--pnv-role-*` in
+`frontend/src/styles/palette.css`, #190) take the same values, except that
+orange and pink are too pale on white for an outline and use the nearest named
+orange and pink that still read:
+
+| Role | show_graph | PsyNeuView outline | As text |
+|------|-----------|--------------------|---------|
+| INPUT | green (#008000) | #008000 | same |
+| OUTPUT | red (#ff0000) | #ff0000 | #dd0000 |
+| CONTROL | blue (#0000ff) | #0000ff | same |
+| Controller | purple (#800080) | #800080 | same |
+| LEARNING | orange (#ffa500) | darkorange (#ff8c00) | #e65100 |
+| PROBE | pink (#ffc0cb) | hotpink (#ff69b4) | #d81b60 |
+| INPUT and OUTPUT | brown (#a52a2a) | #a52a2a | same |
+| INTERNAL | black | #000 | same |
 
 The palette icons don't need to match show_graph's shape/color system exactly,
 since show_graph is about runtime graph rendering, while the palette is about

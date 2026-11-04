@@ -428,9 +428,10 @@ settings:
     notes: >-
       An ordinary node's outline, 1–6 px in whole pixels (Chrome draws
       borders at whole pixels); 4 px by default (was 2 after #42, 1 before). The heavier
-      outlines follow it: INPUT, OUTPUT and CONTROL nodes + 2 px (replacing
-      the Style tab's Border width slider, which set them alone), a selected
-      or running node + 2 px more. /rendering-defaults.json can retune the
+      outlines follow it: INPUT, OUTPUT and CONTROL nodes + 4 px (+ 2 before
+      #190, which moved the contrast between roles toward show_graph's 3 to 1;
+      replacing the Style tab's Border width slider, which set them alone), a
+      selected or running node + 2 px more. /rendering-defaults.json can retune the
       default; a width chosen here wins. The Style tab links here.
 
   - id: edge-line-width
@@ -706,6 +707,20 @@ settings:
 # they are listed here so the inventory says where each one lives. The check in
 # settingsInventory.test.ts reads only `settings` above.
 elsewhere:
+  - id: panel-layout
+    label: Which panels show (graph, code editor, Inspector panel, Components panel)
+    home: toolbar ▸ Layout menu ▸ Panels (data-testid layout-menu-panel-<graph|code|bottom|palette>), and the keyboard (Mod+1 to Mod+4, listed under Settings ▸ Keyboard shortcuts, #191)
+    storage: browser localStorage (psynewview_layout_graph_visible, psynewview_layout_code_visible, psynewview_layout_bottom_visible, psynewview_palette_open; the Mac app keeps psynewview_ keys)
+    notes: >-
+      The graph alone by default (#189): the code editor and the Inspector
+      panel start hidden, and come back from the Layout menu, its presets, or
+      their keys. A choice already stored wins over the default. At least one
+      of graph, code and Inspector panel always stays; hiding the last is
+      refused and the key says so. How the Components panel starts is its own
+      setting (components-start, #113). A walkthrough shows every panel while
+      it runs and puts the stored layout back afterwards
+      (psynewview_layout_before_walkthrough holds it meanwhile).
+
   - id: graph-show-ports
     label: Show ports
     home: graph toolbar ▸ Advanced Graph View Options ▸ Nodes ▸ Show ports (data-testid toolbar-show-ports, #123)

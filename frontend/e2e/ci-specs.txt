@@ -7,6 +7,7 @@ arrowheads-at-end.spec.ts
 busy-indicator.spec.ts
 components-panel-start-setting.spec.ts
 composition-cim-edges.spec.ts
+composition-frame-buttons.spec.ts
 developer-mode-marking.spec.ts
 developer-tests-loader.spec.ts
 diagnostics.spec.ts
@@ -33,6 +34,7 @@ inspector-condition-undo.spec.ts
 layered-wide-boxes.spec.ts
 layout-default-fresh-profile.spec.ts
 layout-default-show-graph.spec.ts
+layout-graph-only-default.spec.ts
 layout-mode-per-view.spec.ts
 learn-pathway.spec.ts
 learning-nodes-run-inspector.spec.ts
@@ -98,5 +100,6 @@ tutorials-menu-folding.spec.ts
 undo-depth.spec.ts
 undo-notices.spec.ts
 value-grid.spec.ts
+walkthrough-layout-restore.spec.ts
 watch-status-in-bar.spec.ts
 where-things-live.spec.ts

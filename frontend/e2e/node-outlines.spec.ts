@@ -1,8 +1,10 @@
 /**
  * Node outlines are heavier by default and adjustable in Settings ▸
- * Appearance ▸ Node outlines. INPUT/OUTPUT/CONTROL nodes are 2 px heavier,
- * and a selected node 2 px heavier than its own outline (#42). Widths are
- * checked as drawn: Chrome draws borders at whole pixels.
+ * Appearance ▸ Node outlines. INPUT/OUTPUT/CONTROL nodes are 4 px heavier
+ * (#190; 2 px before), and a selected node 2 px heavier than its own outline
+ * (#42). Widths are checked as drawn: Chrome draws borders at whole pixels.
+ * The default colours are show_graph's as a browser draws them (#190): green
+ * #008000 for INPUT, red #ff0000 for OUTPUT, black for an ordinary node.
  */
 import { mutatingTest as test, expect, clickCanvasNode } from "./test-base";
 import { writeFileSync, mkdtempSync, realpathSync } from "fs";
@@ -22,19 +24,26 @@ comp.add_linear_processing_pathway([colour, hidden, response])
 
 type Page = import("@playwright/test").Page;
 
-/** Each canvas node's oval outline width as drawn, in px, by node id. */
-async function outlineWidths(page: Page): Promise<Record<string, number>> {
+/** Each canvas node's oval outline as drawn, by node id: its width in px and its colour. */
+async function outlines(page: Page): Promise<Record<string, { width: number; color: string }>> {
   return page.locator(".react-flow__node").evaluateAll((nodes) =>
     Object.fromEntries(
       nodes.flatMap((n) => {
         const oval = Array.from(n.querySelectorAll<HTMLElement>("div")).find((d) => d.style.borderRadius === "50%");
-        return oval ? [[n.getAttribute("data-id") ?? "", parseFloat(getComputedStyle(oval).borderTopWidth)]] : [];
+        if (!oval) return [];
+        const cs = getComputedStyle(oval);
+        return [[n.getAttribute("data-id") ?? "", { width: parseFloat(cs.borderTopWidth), color: cs.borderTopColor }]];
       }),
     ),
   );
 }
 
-test("node outlines: heavier defaults, one width in Settings, emphasis and selection follow", { tag: "@ci" }, async ({ page }) => {
+/** Each canvas node's oval outline width as drawn, in px, by node id. */
+async function outlineWidths(page: Page): Promise<Record<string, number>> {
+  return Object.fromEntries(Object.entries(await outlines(page)).map(([id, o]) => [id, o.width]));
+}
+
+test("node outlines: show_graph's colours and heavier defaults, one width in Settings, emphasis and selection follow", { tag: "@ci" }, async ({ page }) => {
   const dir = mkdtempSync(path.join(realpathSync(tmpdir()), "outlines42-"));
   const model = path.join(dir, "three_layer.py");
   writeFileSync(model, THREE_LAYER);
@@ -47,9 +56,14 @@ test("node outlines: heavier defaults, one width in Settings, emphasis and selec
   await prompt.press("Enter");
   await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 60_000 });
 
-  // The defaults: 4 px, or 6 px for INPUT/OUTPUT/CONTROL nodes.
+  // The defaults: 4 px black for an ordinary node; 8 px for INPUT (green)
+  // and OUTPUT (red) nodes, show_graph's colours.
+  expect(await outlines(page)).toEqual({
+    colour: { width: 8, color: "rgb(0, 128, 0)" },
+    hidden: { width: 4, color: "rgb(0, 0, 0)" },
+    response: { width: 8, color: "rgb(255, 0, 0)" },
+  });
   const before = await outlineWidths(page);
-  expect(before).toEqual({ colour: 6, hidden: 4, response: 6 });
 
   // Choose 5 px in Settings; the canvas follows without a reload, and the
   // heavier outlines move with it.

@@ -32,7 +32,8 @@ export interface RenderingDefaults {
   nodeBorderWidth: number;
   /**
    * Node oval border width for emphasis roles (INPUT/OUTPUT/CONTROL…), px.
-   * Since #42 nodes draw this as nodeBorderWidth + 2 (stores/nodeOutlineStore.ts).
+   * Since #42 nodes draw this as nodeBorderWidth + NODE_OUTLINE_EMPHASIS_EXTRA
+   * (stores/nodeOutlineStore.ts; + 4 since #190), so this value is not read for nodes.
    */
   nodeBorderWidthEmphasis: number;
 }
@@ -43,7 +44,7 @@ export const RENDERING_DEFAULTS: RenderingDefaults = {
   arrowheadSize: 7, // larger, more show_graph-like chevron
   arrowheadPosition: 1, // at the target, where show_graph draws it (was 0.5, mid-line)
   nodeBorderWidth: 4, // ordinary roles (#42: was 1, too light to read; 4 since rc testing)
-  nodeBorderWidthEmphasis: 6, // INPUT/OUTPUT/CONTROL…: the outline + 2 px since #42; not read for nodes
+  nodeBorderWidthEmphasis: 8, // INPUT/OUTPUT/CONTROL…: the outline + 4 px since #190 (+ 2 since #42); not read for nodes
 };
 
 /**

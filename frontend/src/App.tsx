@@ -70,9 +70,14 @@ export default function App() {
   }, [assistantOn, bottomTab]);
 
   // #1112: Cmd+I shows the Inspector, the Mac convention for Show Inspector.
-  // Registered here because App owns which bottom tab is selected.
+  // Registered here because App owns which bottom tab is selected. The bottom
+  // panel starts hidden now (#189), so this shows it too.
   useEffect(
-    () => registerCommand("inspector.focus", () => setBottomTab("inspector")),
+    () =>
+      registerCommand("inspector.focus", () => {
+        useLayoutStore.getState().setPanelVisible("bottom", true);
+        setBottomTab("inspector");
+      }),
     []
   );
 

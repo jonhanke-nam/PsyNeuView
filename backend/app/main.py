@@ -16,6 +16,7 @@ from app.api.assistant_routes import router as assistant_router
 from app.api.routes import router
 from app.api.ws import handle_websocket
 from app.frontend_files import FrontendFiles
+from app.request_guard import RequestGuard
 from app.services import (
     activity_log,
     edit_lock,
@@ -173,6 +174,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Added last, so it runs first: before CORS answers anything.
+app.add_middleware(RequestGuard)
 
 app.include_router(router, prefix="/api")
 app.include_router(assistant_router, prefix="/api")

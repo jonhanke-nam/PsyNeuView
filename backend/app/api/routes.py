@@ -2309,6 +2309,15 @@ def save_copy(request: SaveCopyRequest):
     return SaveCopyResponse(file_path=str(target))
 
 
+def _bundle_model_name(name: object) -> str:
+    """A bundle's model name as a file name: it comes from the bundle, so it
+    can't be allowed to say where the file goes."""
+    stem = Path(str(name or "").replace("\\", "/")).name.strip()
+    if not stem or stem in (".", "..") or stem.startswith("."):
+        return "imported_model"
+    return stem
+
+
 @router.post("/model/import-project")
 async def import_project(file: UploadFile = File(...)):
     """Import a .pnlproject bundle.
@@ -2351,7 +2360,7 @@ async def import_project(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Invalid .pnlproject: not a valid zip file")
 
     # Save to models directory
-    model_name = manifest.get("model", {}).get("name", "imported_model")
+    model_name = _bundle_model_name(manifest.get("model", {}).get("name"))
     save_dir = get_default_save_dir()
     save_dir.mkdir(parents=True, exist_ok=True)
 

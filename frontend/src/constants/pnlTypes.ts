@@ -374,6 +374,15 @@ export const ROLE_COLORS: Record<string, string> = {
   INTERNAL: "var(--pnv-role-internal)",
 };
 
+// Role -> colour as text (a node's type tag) or behind white text (its role
+// tag), for the roles whose outline colour is too light to read that way
+// (#190). A role not listed here uses its ROLE_COLORS entry for text too.
+export const ROLE_TEXT_COLORS: Record<string, string> = {
+  OUTPUT: "var(--pnv-role-output-text)",
+  LEARNING: "var(--pnv-role-learning-text)",
+  PROBE: "var(--pnv-role-probe-text)",
+};
+
 /** The palette token behind each role colour, for code that needs the hex. */
 export const ROLE_TOKENS: Record<string, `--pnv-${string}`> = Object.fromEntries(
   Object.entries(ROLE_COLORS).map(([role, v]) => [role, v.slice(4, -1) as `--pnv-${string}`]),

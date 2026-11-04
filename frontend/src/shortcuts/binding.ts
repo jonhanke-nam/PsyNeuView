@@ -70,7 +70,12 @@ export const BARE_ALLOWED = new Set([
  * rebinding UI that accepts one of these is lying to the user.
  */
 const OS_RESERVED = new Set(["Mod+q", "Mod+Tab", "Mod+ "]);
-const BROWSER_RESERVED = new Set(["Mod+w", "Mod+t", "Mod+n", "Mod+l"]);
+// Cmd+1..9 (Ctrl+1..9 elsewhere) switch the browser's tabs and never reach
+// the page (#191); inside the Mac app's web view they do.
+const BROWSER_RESERVED = new Set([
+  "Mod+w", "Mod+t", "Mod+n", "Mod+l",
+  ...Array.from({ length: 9 }, (_, i) => `Mod+${i + 1}`),
+]);
 
 export function isMac(): boolean {
   return IS_MAC;
