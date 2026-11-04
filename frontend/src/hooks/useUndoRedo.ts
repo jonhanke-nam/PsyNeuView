@@ -12,6 +12,7 @@ import { withBusy } from "@/stores/busyStore";
 import { useModelStore } from "@/stores/modelStore";
 import { useHistoryStore, type Snapshot } from "@/stores/historyStore";
 import { useNotificationStore } from "@/stores/notificationStore";
+import { record } from "@/utils/activityLog";
 import {
   continuingBurst,
   historyNoticeText,
@@ -100,6 +101,7 @@ async function moveInHistoryNow(redo: boolean, steps: number, origin: HistoryMov
     return;
   }
   const snapshot = result.snapshot;
+  record("edit", `${redo ? "Redo" : "Undo"}: ${single || "action"}`, { steps: result.moved, origin });
   const burst = noteMove(direction, result.moved, origin, before, useHistoryStore.getState().past.length);
   showMoveNotice(burst, single || "action");
   const addNotification = notifications.addNotification;

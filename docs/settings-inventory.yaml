@@ -260,6 +260,23 @@ settings:
       time so far beside the wheel once it has spun for a second. Problem
       reports record each wait's start and stop times whatever this says.
 
+  - id: activity-log-actions
+    label: General ▸ Problem reports ▸ Keep a log of my actions for problem reports
+    home: settings
+    section: general
+    storage: browser localStorage (psyneuview.activityLog.actions); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-activity-log-actions
+    notes: >-
+      On by default (#177). Covers user actions only: menus, buttons, tabs,
+      the canvas, edits, trace stepping. Recorded whether it is on or off,
+      and the control's wording says so plainly: errors, messages shown,
+      every wait's timing, and runs, learning and walkthroughs with how they
+      ended (the owner's decision: they are what the app did, with an
+      outcome, and a report needs them). Off: nothing a user does is
+      recorded or saved, the actions already recorded are dropped here and
+      from the copy on disk (~/.psyneuview/activity-log), and a report says
+      logging was off.
+
   - id: tour-ring-thickness
     label: Tutorials and Voice ▸ Highlight ▸ Ring thickness
     home: settings
