@@ -215,6 +215,20 @@ export function autoSizeGroups(nodes: Node[]) {
   }
 }
 
+/**
+ * Fit the frames to their members, then move what an open frame would cover
+ * out from under it (#208). `keep` names the frames the user just dropped.
+ * For a custom layout in the nested view; edits the nodes in place.
+ */
+export function fitFramesAndMakeRoom(nodes: Node[], keep?: ReadonlySet<string>): void {
+  autoSizeGroups(nodes);
+  makeRoomForFrames(
+    nodes.filter((n) => !n.hidden && (n.type === "mechanismNode" || n.type === "compositionNode")),
+    sizeForRoom,
+    { keep, refit: () => autoSizeGroups(nodes) },
+  );
+}
+
 // #697/#713: in the flat / PyTorch view, reconstruct each origin composition as
 // an INSET frame (#427) that *contains* its hoisted members — so the box
 // accurately bounds the composition (members laid out together by

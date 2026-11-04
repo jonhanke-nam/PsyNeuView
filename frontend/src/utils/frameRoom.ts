@@ -12,6 +12,10 @@
  * keeps its corner, nodes clear of the frames keep their places, and two
  * mechanisms the user placed over one another are left as they are.
  *
+ * The same rule answers a drag: a frame dropped on nodes moves them aside, and
+ * a node dropped on a frame is put beside it, so a later rebuild has nothing to
+ * move and nothing jumps.
+ *
  * Siblings are compared within their own parent (positions inside a frame are
  * relative to it), the deepest frames first, so a frame that grows to fit
  * what moved inside it can then make its own room among its siblings.
@@ -55,6 +59,8 @@ export interface RoomOptions {
   gap?: number;
   /** Called after each group of siblings is done, to refit frames to what moved inside them. */
   refit?: () => void;
+  /** Where two frames meet, these stay: the frames the user just dropped. */
+  keep?: ReadonlySet<string>;
 }
 
 /**
@@ -67,6 +73,7 @@ export function makeRoomForFrames(
   options: RoomOptions = {},
 ): string[] {
   const gap = options.gap ?? 12;
+  const keep = options.keep;
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const depth = (n: Node): number => {
     const parent = n.parentId ? byId.get(n.parentId) : undefined;
@@ -108,9 +115,11 @@ export function makeRoomForFrames(
           // Who moves: a mechanism rather than a frame; else the one not
           // already moved; else the later of the two. It goes the way it
           // already went, or the way the node it is clearing went, or else
-          // the shortest way out.
+          // the shortest way out. A frame the user just dropped stays put.
           let [stay, go] = [a, b];
           if (isFrame(b) && !isFrame(a)) [stay, go] = [b, a];
+          else if (isFrame(a) && isFrame(b) && keep?.has(b.id) && !keep.has(a.id)) [stay, go] = [b, a];
+          else if (isFrame(a) && isFrame(b) && keep?.has(a.id)) [stay, go] = [a, b];
           else if (isFrame(a) === isFrame(b) && way.has(b.id) && !way.has(a.id)) [stay, go] = [b, a];
           const out = waysOut(box(stay), box(go), g);
           const chosen =

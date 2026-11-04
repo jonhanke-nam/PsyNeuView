@@ -22,7 +22,7 @@ import {
 import { useFitGraph } from "@/hooks/useFitGraph";
 import { computeShiftTable, shiftPosition, unshiftPosition } from "@/utils/viewTransform";
 
-import { useModelStore, type MechanismData, autoSizeGroups, usesFlatPositions } from "@/stores/modelStore";
+import { useModelStore, type MechanismData, autoSizeGroups, fitFramesAndMakeRoom, usesFlatPositions } from "@/stores/modelStore";
 import { recordAction } from "@/utils/history";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useStatusStore } from "@/stores/statusStore";
@@ -557,10 +557,13 @@ export function GraphCanvas() {
   const onNodeDrag: OnNodeDrag = useCallback(() => {}, []);
 
   const onNodeDragStop: OnNodeDrag = useCallback(
-    (_, node) => {
-      // Final resize + save layout
-      const currentNodes = [...nodesRef.current];
-      autoSizeGroups(currentNodes);
+    (_, node, dragged) => {
+      // Final resize + save layout. Copies, so React Flow draws what moves below.
+      const currentNodes = nodesRef.current.map((n) => ({ ...n }));
+      // #208: an open frame never covers an outer node, whichever of them was
+      // dragged. Moved now and saved below, or the next rebuild would do it.
+      if (usesFlatPositions()) autoSizeGroups(currentNodes);
+      else fitFramesAndMakeRoom(currentNodes, new Set(dragged.map((n) => n.id)));
       setNodes(currentNodes);
 
       // Record position change for undo

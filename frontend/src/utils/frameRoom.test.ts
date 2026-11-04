@@ -26,6 +26,20 @@ const apart = (a: Box, b: Box) =>
   a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y;
 
 describe("room for an open frame (#208)", () => {
+  it("keeps a dropped frame in place where it meets another frame", () => {
+    const [a, b] = [frame("A", 0, 0, 300, 300), frame("B", 200, 0, 300, 300)];
+    expect(makeRoomForFrames([a, b], sizeOf, { keep: new Set(["B"]) })).toEqual(["A"]);
+    expect(b.position).toEqual({ x: 200, y: 0 });
+    expect(apart(boxOf(a), boxOf(b))).toBe(true);
+  });
+
+  it("puts a dropped mechanism beside the frame, even though it was the one dragged", () => {
+    const [f, m] = [frame("F", 0, 0, 400, 400), mech("M", 100, 100)];
+    expect(makeRoomForFrames([f, m], sizeOf, { keep: new Set(["M"]) })).toEqual(["M"]);
+    expect(f.position).toEqual({ x: 0, y: 0 });
+    expect(apart(boxOf(f), boxOf(m))).toBe(true);
+  });
+
   it("moves the nodes under a frame out the shortest way, and leaves the rest", () => {
     // EGO after EM is opened at its folded node's corner: the frame grows over
     // the neighbours that were arranged around the small node.
