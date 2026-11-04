@@ -129,12 +129,21 @@ function leaveFlattenedViews() {
   if (gs.pytorch) gs.setPytorch(false);
 }
 
-/** Fold a composition to a single node, or open a folded one (#395). */
+/**
+ * Fold a composition to a single node, or open a folded one (#395).
+ *
+ * In a flattened view the frame is open whatever the setting says (the nested
+ * view folds compositions on first sight, #395, and that can already be on
+ * record), so a press there always folds.
+ */
 export async function toggleCompositionCollapse(label: string) {
-  const folding = !useGraphSettings.getState().collapsedCompositions.has(label);
+  const gs = useGraphSettings.getState();
+  const folding = gs.flat || gs.pytorch || !gs.collapsedCompositions.has(label);
   await changeCompositionView(folding ? `Collapsing ${label}` : `Expanding ${label}`, () => {
     if (folding) leaveFlattenedViews();
-    useGraphSettings.getState().toggleCollapsedComposition(label);
+    if (folding === !useGraphSettings.getState().collapsedCompositions.has(label)) {
+      useGraphSettings.getState().toggleCollapsedComposition(label);
+    }
   });
 }
 
