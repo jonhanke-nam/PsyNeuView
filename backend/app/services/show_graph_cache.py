@@ -11,7 +11,9 @@ What counts as "nothing has changed" is the key:
   so they get their own entry);
 - the other ``.py`` files in the model's folder (name, size, modified time),
   since a model may import a helper module that sits next to it;
-- the composition, the show_graph options and the format asked for.
+- the composition, the show_graph options and the format asked for;
+- for a picture, how the app redraws it (``show_graph_picture.PICTURE_VERSION``),
+  so a picture kept before a change to that is not shown again.
 
 The PsyNeuLink in use is not in the key. Instead the cache is emptied whenever
 the model runner restarts (``sandbox.restart_warm_worker``), which is how every
@@ -31,6 +33,8 @@ import json
 import threading
 from collections import OrderedDict
 from pathlib import Path
+
+from app.services.show_graph_picture import PICTURE_VERSION
 
 # Descriptions are tens of KB; SVGs a few hundred. Enough for every model a
 # session opens, without growing unbounded.
@@ -65,6 +69,7 @@ def cache_key(file_path: str, composition_name: str, options: dict, fmt: str) ->
             "composition": composition_name,
             "options": options,
             "format": fmt,
+            "picture": PICTURE_VERSION if fmt == "svg" else None,
         },
         sort_keys=True,
         default=str,

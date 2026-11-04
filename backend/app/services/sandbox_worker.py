@@ -2195,12 +2195,15 @@ def task_show_graph(params):
     # show_graph's refusal as it stands.
     try:
         import graphviz as gv
+        from app.services.show_graph_picture import as_graphviz_draws_it
         # Use 'source' format to get the final DOT with all colors applied,
         # then render to SVG. The 'gv' format returns an intermediate object
         # that may not have role-based colors (green/red/purple) applied.
         dot_source = comp.show_graph(output_fmt='source', **options)
         svg_bytes = gv.Source(dot_source).pipe(format='svg')
-        return {"svg": svg_bytes.decode('utf-8')}
+        # Graphviz keeps show_graph's colour names in the SVG, and a browser
+        # reads "green" darker than show_graph's own PDF draws it (#190).
+        return {"svg": as_graphviz_draws_it(svg_bytes.decode('utf-8'))}
     except Exception as e:
         return {"error": f"show_graph failed: {exception_text(e)}"}
 

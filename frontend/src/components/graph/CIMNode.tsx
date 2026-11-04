@@ -24,6 +24,15 @@ const CIM_COLORS: Record<string, string> = {
   PARAMETER_CIM: "var(--pnv-role-control)", // blue (the CONTROL role's)
 };
 
+// The same colours as the label's text, darker where the outline colour is
+// too light to read on white (show_graph's green and red, #190): the roles'
+// text variants, as MechanismNode uses them.
+const CIM_TEXT_COLORS: Record<string, string> = {
+  INPUT_CIM: "var(--pnv-role-input-text)",
+  OUTPUT_CIM: "var(--pnv-role-output-text)",
+  PARAMETER_CIM: "var(--pnv-role-control)",
+};
+
 interface PortInfo {
   name: string;
   shape?: number[];
@@ -33,6 +42,7 @@ export const CIMNode = memo(function CIMNode({ data, selected }: NodeProps) {
   const d = data as any;
   const cimType: string = d.cimType || "INPUT_CIM";
   const color = CIM_COLORS[cimType] || "var(--pnv-text-hint)";
+  const textColor = CIM_TEXT_COLORS[cimType] || color;
   const direction = useGraphSettings((s) => s.direction);
   const { input: inputPos, output: outputPos } = getHandlePositions(direction);
   const isHorizontal = direction === "LR" || direction === "RL";
@@ -51,7 +61,7 @@ export const CIMNode = memo(function CIMNode({ data, selected }: NodeProps) {
         background: `color-mix(in srgb, ${color} 8.2353%, transparent)`,
         fontSize: "var(--pnv-fs-11)",
         fontFamily: "monospace",
-        color,
+        color: textColor,
         fontWeight: 600,
         textAlign: "center",
         minWidth: 90,

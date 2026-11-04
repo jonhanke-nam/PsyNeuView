@@ -3,8 +3,10 @@
  * Appearance ▸ Node outlines. INPUT/OUTPUT/CONTROL nodes are 4 px heavier
  * (#190; 2 px before), and a selected node 2 px heavier than its own outline
  * (#42). Widths are checked as drawn: Chrome draws borders at whole pixels.
- * The default colours are show_graph's as a browser draws them (#190): green
- * #008000 for INPUT, red #ff0000 for OUTPUT, black for an ordinary node.
+ * The default colours are show_graph's as its own PDF draws them (#190):
+ * green #00ff00 for INPUT, red #ff0000 for OUTPUT, black for an ordinary
+ * node. The show_graph tab draws the same green (backend test_show_graph_picture.py:
+ * CI's browser tests have no Graphviz to draw that tab with).
  */
 import { mutatingTest as test, expect, clickCanvasNode } from "./test-base";
 import { writeFileSync, mkdtempSync, realpathSync } from "fs";
@@ -59,7 +61,7 @@ test("node outlines: show_graph's colours and heavier defaults, one width in Set
   // The defaults: 4 px black for an ordinary node; 8 px for INPUT (green)
   // and OUTPUT (red) nodes, show_graph's colours.
   expect(await outlines(page)).toEqual({
-    colour: { width: 8, color: "rgb(0, 128, 0)" },
+    colour: { width: 8, color: "rgb(0, 255, 0)" },
     hidden: { width: 4, color: "rgb(0, 0, 0)" },
     response: { width: 8, color: "rgb(255, 0, 0)" },
   });

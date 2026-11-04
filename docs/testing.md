@@ -8,7 +8,7 @@ added or changed (call it out in the PR, like the [catches ledger](ci/catches.md
 
 | Suite | Location | What it validates | How |
 | --- | --- | --- | --- |
-| **Backend pytest** | `backend/tests/` (~57 files, ~695 tests) | Backend behavior end-to-end: introspector, executor, MDF round-trips, file/sidecar handling, debugger snapshots, and **reference-model equivalence** | In-process Python assertions against PsyNeuLink |
+| **Backend pytest** | `backend/tests/` (~57 files, ~695 tests) | Backend behavior end-to-end: introspector, executor, MDF round-trips, file/sidecar handling, debugger snapshots, and **reference-model equivalence**; one source guard reaches into the frontend (`test_show_graph_palette.py`: the INPUT and OUTPUT role colours in `palette.css` are show_graph's, read from PsyNeuLink and resolved as Graphviz draws them, #190) | In-process Python assertions against PsyNeuLink |
 | **Tutorials (e2e)** | `frontend/e2e/tutorials/*.tutorial.spec.ts` | The user-facing workflows in the [tutorials](tutorials/README.md) | Drives the real app in headless Chromium, asserts the workflow, and regenerates the doc screenshots |
 | **Broader e2e** | `frontend/e2e/*.spec.ts` | App smoke + feature surfaces, incl. the **reference-model runnability gate** (`reference-models-runnable.spec.ts`): loads + runs *every* bundled reference model and fails on a white screen / uncaught error | Same Playwright engine as tutorials |
 | **Typecheck** | `frontend` (`tsc -b`) | TypeScript type correctness | Compile-time; no runtime |
