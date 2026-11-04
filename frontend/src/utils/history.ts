@@ -9,6 +9,7 @@ import { useModelStore } from "@/stores/modelStore";
 import { record } from "@/utils/activityLog";
 import { useHistoryStore, type SaveMark, type Snapshot } from "@/stores/historyStore";
 import type { MechanismData } from "@/stores/modelStore";
+import { captureView } from "@/utils/graphView";
 
 /**
  * Capture the current state and push it as a history snapshot.
@@ -40,6 +41,8 @@ export function recordAction(description: string) {
     description,
     timestamp: Date.now(),
     positions,
+    // The view the graph was built in, so undo puts it back too (#194).
+    view: captureView(),
   };
 
   useHistoryStore.getState().pushSnapshot(snapshot);
@@ -76,6 +79,7 @@ export function recordSave(source: string, mark: SaveMark) {
       description: "Saved",
       timestamp: Date.now(),
       positions,
+      view: captureView(),
     },
     mark,
   );
