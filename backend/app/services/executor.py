@@ -14,6 +14,7 @@ import numpy as np
 from pathlib import Path
 
 from app.services.sandbox import run_in_sandbox
+from app.services.assistant.review import require_runnable
 from app.services.show_graph_guard import suppress_show_graph
 
 
@@ -163,6 +164,8 @@ def _run_model_inprocess(
     execution_mode: str | None = None,
 ) -> dict:
     """In-process execution (used as fallback and in tests)."""
+    # Assistant-written content runs only once reviewed (#179).
+    require_runnable(file_path)
     import psyneulink as pnl
 
     try:
@@ -447,6 +450,8 @@ def _learn_model_inprocess(
     execution_mode: str | None = None,
 ) -> dict:
     """In-process learning (used as fallback and in tests)."""
+    # Assistant-written content runs only once reviewed (#179).
+    require_runnable(file_path)
     import psyneulink as pnl
     from app.services.pathway_learning import METRICS
 
@@ -563,6 +568,8 @@ def get_input_nodes(file_path: str, composition_name: str, use_sandbox: bool = T
 
 def _get_input_nodes_inprocess(file_path: str, composition_name: str) -> dict:
     """In-process version."""
+    # Assistant-written content runs only once reviewed (#179).
+    require_runnable(file_path)
     import psyneulink as pnl
 
     try:
