@@ -11,86 +11,13 @@ import { generateDefaultVarName } from "@/utils/defaultNaming";
 import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { withBusy } from "@/stores/busyStore";
-import { errorDetail } from "@/utils/errorDetail";
-
-// Which of the three graph views is showing (#717): a frame button's reload
-// has to carry the same flags as any other reload, or the canvas silently
-// changes view (#194).
-interface ViewFlags {
-  flat: boolean;
-  pytorch: boolean;
-}
-
-// Everything a frame button changes before the graph is rebuilt, so a rebuild
-// that fails can put it all back exactly (#194).
-interface ViewSnapshot extends ViewFlags {
-  collapsed: Set<string>;
-  inset: Set<string>;
-  focused: string | null;
-  viewBeforeEntering: ViewFlags | null;
-}
-
-// The view (flattened or PyTorch) that was showing when a composition was
-// entered, so leaving it returns there. Entering shows the composition on its
-// own in the nested view (the flattened views have no such thing as a single
-// composition), and the view menu says so while it lasts.
-let viewBeforeEntering: ViewFlags | null = null;
-
-function snapshotView(): ViewSnapshot {
-  const gs = useGraphSettings.getState();
-  return {
-    flat: gs.flat,
-    pytorch: gs.pytorch,
-    collapsed: new Set(gs.collapsedCompositions),
-    inset: new Set(gs.insetCompositions),
-    focused: useModelStore.getState().focusedComposition,
-    viewBeforeEntering,
-  };
-}
-
-function restoreView(snap: ViewSnapshot) {
-  useGraphSettings.setState({
-    flat: snap.flat,
-    pytorch: snap.pytorch,
-    collapsedCompositions: snap.collapsed,
-    insetCompositions: snap.inset,
-  });
-  useModelStore.getState().setFocusedComposition(snap.focused);
-  viewBeforeEntering = snap.viewBeforeEntering;
-}
-
-// Rebuild the graph from the open file with the view settings as they now
-// stand. modelStore reads collapsedCompositions, insetCompositions and
-// focusedComposition at dispatch time, so flipping them isn't enough — the
-// graph has to be rebuilt, and refetching /api/model/load is the cheapest way
-// to do that today without caching raw modelData in the store. Returns null
-// when the graph was rebuilt, else the reason it wasn't.
-async function rebuildGraph(): Promise<string | null> {
-  const { filePath, setSource, loadModelFromServer } = useModelStore.getState();
-  if (!filePath) return null;
-  const gs = useGraphSettings.getState();
-  try {
-    const resp = await fetch("/api/model/load", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        file_path: filePath,
-        flat: gs.flat,
-        pytorch: gs.pytorch,
-        ...showGraphLoadRequest(),
-      }),
-    });
-    if (!resp.ok) return await errorDetail(resp);
-    const data = await resp.json();
-    setSource(data.source);
-    // The labels, bundle and sidecars too: leaving them out clears the
-    // sidecar's port labels on every rebuild (#611).
-    loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
-    return null;
-  } catch (e) {
-    return (e as Error).message || "the server could not be reached";
-  }
-}
+import {
+  applyView,
+  captureView,
+  getViewBeforeEntering,
+  rebuildGraph,
+  setViewBeforeEntering,
+} from "@/utils/graphView";
 
 /**
  * Change how a composition is shown and rebuild the graph (#194).
@@ -102,14 +29,14 @@ async function rebuildGraph(): Promise<string | null> {
  * next unrelated rebuild applied it by surprise.
  */
 async function changeCompositionView(what: string, apply: () => void): Promise<void> {
-  const before = snapshotView();
+  const before = captureView();
   const { setStatus, clearStatus } = useStatusStore.getState();
   apply();
   setStatus(`${what}...`);
   try {
     const failure = await withBusy(what, rebuildGraph());
     if (failure !== null) {
-      restoreView(before);
+      applyView(before);
       useNotificationStore.getState().addNotification(
         "error",
         `${what} failed: ${failure}. The graph is as it was.`,
@@ -163,13 +90,14 @@ export async function focusComposition(label: string | null) {
   await changeCompositionView(label ? `Entering ${label}` : "Leaving the composition", () => {
     const gs = useGraphSettings.getState();
     const model = useModelStore.getState();
+    const from = getViewBeforeEntering();
     if (label) {
-      if (!model.focusedComposition) viewBeforeEntering = { flat: gs.flat, pytorch: gs.pytorch };
+      if (!model.focusedComposition) setViewBeforeEntering({ flat: gs.flat, pytorch: gs.pytorch });
       leaveFlattenedViews();
-    } else if (viewBeforeEntering) {
-      gs.setFlat(viewBeforeEntering.flat);
-      gs.setPytorch(viewBeforeEntering.pytorch);
-      viewBeforeEntering = null;
+    } else if (from) {
+      gs.setFlat(from.flat);
+      gs.setPytorch(from.pytorch);
+      setViewBeforeEntering(null);
     }
     model.setFocusedComposition(label);
   });
