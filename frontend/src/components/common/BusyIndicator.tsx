@@ -1,14 +1,21 @@
 /**
  * The spinning wheel of patience (#38): shown once anything the user asked
- * for has run past the threshold (busyStore). The toolbar copy also turns the
- * pointer to "progress" and announces "Working…" to screen readers; the
- * in-place copy sits over the canvas, where the result will appear. With
- * reduced motion the wheel stands still. Settings can also show how long it
- * has been spinning (#176), in either place or both.
+ * for has run past the threshold (busyStore).
+ *
+ * One wheel at a time (#220): centred over the graph when the graph is
+ * showing, otherwise over the workspace (only code, only the Inspector, or
+ * nothing at all). Settings ▸ Appearance can show how long it has been
+ * spinning (#176), below the wheel or in its centre, once a second has passed.
+ * With reduced motion the wheel stands still.
+ *
+ * The wheel itself is hidden from screen readers. BusyStatus, mounted once and
+ * for good, turns the pointer to "progress" and announces "Working…": a live
+ * region has to be on the page before its text changes for that to be read.
  */
 
 import { useEffect, useState } from "react";
 import { formatBusyElapsed, oldestTask, useBusyStore } from "@/stores/busyStore";
+import { useLayoutStore } from "@/stores/layoutStore";
 
 /** True once the oldest in-flight task has run for the threshold. */
 export function useBusyVisible(): boolean {
@@ -30,7 +37,9 @@ export function useBusyVisible(): boolean {
 /** Whole seconds this stretch of busyness has lasted, while `active`. */
 function useBusySeconds(active: boolean): number {
   const since = useBusyStore((s) => s.busySince);
-  const [seconds, setSeconds] = useState(0);
+  const [seconds, setSeconds] = useState(() =>
+    active && since !== null ? Math.floor((Date.now() - since) / 1000) : 0,
+  );
   useEffect(() => {
     if (!active || since === null) {
       setSeconds(0);
@@ -48,17 +57,34 @@ function useBusySeconds(active: boolean): number {
 /** Nothing for the first second, when a time would only be a distraction. */
 const elapsedText = (seconds: number) => (seconds >= 1 ? formatBusyElapsed(seconds) : "");
 
-function Wheel({ size }: { size: number }) {
+/** The wheel's size: fixed, so that nothing about it changes with the digits. */
+const WHEEL_SIZE = "44px";
+/**
+ * With the time in its centre the wheel is bigger, with short spokes round the
+ * rim: the clear space inside is about 4.4 times the text size, room for
+ * `1:02:09`. In terms of the text size, so it still fits at Large.
+ */
+const WHEEL_SIZE_WITH_CENTRE = "calc(var(--pnv-fs-13) * 6.5)";
+const CARD_PADDING = "14px";
+
+const timerText = {
+  fontSize: "var(--pnv-fs-13)",
+  fontWeight: 600,
+  fontVariantNumeric: "tabular-nums",
+  whiteSpace: "nowrap",
+} as const;
+
+/** The spokes turn on their own; the box round them does not, so it can be measured. */
+function Wheel({ rim }: { rim: boolean }) {
+  const spoke = rim
+    ? { x: 11.35, y: 0.8, width: 1.3, height: 3, rx: 0.65 }
+    : { x: 11, y: 2, width: 2, height: 6, rx: 1 };
   return (
-    <svg className="pnv-busy-wheel" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="pnv-busy-wheel" width="100%" height="100%" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
       {Array.from({ length: 12 }, (_, i) => (
         <rect
           key={i}
-          x="11"
-          y="2"
-          width="2"
-          height="6"
-          rx="1"
+          {...spoke}
           fill="currentColor"
           opacity={0.25 + (0.75 * i) / 11}
           transform={`rotate(${i * 30} 12 12)`}
@@ -68,67 +94,29 @@ function Wheel({ size }: { size: number }) {
   );
 }
 
-export function BusyIndicator({ placement }: { placement: "toolbar" | "canvas" }) {
-  const visible = useBusyVisible();
-  const isToolbar = placement === "toolbar";
+function WheelCard({ place }: { place: BusyPlace }) {
   const timerPlace = useBusyStore((s) => s.timerPlace);
-  const showTimer = timerPlace === "both" || timerPlace === placement;
-  const seconds = useBusySeconds(visible && showTimer);
-
-  useEffect(() => {
-    if (!isToolbar) return;
-    document.documentElement.classList.toggle("pnv-busy", visible);
-    return () => document.documentElement.classList.remove("pnv-busy");
-  }, [isToolbar, visible]);
-
-  if (isToolbar) {
-    return (
-      <span
-        data-testid="busy-indicator"
-        data-visible={visible}
-        role="status"
-        aria-live="polite"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          flexShrink: 0,
-          color: "var(--pnv-primary)",
-          fontSize: "var(--pnv-fs-13)",
-          fontWeight: 600,
-          visibility: visible ? "visible" : "hidden",
-        }}
-      >
-        {/* Always laid out, so the toolbar never shifts when it shows; the
-            text is only there while it shows, for screen readers. */}
-        <Wheel size={20} />
-        {visible ? "Working…" : <span aria-hidden="true">Working…</span>}
-        {/* Width reserved so the toolbar doesn't move; hidden from screen
-            readers, which would otherwise read it out every second. */}
-        {showTimer && (
-          <span
-            data-testid="busy-elapsed"
-            aria-hidden="true"
-            style={{ display: "inline-block", minWidth: "5ch", fontVariantNumeric: "tabular-nums" }}
-          >
-            {elapsedText(seconds)}
-          </span>
-        )}
-      </span>
-    );
-  }
-  if (!visible) return null;
+  const seconds = useBusySeconds(timerPlace !== "off");
+  const inCentre = timerPlace === "center";
+  const size = inCentre ? WHEEL_SIZE_WITH_CENTRE : WHEEL_SIZE;
+  const text = timerPlace === "off" ? "" : elapsedText(seconds);
   return (
     <div
-      data-testid="busy-indicator-canvas"
+      data-testid="busy-wheel"
+      data-place={place}
       aria-hidden="true"
       style={{
         position: "absolute",
-        top: "50%",
+        // Hung from the top, so the wheel's own centre is the pane's centre and
+        // the card can grow downwards when the time appears, leaving it put.
+        top: `calc(50% - ${size} / 2 - ${CARD_PADDING})`,
         left: "50%",
-        transform: "translate(-50%, -50%)",
+        transform: "translateX(-50%)",
         zIndex: 50,
-        padding: 14,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: CARD_PADDING,
         borderRadius: 16,
         background: "color-mix(in srgb, var(--pnv-surface) 85%, transparent)",
         boxShadow: "var(--pnv-shadow-popover)",
@@ -136,21 +124,62 @@ export function BusyIndicator({ placement }: { placement: "toolbar" | "canvas" }
         pointerEvents: "none",
       }}
     >
-      <Wheel size={44} />
-      {showTimer && (
-        <div
-          data-testid="busy-elapsed-canvas"
-          style={{
-            minHeight: "1.3em",
-            textAlign: "center",
-            fontSize: "var(--pnv-fs-13)",
-            fontWeight: 600,
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {elapsedText(seconds)}
+      <div data-testid="busy-wheel-box" style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+        <Wheel rim={inCentre} />
+        {inCentre && text && (
+          <div
+            data-testid="busy-elapsed"
+            style={{ ...timerText, position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
+          >
+            {text}
+          </div>
+        )}
+      </div>
+      {!inCentre && text && (
+        <div data-testid="busy-elapsed" style={{ ...timerText, marginTop: 6, textAlign: "center" }}>
+          {text}
         </div>
       )}
     </div>
+  );
+}
+
+export type BusyPlace = "graph" | "workspace";
+
+/**
+ * Mounted in both places; only the one that applies draws anything. Layout is
+ * read here so that one wheel at a time holds however the panels change.
+ */
+export function BusyIndicator({ place }: { place: BusyPlace }) {
+  const visible = useBusyVisible();
+  const graphVisible = useLayoutStore((s) => s.graphVisible);
+  if (!visible || graphVisible !== (place === "graph")) return null;
+  return <WheelCard place={place} />;
+}
+
+/** The "progress" pointer and the announcement, whatever is on screen. */
+export function BusyStatus() {
+  const visible = useBusyVisible();
+  useEffect(() => {
+    document.documentElement.classList.toggle("pnv-busy", visible);
+    return () => document.documentElement.classList.remove("pnv-busy");
+  }, [visible]);
+  return (
+    <span
+      data-testid="busy-indicator"
+      data-visible={visible}
+      role="status"
+      aria-live="polite"
+      style={{
+        position: "absolute",
+        width: 1,
+        height: 1,
+        overflow: "hidden",
+        clipPath: "inset(50%)",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {visible ? "Working…" : ""}
+    </span>
   );
 }

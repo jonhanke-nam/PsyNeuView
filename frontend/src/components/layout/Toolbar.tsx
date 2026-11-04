@@ -2,7 +2,6 @@
  * Top toolbar with file operations, model browser, and demo models.
  */
 
-import { BusyIndicator } from "@/components/common/BusyIndicator";
 import { Z_MENU } from "@/constants/zLayers";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { errorDetail } from "@/utils/errorDetail";
@@ -1576,7 +1575,6 @@ export function Toolbar() {
       }}
     >
       <strong style={{ fontSize: "var(--pnv-fs-14)", flexShrink: 0 }}>PsyNeuView</strong>
-      <BusyIndicator placement="toolbar" />
 
       {/* Settings (gear icon) — opens sectioned settings panel (#119). Next to
           the name, where nothing a model adds to the toolbar can push it off

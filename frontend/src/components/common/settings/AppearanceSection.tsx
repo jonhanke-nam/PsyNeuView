@@ -74,6 +74,7 @@ import {
   isPointerSize,
 } from "@/utils/graphCursor";
 import { TEXT_SIZES, TEXT_SIZE_LABELS, DEFAULT_TEXT_SIZE, isTextSize, useTextSizeStore } from "@/stores/textSizeStore";
+import { BUSY_TIMER_PLACES, DEFAULT_BUSY_TIMER_PLACE, useBusyStore } from "@/stores/busyStore";
 import { Group, SettingLabel, mutedStyle } from "./shared";
 
 export function AppearanceSection() {
@@ -102,6 +103,9 @@ export function AppearanceSection() {
       </Group>
       <Group id="graph-legend" title="Graph legend">
         <GraphLegendRow />
+      </Group>
+      <Group id="busy-wheel" title="Busy wheel">
+        <BusyTimerRow />
       </Group>
       <Group id="scheduling-arrows" title="Scheduling arrows">
         <SchedulingArrowsRow />
@@ -469,6 +473,37 @@ function TextSizeRow() {
         {TEXT_SIZES.map((t) => (
           <option key={t} value={t}>
             {TEXT_SIZE_LABELS[t]}{t === DEFAULT_TEXT_SIZE ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/** Whether the busy wheel shows how long it has been spinning, and where (#176, #220). */
+function BusyTimerRow() {
+  const place = useBusyStore((s) => s.timerPlace);
+  const setPlace = useBusyStore((s) => s.setTimerPlace);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <SettingLabel title="Show how long it has been spinning" htmlFor="setting-busy-timer">
+        Shows the time so far with the busy wheel, once a second has passed.
+        Problem reports record how long each wait took either way.
+      </SettingLabel>
+      <select
+        id="setting-busy-timer"
+        data-testid="setting-busy-timer"
+        value={place}
+        onChange={(e) => {
+          const chosen = BUSY_TIMER_PLACES.find((p) => p.place === e.target.value);
+          if (chosen) setPlace(chosen.place);
+        }}
+        style={selectStyle}
+      >
+        {BUSY_TIMER_PLACES.map((p) => (
+          <option key={p.place} value={p.place}>
+            {p.label}
+            {p.place === DEFAULT_BUSY_TIMER_PLACE ? " (default)" : ""}
           </option>
         ))}
       </select>

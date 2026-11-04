@@ -39,15 +39,20 @@ export function loadBusyThreshold(): number {
 }
 
 export const BUSY_TIMER_KEY = "psyneuview.busy.timerPlace";
-export type BusyTimerPlace = "off" | "toolbar" | "canvas" | "both";
-export const DEFAULT_BUSY_TIMER_PLACE: BusyTimerPlace = "toolbar";
+export type BusyTimerPlace = "off" | "below" | "center";
+export const DEFAULT_BUSY_TIMER_PLACE: BusyTimerPlace = "below";
 export const BUSY_TIMER_PLACES: { place: BusyTimerPlace; label: string }[] = [
   { place: "off", label: "Off" },
-  { place: "toolbar", label: "In the toolbar" },
-  { place: "canvas", label: "Over the graph" },
-  { place: "both", label: "Both" },
+  { place: "below", label: "Below the wheel" },
+  { place: "center", label: "In the centre of the wheel" },
 ];
 
+/**
+ * The stored choice. Before there was one wheel (#220) the values were "off",
+ * "toolbar", "canvas" and "both": Off stays Off; the old places, like anything
+ * else not recognised, are the default. They are only read differently, not
+ * rewritten, so the next choice made is what replaces them.
+ */
 export function loadBusyTimerPlace(): BusyTimerPlace {
   try {
     const stored = localStorage.getItem(BUSY_TIMER_KEY);

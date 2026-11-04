@@ -62,8 +62,7 @@ test.describe("Open menu: the examples probe (#175)", { tag: "@ci" }, () => {
     await page.waitForTimeout(1_000);
     expect(statusRequests()).toBe(0);
     await expect(wheel).toHaveAttribute("data-visible", "false");
-    // The timer's span keeps its width while idle; it shows no time.
-    await expect(page.getByTestId("busy-elapsed")).not.toHaveText(/\d/);
+    await expect(page.getByTestId("busy-wheel")).toHaveCount(0);
 
     // Unfolding the section is what asks, and the wheel stays off while the
     // server works: the request is background, so nobody is kept waiting.
