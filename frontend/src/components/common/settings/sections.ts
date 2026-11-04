@@ -33,6 +33,7 @@ export const SETTINGS_SECTIONS = [
   { id: "tutorials-voice", label: "Tutorials and Voice" },
   { id: "open-menu", label: "Open menu" },
   { id: "folders", label: "Folders" },
+  { id: "assistant", label: "AI assistant", needsAssistant: true },
   { id: "shortcuts", label: "Keyboard shortcuts" },
   { id: "reports", label: "Problem reports", macAppOnly: true },
   { id: "developer", label: "Developer (advanced)" },
@@ -42,14 +43,20 @@ export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number]["id"];
 
 export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = SETTINGS_SECTIONS.map((s) => s.id);
 
-/** The sections to list: all of them inside the Mac app, the browser's elsewhere. */
-export function availableSections(inMacApp: boolean) {
-  return SETTINGS_SECTIONS.filter((s) => inMacApp || !("macAppOnly" in s && s.macAppOnly));
+/**
+ * The sections to list: all of them inside the Mac app, the browser's
+ * elsewhere. AI assistant (#179) is listed only where the deployment has the
+ * `assistant` capability, which the page learns from the backend.
+ */
+export function availableSections(inMacApp: boolean, assistant = false) {
+  return SETTINGS_SECTIONS.filter(
+    (s) => (inMacApp || !("macAppOnly" in s && s.macAppOnly)) && (assistant || !("needsAssistant" in s && s.needsAssistant)),
+  );
 }
 
 /** `id` when it is listed, otherwise About. */
-export function availableSectionOrDefault(id: SettingsSectionId | null, inMacApp: boolean): SettingsSectionId {
-  if (id && availableSections(inMacApp).some((s) => s.id === id)) return id;
+export function availableSectionOrDefault(id: SettingsSectionId | null, inMacApp: boolean, assistant = false): SettingsSectionId {
+  if (id && availableSections(inMacApp, assistant).some((s) => s.id === id)) return id;
   return DEFAULT_SETTINGS_SECTION;
 }
 

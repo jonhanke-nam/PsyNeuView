@@ -37,6 +37,10 @@ function buildActions(): Record<string, () => void> {
     // The bottom panel is App's own state, so App registers this one.
     "inspector.focus": () => void runCommand("inspector.focus"),
 
+    // Stop the assistant's turn (#179). Declines when no turn is running, so
+    // the chord still reaches whatever else wants it.
+    "assistant.stop": () => runCommand("assistant.stop"),
+
     "gesture.cancel": () => {
       const store = useModelStore.getState();
       const pending =

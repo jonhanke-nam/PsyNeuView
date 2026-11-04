@@ -24,6 +24,8 @@ import { DialogHeader } from "./dialog/DialogHeader";
 import { useDismiss } from "./dialog/useDismiss";
 import { AboutSection } from "./settings/AboutSection";
 import { AppearanceSection } from "./settings/AppearanceSection";
+import { AssistantSection } from "./settings/AssistantSection";
+import { useAssistantStore } from "@/stores/assistantStore";
 import { DeveloperSection } from "./settings/DeveloperSection";
 import { FoldersSection } from "./settings/FoldersSection";
 import { GeneralSection } from "./settings/GeneralSection";
@@ -58,7 +60,10 @@ export function SettingsPanel({ isOpen, onClose, section: requested = null }: Pr
   // on close/reopen so the panel doesn't claim a previous version that's stale.
   const [previousPnl, setPreviousPnl] = useState<PsyNeuLinkInfo | null>(null);
   const inMacApp = hasSettingsBridge();
-  const [section, setSection] = useState<SettingsSectionId>(() => availableSectionOrDefault(loadLastSection(), inMacApp));
+  // AI assistant (#179): listed only where the backend has the capability.
+  const assistantAvailable = useAssistantStore((s) => s.available === true);
+  const loadAssistant = useAssistantStore((s) => s.load);
+  const [section, setSection] = useState<SettingsSectionId>(() => availableSectionOrDefault(loadLastSection(), inMacApp, assistantAvailable));
 
   // Refetch /settings/info. Called once on open and again after a successful
   // install so the panel reflects the new install without a page reload —
@@ -91,7 +96,8 @@ export function SettingsPanel({ isOpen, onClose, section: requested = null }: Pr
     setLoadError(null);
     setCapabilities(null);
     setPreviousPnl(null);
-    setSection(availableSectionOrDefault(requested ?? loadLastSection(), inMacApp));
+    setSection(availableSectionOrDefault(requested ?? loadLastSection(), inMacApp, useAssistantStore.getState().available === true));
+    void loadAssistant();
 
     fetch("/api/settings/info")
       .then(async (resp) => {
@@ -118,7 +124,7 @@ export function SettingsPanel({ isOpen, onClose, section: requested = null }: Pr
     return () => {
       cancelled = true;
     };
-  }, [isOpen, requested, inMacApp]);
+  }, [isOpen, requested, inMacApp, loadAssistant]);
 
   const showSection = (id: SettingsSectionId) => {
     setSection(id);
@@ -187,7 +193,7 @@ export function SettingsPanel({ isOpen, onClose, section: requested = null }: Pr
               gap: 2,
             }}
           >
-            {availableSections(inMacApp).map((s) => {
+            {availableSections(inMacApp, assistantAvailable).map((s) => {
               const active = s.id === section;
               return (
                 <button
@@ -234,6 +240,7 @@ export function SettingsPanel({ isOpen, onClose, section: requested = null }: Pr
             {section === "tutorials-voice" && <TutorialsVoiceSection />}
             {section === "open-menu" && <OpenMenuSection />}
             {section === "folders" && <FoldersSection />}
+            {section === "assistant" && <AssistantSection />}
             {section === "reports" && <ReportsSection />}
             {section === "shortcuts" && (
               <ShortcutsSection
