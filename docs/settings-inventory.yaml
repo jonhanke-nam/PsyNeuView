@@ -427,9 +427,10 @@ settings:
     notes: >-
       An ordinary node's outline, 1–6 px in whole pixels (Chrome draws
       borders at whole pixels); 4 px by default (was 2 after #42, 1 before). The heavier
-      outlines follow it: INPUT, OUTPUT and CONTROL nodes + 2 px (replacing
-      the Style tab's Border width slider, which set them alone), a selected
-      or running node + 2 px more. /rendering-defaults.json can retune the
+      outlines follow it: INPUT, OUTPUT and CONTROL nodes + 4 px (+ 2 before
+      #190, which moved the contrast between roles toward show_graph's 3 to 1;
+      replacing the Style tab's Border width slider, which set them alone), a
+      selected or running node + 2 px more. /rendering-defaults.json can retune the
       default; a width chosen here wins. The Style tab links here.
 
   - id: edge-line-width

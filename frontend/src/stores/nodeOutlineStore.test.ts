@@ -26,10 +26,10 @@ const width = (m: Awaited<ReturnType<typeof freshStore>>) => {
 describe("node outline width", () => {
   beforeEach(() => localStorage.clear());
 
-  it("defaults to 4 px, with emphasis and selection 2 px heavier", async () => {
+  it("defaults to 4 px, with emphasis 4 px and selection 2 px heavier", async () => {
     const m = await freshStore();
     expect(width(m)).toBe(4);
-    expect(m.NODE_OUTLINE_EMPHASIS_EXTRA).toBe(2);
+    expect(m.NODE_OUTLINE_EMPHASIS_EXTRA).toBe(4);
     expect(m.NODE_OUTLINE_SELECTED_EXTRA).toBe(2);
   });
 
