@@ -18,10 +18,24 @@
 import { mutatingTest as test, expect, closePalette, canvasNode, fitGraph } from "./test-base";
 import type { Page } from "@playwright/test";
 import path from "path";
+import { copyFileSync, mkdirSync } from "fs";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const EGO = path.resolve(__dirname, "..", "..", "backend", "reference_models", "Giallanza2024_ego_study2.py");
+const REFERENCE_MODELS = path.resolve(__dirname, "..", "..", "backend", "reference_models");
+const EGO_FILES = ["Giallanza2024_ego_study2.py", "Giallanza2024_ego_study2.pnlview.json", "Giallanza2024_ego_study2.psyneuview.json"];
+
+/**
+ * A copy of EGO, with its sidecars, in this test's own folder. The moves
+ * here are saved to the model's layout sidecar, and the bundled one must not
+ * carry them into the specs that open EGO after this one.
+ */
+function egoCopy(): string {
+  const dir = test.info().outputPath("ego");
+  mkdirSync(dir, { recursive: true });
+  for (const f of EGO_FILES) copyFileSync(path.join(REFERENCE_MODELS, f), path.join(dir, f));
+  return path.join(dir, EGO_FILES[0]);
+}
 
 /** EGO's own nodes, outside EM. */
 const OUTER = ["STATE", "PREVIOUS STATE", "CONTEXT", "CONTEXT [NORMALIZED]", "PREDICTION", "CONTEXT [BIAS]", "LOSS for PREDICTION"];
@@ -252,6 +266,7 @@ async function expectAllGood(page: Page, when: string) {
 test.describe("expanding a folded, moved composition (#208, #209)", { tag: "@ci" }, () => {
   test("Like show_graph: the open frame clears the outer nodes and its projections reach its members", async ({ page }) => {
     test.setTimeout(180_000);
+    const EGO = egoCopy();
     await openFromPath(page, EGO);
     await chooseLayout(page, "showgraph");
 
@@ -291,7 +306,7 @@ test.describe("expanding a folded, moved composition (#208, #209)", { tag: "@ci"
 
   test("Layered: the same, after fold, move and expand", async ({ page }) => {
     test.setTimeout(120_000);
-    await openFromPath(page, EGO);
+    await openFromPath(page, egoCopy());
     await chooseLayout(page, "layered");
     await press(page, /^Collapse composition EM$/);
     await ensureCustomLayout(page);
