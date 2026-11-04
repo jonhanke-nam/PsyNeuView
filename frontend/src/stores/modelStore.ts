@@ -9,6 +9,7 @@ import { applyLayout } from "@/utils/layout";
 import { knownSize, placementFits } from "@/utils/showGraphLayout";
 import { cimAnchor, cimPosition } from "@/utils/cimPlacement";
 import { retargetFrameEdges } from "@/utils/frameEdges";
+import { makeRoomForFrames } from "@/utils/frameRoom";
 import { useHistoryStore } from "./historyStore";
 import { recordAction } from "@/utils/history";
 import { usePortLayout } from "@/stores/portLayoutStore";
@@ -168,6 +169,18 @@ const GROUP_PADDING = { top: 50, bottom: 30, left: 20, right: 20 };
 // layout expects.
 export const NODE_WIDTH = 170;
 export const NODE_HEIGHT = 80;
+
+/**
+ * A node's footprint for making room beside an open frame (#208): a frame's
+ * set size, a drawn box's measured size, else the assumed size.
+ */
+function sizeForRoom(n: Node): { w: number; h: number } {
+  const known = knownSize(n);
+  return {
+    w: (n.style?.width as number) || known.w || NODE_WIDTH,
+    h: (n.style?.height as number) || known.h || NODE_HEIGHT,
+  };
+}
 
 /**
  * Auto-size composition group nodes to fit their children.
@@ -1909,6 +1922,16 @@ export const useModelStore = create<ModelState>((set, get) => ({
     const { layoutStyle } = useGraphSettings.getState();
     if (!(layoutStyle === "showgraph" && (autoLayout || !hasSavedPositions) && placementFits(layoutNodes))) {
       autoSizeGroups(layoutNodes);
+    }
+
+    // #208: in a custom layout a composition keeps one saved position folded
+    // or open, so a frame opened at its folded node's corner lands over the
+    // neighbours arranged around that node. Move those out from under it
+    // (the shortest way), and leave every other position as saved. A layout
+    // engine places frames clear of their neighbours itself, and the flat
+    // views have no folding.
+    if (!autoLayout && hasSavedPositions && !isFlatView) {
+      makeRoomForFrames(layoutNodes, sizeForRoom, { refit: () => autoSizeGroups(layoutNodes) });
     }
 
     // Add CIM nodes AFTER layout so the main graph stays connected.
