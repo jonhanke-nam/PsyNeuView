@@ -25,6 +25,11 @@ import {
 import { boundaryDir, boundaryInward, isDrawnOutline, nodeShapeFor, shapeTooltip, type NodeShape } from "@/utils/nodeShape";
 import { NodeShapeOutline } from "./NodeShapeOutline";
 
+/** A collapsed composition's Expand button: the frame buttons' 28 px (#194), and its gap from the edge. */
+const EXPAND_BUTTON_WIDTH = 28;
+const EXPAND_BUTTON_GAP = 6;
+const EXPAND_BUTTON_ROOM = EXPAND_BUTTON_WIDTH + 2 * EXPAND_BUTTON_GAP;
+
 /** How tall the value pill's grid is (#1387): its 10px line of text. */
 const PILL_GRID_HEIGHT = 10;
 
@@ -404,8 +409,13 @@ export const MechanismNode = memo(function MechanismNode({
     : isCursorHighlighted
     ? "var(--pnv-cursor-highlight)"
     : undefined;
-  const padding =
-    shape === "doubleoctagon" ? "16px 48px" : shape === "octagon" ? "12px 40px" : shape === "doublecircle" ? "14px 30px" : "10px 24px";
+  const [padY, padX] =
+    shape === "doubleoctagon" ? [16, 48] : shape === "octagon" ? [12, 40] : shape === "doublecircle" ? [14, 30] : [10, 24];
+  // #211: a collapsed composition's Expand button sits at the node's right
+  // edge, out of its middle, so a click on the node selects it rather than
+  // opening it. The same room on the left keeps the name centred.
+  const expandRoom = isCollapsedComposition ? EXPAND_BUTTON_ROOM : 0;
+  const padding = `${padY}px ${padX + expandRoom}px`;
 
   return (
     <div
@@ -558,7 +568,7 @@ export const MechanismNode = memo(function MechanismNode({
       {/* Type + Role badges. With Elements off (the default, #122) and no
           other tag, the row is left out so the name sits centred in the oval,
           as show_graph() draws it. */}
-      {(showNodeElements || showViewOnlyTag || isCollapsedComposition) && (
+      {(showNodeElements || showViewOnlyTag) && (
       <div data-testid="node-tags" style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
         {showNodeElements && (
           <span
@@ -607,40 +617,43 @@ export const MechanismNode = memo(function MechanismNode({
             view only
           </span>
         )}
-        {isCollapsedComposition && (
-          <button
-            onClick={onExpandComposition}
-            title="Expand this composition to show its contents"
-            aria-label={`Expand composition ${d.label}`}
-            // The size of the frame's buttons (#194), so Expand is as easy
-            // to find and press as the Collapse it undoes.
-            style={{
-              marginLeft: 2,
-              cursor: "pointer",
-              fontSize: 15,
-              lineHeight: 1,
-              minWidth: 28,
-              height: 26,
-              padding: "0 6px",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "1px solid var(--pnv-composition-control-border)",
-              borderRadius: 4,
-              background: "var(--pnv-surface)",
-              color: "var(--pnv-composition-control-text)",
-              fontWeight: 600,
-            }}
-          >
-            +
-          </button>
-        )}
       </div>
       )}
       {showNodeNames && (
         <div data-testid="node-name" style={{ fontSize: 14, fontWeight: 600, color: "var(--pnv-text)" }}>
           {d.label}
         </div>
+      )}
+      {isCollapsedComposition && (
+        <button
+          onClick={onExpandComposition}
+          title="Expand this composition to show its contents"
+          aria-label={`Expand composition ${d.label}`}
+          // The size of the frame's buttons (#194), so Expand is as easy
+          // to find and press as the Collapse it undoes.
+          style={{
+            position: "absolute",
+            right: EXPAND_BUTTON_GAP,
+            top: "50%",
+            transform: "translateY(-50%)",
+            cursor: "pointer",
+            fontSize: 15,
+            lineHeight: 1,
+            minWidth: 28,
+            height: 26,
+            padding: "0 6px",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "1px solid var(--pnv-composition-control-border)",
+            borderRadius: 4,
+            background: "var(--pnv-surface)",
+            color: "var(--pnv-composition-control-text)",
+            fontWeight: 600,
+          }}
+        >
+          +
+        </button>
       )}
       {showNodeElements && d.function && (
         <div
