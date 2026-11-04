@@ -61,6 +61,22 @@ describe("the default layout (#189)", () => {
     expect(useLayoutStore.getState().codeVisible).toBe(true);
   });
 
+  it("every way of hiding a panel reports a refusal the same way (#213)", async () => {
+    const { useLayoutStore } = await freshStore();
+    // Graph alone: the Layout menu's setPanelVisible and the bottom panel's
+    // collapse (toggleBottom) both have to be able to tell the person why.
+    expect(useLayoutStore.getState().setPanelVisible("graph", false)).toBe(false);
+    expect(useLayoutStore.getState().graphVisible).toBe(true);
+    // Showing a panel is never refused.
+    expect(useLayoutStore.getState().setPanelVisible("bottom", true)).toBe(true);
+    expect(useLayoutStore.getState().setPanelVisible("graph", false)).toBe(true);
+    expect(useLayoutStore.getState().toggleBottom()).toBe(false);
+    expect(useLayoutStore.getState().bottomVisible).toBe(true);
+    expect(useLayoutStore.getState().toggleGraph()).toBe(true);
+    expect(useLayoutStore.getState().toggleBottom()).toBe(true);
+    expect(useLayoutStore.getState().bottomVisible).toBe(false);
+  });
+
   it("the Components panel toggles through its own store", async () => {
     const { useLayoutStore } = await freshStore();
     const { usePaletteStore } = await import("./paletteStore");

@@ -31,6 +31,7 @@ import { ExternalChangeModal } from "./components/common/ExternalChangeModal";
 import { ChangesSinceSaveDialog } from "./components/common/ChangesSinceSaveDialog";
 import { RevertToSaveDialog } from "./components/common/RevertToSaveDialog";
 import { registerCommand } from "./shortcuts/commands";
+import { setPanelVisibleOrExplain } from "./shortcuts/lastPanel";
 import { useAppShortcuts } from "./shortcuts/useAppShortcuts";
 import { useModelStore } from "./stores/modelStore";
 import { useNotificationStore } from "./stores/notificationStore";
@@ -52,7 +53,6 @@ export default function App() {
   const innerSizes = useLayoutStore((s) => s.innerSizes);
   const setOuterSizes = useLayoutStore((s) => s.setOuterSizes);
   const setInnerSizes = useLayoutStore((s) => s.setInnerSizes);
-  const toggleBottom = useLayoutStore((s) => s.toggleBottom);
   const { pendingChange, acceptPendingChange, dismissPendingChange } = useFileWatcher();
   useShowGraphLayout();
   useLayeredLayoutFit();
@@ -247,9 +247,11 @@ export default function App() {
                         onClick={() => setBottomTab("style")}
                       />
                       {/* Collapse the bottom panel (#226). Blocked by the store
-                          when it's the last visible pane. */}
+                          when it's the last visible pane, and the shared notice
+                          says why (#213). */}
                       <button
-                        onClick={toggleBottom}
+                        onClick={() => setPanelVisibleOrExplain("bottom", false)}
+                        data-testid="bottom-panel-collapse"
                         title="Collapse this panel"
                         style={{
                           marginLeft: "auto",
