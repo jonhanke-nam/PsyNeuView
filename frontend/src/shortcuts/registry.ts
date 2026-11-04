@@ -106,7 +106,8 @@ export const SHORTCUTS: Shortcut[] = [
   },
   // #191: one key per panel, in the order they appear across the window. The
   // graph-only default (#189) makes these the quick way to bring a panel back.
-  // Hiding the last visible panel is refused, and the shortcut says so.
+  // Hiding the last visible panel is refused, and the shortcut says so, unless
+  // Settings allows a blank screen (#215).
   // A browser keeps Cmd+1..9 for its tabs, so there they can be rebound in
   // Settings; inside the Mac app they reach the page.
   {
