@@ -15,7 +15,9 @@
 export type CommandId =
   | "model.save"
   | "graph.deleteSelection"
-  | "inspector.focus";
+  | "inspector.focus"
+  /** Stop the assistant's turn (#179). */
+  | "assistant.stop";
 
 const handlers = new Map<CommandId, () => void>();
 

@@ -23,6 +23,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app.services.assistant import review as assistant_review
 from app.services.sandbox import WORKER_PATH, RESULT_MARKER
 
 logger = logging.getLogger(__name__)
@@ -178,7 +179,9 @@ class JobManager:
             job.finish("canceled")
             return
 
-        payload = json.dumps({"task": task, "params": task_params})
+        # The import guard's state travels with every task (#179), as it does
+        # for the warm worker; the worker checks the model's path itself too.
+        payload = json.dumps({"task": task, "params": task_params, **assistant_review.worker_payload_extras()})
         try:
             proc = subprocess.Popen(
                 [sys.executable, WORKER_PATH],

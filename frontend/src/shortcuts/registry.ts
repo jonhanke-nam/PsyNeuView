@@ -138,6 +138,15 @@ export const SHORTCUTS: Shortcut[] = [
     scope: "codeEditorToo",
   },
   {
+    id: "assistant.stop",
+    label: "Stop the assistant",
+    group: "Run",
+    defaultBinding: "Mod+.",
+    // Stop has to be reachable while typing in the assistant's text box, so
+    // it fires everywhere; it declines when no turn is running.
+    scope: "always",
+  },
+  {
     id: "gesture.cancel",
     label: "Cancel the current gesture",
     group: "View",

@@ -16,6 +16,8 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
+from app.services.assistant import review as assistant_review
+from app.services.assistant.review import UnreviewedAssistantCode, require_runnable
 from app.services.introspector import load_and_introspect
 from app.services.preview import sync_preview, write_preview
 from app.services.dangling_check import find_dangling_projections
@@ -1083,7 +1085,11 @@ def disk_source(request: DiskSourceRequest):
         raise HTTPException(status_code=400, detail="Only a model's .py file can be read here.")
     if not path.is_file():
         return {"exists": False, "source": None}
-    return {"exists": True, "source": path.read_text(errors="replace")}
+    text = path.read_text(errors="replace")
+    # Reading isn't running, but a page that adopts this text should know it
+    # needs a review before it can be previewed or saved (#179).
+    unreviewed = assistant_review.is_tracked(str(path)) and not assistant_review.is_runnable(str(path), text)
+    return {"exists": True, "source": text, "assistant_unreviewed": unreviewed}
 
 
 def _load_timings(introspect_ms: float, total_start: float, **extra) -> dict:
@@ -1156,6 +1162,11 @@ def load_model(request: LoadModelRequest):
         raise HTTPException(status_code=400, detail=detail)
 
     source = path.read_text()
+
+    # Unreviewed assistant-written content doesn't run, and isn't rewritten
+    # or backed up under another name either (#179): the guard comes before
+    # the conversion below, which writes a copy.
+    require_runnable(str(path))
 
     # Auto-convert star imports before introspection so the file_writer
     # can safely emit `pnl.`-prefixed code for any future edits.
@@ -1630,6 +1641,12 @@ def preview_source_endpoint(request: PreviewSourceRequest):
     path = Path(request.file_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"File not found: {path}")
+    # A preview executes the buffer. Unreviewed assistant-written text is
+    # refused before any copy of it is written (#179); the 409 names the file
+    # to review, and the buffer is left alone.
+    assistant_review.refuse_unreviewed_text(request.file_path, request.source)
+    if assistant_review.is_tracked(request.file_path) and not assistant_review.is_runnable(request.file_path, request.source):
+        raise UnreviewedAssistantCode(request.file_path)
 
     preview = write_preview(request.file_path, request.source)
 
@@ -1675,6 +1692,11 @@ def save_source_endpoint(request: SaveSourceRequest):
     if request.base_source is not None:
         on_disk = path.read_text()
         if on_disk != request.base_source:
+            # What is on disk may be unreviewed assistant-written text (an
+            # accepted file write to the open file, #179). That is a review
+            # question, not a disk change to adopt: refuse with the review
+            # route instead of handing the text over as ``disk_source``.
+            require_runnable(str(path))
             try:
                 disk_model = load_and_introspect(str(path))
             except Exception as e:
@@ -1694,6 +1716,7 @@ def save_source_endpoint(request: SaveSourceRequest):
             )
 
     save_source(request.file_path, request.source)
+    assistant_review.refuse_unreviewed_text(request.file_path, request.source)
     # The buffer and the file now agree. The page stops using the preview
     # copy once this answers, but a show_graph, Run or Learn sent before then
     # still names it (an undo during an autosave, #160). Deleting it made
@@ -1703,6 +1726,9 @@ def save_source_endpoint(request: SaveSourceRequest):
 
     try:
         model = load_and_introspect(request.file_path)
+    except UnreviewedAssistantCode:
+        # Saved, but not executed: the page gets the 409 and the approve route (#179).
+        raise
     except Exception as e:
         # If the code is invalid, still save but return error in model.
         # Still surface dangling-projection info so the validation surface
@@ -1842,6 +1868,9 @@ async def create_job(request: CreateJobRequest):
     path = Path(request.file_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"File not found: {path}")
+    # A job runs the model in its own worker: the same guard as every other
+    # execution, answered at once rather than as a failed job (#179, #187).
+    require_runnable(request.file_path)
 
     execution_mode = request.execution_mode or DEFAULT_LEARN_MODE
     config = {
@@ -2040,6 +2069,9 @@ async def export_project(request: LoadModelRequest):
     (YAML) mirror when the model serializes cleanly. See ``bundle.py`` and
     ``docs/file-handling.md`` for the spec.
     """
+    # Bundling an unreviewed assistant-written model would let it run from the
+    # bundle's working copy later (#179); refuse here as every other route does.
+    require_runnable(request.file_path)
     path = Path(request.file_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"File not found: {path}")
@@ -2249,9 +2281,15 @@ def save_copy(request: SaveCopyRequest):
             raise HTTPException(status_code=400, detail="Saving .py requires `source`.")
         # A copy starts unprotected (#1346): a "# PsyNeuView: protected" line
         # is about the original, not a copy made to work on.
-        target.write_text(protection_line.strip_from_source(request.source))
+        copied = protection_line.strip_from_source(request.source)
+        target.write_text(copied)
+        # Written, not run, if it is unreviewed assistant text (#179).
+        assistant_review.refuse_unreviewed_text(str(target), copied)
         sidecar_copy.apply(copies, path, target)
     elif request.fmt == "pnlproject":
+        # Bundling executes the model for the MDF mirror, and the bundle's
+        # working copy runs when opened: an unreviewed file isn't bundled (#179).
+        require_runnable(str(path))
         mdf_text, _ = _try_mdf_mirror(str(path))
         data, _ = bundle.build_bundle_bytes(
             str(path),
@@ -2334,6 +2372,11 @@ async def import_project(file: UploadFile = File(...)):
         counter += 1
 
     target.write_text(source)
+    if assistant_review.is_unreviewed_content(source):
+        # The bundle carried assistant-written content nobody approved (#179):
+        # saved, tracked under its new path, and not executed until approved.
+        assistant_review.mark_unreviewed(str(target), source)
+        raise UnreviewedAssistantCode(str(target))
 
     # Save layout if present
     if layout_data:
@@ -2385,6 +2428,9 @@ def open_project(request: OpenProjectRequest):
 
     working_py = extracted["working_py_path"]
     manifest = extracted["manifest"]
+    # The bundle may carry assistant-written content nobody approved (#179):
+    # extracted, tracked under its working path, and not executed until approved.
+    assistant_review.refuse_unreviewed_text(working_py, extracted["source"])
     model = load_and_introspect(working_py)
     layout = load_layout(working_py)
 
@@ -2417,6 +2463,7 @@ def save_project(request: SaveProjectRequest):
         raise HTTPException(status_code=404, detail=f"File not found: {working}")
 
     save_source(request.file_path, request.source)
+    assistant_review.refuse_unreviewed_text(request.file_path, request.source)
 
     # Preserve created/description/name from the bundle's prior manifest.
     prior = bundle.working_manifest(request.file_path) or {}
@@ -2518,6 +2565,14 @@ async def import_mdf(file: UploadFile = File(...)):
     # Persist the uploaded MDF to a temp file so modeci_mdf can read by path
     # (it auto-detects format from extension).
     import tempfile
+    try:
+        uploaded_text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        uploaded_text = ""
+    if uploaded_text and assistant_review.is_unreviewed_content(uploaded_text):
+        # Assistant-written MDF nobody approved (#179): approve the file where
+        # the assistant wrote it, then import it.
+        raise UnreviewedAssistantCode(file.filename or "upload")
     suffix = ".json" if classification.file_type is FileType.MDF_JSON else ".yaml"
     with tempfile.NamedTemporaryFile(prefix="psyneuview_mdf_", suffix=suffix, delete=False) as tf:
         tmp_path = Path(tf.name)
@@ -3482,6 +3537,8 @@ def save_as(request: SaveAsRequest):
     # (no source_path) is written exactly as given.
     source = protection_line.strip_from_source(request.source) if request.source_path else request.source
     target.write_text(source)
+    # Written, not run, if it is unreviewed assistant text under a new name (#179).
+    assistant_review.refuse_unreviewed_text(str(target), source)
     sidecar_copy.apply(copies, request.source_path or target, target)
     layout, labels, bundle, sidecars = _sidecar_payload(target)
 

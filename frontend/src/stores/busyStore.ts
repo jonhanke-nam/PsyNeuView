@@ -17,6 +17,7 @@
 import { create } from "zustand";
 import { recordSettingChanged } from "@/utils/activityLog";
 import { BACKGROUND_WAIT_MIN_MS, beginWait, type WaitOutcome } from "@/utils/waitLog";
+import { noteUnreviewedResponse } from "./assistantStore";
 
 export const BUSY_THRESHOLD_KEY = "psyneuview.busy.thresholdMs";
 export const DEFAULT_BUSY_THRESHOLD_MS = 200;
@@ -202,6 +203,8 @@ const BACKGROUND = [
   /^\/api\/psyneulink-examples\/status\b/,
   /^\/api\/settings\/install\/[^/?]+$/, // polling an install job
   /^\/api\/jobs\/[^/?]+$/, // polling a job
+  // The assistant panel polls a turn's events (#179); the wheel never spins for it.
+  /^\/api\/assistant\/sessions\/[^/]+\/events\b/,
   /^\/rendering-defaults\.json/,
 ];
 
@@ -249,7 +252,14 @@ export function installBusyFetch(target: { fetch: typeof fetch } = globalThis): 
     const end = isBackgroundRequest(requestPath(input))
       ? beginWait(label, { kind: "background", minMs: BACKGROUND_WAIT_MIN_MS })
       : beginBusy(label);
-    return settle(original(input, init), end, judgeResponse);
+    const path = requestPath(input);
+    const promise = original(input, init).then((resp) => {
+      // A model route refusing unreviewed assistant-written code (#179):
+      // offer the review once, from one place, whichever route it was.
+      void noteUnreviewedResponse(path, resp);
+      return resp;
+    });
+    return settle(promise, end, judgeResponse);
   };
   (target.fetch as unknown as Record<symbol, boolean>)[WRAPPED] = true;
 }

@@ -15,6 +15,8 @@ import shutil
 import tokenize
 from pathlib import Path
 
+from app.services.assistant import review as assistant_review
+from app.services.assistant.review import require_runnable
 from app.services.clone_manager import artifact_path
 from app.services.file_writer import write_model_source
 
@@ -202,6 +204,8 @@ def convert_to_standard_format(
     import sys
 
     path = Path(file_path)
+    # Assistant-written content runs only once reviewed (#179).
+    require_runnable(file_path)
     original_source = path.read_text()
 
     # Back up original (redirected out of tree for managed clones — #349)
@@ -209,11 +213,14 @@ def convert_to_standard_format(
         backup_path = artifact_path(path.with_suffix(".original.py"))
         shutil.copy2(path, backup_path)
 
-    # Execute to get live objects
-    spec = importlib.util.spec_from_file_location("user_model_convert", file_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["user_model_convert"] = module
-    spec.loader.exec_module(module)
+    # Execute to get live objects, with the import guard watching its imports
+    # (#179). Entered before the module is registered: the guard's refresh
+    # drops stale user modules from sys.modules, and this one is new.
+    with assistant_review.guard_imports():
+        spec = importlib.util.spec_from_file_location("user_model_convert", file_path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["user_model_convert"] = module
+        spec.loader.exec_module(module)
 
     # Collect all PsyNeuLink objects from the module namespace
     mechanisms = {}
