@@ -7,6 +7,10 @@
  * the view menu and the frame buttons said one thing and the canvas another,
  * and after Enter-then-leave there was no breadcrumb and no frame to leave by.
  *
+ * The step is named for the button and the composition (#204): the Undo and
+ * Redo tooltips say "Entered EM", "Left EM", "Collapsed EM", "Expanded EM",
+ * "Inset EM" or "Un-inset EM", where they said "Model updated".
+ *
  * Tried on the EGO model's EM composition, as the frame buttons' own tests are.
  */
 import { mutatingTest as test, expect, closePalette } from "./test-base";
@@ -49,6 +53,12 @@ async function step(page: Page, which: "undo" | "redo") {
   await Promise.all([loaded(page), button.click()]);
 }
 
+/** The Undo and Redo tooltips name the step they would take (#204). */
+async function expectTooltips(page: Page, undo: string | null, redo: string | null) {
+  await expect(page.getByTestId("undo-button")).toHaveAttribute("title", undo ? `Undo: ${undo} (⌘Z)` : "Nothing to undo");
+  await expect(page.getByTestId("redo-button")).toHaveAttribute("title", redo ? `Redo: ${redo} (⌘⇧Z)` : "Nothing to redo");
+}
+
 const frame = (page: Page, label: string) =>
   page.getByTestId("graph-canvas").locator(`.react-flow__node-compositionNode[data-id="${label}"], .react-flow__node-compositionNode[data-id="cluster::${label}"]`);
 const canvasText = (page: Page, text: string) => page.getByTestId("graph-canvas").getByText(text, { exact: true });
@@ -62,6 +72,7 @@ test.describe("undo after a composition frame button (#194)", { tag: "@ci" }, ()
     await press(page, /^Enter composition EM$/);
     await expect(crumb(page)).toBeVisible({ timeout: 15_000 });
     await expect(canvasText(page, "PREDICTION")).toHaveCount(0);
+    await expectTooltips(page, "Entered EM", null);
 
     // Undo: out of EM, back in the flattened view, with the frame and its
     // buttons, and no breadcrumb. Before, the breadcrumb stayed and the view
@@ -72,6 +83,8 @@ test.describe("undo after a composition frame button (#194)", { tag: "@ci" }, ()
     await expect(frameButton(page, /^Enter composition EM$/)).toBeVisible();
     await expect(crumb(page)).toHaveCount(0);
     await expect(viewMenu(page)).toHaveValue("__flat__");
+    // The open is the only step before it, so there is nothing to undo.
+    await expectTooltips(page, null, "Entered EM");
 
     // Redo: inside EM again, breadcrumb and all.
     await step(page, "redo");
@@ -79,15 +92,18 @@ test.describe("undo after a composition frame button (#194)", { tag: "@ci" }, ()
     await expect(canvasText(page, "PREDICTION")).toHaveCount(0);
     await expect(crumb(page)).toBeVisible();
     await expect(viewMenu(page).locator("option:checked")).toContainText("EM");
+    await expectTooltips(page, "Entered EM", null);
 
     // Leave by the breadcrumb, then undo that: inside EM, with the breadcrumb
     // to leave by. This was the canvas with no way out.
     await Promise.all([loaded(page), crumb(page).click()]);
     await expect(canvasText(page, "PREDICTION")).toBeVisible({ timeout: 15_000 });
+    await expectTooltips(page, "Left EM", null);
     await step(page, "undo");
     await expect(canvasText(page, "COMBINED SCORES")).toBeVisible({ timeout: 15_000 });
     await expect(canvasText(page, "PREDICTION")).toHaveCount(0);
     await expect(crumb(page)).toBeVisible();
+    await expectTooltips(page, "Entered EM", "Left EM");
     // And it still leads back to the flattened view it was entered from.
     await Promise.all([loaded(page), crumb(page).click()]);
     await expect(frame(page, "EM")).toBeVisible({ timeout: 15_000 });
@@ -101,6 +117,7 @@ test.describe("undo after a composition frame button (#194)", { tag: "@ci" }, ()
     const folded = page.getByTestId("graph-canvas").locator('.react-flow__node-mechanismNode[data-id="EM"]');
     await expect(folded).toBeVisible({ timeout: 15_000 });
     await expect(viewMenu(page)).not.toHaveValue("__flat__");
+    await expectTooltips(page, "Collapsed EM", null);
 
     // Undo: the flattened view, EM open with its buttons. Before, the nodes
     // came back but the view menu said nested and EM stayed marked folded,
@@ -111,11 +128,13 @@ test.describe("undo after a composition frame button (#194)", { tag: "@ci" }, ()
     await expect(frame(page, "EM")).toBeVisible();
     await expect(frameButton(page, /^Collapse composition EM$/)).toBeVisible();
     await expect(viewMenu(page)).toHaveValue("__flat__");
+    await expectTooltips(page, null, "Collapsed EM");
 
     await step(page, "redo");
     await expect(folded).toBeVisible({ timeout: 15_000 });
     await expect(canvasText(page, "COMBINED SCORES")).toHaveCount(0);
     await expect(viewMenu(page)).not.toHaveValue("__flat__");
+    await expectTooltips(page, "Collapsed EM", null);
   });
 
   test("Inset, then Undo: EM nested and open again; Redo insets it", async ({ page }) => {
@@ -127,11 +146,14 @@ test.describe("undo after a composition frame button (#194)", { tag: "@ci" }, ()
     await press(page, /^Expand composition EM$/);
     const inset = frameButton(page, /^Inset composition EM$/);
     await expect(inset).toHaveAttribute("aria-pressed", "false", { timeout: 15_000 });
+    await expectTooltips(page, "Expanded EM", null);
     const border = () => frame(page, "EM").locator("> div").first().evaluate((el) => getComputedStyle(el).borderTopStyle);
 
     await press(page, /^Inset composition EM$/);
     await expect(inset).toHaveAttribute("aria-pressed", "true", { timeout: 15_000 });
     expect(await border()).toBe("solid");
+    // A step of its own (#194), under its own name (#204).
+    await expectTooltips(page, "Inset EM", null);
 
     // Undo: EM open and nested, not inset. Before, the inset press was not a
     // step at all (same code, same node count), so Undo went back to EM
@@ -141,9 +163,17 @@ test.describe("undo after a composition frame button (#194)", { tag: "@ci" }, ()
     await expect(frame(page, "EM")).toBeVisible();
     await expect(canvasText(page, "COMBINED SCORES")).toBeVisible();
     expect(await border()).toBe("dashed");
+    await expectTooltips(page, "Expanded EM", "Inset EM");
 
     await step(page, "redo");
     await expect(inset).toHaveAttribute("aria-pressed", "true", { timeout: 15_000 });
     expect(await border()).toBe("solid");
+    await expectTooltips(page, "Inset EM", null);
+
+    // Pressed again, EM is shown nested as before; the step says so.
+    await press(page, /^Inset composition EM$/);
+    await expect(inset).toHaveAttribute("aria-pressed", "false", { timeout: 15_000 });
+    expect(await border()).toBe("dashed");
+    await expectTooltips(page, "Un-inset EM", null);
   });
 });
