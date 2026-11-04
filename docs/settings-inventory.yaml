@@ -525,6 +525,39 @@ settings:
       (psynewview_palette_compact) is not read, so nobody stays stuck on the
       strip. Which sections are unfolded is still remembered by the panel.
 
+  - id: allow-blank-screen
+    label: Appearance ▸ Panels ▸ Allow a blank screen
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.layout.allowBlank); inside the Mac app, the app keeps psyneuview. keys
+    control: setting-allow-blank-screen
+    notes: >-
+      Off by default (#215): one of the graph, the code editor and the
+      Inspector panel always stays, and hiding the last is refused with a
+      notice (#213). On, all three can be hidden; the toolbar stays and a
+      hint on the blank screen says how to bring a panel back (the Layout
+      menu and each panel's key, as bound). Turning it off while the screen
+      is blank brings the graph back, and a stored blank layout read while
+      it is off opens as the graph. Only "true" counts as on.
+
+  - id: blank-load-panels
+    label: Appearance ▸ Panels ▸ Panels to open when a model loads on a blank screen
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.layout.blankLoadPanels, a JSON list of graph | code | bottom | palette); inside the Mac app, the app keeps psyneuview. keys
+    control: setting-blank-load-panels
+    notes: >-
+      The graph by default (#215). Depends on allow-blank-screen: greyed out
+      while that is off. One tick box per panel inside the one control
+      (blank-load-panel-<graph|code|bottom|palette>); one of the graph, the
+      code editor and the Inspector panel stays ticked. Applies only when
+      the screen is blank at the moment a model is opened, by any route;
+      with panels showing, opening changes nothing. The Components panel
+      opens only when ticked, otherwise it stays as it was; it is drawn
+      inside the graph, so it shows only with the graph. A stored value
+      that is not a list, or names none of the three, falls back to the
+      graph; unknown entries are dropped.
+
   - id: catalogs
     label: Folders ▸ Your catalogs (add, rename, remove)
     home: settings
@@ -592,10 +625,12 @@ elsewhere:
       panel start hidden, and come back from the Layout menu, its presets, or
       their keys. A choice already stored wins over the default. At least one
       of graph, code and Inspector panel always stays; hiding the last is
-      refused and the key says so. How the Components panel starts is its own
-      setting (components-start, #113). A walkthrough shows every panel while
-      it runs and puts the stored layout back afterwards
-      (psynewview_layout_before_walkthrough holds it meanwhile).
+      refused and the key says so, unless Settings ▸ Appearance ▸ Allow a
+      blank screen is on (allow-blank-screen, #215). How the Components panel
+      starts is its own setting (components-start, #113). A walkthrough shows
+      every panel while it runs and puts the stored layout back afterwards
+      (psynewview_layout_before_walkthrough holds it meanwhile); a blank
+      layout comes back as the graph if the setting went off meanwhile.
 
   - id: graph-node-elements
     label: Type and role tags

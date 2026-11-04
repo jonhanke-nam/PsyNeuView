@@ -14,6 +14,7 @@ import { usePortLayout } from "@/stores/portLayoutStore";
 import { useValueViews } from "@/stores/valueViewStore";
 import { useGraphSettings } from "./graphSettingsStore";
 import { useExternalChangeStore } from "./externalChangeStore";
+import { useLayoutStore } from "./layoutStore";
 import type { GSCInfo, BasicConditionEntry, ConditionInfo, SchedulerConfig, DanglingProjectionInfo, BrokenProjectionInfo, CompositionExecutionModeInfo, InputSet, LearningProfile } from "@/types/model";
 import { buildStepNodeValues, type StepNodeValues } from "@/utils/traceValues";
 import { deriveTrialBoundaries } from "@/utils/trialBoundaries";
@@ -527,7 +528,11 @@ interface ModelState {
   ws: WebSocket | null;
 
   // Actions
-  setFilePath: (path: string) => void;
+  /**
+   * The open file changed. `keepPanels` is for a Save As, which renames what is
+   * open rather than opening a model, so a blank screen stays blank (#215).
+   */
+  setFilePath: (path: string, opts?: { keepPanels?: boolean }) => void;
   // #906: force the next loadModelFromServer to re-derive Auto/Custom from the
   // sidecar, even when re-opening the *same* file path (an explicit Open should
   // respect the model's saved/curated layout, unlike a same-file source reload).
@@ -726,11 +731,20 @@ export const useModelStore = create<ModelState>((set, get) => ({
   // only opening a .pnlproject (which calls setBundleOrigin right after)
   // should leave an origin set. This keeps a stale origin from a previously
   // opened bundle from making the next plain-.py Save re-zip into it (#348).
-  setFilePath: (path) => {
+  setFilePath: (path, { keepPanels = false } = {}) => {
     const changed = path !== get().filePath;
     // The activity log (#1287): an explicit Open — a new path, or the same one
     // opened again (markFreshOpen ran first). A same-file reload is neither.
-    if (changed || pendingFreshOpenLayout) record("model", `${changed ? "Opened" : "Reopened"} ${path}`, { path });
+    if (changed || pendingFreshOpenLayout) {
+      record("model", `${changed ? "Opened" : "Reopened"} ${path}`, { path });
+      // #215: a model opened onto a blank screen brings the chosen panels
+      // with it (the graph by default); with any panel showing, nothing
+      // changes. Every explicit Open of a new path comes through here, and a
+      // same-file reload does not. Routes that can re-open the same path but
+      // mark it fresh only after this runs (a catalog model, a dropped file)
+      // call showPanelsForOpen themselves.
+      if (!keepPanels) useLayoutStore.getState().showPanelsForOpen();
+    }
     // A different file is a new model: re-apply collapse-by-default to its
     // nested compositions and wipe the previous model's run artifacts so the
     // Run panel starts clean. Same-file reloads (source edits, collapse

@@ -2,6 +2,7 @@ about-release-dates.spec.ts
 app-shell.spec.ts
 app-update-notice.spec.ts
 arrowheads-at-end.spec.ts
+blank-screen-setting.spec.ts
 busy-indicator.spec.ts
 components-panel-start-setting.spec.ts
 composition-cim-edges.spec.ts

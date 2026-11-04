@@ -9,6 +9,9 @@
  * The notice names the panel that stays and the two that could replace it,
  * with their real keys: read from the shortcut registry with the person's own
  * rebindings applied, so a changed key shows up here too.
+ *
+ * With Settings ▸ Appearance ▸ Allow a blank screen on (#215) the store never
+ * refuses, so none of this runs; layout/BlankScreen.tsx is the hint then.
  */
 
 import { useLayoutStore, type AnyPanel, type LayoutPanel } from "@/stores/layoutStore";

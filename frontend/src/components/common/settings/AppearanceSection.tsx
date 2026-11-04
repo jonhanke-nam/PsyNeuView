@@ -18,7 +18,9 @@
  * And the app's text size (#111): Small, Default or Large, remembered per
  * browser (stores/textSizeStore.ts). And whether a node shows its "view
  * only" tag (#211): hidden by default, as show_graph draws no such tag
- * (stores/viewOnlyTagsStore.ts).
+ * (stores/viewOnlyTagsStore.ts). And the panels (#215): whether every
+ * panel may be hidden, and which ones a model opens onto a blank screen,
+ * the second only available while the first is on (stores/layoutStore.ts).
  */
 
 import { LEGEND_STARTS, isLegendStart, useGraphLegendStore } from "@/stores/graphLegendStore";
@@ -29,6 +31,7 @@ import {
   useComponentsStartStore,
 } from "@/stores/componentsPanelStartStore";
 import { usePaletteStore } from "@/stores/paletteStore";
+import { BLANK_LOAD_PANEL_OPTIONS, isLayoutPanel, useLayoutStore } from "@/stores/layoutStore";
 import {
   DEFAULT_SCHEDULING_ARROWS,
   SCHEDULING_ARROWS,
@@ -112,6 +115,13 @@ export function AppearanceSection() {
       </Group>
       <Group id="components-panel" title="Components panel">
         <ComponentsStartRow />
+      </Group>
+      <Group id="panels" title="Panels">
+        <AllowBlankScreenRow />
+        {/* Indented under the setting it depends on, in line with that setting's words. */}
+        <div style={{ marginTop: 14, marginLeft: 21 }}>
+          <BlankLoadPanelsRow />
+        </div>
       </Group>
     </>
   );
@@ -228,6 +238,89 @@ function ComponentsStartRow() {
         ))}
       </select>
     </div>
+  );
+}
+
+// #215: whether every panel may be hidden. Off, one of the graph, the code
+// editor and the Inspector panel always stays (the store refuses, #213).
+function AllowBlankScreenRow() {
+  const allowBlank = useLayoutStore((s) => s.allowBlank);
+  const setAllowBlank = useLayoutStore((s) => s.setAllowBlank);
+  return (
+    <label style={{ fontSize: "var(--pnv-fs-13)", display: "flex", gap: 8, alignItems: "flex-start" }}>
+      <input
+        type="checkbox"
+        data-testid="setting-allow-blank-screen"
+        checked={allowBlank}
+        onChange={(e) => setAllowBlank(e.target.checked)}
+        style={{ marginTop: 3 }}
+      />
+      <span>
+        Allow a blank screen
+        <span style={{ ...mutedStyle, display: "block" }}>
+          Normally one of the graph, the code editor and the Inspector panel always stays on screen. With
+          this on, you can hide them all; the toolbar stays, and a short hint says how to bring a panel
+          back. Turning it off while the screen is blank brings the graph back.
+        </span>
+      </span>
+    </label>
+  );
+}
+
+// #215: the panels a model opens onto a blank screen. Only available while a
+// blank screen is allowed (greyed out otherwise: there is no blank screen to
+// load onto). One of the graph, the code editor and the Inspector panel stays
+// ticked, since a model needs one of them to show in.
+function BlankLoadPanelsRow() {
+  const allowBlank = useLayoutStore((s) => s.allowBlank);
+  const panels = useLayoutStore((s) => s.blankLoadPanels);
+  const setPanels = useLayoutStore((s) => s.setBlankLoadPanels);
+  const lastTopLevel = panels.filter((p) => isLayoutPanel(p)).length === 1;
+  return (
+    <fieldset
+      data-testid="setting-blank-load-panels"
+      disabled={!allowBlank}
+      aria-disabled={!allowBlank || undefined}
+      style={{ border: "none", margin: 0, padding: 0, fontSize: "var(--pnv-fs-13)", opacity: allowBlank ? 1 : 0.5 }}
+    >
+      <legend style={{ padding: 0 }}>
+        <SettingLabel title="Panels to open when a model loads on a blank screen">
+          Only when the screen is blank at the moment a model loads; with any panel showing, loading
+          changes nothing. One of the graph, the code editor and the Inspector panel stays ticked.
+          {!allowBlank && " Available while Allow a blank screen is on."}
+        </SettingLabel>
+      </legend>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
+        {BLANK_LOAD_PANEL_OPTIONS.map((o) => {
+          const chosen = panels.includes(o.id);
+          // The last of the three can't be unticked; the row says why.
+          const keeps = chosen && lastTopLevel && isLayoutPanel(o.id);
+          return (
+            <label
+              key={o.id}
+              title={keeps ? "One of the graph, the code editor and the Inspector panel has to stay ticked" : undefined}
+              style={{ display: "flex", gap: 8, alignItems: "center", cursor: keeps || !allowBlank ? "default" : "pointer" }}
+            >
+              <input
+                type="checkbox"
+                data-testid={`blank-load-panel-${o.id}`}
+                checked={chosen}
+                disabled={!allowBlank || keeps}
+                onChange={(e) =>
+                  setPanels(e.target.checked ? [...panels, o.id] : panels.filter((p) => p !== o.id))
+                }
+              />
+              <span>
+                {o.label}
+                {o.id === "graph" ? <span style={mutedStyle}> (default)</span> : null}
+                {/* It is drawn inside the graph, so it can't show on its own. */}
+                {o.id === "palette" ? <span style={mutedStyle}> (shows inside the graph, so tick the graph too)</span> : null}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 

@@ -989,6 +989,7 @@ export function Toolbar() {
         data.file_path ?? demo.pristine_path.replace("/demos/", "/");
       noteModelOrigin(workingPath, { kind: "demo", section: "demos" });
       setFilePath(workingPath);
+      useLayoutStore.getState().showPanelsForOpen(); // #215: also when re-opening the same demo
       setSource(data.source);
       loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
       logLoadPerf({
@@ -1162,6 +1163,7 @@ export function Toolbar() {
       // #906: re-opening the same reference must re-pick Auto/Custom from its
       // (curated) sidecar, not keep a stale mode from a prior open.
       useModelStore.getState().markFreshOpen();
+      useLayoutStore.getState().showPanelsForOpen(); // #215: also when re-opening the same model
       loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
       logLoadPerf({
         label: rm.label,
@@ -1228,6 +1230,7 @@ export function Toolbar() {
       setCurrentReference(m.name);
       setSource(data.source);
       useModelStore.getState().markFreshOpen(); // #906
+      useLayoutStore.getState().showPanelsForOpen(); // #215: also when re-opening the same model
       loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
       logLoadPerf({
         label: m.label,
@@ -1503,7 +1506,8 @@ export function Toolbar() {
       const data = await resp.json();
       const newPath = data.file_path;
       recordActivity("model", `Saved as ${newPath}`, { path: newPath, saveAs: true });
-      setFilePath(newPath);
+      // Saving is not opening: a blank screen stays blank (#215).
+      setFilePath(newPath, { keepPanels: true });
       setSource(data.source);
       // The copy opens with its own sidecars — copies of this model's (#1244).
       loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
@@ -2316,6 +2320,8 @@ export function Toolbar() {
           onChange={(e) => {
             const val = e.target.value;
             const gs = useGraphSettings.getState();
+            // #215: picking what to look at on a blank screen brings the chosen panels.
+            useLayoutStore.getState().showPanelsForOpen();
             if (val === "__flat__") {
               gs.setPytorch(false);
               gs.setFlat(true);
@@ -3568,7 +3574,9 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   // grey out that row's toggle to signal it can't be turned off right now. The
   // row stays clickable (aria-disabled, not disabled): a click on it brings up
   // the notice that says why nothing changed and what to do instead (#213).
-  const lastTopLevel = [codeVisible, graphVisible, bottomVisible].filter(Boolean).length === 1;
+  // Unless a blank screen is allowed (#215): then nothing is locked.
+  const allowBlank = useLayoutStore((s) => s.allowBlank);
+  const lastTopLevel = !allowBlank && [codeVisible, graphVisible, bottomVisible].filter(Boolean).length === 1;
   const panels: { id: AnyPanel; label: string; visible: boolean; locked: boolean; shortcut: string; onToggle: () => void }[] = [
     { id: "graph", label: "Graph canvas", visible: graphVisible, locked: lastTopLevel && graphVisible, shortcut: keyFor("layout.toggleGraph"), onToggle: () => setPanelVisibleOrExplain("graph", !graphVisible) },
     { id: "code", label: "Code editor", visible: codeVisible, locked: lastTopLevel && codeVisible, shortcut: keyFor("layout.toggleCode"), onToggle: () => setPanelVisibleOrExplain("code", !codeVisible) },

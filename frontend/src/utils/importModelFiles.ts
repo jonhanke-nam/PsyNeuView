@@ -12,6 +12,7 @@
  */
 
 import { useModelStore } from "@/stores/modelStore";
+import { useLayoutStore } from "@/stores/layoutStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
 import { guardOpen } from "@/utils/tutorialGuard";
@@ -50,6 +51,7 @@ async function importProject(file: File): Promise<void> {
     store.setFilePath(data.file_path);
     store.setSource(data.source);
     store.markFreshOpen(); // #906: re-pick layout mode from the sidecar
+    useLayoutStore.getState().showPanelsForOpen(); // #215: also when the same file is dropped again
     store.loadModelFromServer(data.model, data.layout);
     notify.addNotification(
       "success",
@@ -103,6 +105,7 @@ async function importPython(file: File): Promise<void> {
     store.setFilePath(fullPath);
     store.setSource(data.source);
     store.markFreshOpen(); // #906: re-pick layout mode from the sidecar
+    useLayoutStore.getState().showPanelsForOpen(); // #215: also when the same file is dropped again
     store.loadModelFromServer(
       data.model,
       data.layout,
