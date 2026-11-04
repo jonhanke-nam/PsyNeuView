@@ -103,7 +103,8 @@ export function AppearanceSection() {
       </Group>
       <Group id="panels" title="Panels">
         <AllowBlankScreenRow />
-        <div style={{ marginTop: 14 }}>
+        {/* Indented under the setting it depends on, in line with that setting's words. */}
+        <div style={{ marginTop: 14, marginLeft: 21 }}>
           <BlankLoadPanelsRow />
         </div>
       </Group>
