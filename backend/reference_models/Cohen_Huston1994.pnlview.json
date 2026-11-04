@@ -2,32 +2,32 @@
   "version": 1,
   "positions": {
     "word_input_layer": {
-      "x": 18,
+      "x": -2,
       "y": 900
     },
     "color_input_layer": {
-      "x": 358,
+      "x": 598,
       "y": 900
     },
     "task_input_layer": {
-      "x": 718,
+      "x": 898,
       "y": 900
     },
     "word_hidden_layer": {
       "x": -2,
-      "y": 720
+      "y": 640
     },
     "color_hidden_layer": {
-      "x": 338,
-      "y": 720
+      "x": 598,
+      "y": 640
     },
     "task_layer": {
-      "x": 698,
-      "y": 720
+      "x": 898,
+      "y": 640
     },
     "response_layer": {
-      "x": 168,
-      "y": 540
+      "x": 298,
+      "y": 640
     }
   }
 }
