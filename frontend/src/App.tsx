@@ -28,6 +28,7 @@ import { DiagnosticPanel } from "./components/common/DiagnosticPanel";
 import { useFileWatcher } from "./hooks/useFileWatcher";
 import { useShowGraphLayout } from "./hooks/useShowGraphLayout";
 import { useLayeredLayoutFit } from "./hooks/useLayeredLayoutFit";
+import { useFrameFit } from "./hooks/useFrameFit";
 import { ExternalChangeModal } from "./components/common/ExternalChangeModal";
 import { ChangesSinceSaveDialog } from "./components/common/ChangesSinceSaveDialog";
 import { RevertToSaveDialog } from "./components/common/RevertToSaveDialog";
@@ -58,6 +59,7 @@ export default function App() {
   const { pendingChange, acceptPendingChange, dismissPendingChange } = useFileWatcher();
   useShowGraphLayout();
   useLayeredLayoutFit();
+  useFrameFit();
   useAppShortcuts();
 
   // #1112: Cmd+I shows the Inspector, the Mac convention for Show Inspector.

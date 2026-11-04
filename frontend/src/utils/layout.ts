@@ -173,13 +173,37 @@ export function applyDagreLayout(
   // Dropping the edges that close a cycle leaves a graph acyclic by
   // construction, so depth is defined for every node. Those edges still render;
   // like the scheduler edges above, they simply don't influence placement.
+  // #209: a projection crossing a frame's boundary is drawn to the member
+  // inside, but ranks as an edge to the frame: to one whole unit if the frame
+  // is inset (its members are laid out on their own), and to the frame's entry
+  // or exit members if it is open (below). Given a vote to itself, one member
+  // would be pulled off its row by whichever outer node feeds it.
+  const parentOf = new Map(nodes.map((n) => [n.id, n.parentId]));
+  const insetOwner = (id: string): string => {
+    let owner = id;
+    for (let cur = parentOf.get(id), i = 0; cur && i < 50; cur = parentOf.get(cur), i++) {
+      if (insetFrameIds.has(cur)) owner = cur;
+    }
+    return owner;
+  };
+  const chainOf = (id: string): string[] => {
+    const chain = [id];
+    for (let cur = parentOf.get(id), i = 0; cur && i < 50; cur = parentOf.get(cur), i++) chain.unshift(cur);
+    return chain;
+  };
+  /** Both ends, each raised to its frame at the level where the two meet. */
+  const rankEnds = (source: string, target: string): { source: string; target: string } => {
+    const [s, t] = [chainOf(insetOwner(source)), chainOf(insetOwner(target))];
+    let shared = 0;
+    while (shared < s.length - 1 && shared < t.length - 1 && s[shared] === t[shared]) shared++;
+    return { source: s[shared], target: t[shared] };
+  };
   const rankable = acyclicEdges(
     nodes.filter((n) => g.hasNode(n.id)).map((n) => ({ id: n.id })),
     edges
       .filter((e) => e.type !== "gscEdge")
       .map((e) => ({
-        source: e.source,
-        target: e.target,
+        ...rankEnds(e.source, e.target),
         feedback: Boolean((e.data as { feedback?: boolean } | undefined)?.feedback),
         control: (e.data as { type?: string } | undefined)?.type === "ControlProjection",
       })),

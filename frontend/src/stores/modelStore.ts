@@ -8,6 +8,8 @@ import { MarkerType, type Node, type Edge } from "@xyflow/react";
 import { applyLayout } from "@/utils/layout";
 import { knownSize, placementFits } from "@/utils/showGraphLayout";
 import { cimAnchor, cimPosition } from "@/utils/cimPlacement";
+import { retargetFrameEdges } from "@/utils/frameEdges";
+import { makeRoomForFrames } from "@/utils/frameRoom";
 import { useHistoryStore } from "./historyStore";
 import { recordAction } from "@/utils/history";
 import { usePortLayout } from "@/stores/portLayoutStore";
@@ -169,6 +171,18 @@ export const NODE_WIDTH = 170;
 export const NODE_HEIGHT = 80;
 
 /**
+ * A node's footprint for making room beside an open frame (#208): a frame's
+ * set size, a drawn box's measured size, else the assumed size.
+ */
+function sizeForRoom(n: Node): { w: number; h: number } {
+  const known = knownSize(n);
+  return {
+    w: (n.style?.width as number) || known.w || NODE_WIDTH,
+    h: (n.style?.height as number) || known.h || NODE_HEIGHT,
+  };
+}
+
+/**
  * Auto-size composition group nodes to fit their children.
  * Mutates the nodes array in place.
  */
@@ -199,6 +213,20 @@ export function autoSizeGroups(nodes: Node[]) {
       height: Math.max(150, maxY + GROUP_PADDING.bottom),
     };
   }
+}
+
+/**
+ * Fit the frames to their members, then move what an open frame would cover
+ * out from under it (#208). `keep` names the frames the user just dropped.
+ * For a custom layout in the nested view; edits the nodes in place.
+ */
+export function fitFramesAndMakeRoom(nodes: Node[], keep?: ReadonlySet<string>): void {
+  autoSizeGroups(nodes);
+  makeRoomForFrames(
+    nodes.filter((n) => !n.hidden && (n.type === "mechanismNode" || n.type === "compositionNode")),
+    sizeForRoom,
+    { keep, refit: () => autoSizeGroups(nodes) },
+  );
 }
 
 // #697/#713: in the flat / PyTorch view, reconstruct each origin composition as
@@ -1679,6 +1707,11 @@ export const useModelStore = create<ModelState>((set, get) => ({
       });
     }
 
+    // #209: a projection into or out of an open composition is drawn to the
+    // member inside it, as show_graph draws it, not to the frame's outline.
+    // Folded, the composition is one node and its edges stay on that node.
+    retargetFrameEdges(nodes, edges);
+
     // --- Stagger edge labels to prevent overlap ---
     // Resolve overlaps in pixel space using actual node positions.
     // Each label sits at labelOffset (0-1) along the edge. The label's
@@ -1916,6 +1949,16 @@ export const useModelStore = create<ModelState>((set, get) => ({
     const { layoutStyle } = useGraphSettings.getState();
     if (!(layoutStyle === "showgraph" && (autoLayout || !hasSavedPositions) && placementFits(layoutNodes))) {
       autoSizeGroups(layoutNodes);
+    }
+
+    // #208: in a custom layout a composition keeps one saved position folded
+    // or open, so a frame opened at its folded node's corner lands over the
+    // neighbours arranged around that node. Move those out from under it
+    // (the shortest way), and leave every other position as saved. A layout
+    // engine places frames clear of their neighbours itself, and the flat
+    // views have no folding.
+    if (!autoLayout && hasSavedPositions && !isFlatView) {
+      makeRoomForFrames(layoutNodes, sizeForRoom, { refit: () => autoSizeGroups(layoutNodes) });
     }
 
     // Add CIM nodes AFTER layout so the main graph stays connected.

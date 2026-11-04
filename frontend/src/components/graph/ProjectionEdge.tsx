@@ -619,6 +619,9 @@ export function ProjectionEdge({
         className={curve ? "pnv-edge-showgraph" : undefined}
         // show_graph's edge it follows, by its ends' names (#73).
         data-showgraph-ends={curve?.ends?.join("\u0000")}
+        // The nodes the edge is drawn between (#209): a member inside an open
+        // frame, where the projection goes through the frame's interface.
+        data-ends={`${source}\u0000${target}`}
         interactionWidth={0}
         style={{
           // Spread per-type style first (color, dasharray, base width), then
