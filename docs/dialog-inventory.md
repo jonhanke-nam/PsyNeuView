@@ -92,3 +92,4 @@ needs a ×.
 | Port and value tooltips on a node | `graph/MechanismNode.tsx` | hover tooltips, pointer-events none |
 | Edge bend handles | `graph/ProjectionEdge.tsx` | parts of the edge |
 | The palette sidebar itself | `graph/PaletteSidebar.tsx` | a layout panel (Layout ▸ Object palette); its compact flyout is the menu above |
+| The hint on a blank screen | `layout/BlankScreen.tsx` | status (#215): covers the pane area while every panel is hidden, and goes when a panel comes back from the Layout menu or its key |

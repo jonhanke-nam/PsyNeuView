@@ -18,6 +18,7 @@ import { RunStatePanel } from "./components/inspector/RunStatePanel";
 import { GraphStylePanel } from "./components/graph/GraphStylePanel";
 import { SchedulerPanel } from "./components/scheduler/SchedulerPanel";
 import { Toolbar } from "./components/layout/Toolbar";
+import { BlankScreen } from "./components/layout/BlankScreen";
 import { BusyIndicator } from "./components/common/BusyIndicator";
 import { NotificationBar } from "./components/common/NotificationBar";
 import { StatusBar } from "./components/common/StatusBar";
@@ -153,7 +154,10 @@ export default function App() {
         <DiagnosticPanel />
         <NotificationBar />
         <StatusBar />
-        <div style={{ flex: 1, overflow: "hidden" }}>
+        <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+          {/* #215: with every panel hidden (a choice in Settings), the hint
+              covers the pane area; the panels below stay mounted. */}
+          <BlankScreen />
           <Allotment
             defaultSizes={outerSizes}
             onChange={(sizes) => {
