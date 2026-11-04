@@ -92,6 +92,8 @@ How the app looks and feels, remembered per browser:
   - the legend's own Show/Hide folds it for the open model
 - **Components panel** — how the panel opens: Starts open (the word list, default) or Starts as the icon strip (#113)
   - the panel's own ◀/▶ switches it for the session only.
+- **Panels** (#215) — **Allow a blank screen**, off by default: on, the graph, the code editor and the Inspector panel can all be hidden, with a hint on the blank screen saying how to bring one back; off, the last of them stays, with the notice (#213), and turning it off while blank brings the graph back
+  - **Panels to open when a model loads on a blank screen** — the graph (default), the code editor, the Inspector panel, the Components panel; greyed out while the first is off; one of the first three stays ticked
 - *Not here:* **Show ports** (#112) is the one switch in the graph toolbar's **Advanced Graph View Options** (#123) — off by default, it shows the port dots on the graph and the Ports section in Components, and is remembered per browser
   - Settings has no second control for it (listed under `elsewhere` in the inventory)
 
