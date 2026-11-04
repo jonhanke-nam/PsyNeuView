@@ -38,6 +38,14 @@ const TUTORIALS_FOLDED_KEY = "psyneuview.tutorials.foldedSections";
  * in its own `addInitScript`.
  */
 const LAYOUT_DEFAULT_KEY = "psyneuview.graph.layoutDefault";
+/**
+ * Which panels show (#189). The window now opens with the graph alone; the
+ * suite was written with the code editor and the bottom panel (Inspector, Run,
+ * Learn…) on screen, so it keeps them on unless a spec asks otherwise. A spec
+ * about the default sets the keys in its own `addInitScript`.
+ */
+const LAYOUT_CODE_VISIBLE_KEY = "psynewview_layout_code_visible";
+const LAYOUT_BOTTOM_VISIBLE_KEY = "psynewview_layout_bottom_visible";
 
 /**
  * Start with the Open menu's catalog sections expanded.
@@ -88,6 +96,15 @@ async function expandOpenMenuSections(page: import("@playwright/test").Page) {
   await page.addInitScript((key) => {
     if (localStorage.getItem(key) === null) localStorage.setItem(key, "layered");
   }, LAYOUT_DEFAULT_KEY);
+  // #189: the code editor and the bottom panel on, as the suite expects.
+  await page.addInitScript(
+    (keys) => {
+      for (const key of keys) {
+        if (localStorage.getItem(key) === null) localStorage.setItem(key, "true");
+      }
+    },
+    [LAYOUT_CODE_VISIBLE_KEY, LAYOUT_BOTTOM_VISIBLE_KEY],
+  );
 }
 
 export const readOnlyTest = base.extend({
@@ -153,8 +170,15 @@ export const VIEW_OPTION_IDS: Record<string, string> = {
   Inactive: "graph-view-option-inactive",
 };
 
-/** Exported so a spec about folding can opt out of the seeding above. */
-export { COLLAPSED_SECTIONS_KEY, SHOWN_DEV_SECTIONS_KEY, ORIENTATION_OFFER_KEY, TUTORIALS_FOLDED_KEY };
+/** Exported so a spec about folding, or about the panels, can opt out of the seeding above. */
+export {
+  COLLAPSED_SECTIONS_KEY,
+  SHOWN_DEV_SECTIONS_KEY,
+  ORIENTATION_OFFER_KEY,
+  TUTORIALS_FOLDED_KEY,
+  LAYOUT_CODE_VISIBLE_KEY,
+  LAYOUT_BOTTOM_VISIBLE_KEY,
+};
 
 /**
  * Dismiss the Components palette, if it's showing.
