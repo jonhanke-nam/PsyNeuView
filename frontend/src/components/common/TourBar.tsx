@@ -35,9 +35,10 @@ import { useFitGraph } from "@/hooks/useFitGraph";
 
 import { useTourProgress } from "@/hooks/useTourProgress";
 import { useCatalogOpener } from "@/stores/catalogOpenerStore";
+import { useLayoutStore } from "@/stores/layoutStore";
 import { useModelStore } from "@/stores/modelStore";
 import { useTourHighlightStore } from "@/stores/tourHighlightStore";
-import { useTourStore } from "@/stores/tourStore";
+import { tourIdFromUrl, useTourStore } from "@/stores/tourStore";
 import { useUIStore } from "@/stores/uiStore";
 import { openSettings } from "./settings/sections";
 import { loadNarrationVoice, narrationAvailable, resolveVoice, speakCaption, stopSpeaking, voiceShortName, type SpeechEngine } from "@/utils/narration";
@@ -132,6 +133,23 @@ export function TourBar() {
       if (!was) useUIStore.getState().setDeveloperMode(false);
     };
   }, [wantsDeveloperMode, tourKey]);
+
+  // #189: the window opens with the graph alone, but a walkthrough points at
+  // the code editor, the bottom panel's tabs and the Components panel. So every
+  // panel shows while one runs, and the learner's own layout comes back when
+  // it ends — finished or stopped — the same way as developer mode above.
+  useEffect(() => {
+    if (!tourKey) return;
+    const layout = useLayoutStore.getState();
+    layout.showEverythingForWalkthrough();
+    return () => useLayoutStore.getState().restoreLayoutAfterWalkthrough();
+  }, [tourKey]);
+  // A reload mid-walkthrough never ran that cleanup. Unless the page is about
+  // to start one again from its `?tour=` link, put the layout back now.
+  useEffect(() => {
+    if (tourIdFromUrl(window.location.search)) return;
+    useLayoutStore.getState().restoreLayoutAfterWalkthrough();
+  }, []);
 
   // The node this step points at, when the open model doesn't have it. The
   // instruction alone would point at nothing; say what's missing instead.
