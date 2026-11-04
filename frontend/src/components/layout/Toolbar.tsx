@@ -24,6 +24,7 @@ import { useStatusStore } from "@/stores/statusStore";
 import { useLayoutStore, type AnyPanel, type LayoutPreset } from "@/stores/layoutStore";
 import { usePaletteStore } from "@/stores/paletteStore";
 import { displayBinding } from "@/shortcuts/binding";
+import { setPanelVisibleOrExplain } from "@/shortcuts/lastPanel";
 import { useResolvedShortcuts } from "@/shortcuts/useAppShortcuts";
 import { focusComposition } from "@/utils/nodeActions";
 import { hasFileBridge, pickOpenPath, pickSavePath } from "@/utils/fileBridge";
@@ -3500,7 +3501,6 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   const codeVisible = useLayoutStore((s) => s.codeVisible);
   const graphVisible = useLayoutStore((s) => s.graphVisible);
   const bottomVisible = useLayoutStore((s) => s.bottomVisible);
-  const setPanelVisible = useLayoutStore((s) => s.setPanelVisible);
   const applyPreset = useLayoutStore((s) => s.applyPreset);
   const paletteOpen = usePaletteStore((s) => s.isOpen);
 
@@ -3526,12 +3526,14 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   };
 
   // Hiding the last visible of code/graph/bottom is blocked by the store, so
-  // grey out that row's toggle to signal it can't be turned off right now.
+  // grey out that row's toggle to signal it can't be turned off right now. The
+  // row stays clickable (aria-disabled, not disabled): a click on it brings up
+  // the notice that says why nothing changed and what to do instead (#213).
   const lastTopLevel = [codeVisible, graphVisible, bottomVisible].filter(Boolean).length === 1;
   const panels: { id: AnyPanel; label: string; visible: boolean; locked: boolean; shortcut: string; onToggle: () => void }[] = [
-    { id: "graph", label: "Graph canvas", visible: graphVisible, locked: lastTopLevel && graphVisible, shortcut: keyFor("layout.toggleGraph"), onToggle: () => setPanelVisible("graph", !graphVisible) },
-    { id: "code", label: "Code editor", visible: codeVisible, locked: lastTopLevel && codeVisible, shortcut: keyFor("layout.toggleCode"), onToggle: () => setPanelVisible("code", !codeVisible) },
-    { id: "bottom", label: "Inspector / tabs", visible: bottomVisible, locked: lastTopLevel && bottomVisible, shortcut: keyFor("layout.toggleBottom"), onToggle: () => setPanelVisible("bottom", !bottomVisible) },
+    { id: "graph", label: "Graph canvas", visible: graphVisible, locked: lastTopLevel && graphVisible, shortcut: keyFor("layout.toggleGraph"), onToggle: () => setPanelVisibleOrExplain("graph", !graphVisible) },
+    { id: "code", label: "Code editor", visible: codeVisible, locked: lastTopLevel && codeVisible, shortcut: keyFor("layout.toggleCode"), onToggle: () => setPanelVisibleOrExplain("code", !codeVisible) },
+    { id: "bottom", label: "Inspector / tabs", visible: bottomVisible, locked: lastTopLevel && bottomVisible, shortcut: keyFor("layout.toggleBottom"), onToggle: () => setPanelVisibleOrExplain("bottom", !bottomVisible) },
     { id: "palette", label: "Components panel", visible: paletteOpen, locked: false, shortcut: keyFor("layout.togglePalette"), onToggle: () => usePaletteStore.getState().setOpen(!paletteOpen) },
   ];
 
@@ -3603,10 +3605,10 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
               key={panel.id}
               data-testid={`layout-menu-panel-${panel.id}`}
               onClick={panel.onToggle}
-              disabled={panel.locked}
+              aria-disabled={panel.locked || undefined}
               title={
                 panel.locked
-                  ? "Can't hide the last visible panel"
+                  ? "One panel has to stay open: show another panel before hiding this one"
                   : `Show/hide ${panel.label}${panel.shortcut ? ` (${panel.shortcut})` : ""}`
               }
               style={{
