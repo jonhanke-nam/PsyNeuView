@@ -90,6 +90,7 @@ One entry per review. Add the newest at the top.
 
 | Date | Phase | What was reviewed (branch, commit) | Reviewer (role) | Result | Follow-ups |
 |---|---|---|---|---|---|
+| 2026-11-03 | 1, 2, 3 | Narrow re-check at `9fb29e6a` (#187) | Independent reviewer (adversarial, not the author) | **A High everyone missed**: `POST /api/jobs` started the worker outside `run_in_sandbox`, so an unreviewed model ran through a queued Learn job. Plus: a tracked path under a `site-packages` name was exempt; a helper loaded by path wasn't caught though the docs said `importlib` was; a finder a model adds could get ahead of the guard; the in-process path served a stale helper; a PsyNeuLink checkout would be purged every task. All fixed below; **Phase 3 pending** the reviewer's re-check | The findings below |
 | 2026-11-03 | 1, 2, 3 | Re-check of the fixes at `f90f6499` | Independent reviewer (adversarial, not the author) | 13 of 14 findings closed. **Phases 1 and 2 safe to ship, off by default. Phase 3 pending**: finding 7's whole-folder rule missed a subfolder (`pkg/helper.py` imported through `sys.path`); replaced by the import-time guard below | The reviewer's check of the import guard |
 | 2026-11-03 | 1, 2, 3 | The joined feature, PR #186 (`feature/ai-integrated-179`) | Independent reviewer (adversarial, not the author) | Phases 1 and 2 safe after the fixes below; **Phase 3 not safe as reviewed**: three routes ran unreviewed code. Fixed on the same branch; needs the reviewer's re-check | The findings below; the open items in the threat model |
 | 2026-11-03 | 0 | Threat model, containment experiment, this checklist (`feature/ai-threat-model-179`) | Awaiting review | Open | Containment recommendation needs a second opinion before Phase 4 is planned |
@@ -122,6 +123,17 @@ fails: the marker never appears.
 | — | Suspected | Bidirectional and zero-width characters could make a reviewed file read differently from how it runs | Flagged in a proposal's warnings; shown as `<U+XXXX>` in Before, After and the review card, with a note |
 | — | Suspected | `rename_node.new_name` accepted `<` and `>` | Letters, digits, spaces and `_ - . : ( ) [ ]` only |
 | — | Suspected | "Accept all" could accept proposals that arrived after it was pressed | It accepts exactly what was on screen when pressed |
+
+### The second re-check (#187)
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| R1 | High | `POST /api/jobs` → `jobs.py` spawned `sandbox_worker` outside `run_in_sandbox`: no `require_runnable`, no `review_state`; an unreviewed model ran through a queued Learn job | Three layers, so the class is closed, not the route: `create_job` calls `require_runnable` (the 409 at once, no job started); every worker payload (warm, cold, job) carries `review_state` and the exempt roots through one helper; the worker checks the model's path itself in its loaders, finding the default state path when a caller names none, and fails closed when the state is unreadable. The threat model lists every spawn and by-path load with its guard, and `test_every_spawn_and_exec_site_is_listed` fails on a new one |
+| R2 | Medium | A tracked path under a folder named `site-packages` was exempt from vetting; past the scan bound a write into `Big/zz/site-packages/vend2.py` was accepted | The tracked lookup comes before any library shortcut; a path inside an allowed folder with a part that looks like a Python install (`site-packages`, `dist-packages`, `conda-meta`, `pythonX.Y`) is refused |
+| R3 | Medium | A helper loaded by path (`spec_from_file_location` + `exec_module`, `SourceFileLoader.load_module`) ran, and the docs claimed `importlib` was covered | `SourceFileLoader.get_code` is wrapped (one check for every source module Python loads, by name or by path); PsyNeuView's own loading passes approved files. The docs say exactly what is and isn't covered |
+| R4 | Low | A finder a model added stays ahead of the guard in the warm worker | `refresh()` puts the finder back at `sys.meta_path[0]` before every task |
+| R5 | Low | In-process (`use_sandbox=False`): a helper approved, then edited, was served stale from `sys.modules` | The purge runs in the server too; the app's own modules are under the repo root, which is never purged |
+| R6 | Low | A PsyNeuLink checkout (`~/.psyneuview/sources/...` or a user's own) counted as user-land: once anything was tracked, every task would purge and re-import all of `psyneulink.*` | The active checkout travels with every task as an exempt root and is never purged; a tracked file under it is still checked, since tracked is looked up first |
 
 Still open after this review (also in the threat model's open items): a
 per-session credential for the assistant routes; per-folder consent at a

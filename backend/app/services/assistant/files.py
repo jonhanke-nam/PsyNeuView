@@ -312,6 +312,9 @@ def _relative_parts(path: str) -> tuple[Path, str, list[str]]:
             rel = parts[len(fparts):]
             if len(rel) > MAX_DEPTH:
                 raise PathRefused(path, "too_deep")
+            for part in rel[:-1]:
+                if part in _INSTALL_DIRS or _INSTALL_SEGMENT.match(part.lower()):
+                    raise PathRefused(path, "python_install", f"A folder that looks like a Python install can't be used ({part}): {path}")
             return folder, access, rel
     # ``..`` in the prefix, a different case, a lookalike, or just elsewhere.
     raise PathRefused(path, "outside_allowed_folders", f"Not inside a folder the assistant may use: {path}")

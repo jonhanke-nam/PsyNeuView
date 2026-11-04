@@ -213,12 +213,19 @@ worker (which loads it by path and refreshes it from the state file named
 in every task, dropping tracked modules from its cache). A module about to
 load from a tracked `.py` whose content isn't the approved content fails to
 import, and the route answers the same 409 naming that file, so the review
-card reviews it. The standard library and site-packages are never vetted,
-and with nothing tracked the finder does one check per import and nothing
-else. A model beside an unapproved file runs unless it imports it. What
-this doesn't cover: a model that runs code by other means
-(`exec(open(...).read())`, `runpy`, a subprocess); approving a model means
-trusting what it does. A route that would execute unreviewed content answers 409
+card reviews it; so does a file loaded by path (`spec_from_file_location`
++ `exec_module`, `SourceFileLoader.load_module`), through a wrapper on
+`SourceFileLoader.get_code`. The worker also checks the model's own path
+itself, whatever started it, finding the state file from the payload or
+the default path. The standard library, site-packages and the active
+PsyNeuLink checkout are never vetted or purged (a tracked path is checked
+first, wherever it sits), and with nothing tracked the finder does one
+check per import and nothing else. A model beside an unapproved file runs
+unless it imports it. What this doesn't cover: a model that runs code by
+other means (`exec(open(...).read())`, `runpy`, a subprocess); approving a
+model means trusting what it does. Every place model code is executed is
+listed in the threat model with its guard, and a test fails if a new one
+appears unlisted. A route that would execute unreviewed content answers 409
 with `{"detail": <message>, "reason": "assistant_code_unreviewed", "path",
 "approve": {...}}` (top level, from the app's exception handler; the page
 reads `reason` from either the top level or under `detail`).

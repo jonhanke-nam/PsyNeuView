@@ -218,15 +218,36 @@ containment rather than a better approval view.
 
 ## 7. What the execution guard does and doesn't cover
 
-- **Imports** are vetted at import time (`import_guard.py`): a model that
-  imports a tracked, unapproved file, directly, from a subfolder or
-  package, through `importlib`, or from a folder it put on `sys.path`,
-  stops with the 409 naming that file. This defends against accidental or
-  agent-written imports.
+- **Covered** (`import_guard.py`): what the path finder resolves, that is
+  `import`, `importlib.import_module`, packages and subfolders, folders on
+  `sys.path`; and a file loaded by path (`spec_from_file_location` +
+  `exec_module`, `SourceFileLoader(...).load_module()`), through a wrapper
+  on `SourceFileLoader.get_code`. A tracked, unapproved file stops with the
+  409 naming it; a tracked path is tracked wherever it sits, a folder
+  named `site-packages` included. The finder puts itself first on
+  `sys.meta_path` before every task, so a finder a model added earlier
+  can't get ahead of it. This defends against accidental or agent-written
+  imports and loads.
 - **Not covered:** a reviewed model that runs code by other means,
   `exec(open(...).read())`, `runpy`, a subprocess, or that reads and
-  evaluates a file. Approving a model means trusting what it does; the
-  review card says so.
+  evaluates text. Hard links, sourceless `.pyc` files and zip imports need
+  something already running as the user to set them up. A `__pycache__`
+  entry compiled from an earlier approved text with the same size and
+  whole-second mtime is what Python runs, as it would for any file.
+  Approving a model means trusting what it does; the review card says so.
+
+### Every way model code is executed, and its guard
+
+| Where | What | Guard |
+|---|---|---|
+| `sandbox.py` (warm worker, cold fallback) | Spawns `sandbox_worker.py` | `run_in_sandbox` → `require_runnable`; every task payload carries `review_state` and the exempt roots |
+| `jobs.py` | Spawns `sandbox_worker.py` for a queued job | `create_job` → `require_runnable` (the 409 at once); the payload carries the same |
+| `sandbox_worker.py` `load_module`, `load_module_resilient` | Loads the model by path | `check_model_path` against the state, found from the payload or the default path when a caller names none; fails closed if unreadable; the guard's hooks for everything the model imports or loads |
+| `introspector.py`, `executor.py` (run, learn, input nodes), `converter.py` | In-process loads by path | `require_runnable` + `guard_imports()` (the same hooks, the server's view of the state) |
+
+`backend/tests/test_assistant_runner_guard.py::test_every_spawn_and_exec_site_is_listed`
+fails when a new spawn of the worker or a new by-path load appears in
+`backend/app` outside this list.
 - **The state file** (`~/.psyneuview/assistant-review.json`) is the record
   of what is tracked. Deleting or truncating it reads as nothing tracked
   (fail open). Accepted: only something already running as the user can

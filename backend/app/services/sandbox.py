@@ -200,7 +200,7 @@ class WarmWorker:
             if not self.is_alive():
                 return {"error": "Warm worker failed to start"}
 
-            payload = json.dumps({"task": task, "params": params, "review_state": str(assistant_review.state_path())})
+            payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras()})
             t0 = time.time()
 
             try:
@@ -340,7 +340,7 @@ def _raise_if_unreviewed_import(result: dict) -> None:
 
 def _run_cold(task: str, params: dict, timeout: int) -> dict:
     """Cold-start fallback: spawn a fresh subprocess (slow but reliable)."""
-    payload = json.dumps({"task": task, "params": params, "review_state": str(assistant_review.state_path())})
+    payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras()})
     t0 = time.time()
 
     try:

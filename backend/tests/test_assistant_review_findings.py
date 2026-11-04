@@ -358,7 +358,9 @@ def test_helper_approved_then_edited_across_two_tasks_in_the_same_worker(st):
     assert marker2.exists()
     marker2.unlink()
     marker3 = st["tmp"] / "ran3.txt"
-    helper.write_text(_helper(marker3))  # edited: no longer the approved text
+    # Edited: no longer the approved text. A different length too, since Python
+    # keys __pycache__ on the source's mtime (whole seconds) and size.
+    helper.write_text(_helper(marker3) + "# edited\n")
     r = load(model)
     assert unreviewed(r), r.text
     assert r.json()["path"] == str(helper.resolve())

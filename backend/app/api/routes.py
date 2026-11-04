@@ -1830,6 +1830,9 @@ async def create_job(request: CreateJobRequest):
     path = Path(request.file_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"File not found: {path}")
+    # A job runs the model in its own worker: the same guard as every other
+    # execution, answered at once rather than as a failed job (#179, #187).
+    require_runnable(request.file_path)
 
     execution_mode = request.execution_mode or DEFAULT_LEARN_MODE
     config = {

@@ -18,10 +18,25 @@ nothing else. When something is tracked, a path lookup per import from a
 ``.py`` outside the standard library and site-packages, and one file read
 for a tracked path.
 
+Two hooks, one check:
+
+* the finder, for everything the path finder resolves (``import``,
+  ``importlib.import_module``, packages, subfolders, folders on ``sys.path``);
+* a wrapper on ``SourceFileLoader.get_code``, for a file loaded by path
+  (``spec_from_file_location`` + ``exec_module``, ``SourceFileLoader(...).load_module()``),
+  which is also how PsyNeuView loads a model, so an agent could write it.
+
+The worker also checks the model's own path itself, in its loaders, so a
+task started without the server's guard (an old or direct caller) is still
+refused. A tracked path is tracked wherever it sits: the state is consulted
+before any "library path" shortcut.
+
 What it doesn't cover, said plainly: a reviewed model that runs code by
-other means, ``exec(open(...).read())``, ``runpy``, a subprocess, isn't
-going through the import system. Approving a model means trusting what it
-does. The guard is against accidental or agent-written imports.
+other means, ``exec(open(...).read())``, ``runpy``, a subprocess, or that
+evaluates text it read, isn't going through a loader. Hard links, sourceless
+``.pyc`` files and zip imports need something already running as the user
+to set them up. Approving a model means trusting what it does. The guard is
+against accidental or agent-written imports and loads.
 """
 
 from __future__ import annotations
@@ -119,15 +134,45 @@ _LIBRARY_ROOTS = _library_roots()
 
 
 def is_library_path(path: str) -> bool:
-    """The standard library, the interpreter's prefix, site-packages: never
-    vetted, so the packages PsyNeuLink imports cost nothing."""
+    """The standard library, the interpreter's prefix, site-packages, and the
+    roots a task names (the active PsyNeuLink checkout): never vetted and
+    never purged, so the packages PsyNeuLink imports cost nothing. Consulted
+    only after the tracked lookup: a tracked path is tracked wherever it sits."""
     sep = os.sep
     if f"{sep}site-packages{sep}" in path or f"{sep}dist-packages{sep}" in path:
         return True
-    for root in _LIBRARY_ROOTS:
+    for root in _LIBRARY_ROOTS + _state.extra_roots:
         if path == root or path.startswith(root + sep):
             return True
     return False
+
+
+def _tracked_entry(real: str) -> dict | None:
+    return _state.tracked.get(real)
+
+
+def vet(path: str) -> None:
+    """Raise ``UnreviewedImport`` if ``path`` is a tracked file whose content
+    isn't the approved content, or if the state is unreadable and the path
+    isn't a library's. The one check both hooks and the worker's loaders use."""
+    state = _state
+    if not state.tracked and not state.broken:
+        return
+    try:
+        real = os.path.realpath(path)
+    except (OSError, ValueError):
+        return
+    entry = state.tracked.get(real)
+    if entry is not None:
+        approved = entry.get("approved")
+        if approved is None or approved != _content_hash_of(real):
+            raise UnreviewedImport(real)
+        return
+    if state.broken and not is_library_path(real):
+        raise UnreviewedImport(real, state_unreadable=True)
+
+
+check_model_path = vet
 
 
 def _content_hash_of(path: str) -> str | None:
@@ -151,27 +196,37 @@ class _State:
         self.provider: Callable[[], tuple[dict, bool]] | None = None
         self._path: str | None = None
         self._key: tuple | None = None
+        #: Roots a task names as never vetted (the active PsyNeuLink checkout).
+        self.extra_roots: tuple[str, ...] = ()
 
-    def refresh(self, path: str | None = None) -> None:
+    def refresh(self, path: str | None = None, exempt_roots=None) -> None:
+        if exempt_roots is not None:
+            roots = []
+            for root in exempt_roots:
+                try:
+                    roots.append(os.path.realpath(str(root)))
+                except (OSError, ValueError):
+                    continue
+            self.extra_roots = tuple(roots)
+        _keep_first()
         if self.provider is not None:
-            # The server's own process: its importers load the model under a
-            # fresh name each time and never cache user modules on purpose, so
-            # nothing is purged here.
             self.tracked, self.broken = self.provider()
-            return
-        path = path or self._path or default_state_path()
-        self._path = path
-        try:
-            st = os.stat(path)
-            key = (path, st.st_mtime_ns, st.st_size)
-        except OSError:
-            key = (path, None, None)
-        if key != self._key:
-            self.tracked, self.broken = read_state(path)
-            self._key = key
+        else:
+            path = path or self._path or default_state_path()
+            self._path = path
+            try:
+                st = os.stat(path)
+                key = (path, st.st_mtime_ns, st.st_size)
+            except OSError:
+                key = (path, None, None)
+            if key != self._key:
+                self.tracked, self.broken = read_state(path)
+                self._key = key
         # Every task, not only when the state file changed: a tracked file's
         # content can change without the state changing, and the cache must
-        # not serve what was imported before.
+        # not serve what was imported before. In the server too: its own
+        # modules are under the repo root, which is never purged, but a helper
+        # a model imported stays in sys.modules there like anywhere else.
         self._purge_cached()
 
     def _purge_cached(self) -> None:
@@ -212,20 +267,9 @@ class ReviewFinder(importlib.abc.MetaPathFinder):
         spec = importlib.machinery.PathFinder.find_spec(fullname, path, target)
         if spec is None or not spec.has_location or not spec.origin or not spec.origin.endswith(".py"):
             return None
-        try:
-            origin = os.path.realpath(spec.origin)
-        except (OSError, ValueError):
-            return None
-        if is_library_path(origin):
-            return None
-        if state.broken:
-            raise UnreviewedImport(origin, state_unreadable=True)
-        entry = state.tracked.get(origin)
-        if entry is None:
-            return None
-        approved = entry.get("approved")
-        if approved is None or approved != _content_hash_of(origin):
-            raise UnreviewedImport(origin)
+        # Tracked first, library shortcut second: a tracked path is tracked
+        # wherever it sits, a folder named site-packages included.
+        vet(spec.origin)
         return None
 
     def invalidate_caches(self):
@@ -235,20 +279,41 @@ class ReviewFinder(importlib.abc.MetaPathFinder):
 _finder = ReviewFinder()
 
 
+def _keep_first() -> None:
+    """The finder goes back to ``sys.meta_path[0]``: a finder a model added
+    earlier in the same worker would otherwise sit ahead of it."""
+    if sys.meta_path and sys.meta_path[0] is _finder:
+        return
+    sys.meta_path[:] = [f for f in sys.meta_path if f is not _finder]
+    sys.meta_path.insert(0, _finder)
+
+
+_original_get_code = importlib.machinery.SourceFileLoader.get_code
+
+
+def _vetted_get_code(self, fullname):
+    # Every source module Python loads passes here, by name or by path.
+    vet(self.path)
+    return _original_get_code(self, fullname)
+
+
 def install(provider: Callable[[], tuple[dict, bool]] | None = None) -> None:
-    """Put the finder first on ``sys.meta_path`` (once). ``provider``, if
-    given, is asked for ``(tracked, broken)`` on every refresh instead of the
-    state file being read here (the server's own review module)."""
+    """Put the finder first on ``sys.meta_path`` and the loader wrapper in
+    place (once). ``provider``, if given, is asked for ``(tracked, broken)``
+    on every refresh instead of the state file being read here (the
+    server's own review module)."""
     if provider is not None:
         _state.provider = provider
-    if _finder not in sys.meta_path:
-        sys.meta_path.insert(0, _finder)
+    _keep_first()
+    if importlib.machinery.SourceFileLoader.get_code is not _vetted_get_code:
+        importlib.machinery.SourceFileLoader.get_code = _vetted_get_code
 
 
-def refresh(path: str | None = None) -> None:
-    """Read the state again if it changed (or ask the provider). Called by
-    the worker before every task, and by the server before an in-process load."""
-    _state.refresh(path)
+def refresh(path: str | None = None, exempt_roots=None) -> None:
+    """Read the state again if it changed (or ask the provider), put the
+    finder first again, and drop cached user modules. Called by the worker
+    before every task, and by the server before an in-process load."""
+    _state.refresh(path, exempt_roots)
 
 
 def tracked_count() -> int:

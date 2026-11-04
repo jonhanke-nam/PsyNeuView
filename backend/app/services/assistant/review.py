@@ -304,7 +304,7 @@ def guard_imports():
 
 class _GuardImports:
     def __enter__(self):
-        import_guard.refresh()
+        import_guard.refresh(exempt_roots=exempt_roots())
         return self
 
     def __exit__(self, exc_type, exc, tb):
@@ -314,6 +314,39 @@ class _GuardImports:
                 reason="assistant_review_state_unreadable" if exc.state_unreadable else None,
             ) from None
         return False
+
+
+_exempt_cache: tuple[float, list[str]] = (0.0, [])
+
+
+def exempt_roots() -> list[str]:
+    """Roots the guard never vets or purges besides the libraries it knows:
+    the active PsyNeuLink checkout, which the app can point at any folder
+    (``~/.psyneuview/sources/...`` or a user's own). Looked up at most every
+    few seconds."""
+    global _exempt_cache
+    import time as _time
+
+    now = _time.monotonic()
+    if now - _exempt_cache[0] < 5.0:
+        return _exempt_cache[1]
+    roots: list[str] = []
+    try:
+        from app.services import locations
+
+        active = locations._active_pnl_path()
+        if active:
+            roots.append(str(active))
+    except Exception:
+        pass
+    _exempt_cache = (now, roots)
+    return roots
+
+
+def worker_payload_extras() -> dict:
+    """What every task sent to a sandbox worker carries for the import
+    guard: the state file's path and the roots never vetted."""
+    return {"review_state": str(state_path()), "exempt_roots": exempt_roots()}
 
 
 # The server's own importers go through the same finder as the worker's,
