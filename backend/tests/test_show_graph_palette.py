@@ -1,24 +1,23 @@
 """The palette's role colours agree with PsyNeuLink's show_graph (#190).
 
-The owner's policy: the red and green on OUTPUT and INPUT nodes must be the
-ones show_graph draws. Nothing else checked that. The e2e check of node
-outlines pins the hex values by hand, so it would keep passing if PsyNeuLink
-changed its colours, or if both sides drifted together.
+The owner's policy: the red, green and purple on OUTPUT, INPUT and controller
+nodes must be the ones show_graph draws. Nothing else checked that. The e2e
+check of node outlines pins the hex values by hand, so it would keep passing if
+PsyNeuLink changed its colours, or if both sides drifted together.
 
 This reads show_graph's defaults from PsyNeuLink itself (``ShowGraph``'s
-``input_color`` and ``output_color``), resolves each name the way Graphviz
-draws it in the PDF and PNG show_graph writes (its X11 colour scheme), and
-compares with ``--pnv-role-input`` and ``--pnv-role-output`` read from
-``frontend/src/styles/palette.css``. Red and green are enforced.
+``input_color``, ``output_color`` and ``controller_color``), resolves each name
+the way Graphviz draws it in the PDF and PNG show_graph writes (its X11 colour
+scheme), and compares with ``--pnv-role-input``, ``--pnv-role-output`` and
+``--pnv-role-controller`` read from ``frontend/src/styles/palette.css``. Red,
+green and purple are enforced.
 
-The other roles are reported, not enforced. For these, show_graph's PDF and a
-browser's reading of its SVG can disagree, and the palette follows the
-browser's reading (or, for orange and pink, a darker colour that reads on
-white). Known differences, as of this writing:
+The other roles are reported, not enforced. Orange and pink are deliberately
+darker than show_graph's, so they read on white (#196); the rest happen to
+agree. As of this writing:
 
     role              show_graph  PDF/PNG (X11)  browser (CSS)  palette
     control           blue        #0000ff        #0000ff        #0000ff
-    controller        purple      #a020f0        #800080        #800080
     learning          orange      #ffa500        #ffa500        #ff8c00
     probe             pink        #ffc0cb        #ffc0cb        #ff69b4
     input and output  brown       #a52a2a        #a52a2a        #a52a2a
@@ -42,10 +41,10 @@ PALETTE = Path(__file__).resolve().parents[2] / "frontend" / "src" / "styles" / 
 ENFORCED = {
     "input_color": "--pnv-role-input",
     "output_color": "--pnv-role-output",
+    "controller_color": "--pnv-role-controller",
 }
 REPORTED = {
     "control_color": "--pnv-role-control",
-    "controller_color": "--pnv-role-controller",
     "learning_color": "--pnv-role-learning",
     "probe_color": "--pnv-role-probe",
     "input_and_output_color": "--pnv-role-singleton",
