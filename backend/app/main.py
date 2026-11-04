@@ -14,7 +14,9 @@ from app import __version__
 from app.api.routes import router
 from app.api.ws import handle_websocket
 from app.frontend_files import FrontendFiles
+from app.request_guard import RequestGuard
 from app.services import (
+    activity_log,
     edit_lock,
     github_auth,
     managed_layouts,
@@ -67,6 +69,9 @@ async def lifespan(app: FastAPI):
     spinner (PsyNeuView-MacApp#232; ``app/services/startup_phases.py``).
     """
     _announce_what_is_running()
+    # This launch's page activity log starts fresh; the last launch's is
+    # kept as the previous one, for a report made after a restart (#177).
+    activity_log.start_launch()
     with startup_phases.phase("migrate"):
         # Before anything can open a working copy: carry edited Reference
         # Models (and other working copies) over from where older versions
@@ -166,6 +171,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Added last, so it runs first: before CORS answers anything.
+app.add_middleware(RequestGuard)
 
 app.include_router(router, prefix="/api")
 

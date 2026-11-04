@@ -103,6 +103,13 @@ describe("deliverability", () => {
   it("allows an ordinary binding", () => {
     expect(deliverability("Mod+i", "browser").deliverable).toBe(true);
   });
+
+  it("knows a browser keeps Cmd+1..9 for its tabs, and the Mac app does not (#191)", () => {
+    for (const n of [1, 4, 9]) {
+      expect(deliverability(`Mod+${n}`, "browser").deliverable).toBe(false);
+      expect(deliverability(`Mod+${n}`, "macApp").deliverable).toBe(true);
+    }
+  });
 });
 
 // A KeyboardEvent stand-in: only the fields the matcher reads.

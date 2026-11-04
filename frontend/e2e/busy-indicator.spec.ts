@@ -5,6 +5,9 @@
  *
  * Each slow request is made slow on purpose with page.route. Screenshots
  * land in `$SHOTS_DIR` when it is set.
+ *
+ * It also says how long it has been spinning, where Settings chooses, and a
+ * problem report records each wait with its start and stop times (#176).
  */
 import { mutatingTest as test, expect } from "./test-base";
 import { readFileSync, writeFileSync, mkdtempSync } from "fs";
@@ -120,5 +123,99 @@ test.describe("Busy wheel (#38)", { tag: "@ci" }, () => {
     await shot(page, "02-undo-busy");
     await expect(wheel).toHaveAttribute("data-visible", "false", { timeout: 30_000 });
     await expect(page.getByTestId("busy-indicator-canvas")).toHaveCount(0);
+  });
+
+  test("the wheel shows how long it has spun, where Settings says, without moving the toolbar", async ({ page }) => {
+    test.setTimeout(180_000);
+    const model = scratchModel();
+    await openFromPath(page, model);
+    await replaceBuffer(page, EDITED);
+    // The button right after the wheel. Those further along move when the undo
+    // count appears, which is nothing to do with the wheel.
+    const nextButton = page.getByTestId("settings-button");
+    const before = await nextButton.boundingBox();
+    await slowDown(page, "**/api/model/save-source", 4_000);
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    const toolbar = page.getByTestId("busy-elapsed");
+    await expect(toolbar).toHaveText(/^[1-9] s$/, { timeout: 3_000 });
+    await expect(toolbar).toHaveAttribute("aria-hidden", "true");
+    expect((await nextButton.boundingBox())?.x).toBe(before?.x);
+    await expect(page.getByTestId("busy-elapsed-canvas")).toHaveCount(0);
+    await shot(page, "03-timer-toolbar");
+    await expect(page.getByTestId("busy-indicator")).toHaveAttribute("data-visible", "false", { timeout: 30_000 });
+    expect((await nextButton.boundingBox())?.x).toBe(before?.x);
+
+    const choose = async (place: string) => {
+      await page.getByTestId("settings-button").click();
+      await page.getByTestId("settings-section-general").click();
+      await page.getByTestId("setting-busy-timer").selectOption(place);
+      await page.keyboard.press("Escape");
+    };
+    const slowSave = async (text: string) => {
+      await replaceBuffer(page, text);
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(page.getByTestId("busy-indicator")).toHaveAttribute("data-visible", "true");
+    };
+
+    await choose("both");
+    await slowSave(EDITED + "# both\n");
+    await expect(page.getByTestId("busy-elapsed-canvas")).toHaveText(/^[1-9] s$/, { timeout: 3_000 });
+    await expect(toolbar).toHaveText(/^[1-9] s$/);
+    await shot(page, "04-timer-both");
+    await expect(page.getByTestId("busy-indicator")).toHaveAttribute("data-visible", "false", { timeout: 30_000 });
+
+    await choose("off");
+    await slowSave(EDITED + "# off\n");
+    await page.waitForTimeout(1_500);
+    await expect(toolbar).toHaveCount(0);
+    await expect(page.getByTestId("busy-elapsed-canvas")).toHaveCount(0);
+    await shot(page, "05-timer-off");
+    await expect(page.getByTestId("busy-indicator")).toHaveAttribute("data-visible", "false", { timeout: 30_000 });
+  });
+
+  test("a problem report has each wait's start and stop, and the action it came from", async ({ page }) => {
+    test.setTimeout(120_000);
+    // The menu asks for the status only when the source has examples and
+    // their section is on show (#175): the shared fixture starts every
+    // section unfolded, so here the request goes out as the menu opens.
+    // open-menu-examples-probe.spec.ts covers the folded case.
+    await page.route("**/api/psyneulink-examples", (route) =>
+      route.fulfill({ json: { available: true, models: [{ name: "stub", label: "Stub", path: "/stub.py" }] } }),
+    );
+    await page.route("**/api/psyneulink-examples/status", async (route) => {
+      await new Promise((r) => setTimeout(r, 4_000));
+      await route.fulfill({ json: { available: true, status: {} } });
+    });
+    await page.goto("/");
+    await expect(page.getByTestId("open-menu")).toBeEnabled();
+
+    type Entry = { t: string; time: string; kind: string; text: string; data?: Record<string, unknown> };
+    type Snap = { activity: Entry[]; waitsInProgress: { label: string; action: string | null }[] };
+    const snapshot = () =>
+      page.evaluate(() => (window as unknown as { __pnvDiagnostics: () => Promise<unknown> }).__pnvDiagnostics()) as Promise<Snap>;
+    const status = "GET /api/psyneulink-examples/status";
+
+    // Clicking Open is logged, and the request it starts is reported while it
+    // runs: as background work, so it is on record without showing the wheel.
+    await page.getByTestId("open-menu").click();
+    await expect.poll(async () => (await snapshot()).waitsInProgress.map((w) => w.label), { timeout: 15_000 }).toContain(status);
+    const during = await snapshot();
+    expect(during.activity.find((e) => e.kind === "menu" && e.text === "Open menu opened")).toBeTruthy();
+    expect(during.waitsInProgress.find((w) => w.label === status)?.action).toBe("Open menu opened");
+    await expect(page.getByTestId("busy-indicator")).toHaveAttribute("data-visible", "false");
+
+    // Once it stops, it has both times and its cause; everything has a time, in order.
+    await expect
+      .poll(async () => (await snapshot()).activity.find((e) => e.kind === "wait" && e.data?.label === status)?.data?.stop, {
+        timeout: 90_000,
+      })
+      .toEqual(expect.any(String));
+    const after = await snapshot();
+    const wait = after.activity.find((e) => e.kind === "wait" && e.data?.label === status)!;
+    expect(wait.text).toContain("· from: Open menu opened");
+    expect(wait.data?.durationMs as number).toBeGreaterThanOrEqual(3_900);
+    expect(after.activity.every((e) => e.time === e.t && e.time.length > 0)).toBe(true);
+    const times = after.activity.map((e) => Date.parse(e.t));
+    expect(times).toEqual([...times].sort((a, b) => a - b));
   });
 });

@@ -156,6 +156,7 @@ export function SettingsPanel({ isOpen, onClose, section: requested = null }: Pr
         aria-modal="true"
         aria-labelledby="settings-dialog-title"
         data-testid="settings-panel"
+        data-pnv-where="Settings"
         onClick={(e) => e.stopPropagation()}
         style={{
           background: "var(--pnv-surface)",

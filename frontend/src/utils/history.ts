@@ -6,8 +6,20 @@
  */
 
 import { useModelStore } from "@/stores/modelStore";
+import { record } from "@/utils/activityLog";
 import { useHistoryStore, type SaveMark, type Snapshot } from "@/stores/historyStore";
 import type { MechanismData } from "@/stores/modelStore";
+import { captureView } from "@/utils/graphView";
+
+export interface RecordActionOptions {
+  /**
+   * Whether the step is an edit the user made to the model, which problem
+   * reports list (#177). Defaults to true. False for the app's own steps: a
+   * model loading or being rebuilt, and a frame button changing the view
+   * (#204), which change what is shown and not the model.
+   */
+  edit?: boolean;
+}
 
 /**
  * Capture the current state and push it as a history snapshot.
@@ -16,7 +28,10 @@ import type { MechanismData } from "@/stores/modelStore";
  *
  * @param description - Human-readable description ("Modified gain in hidden_layer")
  */
-export function recordAction(description: string) {
+export function recordAction(description: string, opts?: RecordActionOptions) {
+  // An edit the user made goes in the activity log, for problem reports
+  // (#177). The description names what changed, never the new text or value.
+  if (opts?.edit !== false) record("edit", description);
   const store = useModelStore.getState();
   const { source, nodes, edges, filePath } = store;
 
@@ -35,6 +50,8 @@ export function recordAction(description: string) {
     description,
     timestamp: Date.now(),
     positions,
+    // The view the graph was built in, so undo puts it back too (#194).
+    view: captureView(),
   };
 
   useHistoryStore.getState().pushSnapshot(snapshot);
@@ -45,7 +62,7 @@ export function recordAction(description: string) {
  * This creates the baseline for undo — the first entry in the stack.
  */
 export function recordInitialState() {
-  recordAction("Model loaded");
+  recordAction("Model loaded", { edit: false });
 }
 
 /**
@@ -71,6 +88,7 @@ export function recordSave(source: string, mark: SaveMark) {
       description: "Saved",
       timestamp: Date.now(),
       positions,
+      view: captureView(),
     },
     mark,
   );

@@ -134,21 +134,40 @@
   --pnv-shadow-flyout: 2px 0 8px rgba(0, 0, 0, 0.08);
 
   /* Node roles, from docs/icon-ontology.md: the colour a mechanism's role
-     has in PsyNeuLink's own show_graph. Their own set: a button is never
+     has in PsyNeuLink's own show_graph, as show_graph's own PDF and PNG draw
+     it. show_graph names its colours ("green", "red", "blue"), and Graphviz
+     draws each name with its X11 value: green is #00ff00 (a browser would
+     read the same name in an SVG as #008000, so the app's show_graph tab is
+     made to agree with the PDF, not the other way round). Red and green must
+     match show_graph exactly (#190). Their own set: a button is never
      "INPUT green", and a role is never "the primary blue". */
-  --pnv-role-input: #2e7d32;
-  --pnv-role-output: #c62828;
-  --pnv-role-control: #1565c0;
-  --pnv-role-learning: #e65100;
-  --pnv-role-probe: #e91e63;
-  --pnv-role-internal: #555;
+  --pnv-role-input: #00ff00;
+  --pnv-role-output: #ff0000;
+  --pnv-role-control: #0000ff;
+  /* show_graph's orange (#ffa500) and pink (#ffc0cb) are too pale on white
+     for an outline (2:1 and 1.5:1), so these are the nearest named orange and
+     pink that still read. */
+  --pnv-role-learning: #ff8c00;
+  --pnv-role-probe: #ff69b4;
+  --pnv-role-internal: #000;
   /* The rest of show_graph's role colours: a node that is both INPUT and
-     OUTPUT, the composition's controller (and its objective), a node that
-     sends a feedback projection, and one in a cycle. */
-  --pnv-role-singleton: #795548;
-  --pnv-role-controller: #7b1fa2;
-  --pnv-role-feedback-sender: #ef6c00;
-  --pnv-role-cycle: #5d4037;
+     OUTPUT (brown), the composition's controller (and its objective,
+     purple), a node that sends a feedback projection (black: show_graph gives
+     it a shape, not a colour), and one in a cycle (black, like any ordinary
+     node: show_graph marks a cycle with a double ring). */
+  --pnv-role-singleton: #a52a2a;
+  --pnv-role-controller: #800080;
+  --pnv-role-feedback-sender: #000;
+  --pnv-role-cycle: #000;
+  /* The same roles as text (a node's type tag) and behind white text (its
+     role tag), where the outline colour is too light to read: a darker green
+     (#00ff00 on white is 1.4:1, unreadable; this is CSS green, 5.1:1), red,
+     orange and pink. The other roles' outline colours read as text as they
+     are. ROLE_TEXT_COLORS in constants/pnlTypes.ts names these. */
+  --pnv-role-input-text: #008000;
+  --pnv-role-output-text: #dd0000;
+  --pnv-role-learning-text: #e65100;
+  --pnv-role-probe-text: #d81b60;
   /* A node the PyTorch view runs but leaves out of the gradient (#230):
      show_graph's brown dotted style, as text, tint and dashed border. */
   --pnv-role-no-gradient: #7a5a2e;

@@ -391,6 +391,10 @@ source again clones it afresh. The copy in use can't be removed.
     working-copies/           working copies of included models (Reference Models, Demos,
                               PsyNeuLink Examples from a managed PsyNeuLink), with their
                               layout, label and index files (#1319)
+    cache/                    answers kept only to save time, safe to delete
+        examples-status.json  whether each PsyNeuLink example loads, for the marks on
+                              the Open menu, keyed by the source's commit and the
+                              example files' names, sizes and modification times (#175)
 ~/.psynewview.json            the preferences file (the misspelling is historical and load-bearing)
 ```
 
@@ -422,6 +426,7 @@ Writes are atomic.
 | `PSYNEUVIEW_PNL_UPDATE_CHECKS` | `0` keeps the scheduled PsyNeuLink update checks, the start-time install and the launch pulls off in this process (#1304). They are also off in test mode and wherever installing isn't possible. |
 | `PSYNEWVIEW_WORKING_DIR` | Another folder for the working copies of included models instead of `~/.psyneuview/working-copies` (the e2e harness uses a temp one). While it is set, no working copies are moved out of old installs. |
 | `PSYNEUVIEW_LAYOUTS_DIR` | Another folder for the layouts and labels of read-only PsyNeuLink files instead of `~/.psyneuview/layouts` (the e2e harness and the backend tests use a temp one). While it is set, nothing is moved there from the old places (#1321). |
+| `PSYNEUVIEW_CACHE_DIR` | Another folder for answers kept only to save time (the PsyNeuLink examples' load status) instead of `~/.psyneuview/cache` (the e2e harness and the backend tests use a temp one) (#175). |
 | `PSYNEWVIEW_TEST_MODE` | The test-only endpoints ([testing](testing.md)). |
 
 Note the two spellings: `PSYNEWVIEW_` is historical and kept; newer

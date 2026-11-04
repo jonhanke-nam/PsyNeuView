@@ -9,15 +9,30 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { applyHistoryStep } from "@/hooks/useUndoRedo";
+import type { AnyPanel } from "@/stores/layoutStore";
 import { useModelStore } from "@/stores/modelStore";
 import { runCommand } from "./commands";
+import { togglePanelOrExplain } from "./lastPanel";
 import { OVERRIDES_CHANGED, loadOverrides } from "./storage";
 import { resolveShortcuts, type ResolvedShortcut } from "./registry";
 import { useShortcuts } from "./useShortcuts";
 
+// Shows or hides one panel. The store refuses to hide the last visible one;
+// the key is still consumed (the browser would otherwise take it), and the
+// shared notice says why nothing moved (#213).
+function togglePanel(panel: AnyPanel) {
+  togglePanelOrExplain(panel);
+}
+
 /** Actions by shortcut id. Anything not listed simply does nothing. */
-function buildActions(): Record<string, () => void> {
+function buildActions(): Record<string, () => boolean | void> {
   return {
+    // #191: one key per panel; the choice is stored like a Layout-menu change.
+    "layout.toggleGraph": () => togglePanel("graph"),
+    "layout.toggleCode": () => togglePanel("code"),
+    "layout.toggleBottom": () => togglePanel("bottom"),
+    "layout.togglePalette": () => togglePanel("palette"),
+
     "history.undo": () => void applyHistoryStep(false),
     "history.redo": () => void applyHistoryStep(true),
 
@@ -52,10 +67,14 @@ function buildActions(): Record<string, () => void> {
   };
 }
 
-/** Install the app's shortcuts. Call once, high in the tree. */
-export function useAppShortcuts(): ResolvedShortcut[] {
-  // Re-read on the custom event the Settings panel fires, so a rebinding takes
-  // effect immediately rather than at the next reload.
+/**
+ * The declared shortcuts with the user's overrides applied, kept current.
+ *
+ * Re-read on the custom event the Settings panel fires, so a rebinding takes
+ * effect immediately rather than at the next reload. Also what a menu uses to
+ * show a shortcut beside its item (#191), so the two can't disagree.
+ */
+export function useResolvedShortcuts(): ResolvedShortcut[] {
   const [overrides, setOverrides] = useState<Record<string, string>>(loadOverrides);
   useEffect(() => {
     const refresh = () => setOverrides(loadOverrides());
@@ -63,16 +82,24 @@ export function useAppShortcuts(): ResolvedShortcut[] {
     return () => window.removeEventListener(OVERRIDES_CHANGED, refresh);
   }, []);
 
-  const shortcuts = useMemo(() => {
-    const actions = buildActions();
+  return useMemo(() => {
     const { resolved, errors } = resolveShortcuts(overrides);
     if (errors.length) {
       // Loud enough to find, quiet enough not to block startup: a bad override
       // already falls back to its default, so the app still works.
       console.warn("[shortcuts] ignoring unusable bindings:", errors);
     }
-    return resolved.map((s) => ({ ...s, run: actions[s.id] }));
+    return resolved;
   }, [overrides]);
+}
+
+/** Install the app's shortcuts. Call once, high in the tree. */
+export function useAppShortcuts(): ResolvedShortcut[] {
+  const resolved = useResolvedShortcuts();
+  const shortcuts = useMemo(() => {
+    const actions = buildActions();
+    return resolved.map((s) => ({ ...s, run: actions[s.id] }));
+  }, [resolved]);
 
   useShortcuts(shortcuts);
   return shortcuts;

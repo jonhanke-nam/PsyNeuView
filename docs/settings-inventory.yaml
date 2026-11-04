@@ -249,6 +249,34 @@ settings:
       asks for that runs longer shows the spinning wheel in the toolbar and
       over the graph, with a "progress" pointer.
 
+  - id: busy-timer
+    label: General ▸ Busy indicator ▸ Show how long it has been spinning
+    home: settings
+    section: general
+    storage: browser localStorage (psyneuview.busy.timerPlace); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-busy-timer
+    notes: >-
+      Off, In the toolbar (default), Over the graph or Both (#176). Shows the
+      time so far beside the wheel once it has spun for a second. Problem
+      reports record each wait's start and stop times whatever this says.
+
+  - id: activity-log-actions
+    label: General ▸ Problem reports ▸ Keep a log of my actions for problem reports
+    home: settings
+    section: general
+    storage: browser localStorage (psyneuview.activityLog.actions); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-activity-log-actions
+    notes: >-
+      On by default (#177). Covers user actions only: menus, buttons, tabs,
+      the canvas, edits, trace stepping. Recorded whether it is on or off,
+      and the control's wording says so plainly: errors, messages shown,
+      every wait's timing, and runs, learning and walkthroughs with how they
+      ended (the owner's decision: they are what the app did, with an
+      outcome, and a report needs them). Off: nothing a user does is
+      recorded or saved, the actions already recorded are dropped here and
+      from the copy on disk (~/.psyneuview/activity-log), and a report says
+      logging was off.
+
   - id: tour-ring-thickness
     label: Tutorials and Voice ▸ Highlight ▸ Ring thickness
     home: settings
@@ -399,9 +427,10 @@ settings:
     notes: >-
       An ordinary node's outline, 1–6 px in whole pixels (Chrome draws
       borders at whole pixels); 4 px by default (was 2 after #42, 1 before). The heavier
-      outlines follow it: INPUT, OUTPUT and CONTROL nodes + 2 px (replacing
-      the Style tab's Border width slider, which set them alone), a selected
-      or running node + 2 px more. /rendering-defaults.json can retune the
+      outlines follow it: INPUT, OUTPUT and CONTROL nodes + 4 px (+ 2 before
+      #190, which moved the contrast between roles toward show_graph's 3 to 1;
+      replacing the Style tab's Border width slider, which set them alone), a
+      selected or running node + 2 px more. /rendering-defaults.json can retune the
       default; a width chosen here wins. The Style tab links here.
 
   - id: edge-line-width
@@ -533,6 +562,20 @@ settings:
 # they are listed here so the inventory says where each one lives. The check in
 # settingsInventory.test.ts reads only `settings` above.
 elsewhere:
+  - id: panel-layout
+    label: Which panels show (graph, code editor, Inspector panel, Components panel)
+    home: toolbar ▸ Layout menu ▸ Panels (data-testid layout-menu-panel-<graph|code|bottom|palette>), and the keyboard (Mod+1 to Mod+4, listed under Settings ▸ Keyboard shortcuts, #191)
+    storage: browser localStorage (psynewview_layout_graph_visible, psynewview_layout_code_visible, psynewview_layout_bottom_visible, psynewview_palette_open; the Mac app keeps psynewview_ keys)
+    notes: >-
+      The graph alone by default (#189): the code editor and the Inspector
+      panel start hidden, and come back from the Layout menu, its presets, or
+      their keys. A choice already stored wins over the default. At least one
+      of graph, code and Inspector panel always stays; hiding the last is
+      refused and the key says so. How the Components panel starts is its own
+      setting (components-start, #113). A walkthrough shows every panel while
+      it runs and puts the stored layout back afterwards
+      (psynewview_layout_before_walkthrough holds it meanwhile).
+
   - id: graph-show-ports
     label: Show ports
     home: graph toolbar ▸ Advanced Graph View Options ▸ Nodes ▸ Show ports (data-testid toolbar-show-ports, #123)

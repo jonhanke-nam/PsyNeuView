@@ -199,6 +199,16 @@ open while the bar's buttons are used.
 A walkthrough with `developerMode: true` turns developer mode on when it
 starts and puts it back as it was when it ends, finished or not.
 
+Every walkthrough shows every panel (the code editor, the graph, the bottom
+panel's tabs and the Components panel) while it runs, since the window opens
+with the graph alone (#189) and steps point at the others. The layout from
+before comes back when the walkthrough ends, finished or stopped, and is kept
+in the browser (`psynewview_layout_before_walkthrough`) meanwhile, so a reload
+mid-walkthrough puts it back too rather than leaving the tutorial's layout
+behind as a choice. The e2e fixture (`test-base.ts`) turns the code editor and
+the bottom panel on for every spec, as the suite was written; a spec about the
+default sets those keys itself.
+
 ### The first-launch offer
 
 The first time PsyNeuView opens in a browser it offers **PsyNeuView First

@@ -21,8 +21,11 @@ import { PresenceIndicator } from "@/components/common/PresenceIndicator";
 import { AppUpdateNotice } from "@/components/common/AppUpdateNotice";
 import { importModelFiles, IMPORT_ACCEPT_ATTR } from "@/utils/importModelFiles";
 import { useStatusStore } from "@/stores/statusStore";
-import { useLayoutStore, type LayoutPreset } from "@/stores/layoutStore";
+import { useLayoutStore, type AnyPanel, type LayoutPreset } from "@/stores/layoutStore";
 import { usePaletteStore } from "@/stores/paletteStore";
+import { displayBinding } from "@/shortcuts/binding";
+import { setPanelVisibleOrExplain } from "@/shortcuts/lastPanel";
+import { useResolvedShortcuts } from "@/shortcuts/useAppShortcuts";
 import { focusComposition } from "@/utils/nodeActions";
 import { hasFileBridge, pickOpenPath, pickSavePath } from "@/utils/fileBridge";
 import { logLoadPerf } from "@/utils/loadPerf";
@@ -72,7 +75,8 @@ import { onPnlSourceChanged } from "@/utils/pnlSourceEvents";
 import { RECENT_PATHS_CHANGED, addRecentPath, getRecentPaths } from "@/utils/recentPaths";
 import { pnlSourceLabel, sourceSwitchNote, type PsyNeuLinkInfo } from "@/utils/pnlSources";
 import { abbreviateHome } from "@/components/common/settings/shared";
-import { record as recordActivity, recordMenuClick } from "@/utils/activityLog";
+import { record as recordActivity } from "@/utils/activityLog";
+import { causedBy } from "@/utils/waitLog";
 import { noteModelOrigin } from "@/utils/diagnostics";
 import { windowRequest } from "@/utils/appWindow";
 import { chooseTutorialStart, guardOpen, useTutorialChoice } from "@/utils/tutorialGuard";
@@ -126,6 +130,9 @@ my_model.add_projection(input_to_output)
 `;
 }
 
+/** Opening the Open menu, in the activity log and as the cause of its requests (#176). */
+const OPEN_MENU_OPENED = "Open menu opened";
+const EXAMPLES_SECTION_EXPANDED = "PsyNeuLink examples expanded";
 const EXPANDED_FOLDERS_KEY = "psyneuview.loadModelDropdown.expandedFolders";
 const REFERENCE_ORDER_KEY = "psyneuview.referenceModels.order";
 
@@ -281,15 +288,13 @@ export function Toolbar() {
   const [libraryModels, setLibraryModels] = useState<LibraryModel[]>([]);
   // PsyNeuLink's own examples, live from the active source's Scripts/ (#843).
   const [pnlExamples, setPnlExamples] = useState<LibraryModel[]>([]);
-  // Per-example load status for the live-section badges (#843/#839), fetched
-  // lazily the first time the menu opens (the probe runs the whole corpus).
-  const [pnlStatus, setPnlStatus] = useState<
-    Record<
-      string,
-      { load: string; run?: string; error?: string; runError?: string; nodes?: number }
-    >
-  >({});
+  // Per-example load status for the live-section badges (#843/#839): loads,
+  // or fails. There is no run pass (#175).
+  const [pnlStatus, setPnlStatus] = useState<Record<string, { load: string; error?: string; nodes?: number }>>({});
   const pnlStatusFetched = useRef(false);
+  // What put the examples on show, for the wait log: opening the menu with
+  // the section already expanded, or expanding it (#175).
+  const pnlStatusCause = useRef(OPEN_MENU_OPENED);
   const [userModels, setUserModels] = useState<UserModel[]>([]);
   const [currentDemo, setCurrentDemo] = useState<string | null>(null);
   const [pristineSource, setPristineSource] = useState<string | null>(null);
@@ -440,6 +445,10 @@ export function Toolbar() {
   };
   const isSectionCollapsed = (id: string) => collapsedSections.has(id);
   const toggleSection = (id: string) => {
+    if (id === "examples" && collapsedSections.has(id)) {
+      recordActivity("menu", EXAMPLES_SECTION_EXPANDED);
+      pnlStatusCause.current = EXAMPLES_SECTION_EXPANDED;
+    }
     setCollapsedSections((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -622,6 +631,9 @@ export function Toolbar() {
         pnlBeforeSwitchRef.current = catalogSourcesRef.current.pnl;
         setSwitchNoteArmed(true);
         refreshPnlCatalogs();
+        // The marks belonged to the old source's examples (#175).
+        pnlStatusFetched.current = false;
+        setPnlStatus({});
       }),
     [],
   );
@@ -630,7 +642,7 @@ export function Toolbar() {
   // label and paths until the window was reloaded. The Library header and its
   // tooltip only show with the menu open, so this is when they need to be right.
   useEffect(() => {
-    if (dropdownOpen) refreshPnlCatalogs();
+    if (dropdownOpen) causedBy(OPEN_MENU_OPENED, refreshPnlCatalogs);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dropdownOpen]);
   // Settings rewrites the recent paths when the project folder moves (#1295).
@@ -676,17 +688,24 @@ export function Toolbar() {
     }
   }, [dropdownOpen]);
 
-  // Lazily probe live-example load status the first time the menu opens with
-  // examples present — the probe runs the whole corpus, so don't do it on mount
-  // or on every open. Backend caches by source commit (#843/#839).
+  // Ask for the live examples' load marks only once their section is
+  // actually on show (#843/#839, #175). To answer, the server loads every
+  // example in the model runner, which can take a while; asking as soon
+  // as the menu opened spun the wheel through the first Open of every launch,
+  // for marks under a folded heading. So: the menu is open, the section is
+  // shown and unfolded — whether it was already unfolded when the menu opened
+  // or the user unfolds it now — and once per source. The server keeps the
+  // answer on disk, so a later launch has it at once.
+  const examplesOnShow = dropdownOpen && sectionVisible("examples") && !isSectionCollapsed("examples");
   useEffect(() => {
-    if (!dropdownOpen || pnlStatusFetched.current || pnlExamples.length === 0) return;
+    if (!examplesOnShow || pnlStatusFetched.current || pnlExamples.length === 0) return;
     pnlStatusFetched.current = true;
-    fetch("/api/psyneulink-examples/status")
+    causedBy(pnlStatusCause.current, () => fetch("/api/psyneulink-examples/status"))
       .then((r) => r.json())
       .then((data) => setPnlStatus(data.status || {}))
       .catch(() => {});
-  }, [dropdownOpen, pnlExamples.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [examplesOnShow, pnlExamples.length]);
 
   const moveReference = (from: number, to: number) => {
     setReferenceModels((prev) => {
@@ -1623,6 +1642,8 @@ export function Toolbar() {
   return (
     <div
       data-testid="app-toolbar"
+      // Where a pressed button is, in the activity log (#177, utils/clickLog.ts).
+      data-pnv-where="Toolbar"
       role="toolbar"
       aria-label="Main toolbar"
       // #6: no control breaks onto two lines (index.css); when the row is
@@ -1680,8 +1701,12 @@ export function Toolbar() {
           onClick={() => {
             setDropdownOpen(!dropdownOpen);
             if (!dropdownOpen) {
-              refreshUserModels();
-              void refreshCatalogs();
+              recordActivity("menu", OPEN_MENU_OPENED);
+              pnlStatusCause.current = OPEN_MENU_OPENED;
+              causedBy(OPEN_MENU_OPENED, () => {
+                refreshUserModels();
+                void refreshCatalogs();
+              });
             }
           }}
           // Stable handle for the entry point to every model: specs and guided
@@ -1708,7 +1733,7 @@ export function Toolbar() {
             className="open-menu-dropdown"
             role="menu"
             data-testid="open-menu-list"
-            onClickCapture={(e) => recordMenuClick("Open", e)}
+            data-pnv-menu="Open"
             style={{
               position: "absolute",
               top: "100%",
@@ -2050,29 +2075,18 @@ export function Toolbar() {
                           title={
                             status.load !== "ok"
                               ? `Fails to load: ${status.error ?? "error"}`
-                              : status.run === "ok"
-                                ? `Loads (${status.nodes} nodes) + runs`
-                                : `Loads (${status.nodes} nodes) but did not run with zero inputs: ${status.runError ?? "—"}`
+                              : `Loads (${status.nodes} nodes)`
                           }
                           style={{
                             marginLeft: "auto",
                             paddingLeft: 8,
                             fontSize: "var(--pnv-fs-11)",
                             fontWeight: 600,
-                            color:
-                              status.load !== "ok"
-                                ? "var(--pnv-danger)"
-                                : status.run === "ok"
-                                  ? "var(--pnv-success)"
-                                  : "var(--pnv-warning)",
+                            color: status.load !== "ok" ? "var(--pnv-danger)" : "var(--pnv-success)",
                             userSelect: "none",
                           }}
                         >
-                          {status.load !== "ok"
-                            ? "fails"
-                            : status.run === "ok"
-                              ? "runs"
-                              : "loads"}
+                          {status.load !== "ok" ? "fails" : "loads"}
                         </span>
                       )}
                     </button>
@@ -3350,7 +3364,12 @@ function WalkthroughMenu() {
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (!open) recordActivity("menu", "Tutorials menu opened");
+          setOpen((o) => !o);
+        }}
+        aria-haspopup="menu"
+        aria-expanded={open}
         data-testid="walkthrough-menu"
         data-reminder={remind ? "true" : undefined}
         style={{
@@ -3374,7 +3393,7 @@ function WalkthroughMenu() {
         <div
           role="menu"
           data-testid="walkthrough-menu-list"
-          onClickCapture={(e) => recordMenuClick("Tutorials", e)}
+          data-pnv-menu="Tutorials"
           style={{
             position: "absolute",
             top: "calc(100% + 4px)",
@@ -3523,7 +3542,6 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   const codeVisible = useLayoutStore((s) => s.codeVisible);
   const graphVisible = useLayoutStore((s) => s.graphVisible);
   const bottomVisible = useLayoutStore((s) => s.bottomVisible);
-  const setPanelVisible = useLayoutStore((s) => s.setPanelVisible);
   const applyPreset = useLayoutStore((s) => s.applyPreset);
   const paletteOpen = usePaletteStore((s) => s.isOpen);
 
@@ -3540,20 +3558,33 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   }, [open]);
   useDismiss(open, () => setOpen(false));
 
+  // #191: each row shows its shortcut, read from the same resolved set the
+  // keys fire from, so a rebinding in Settings shows here at once.
+  const shortcuts = useResolvedShortcuts();
+  const keyFor = (id: string) => {
+    const s = shortcuts.find((x) => x.id === id);
+    return s ? displayBinding(s.binding) : "";
+  };
+
   // Hiding the last visible of code/graph/bottom is blocked by the store, so
-  // grey out that row's toggle to signal it can't be turned off right now.
+  // grey out that row's toggle to signal it can't be turned off right now. The
+  // row stays clickable (aria-disabled, not disabled): a click on it brings up
+  // the notice that says why nothing changed and what to do instead (#213).
   const lastTopLevel = [codeVisible, graphVisible, bottomVisible].filter(Boolean).length === 1;
-  const panels: { label: string; visible: boolean; locked: boolean; onToggle: () => void }[] = [
-    { label: "Code editor", visible: codeVisible, locked: lastTopLevel && codeVisible, onToggle: () => setPanelVisible("code", !codeVisible) },
-    { label: "Graph canvas", visible: graphVisible, locked: lastTopLevel && graphVisible, onToggle: () => setPanelVisible("graph", !graphVisible) },
-    { label: "Inspector / tabs", visible: bottomVisible, locked: lastTopLevel && bottomVisible, onToggle: () => setPanelVisible("bottom", !bottomVisible) },
-    { label: "Object palette", visible: paletteOpen, locked: false, onToggle: () => usePaletteStore.getState().setOpen(!paletteOpen) },
+  const panels: { id: AnyPanel; label: string; visible: boolean; locked: boolean; shortcut: string; onToggle: () => void }[] = [
+    { id: "graph", label: "Graph canvas", visible: graphVisible, locked: lastTopLevel && graphVisible, shortcut: keyFor("layout.toggleGraph"), onToggle: () => setPanelVisibleOrExplain("graph", !graphVisible) },
+    { id: "code", label: "Code editor", visible: codeVisible, locked: lastTopLevel && codeVisible, shortcut: keyFor("layout.toggleCode"), onToggle: () => setPanelVisibleOrExplain("code", !codeVisible) },
+    { id: "bottom", label: "Inspector / tabs", visible: bottomVisible, locked: lastTopLevel && bottomVisible, shortcut: keyFor("layout.toggleBottom"), onToggle: () => setPanelVisibleOrExplain("bottom", !bottomVisible) },
+    { id: "palette", label: "Components panel", visible: paletteOpen, locked: false, shortcut: keyFor("layout.togglePalette"), onToggle: () => usePaletteStore.getState().setOpen(!paletteOpen) },
   ];
 
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (!open) recordActivity("menu", "Layout menu opened");
+          setOpen((o) => !o);
+        }}
         style={{
           fontSize: "var(--pnv-fs-13)",
           padding: "4px 10px",
@@ -3562,6 +3593,8 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
           borderRadius: 4,
         }}
         title="Layout presets, panel visibility, and locking this model"
+        aria-haspopup="menu"
+        aria-expanded={open}
         data-testid="layout-menu-button"
       >
         Layout {"▾"}
@@ -3570,14 +3603,15 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
         <div
           role="menu"
           data-testid="layout-menu-list"
-          onClickCapture={(e) => recordMenuClick("Layout", e)}
+          data-pnv-menu="Layout"
           style={{
             position: "absolute",
             top: "calc(100% + 4px)",
             left: 0,
             // Above the panel dividers (Allotment sashes, z-index 35), like the Open menu (#1391).
             zIndex: Z_MENU,
-            minWidth: 190,
+            // Wide enough for "Components panel" and its key on one line (#191).
+            minWidth: 240,
             background: "var(--pnv-surface)",
             border: "1px solid var(--pnv-border)",
             borderRadius: 6,
@@ -3609,10 +3643,15 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
           </div>
           {panels.map((panel) => (
             <button
-              key={panel.label}
+              key={panel.id}
+              data-testid={`layout-menu-panel-${panel.id}`}
               onClick={panel.onToggle}
-              disabled={panel.locked}
-              title={panel.locked ? "Can't hide the last visible panel" : `Show/hide ${panel.label}`}
+              aria-disabled={panel.locked || undefined}
+              title={
+                panel.locked
+                  ? "One panel has to stay open: show another panel before hiding this one"
+                  : `Show/hide ${panel.label}${panel.shortcut ? ` (${panel.shortcut})` : ""}`
+              }
               style={{
                 ...menuRowStyle(panel.visible),
                 cursor: panel.locked ? "not-allowed" : "pointer",
@@ -3629,8 +3668,15 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
                 if (!panel.visible) e.currentTarget.style.background = "transparent";
               }}
             >
-              <span>{panel.label}</span>
-              <span style={{ opacity: panel.visible ? 1 : 0.25 }}>{panel.visible ? "✓" : "·"}</span>
+              <span style={{ whiteSpace: "nowrap" }}>{panel.label}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                {panel.shortcut && (
+                  <span style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", whiteSpace: "nowrap" }}>
+                    {panel.shortcut}
+                  </span>
+                )}
+                <span style={{ opacity: panel.visible ? 1 : 0.25 }}>{panel.visible ? "✓" : "·"}</span>
+              </span>
             </button>
           ))}
           <span style={{ display: "block", height: 1, background: "var(--pnv-border-faint)", margin: "4px 4px" }} />

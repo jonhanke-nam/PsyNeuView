@@ -67,3 +67,7 @@ loopback, so the fallback cannot quietly grant remote access.
   makes a deployment reproducible.
 - `PSYNEUVIEW_MAC_APP=1` is the deprecated predecessor of this variable. It is
   still honored, but new deployments should set `PSYNEUVIEW_DEPLOYMENT_MODE`.
+
+## Which addresses a local install answers to
+
+In `local` and `mac_app` modes the server answers only to `localhost`, `127.0.0.1` and `::1`. If you serve a local install under another name, such as this machine's name on your network, list it in `PSYNEUVIEW_ALLOWED_HOSTS`, separated by commas. `container` and `hosted` deployments answer to any name, because their operator controls how they're reached. In every mode, a page from another site can't change anything or open the WebSocket.

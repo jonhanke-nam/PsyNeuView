@@ -3,11 +3,12 @@
  * for has run past the threshold (busyStore). The toolbar copy also turns the
  * pointer to "progress" and announces "Working…" to screen readers; the
  * in-place copy sits over the canvas, where the result will appear. With
- * reduced motion the wheel stands still.
+ * reduced motion the wheel stands still. Settings can also show how long it
+ * has been spinning (#176), in either place or both.
  */
 
 import { useEffect, useState } from "react";
-import { oldestTask, useBusyStore } from "@/stores/busyStore";
+import { formatBusyElapsed, oldestTask, useBusyStore } from "@/stores/busyStore";
 
 /** True once the oldest in-flight task has run for the threshold. */
 export function useBusyVisible(): boolean {
@@ -25,6 +26,27 @@ export function useBusyVisible(): boolean {
   }, [start, visible, threshold, elapsed]);
   return visible;
 }
+
+/** Whole seconds this stretch of busyness has lasted, while `active`. */
+function useBusySeconds(active: boolean): number {
+  const since = useBusyStore((s) => s.busySince);
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    if (!active || since === null) {
+      setSeconds(0);
+      return;
+    }
+    const update = () => setSeconds(Math.floor((Date.now() - since) / 1000));
+    update();
+    // Polled often so it changes close to the second; it renders only then.
+    const t = window.setInterval(update, 250);
+    return () => window.clearInterval(t);
+  }, [active, since]);
+  return seconds;
+}
+
+/** Nothing for the first second, when a time would only be a distraction. */
+const elapsedText = (seconds: number) => (seconds >= 1 ? formatBusyElapsed(seconds) : "");
 
 function Wheel({ size }: { size: number }) {
   return (
@@ -49,6 +71,9 @@ function Wheel({ size }: { size: number }) {
 export function BusyIndicator({ placement }: { placement: "toolbar" | "canvas" }) {
   const visible = useBusyVisible();
   const isToolbar = placement === "toolbar";
+  const timerPlace = useBusyStore((s) => s.timerPlace);
+  const showTimer = timerPlace === "both" || timerPlace === placement;
+  const seconds = useBusySeconds(visible && showTimer);
 
   useEffect(() => {
     if (!isToolbar) return;
@@ -78,6 +103,17 @@ export function BusyIndicator({ placement }: { placement: "toolbar" | "canvas" }
             text is only there while it shows, for screen readers. */}
         <Wheel size={20} />
         {visible ? "Working…" : <span aria-hidden="true">Working…</span>}
+        {/* Width reserved so the toolbar doesn't move; hidden from screen
+            readers, which would otherwise read it out every second. */}
+        {showTimer && (
+          <span
+            data-testid="busy-elapsed"
+            aria-hidden="true"
+            style={{ display: "inline-block", minWidth: "5ch", fontVariantNumeric: "tabular-nums" }}
+          >
+            {elapsedText(seconds)}
+          </span>
+        )}
       </span>
     );
   }
@@ -101,6 +137,20 @@ export function BusyIndicator({ placement }: { placement: "toolbar" | "canvas" }
       }}
     >
       <Wheel size={44} />
+      {showTimer && (
+        <div
+          data-testid="busy-elapsed-canvas"
+          style={{
+            minHeight: "1.3em",
+            textAlign: "center",
+            fontSize: "var(--pnv-fs-13)",
+            fontWeight: 600,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {elapsedText(seconds)}
+        </div>
+      )}
     </div>
   );
 }

@@ -22,6 +22,19 @@ don't use a single GitHub issue as the ledger — it gets noisy and is awkward t
 format.) Tracked as a process in #709.
 
 
+## A composition frame's buttons quietly changed the graph's view (2026-11-04)
+
+**Caught by:** the browser script written for `composition-frame-buttons.spec.ts`
+(#194), driving EGO's `EM` frame before the fix
+
+Every reload a frame button started left out the flattened / PyTorch flags
+that every other reload carries, so pressing Enter, Inset or Collapse in the
+default flattened view rebuilt the model nested while the view menu still said
+Flatten; leaving EM then brought it back folded, and a rebuild that failed
+showed nothing and left the setting changed for the next rebuild to apply.
+Fixed by one shared rebuild path in `nodeActions.ts` that carries the view
+flags, restores every setting when the rebuild fails, and says why.
+
 ## The MDF-gap check would have stalled the server while it loaded a model (2026-10-12)
 
 **Caught by:** `backend pytest` and `backend pytest (3.14)` →

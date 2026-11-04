@@ -32,6 +32,7 @@ import { ChangesSinceSaveDialog } from "./components/common/ChangesSinceSaveDial
 import { RevertToSaveDialog } from "./components/common/RevertToSaveDialog";
 import { TutorialChoiceDialog } from "./components/common/TutorialChoiceDialog";
 import { registerCommand } from "./shortcuts/commands";
+import { setPanelVisibleOrExplain } from "./shortcuts/lastPanel";
 import { useAppShortcuts } from "./shortcuts/useAppShortcuts";
 import { useModelStore } from "./stores/modelStore";
 import { useNotificationStore } from "./stores/notificationStore";
@@ -53,16 +54,20 @@ export default function App() {
   const innerSizes = useLayoutStore((s) => s.innerSizes);
   const setOuterSizes = useLayoutStore((s) => s.setOuterSizes);
   const setInnerSizes = useLayoutStore((s) => s.setInnerSizes);
-  const toggleBottom = useLayoutStore((s) => s.toggleBottom);
   const { pendingChange, acceptPendingChange, dismissPendingChange } = useFileWatcher();
   useShowGraphLayout();
   useLayeredLayoutFit();
   useAppShortcuts();
 
   // #1112: Cmd+I shows the Inspector, the Mac convention for Show Inspector.
-  // Registered here because App owns which bottom tab is selected.
+  // Registered here because App owns which bottom tab is selected. The bottom
+  // panel starts hidden now (#189), so this shows it too.
   useEffect(
-    () => registerCommand("inspector.focus", () => setBottomTab("inspector")),
+    () =>
+      registerCommand("inspector.focus", () => {
+        useLayoutStore.getState().setPanelVisible("bottom", true);
+        setBottomTab("inspector");
+      }),
     []
   );
 
@@ -187,6 +192,7 @@ export default function App() {
                   >
                     {/* Tab bar */}
                     <div
+                      data-pnv-where="Bottom tabs"
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -242,9 +248,11 @@ export default function App() {
                         onClick={() => setBottomTab("style")}
                       />
                       {/* Collapse the bottom panel (#226). Blocked by the store
-                          when it's the last visible pane. */}
+                          when it's the last visible pane, and the shared notice
+                          says why (#213). */}
                       <button
-                        onClick={toggleBottom}
+                        onClick={() => setPanelVisibleOrExplain("bottom", false)}
+                        data-testid="bottom-panel-collapse"
                         title="Collapse this panel"
                         style={{
                           marginLeft: "auto",

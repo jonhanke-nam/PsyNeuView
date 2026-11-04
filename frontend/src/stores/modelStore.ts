@@ -597,7 +597,9 @@ interface ModelState {
     // #1029: `markSaved: false` adopts the graph without claiming the buffer
     // matches disk. Used only by previews, which build a model from unsaved
     // text; every other load is authoritative and marks the buffer clean.
-    opts?: { markSaved?: boolean },
+    // #204: `step` names the History step the load records ("Entered EM")
+    // when a frame button asked for the rebuild; otherwise "Model updated".
+    opts?: { markSaved?: boolean; step?: string },
   ) => void;
   /**
    * Adopt a graph built from unsaved editor content, leaving it unsaved.
@@ -936,7 +938,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     sidecarLabels?: ModelLabels | null,
     bundle?: BundleEntry[],
     sidecars?: SidecarView | null,
-    opts?: { markSaved?: boolean },
+    opts?: { markSaved?: boolean; step?: string },
   ) => {
     const markSaved = opts?.markSaved !== false;
 
@@ -2115,9 +2117,12 @@ export const useModelStore = create<ModelState>((set, get) => ({
     useEdgeAttach
       .getState()
       .hydrate(hydrateRoutes(edges as unknown as RoutableEdge[], savedRoutes));
-    // Push snapshot for undo history
+    // Push snapshot for undo history, under the frame button's name when one
+    // asked for this rebuild (#204). A load is the app's doing, not an edit
+    // the user made: the edits that lead to one are recorded where they are
+    // made, and a change of view is not an edit at all.
     // setTimeout ensures set() above takes effect before snapshot capture
-    setTimeout(() => recordAction("Model updated"), 0);
+    setTimeout(() => recordAction(opts?.step ?? "Model updated", { edit: false }), 0);
   },
 }));
 

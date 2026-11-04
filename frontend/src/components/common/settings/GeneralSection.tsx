@@ -10,8 +10,16 @@
 
 import { useEffect, useState } from "react";
 import { useAutosaveStore } from "@/stores/autosaveStore";
-import { BUSY_THRESHOLDS, DEFAULT_BUSY_THRESHOLD_MS, useBusyStore } from "@/stores/busyStore";
+import {
+  BUSY_THRESHOLDS,
+  BUSY_TIMER_PLACES,
+  DEFAULT_BUSY_THRESHOLD_MS,
+  DEFAULT_BUSY_TIMER_PLACE,
+  useBusyStore,
+  type BusyTimerPlace,
+} from "@/stores/busyStore";
 import { useNotificationStore } from "@/stores/notificationStore";
+import { actionLoggingOn, onActionLoggingChanged, setActionLogging } from "@/utils/activityLog";
 import { AUTOSAVE_MAX_SECONDS, AUTOSAVE_MIN_SECONDS, clampAutosaveSeconds } from "@/utils/autosave";
 import { hasSettingsBridge } from "@/utils/macAppSettings";
 import type { PsyNeuLinkInfo } from "@/utils/pnlSources";
@@ -56,8 +64,45 @@ export function GeneralSection({
       </Group>
       <Group id="busy-indicator" title="Busy indicator">
         <BusyThresholdRow />
+        <BusyTimerRow />
+      </Group>
+      <Group id="activity-log" title="Problem reports">
+        <ActionLoggingRow />
       </Group>
     </>
+  );
+}
+
+/**
+ * Whether what the user does goes in the activity log (#177). Errors,
+ * messages shown and the timing of every wait are recorded whatever this
+ * says, and the wording says so: the switch doesn't turn off diagnostics.
+ */
+function ActionLoggingRow() {
+  const [on, setOn] = useState(actionLoggingOn);
+  useEffect(() => onActionLoggingChanged(setOn), []);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <label style={{ display: "flex", alignItems: "flex-start", gap: 6, cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          data-testid="setting-activity-log-actions"
+          checked={on}
+          onChange={(e) => setActionLogging(e.target.checked)}
+          style={{ marginTop: 2 }}
+        />
+        <span>
+          <span style={{ fontWeight: 500 }}>Keep a log of my actions for problem reports</span>
+          <span style={{ display: "block", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", marginTop: 2, maxWidth: 560 }}>
+            Which menus, buttons and tabs you press, what you select on the graph and the edits you make, so a
+            report can say what led up to a problem. Names and paths only: never a model's code, a file's contents
+            or anything you type. Recorded either way, on or off: errors, messages shown, how long each wait took,
+            and runs, learning and walkthroughs with how they ended. Turning this off clears the actions recorded
+            so far, including the copy kept on this computer; it all stays here until you send a report.
+          </span>
+        </span>
+      </label>
+    </div>
   );
 }
 
@@ -227,6 +272,34 @@ function BusyThresholdRow() {
           <option key={t.ms} value={t.ms}>
             {t.label}
             {t.ms === DEFAULT_BUSY_THRESHOLD_MS ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/** Where the wheel says how long it has been spinning (#176). */
+function BusyTimerRow() {
+  const place = useBusyStore((s) => s.timerPlace);
+  const setPlace = useBusyStore((s) => s.setTimerPlace);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)", marginTop: 10 }}>
+      <SettingLabel title="Show how long it has been spinning" htmlFor="setting-busy-timer">
+        Where the wheel shows the time so far, once it has spun for a second.
+        Problem reports record how long each wait took either way.
+      </SettingLabel>
+      <select
+        id="setting-busy-timer"
+        data-testid="setting-busy-timer"
+        value={place}
+        onChange={(e) => setPlace(e.target.value as BusyTimerPlace)}
+        style={{ marginTop: 6, fontSize: "var(--pnv-fs-12)", padding: "3px 6px" }}
+      >
+        {BUSY_TIMER_PLACES.map((p) => (
+          <option key={p.place} value={p.place}>
+            {p.label}
+            {p.place === DEFAULT_BUSY_TIMER_PLACE ? " (default)" : ""}
           </option>
         ))}
       </select>
