@@ -129,15 +129,17 @@ interface LayoutState {
   outerSizes: number[] | undefined;
   innerSizes: number[] | undefined;
 
-  toggleCode: () => void;
-  toggleGraph: () => void;
-  toggleBottom: () => void;
+  toggleCode: () => boolean;
+  toggleGraph: () => boolean;
+  toggleBottom: () => boolean;
   /**
    * Show or hide one panel (#191). Returns false when nothing changed because
-   * it was the last visible panel, so the caller can say why.
+   * it was the last visible panel, so the caller can say why (#213: every
+   * caller does, through `explainLastPanel`).
    */
   togglePanel: (panel: AnyPanel) => boolean;
-  setPanelVisible: (panel: LayoutPanel, v: boolean) => void;
+  /** Returns false when hiding was refused because it was the last visible panel. */
+  setPanelVisible: (panel: LayoutPanel, v: boolean) => boolean;
   applyPreset: (preset: LayoutPreset) => void;
   setOuterSizes: (sizes: number[]) => void;
   setInnerSizes: (sizes: number[]) => void;
@@ -183,10 +185,11 @@ export const useLayoutStore = create<LayoutState>((set, get) => {
     return !after.code && !after.graph && !after.bottom;
   };
 
-  const setPanelVisible = (panel: LayoutPanel, v: boolean) => {
-    if (!v && wouldEmpty(panel)) return; // refuse to hide the last pane
+  const setPanelVisible = (panel: LayoutPanel, v: boolean): boolean => {
+    if (!v && wouldEmpty(panel)) return false; // refuse to hide the last pane
     const { field, ls } = keyFor[panel];
     persistVisible(field, ls, v);
+    return true;
   };
 
   // Set all four panels at once, stored like any other choice.
@@ -223,10 +226,7 @@ export const useLayoutStore = create<LayoutState>((set, get) => {
         usePaletteStore.getState().toggleOpen();
         return true;
       }
-      const showing = get()[keyFor[panel].field];
-      if (showing && wouldEmpty(panel)) return false;
-      setPanelVisible(panel, !showing);
-      return true;
+      return setPanelVisible(panel, !get()[keyFor[panel].field]);
     },
     setPanelVisible,
 
