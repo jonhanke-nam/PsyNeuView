@@ -249,6 +249,20 @@ settings:
       asks for that runs longer shows the spinning wheel in the toolbar and
       over the graph, with a "progress" pointer.
 
+  - id: busy-style
+    label: General ▸ Busy indicator ▸ Busy indicator style
+    home: settings
+    section: general
+    storage: browser localStorage (psyneuview.busy.style); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-busy-style
+    notes: >-
+      Classic wheel (default), Network (PsyNeuLink-style: three nodes joined
+      by projections, turning, each lighting up in turn), Ring, Pulsing nodes,
+      Orbit, Bar or Text only (#169). Every style takes the same space in the
+      toolbar and over the graph, so nothing moves when it changes, and stands
+      still under reduced motion. Each choice shows its picture moving beside
+      its name.
+
   - id: busy-timer
     label: General ▸ Busy indicator ▸ Show how long it has been spinning
     home: settings

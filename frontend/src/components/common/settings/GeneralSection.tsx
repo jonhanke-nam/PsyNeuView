@@ -11,8 +11,10 @@
 import { useEffect, useState } from "react";
 import { useAutosaveStore } from "@/stores/autosaveStore";
 import {
+  BUSY_STYLES,
   BUSY_THRESHOLDS,
   BUSY_TIMER_PLACES,
+  DEFAULT_BUSY_STYLE,
   DEFAULT_BUSY_THRESHOLD_MS,
   DEFAULT_BUSY_TIMER_PLACE,
   useBusyStore,
@@ -22,6 +24,7 @@ import { useNotificationStore } from "@/stores/notificationStore";
 import { actionLoggingOn, onActionLoggingChanged, setActionLogging } from "@/utils/activityLog";
 import { AUTOSAVE_MAX_SECONDS, AUTOSAVE_MIN_SECONDS, clampAutosaveSeconds } from "@/utils/autosave";
 import { hasSettingsBridge } from "@/utils/macAppSettings";
+import { BusyGraphic } from "../BusyIndicator";
 import type { PsyNeuLinkInfo } from "@/utils/pnlSources";
 import { getPlacementDefault, setPlacementDefault } from "@/utils/sidecarApi";
 import { MacAppLaunchToggles } from "../MacAppSettingsSection";
@@ -64,6 +67,7 @@ export function GeneralSection({
       </Group>
       <Group id="busy-indicator" title="Busy indicator">
         <BusyThresholdRow />
+        <BusyStyleRow />
         <BusyTimerRow />
       </Group>
       <Group id="activity-log" title="Problem reports">
@@ -275,6 +279,57 @@ function BusyThresholdRow() {
           </option>
         ))}
       </select>
+    </div>
+  );
+}
+
+/**
+ * What the busy indicator looks like (#169). Each choice shows its picture,
+ * moving, beside its name, so it can be seen before it is chosen.
+ */
+function BusyStyleRow() {
+  const style = useBusyStore((s) => s.style);
+  const setStyle = useBusyStore((s) => s.setStyle);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)", marginTop: 10 }}>
+      <SettingLabel title="Busy indicator style">
+        What shows beside Working… in the toolbar, and over the graph. Every
+        style takes the same space, so nothing moves when it changes; with
+        reduced motion turned on, it stands still.
+      </SettingLabel>
+      <div
+        data-testid="setting-busy-style"
+        role="radiogroup"
+        aria-label="Busy indicator style"
+        style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 6 }}
+      >
+        {BUSY_STYLES.map((choice) => (
+          <label
+            key={choice.style}
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 0", cursor: "pointer" }}
+          >
+            <input
+              type="radio"
+              name="busy-style"
+              value={choice.style}
+              data-testid={`busy-style-${choice.style}`}
+              checked={style === choice.style}
+              onChange={() => setStyle(choice.style)}
+            />
+            <span
+              data-testid={`busy-style-preview-${choice.style}`}
+              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", color: "var(--pnv-primary)", flexShrink: 0 }}
+            >
+              <BusyGraphic style={choice.style} size={20} />
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ fontWeight: 500 }}>{choice.label}</span>
+              {choice.style === DEFAULT_BUSY_STYLE && <span style={{ color: "var(--pnv-text-muted)" }}> (default)</span>}
+              <span style={{ ...mutedStyle, display: "block" }}>{choice.description}</span>
+            </span>
+          </label>
+        ))}
+      </div>
     </div>
   );
 }
