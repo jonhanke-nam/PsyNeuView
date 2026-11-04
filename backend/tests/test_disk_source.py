@@ -25,7 +25,8 @@ def test_returns_the_file_as_it_is_on_disk(tmp_path):
     resp = _read(p)
 
     assert resp.status_code == 200, resp.text
-    assert resp.json() == {"exists": True, "source": "x = 1\n"}
+    # assistant_unreviewed: the page should know when adopting this text needs a review (#179).
+    assert resp.json() == {"exists": True, "source": "x = 1\n", "assistant_unreviewed": False}
 
 
 def test_reads_fresh_each_time_so_an_outside_change_shows(tmp_path):
