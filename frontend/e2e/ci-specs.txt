@@ -48,6 +48,7 @@ nested-cluster-frames.spec.ts
 node-name-special-characters.spec.ts
 node-names-simple.spec.ts
 node-outlines.spec.ts
+node-shapes.spec.ts
 occlusion-audit.spec.ts
 open-menu-custom-catalogs.spec.ts
 open-menu-dev-catalogs.spec.ts

@@ -167,17 +167,20 @@ always shows the full type name.
 
 ## show_graph Visual Conventions (for reference)
 
-PsyNeuLink's `show_graph()` uses these shapes and colors in GraphViz:
+PsyNeuLink's `show_graph()` uses these shapes and colors in GraphViz. The
+canvas draws the same shapes (#192, #193: `utils/nodeShape.ts`), each with
+a tooltip saying what it means, and the graph legend lists the ones the
+open model uses:
 
-| Node Type | Shape | Color |
-|-----------|-------|-------|
-| Regular mechanism | oval | role-based |
-| FEEDBACK_SENDER | septagon | orange |
-| CYCLE | doublecircle | brown |
-| Controller | doubleoctagon | purple |
-| CIM | rectangle | green/red/blue |
-| Nested composition | rectangle | pink |
-| agent_rep (OCM) | egg | purple |
+| Node Type | Shape | Color | On the canvas |
+|-----------|-------|-------|---------------|
+| Regular mechanism | oval | role-based | oval |
+| FEEDBACK_SENDER | octagon | role-based | octagon |
+| CYCLE | doublecircle | role-based | double outline |
+| Controller | doubleoctagon | purple | double octagon |
+| CIM | rectangle | green/red/blue | square (CIMNode) |
+| Nested composition | rectangle | pink | rectangle when collapsed; a frame when expanded |
+| agent_rep (OCM) | egg | purple | not drawn: the canvas has no agent_rep node yet |
 
 show_graph names its colours (`green`, `red`, `blue`, `purple`, `orange`,
 `pink`, `brown`, `black`), and a browser draws its SVG with the CSS meaning of

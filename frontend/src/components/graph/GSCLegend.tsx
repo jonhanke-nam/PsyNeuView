@@ -1,5 +1,8 @@
 /**
- * Draggable, toggleable legend for GraphStructureCondition edge types.
+ * Draggable, toggleable legend for GraphStructureCondition edge types, and
+ * for the node shapes the open model uses (#192, #193: show_graph's octagon
+ * for a feedback sender, rectangle for a collapsed composition, and so on).
+ * It opens when the model has either.
  *
  * - Toggle visibility with the button in the corner
  * - Drag to reposition anywhere on the canvas
@@ -11,12 +14,13 @@
  * absolute position takes over.
  */
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useSchedulingArrowsStore } from "@/stores/schedulingArrowsStore";
 import { useGraphLegendStore } from "@/stores/graphLegendStore";
 import { useReactFlow, useStore } from "@xyflow/react";
 import { useModelStore } from "@/stores/modelStore";
 import { DialogCloseButton } from "@/components/common/dialog/DialogHeader";
+import { nodeShapeFor, polygonPoints, shapeTooltip, SHAPE_INFO, SHAPE_ORDER, type NodeShape } from "@/utils/nodeShape";
 
 const STORAGE_KEY = "psynewview-gsc-legend";
 const LEGEND_MARGIN = 12;
@@ -106,7 +110,18 @@ export function GSCLegend() {
   // React Flow's internal transform updates after fitView; subscribing
   // here lets us recompute the corner whenever the view zooms/pans.
   const transform = useStore((s) => s.transform);
-  const nodeCount = useModelStore((s) => s.nodes.length);
+  const modelNodes = useModelStore((s) => s.nodes);
+  const nodeCount = modelNodes.length;
+  // The shapes other than the oval that the open model draws (#192, #193).
+  const shapesPresent = useMemo(() => {
+    const present = new Set<NodeShape>();
+    for (const n of modelNodes) {
+      if (n.type !== "mechanismNode") continue;
+      const shape = nodeShapeFor(n.data as any);
+      if (shape !== "oval") present.add(shape);
+    }
+    return present;
+  }, [modelNodes]);
 
   // Pick the viewport corner with the most empty space outside the
   // current screen-space node bounding box. Skip when the user has
@@ -189,9 +204,11 @@ export function GSCLegend() {
     setPos((p) => ({ ...p, visible: !p.visible }));
   }, []);
 
-  // Don't render if no model is loaded, no GSC conditions exist, or their
-  // arrows are hidden (#53): the legend explains only those arrows.
-  if (!hasModel || gscConditions.length === 0 || schedulingArrows === "hidden") return null;
+  // The condition rows explain the scheduling arrows, so they go when the
+  // arrows are hidden (#53). With no arrows to explain and no node shape to
+  // name, there is nothing to show.
+  const showConditions = gscConditions.length > 0 && schedulingArrows !== "hidden";
+  if (!hasModel || (!showConditions && shapesPresent.size === 0)) return null;
 
   // Toggle button (always visible)
   if (!pos.visible) {
@@ -269,7 +286,7 @@ export function GSCLegend() {
       {/* Body */}
       <div data-legend-body style={{ padding: "6px 10px 8px", cursor: "default" }}>
         {/* Projection line */}
-        {hasProjections && (
+        {showConditions && hasProjections && (
           <LegendRow
             color={PROJECTION_ITEM.color}
             dash=""
@@ -280,7 +297,7 @@ export function GSCLegend() {
         )}
 
         {/* GSC lines */}
-        {LEGEND_ITEMS.map((item) => {
+        {showConditions && LEGEND_ITEMS.map((item) => {
           // Map label to types
           const typeMap: Record<string, string[]> = {
             before: ["BeforeNode", "BeforeNodes"],
@@ -303,7 +320,49 @@ export function GSCLegend() {
             />
           );
         })}
+
+        {/* Node shapes (#192, #193): the oval for comparison, then each other
+            shape the model draws, with what it means on hover. */}
+        {shapesPresent.size > 0 && (
+          <div
+            data-testid="legend-node-shapes"
+            style={showConditions ? { marginTop: 6, paddingTop: 6, borderTop: "1px solid var(--pnv-border-faint)" } : undefined}
+          >
+            {SHAPE_ORDER.filter((shape) => shape === "oval" || shapesPresent.has(shape)).map((shape) => (
+              <ShapeRow key={shape} shape={shape} />
+            ))}
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+/** A small drawing of the shape beside its name; the tooltip says what it means. */
+function ShapeRow({ shape }: { shape: NodeShape }) {
+  const w = 28, h = 14, inset = 1;
+  const round = shape === "oval" || shape === "doublecircle";
+  const double = shape === "doubleoctagon" || shape === "doublecircle";
+  const line: React.CSSProperties = { fill: "none", stroke: "var(--pnv-node-text-detail)" };
+  const sample = (ins: number, key: string) =>
+    round ? (
+      <ellipse key={key} cx={w / 2} cy={h / 2} rx={w / 2 - ins} ry={h / 2 - ins} style={line} strokeWidth={1} />
+    ) : (
+      <polygon key={key} points={polygonPoints(shape, w, h, ins)} style={line} strokeWidth={1} />
+    );
+  return (
+    <div
+      data-testid={`legend-shape-${shape}`}
+      title={shapeTooltip(shape) ?? SHAPE_INFO.oval.meaning}
+      style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 0" }}
+    >
+      <svg width={w} height={h} style={{ flexShrink: 0 }}>
+        {sample(inset, "outer")}
+        {double && sample(inset + 3, "inner")}
+      </svg>
+      <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-node-text-detail)", whiteSpace: "nowrap" }}>
+        {SHAPE_INFO[shape].label}
+      </span>
     </div>
   );
 }

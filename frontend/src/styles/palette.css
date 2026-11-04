@@ -150,12 +150,12 @@
   --pnv-role-internal: #000;
   /* The rest of show_graph's role colours: a node that is both INPUT and
      OUTPUT (brown), the composition's controller (and its objective,
-     purple), a node that sends a feedback projection (show_graph gives it a
-     shape, not a colour; this orange is ours), and one in a cycle (black,
-     like any ordinary node: show_graph marks a cycle with a double ring). */
+     purple), a node that sends a feedback projection (black: show_graph gives
+     it a shape, not a colour), and one in a cycle (black, like any ordinary
+     node: show_graph marks a cycle with a double ring). */
   --pnv-role-singleton: #a52a2a;
   --pnv-role-controller: #800080;
-  --pnv-role-feedback-sender: #ef6c00;
+  --pnv-role-feedback-sender: #000;
   --pnv-role-cycle: #000;
   /* The same roles as text (a node's type tag) and behind white text (its
      role tag), where the outline colour is too light to read: a darker red,

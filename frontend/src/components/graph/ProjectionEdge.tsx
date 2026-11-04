@@ -27,6 +27,7 @@ import { curvePath, curveBends, pointAlong } from "@/utils/showGraphLayout";
 import {
   ovalOf, ovalBoundaryPoint, ellipsePoint, fanAttachPoint, laneOffsetFor, offsetAttach,
 } from "@/utils/edgeLanes";
+import { nodeShapeFor, onShapeBoundary } from "@/utils/nodeShape";
 import { usePortLayout } from "@/stores/portLayoutStore";
 import { useEdgeAttach, type EdgeEnd } from "@/stores/edgeAttachStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -238,8 +239,12 @@ export function ProjectionEdge({
         ? offsetAttach(sOval, tOval.cx, tOval.cy, lane.hubOffset) : null;
       const tHub = lane.hub === "target" && tOv == null
         ? offsetAttach(tOval, sOval.cx, sOval.cy, lane.hubOffset) : null;
-      const sp = sOv != null ? ellipsePoint(sOval, sOv) : (sHub ?? sFan ?? ovalBoundaryPoint(sOval, tOval.cx, tOval.cy));
-      const tp = tOv != null ? ellipsePoint(tOval, tOv) : (tHub ?? tFan ?? ovalBoundaryPoint(tOval, sOval.cx, sOval.cy));
+      const spOval = sOv != null ? ellipsePoint(sOval, sOv) : (sHub ?? sFan ?? ovalBoundaryPoint(sOval, tOval.cx, tOval.cy));
+      const tpOval = tOv != null ? ellipsePoint(tOval, tOv) : (tHub ?? tFan ?? ovalBoundaryPoint(tOval, sOval.cx, sOval.cy));
+      // #192/#193: a node drawn as an octagon or a rectangle has its outline
+      // outside the oval; the edge ends on the outline, along the same ray.
+      const sp = onShapeBoundary(sOval, nodeShapeFor(nodeLookup.get(source)?.data as any), spOval);
+      const tp = onShapeBoundary(tOval, nodeShapeFor(nodeLookup.get(target)?.data as any), tpOval);
       sx = sp.x; sy = sp.y; tx = tp.x; ty = tp.y;
     }
   }
