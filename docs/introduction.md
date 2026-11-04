@@ -79,7 +79,10 @@ Components panel, and ⌘1 for the canvas itself while another panel is showing
 (Ctrl in place of ⌘ outside a Mac). The keys are listed under Settings ▸
 Keyboard shortcuts, where they can be changed; a browser keeps ⌘1 to ⌘9 for
 its own tabs, so there the Layout menu is the way. Whatever you choose is
-remembered. A guided walkthrough shows every panel while it runs and puts your
+remembered. One of the canvas, the code editor and the Inspector always stays
+on screen: try to hide the last of them, from the menu, its key or the
+Inspector's collapse button, and it stays, with a notice naming the panels to
+show first. A guided walkthrough shows every panel while it runs and puts your
 layout back afterwards.
 
 ## Where to go next
