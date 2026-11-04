@@ -6,6 +6,7 @@ busy-indicator.spec.ts
 components-panel-start-setting.spec.ts
 composition-cim-edges.spec.ts
 composition-frame-buttons.spec.ts
+composition-frame-undo.spec.ts
 developer-mode-marking.spec.ts
 developer-tests-loader.spec.ts
 diagnostics.spec.ts
