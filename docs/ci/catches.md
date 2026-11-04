@@ -22,6 +22,18 @@ don't use a single GitHub issue as the ledger — it gets noisy and is awkward t
 format.) Tracked as a process in #709.
 
 
+## Hiding a node's tag put a folded composition's Expand button under the pointer (2026-11-04)
+
+**Caught by:** `tutorials` → `tour-demo.tutorial.spec.ts`, EGO walkthrough, step
+"the-memory" (#211)
+
+The walkthrough clicks the middle of the folded `EM` node to select it. Hiding
+the "view only" tag left the Expand button alone in the row above the name, so
+it sat in the node's middle and the click opened the composition instead. The
+step never completed. A person selecting a folded composition would have hit
+the same thing. Fixed by moving Expand to the node's right edge, with a `@ci`
+test in `view-only-tags-setting.spec.ts`.
+
 ## A composition frame's buttons quietly changed the graph's view (2026-11-04)
 
 **Caught by:** the browser script written for `composition-frame-buttons.spec.ts`
