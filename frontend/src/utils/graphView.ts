@@ -89,7 +89,10 @@ export function sameView(a: GraphView, b: GraphView): boolean {
 // graph has to be rebuilt, and refetching /api/model/load is the cheapest way
 // to do that today without caching raw modelData in the store. Returns null
 // when the graph was rebuilt, else the reason it wasn't.
-export async function rebuildGraph(): Promise<string | null> {
+//
+// `step` names the History step the rebuild records, "Entered EM" for a
+// frame button (#204); without it the step is called "Model updated".
+export async function rebuildGraph(step?: string): Promise<string | null> {
   const { filePath, setSource, loadModelFromServer } = useModelStore.getState();
   if (!filePath) return null;
   const gs = useGraphSettings.getState();
@@ -109,7 +112,7 @@ export async function rebuildGraph(): Promise<string | null> {
     setSource(data.source);
     // The labels, bundle and sidecars too: leaving them out clears the
     // sidecar's port labels on every rebuild (#611).
-    loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
+    loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars, { step });
     return null;
   } catch (e) {
     return (e as Error).message || "the server could not be reached";
