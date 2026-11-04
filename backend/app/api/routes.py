@@ -1604,6 +1604,10 @@ def remove_port(request: RemovePortRequest):
 class PreviewSourceRequest(BaseModel):
     file_path: str
     source: str
+    # The view to build it in (#194), as for /model/load: undo rebuilds a
+    # step made in the flattened or PyTorch view from its unsaved code.
+    flat: bool = False
+    pytorch: bool = False
 
 
 class PreviewSourceResponse(BaseModel):
@@ -1634,7 +1638,9 @@ def preview_source_endpoint(request: PreviewSourceRequest):
     preview = write_preview(request.file_path, request.source)
 
     try:
-        model = load_and_introspect(str(preview))
+        model = load_and_introspect(
+            str(preview), flat=request.flat, pytorch=request.pytorch
+        )
     except Exception as e:
         # Invalid code is the normal state of a file being typed into, not an
         # error worth failing the request over. Report it the way save-source
