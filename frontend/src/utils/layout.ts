@@ -14,6 +14,7 @@ import { acyclicEdges } from "./roleRanks";
 import { applyShowGraphPlacementWithCurves, knownSize } from "./showGraphLayout";
 import { useShowGraphCurves } from "@/stores/showGraphCurvesStore";
 import { placeCims } from "./cimPlacement";
+import { ovalBoxFor } from "./nodeBox";
 
 interface LayoutOptions {
   direction?: "TB" | "BT" | "LR" | "RL";
@@ -83,13 +84,26 @@ function computeMinRankSep(nodes: Node[], edges: Edge[], baseRankSep: number): n
 export const LAYERED_NODE_WIDTH = 180;
 
 /**
- * The width to lay a node out at: its drawn width, once it has been drawn,
- * when that is wider than the width assumed for every node. A long name makes
- * a wide box, and spacing it at the assumed width overlaps its neighbours
- * (#72). Narrower boxes keep the assumed width, so their layout is unchanged.
+ * A node's drawn box: as measured, or before it has been drawn, the box for its
+ * name. A layout's slot can be bigger than the box (#210), and a box placed by
+ * its slot's corner would sit off-centre, out of line with its row and column.
+ */
+function drawnBox(node: Node): { w: number; h: number } {
+  const known = knownSize(node);
+  if (known.w !== undefined && known.h !== undefined) return { w: known.w, h: known.h };
+  const label = (node.data as { label?: string } | undefined)?.label;
+  const box = ovalBoxFor(label ?? node.id);
+  return { w: known.w ?? box.width, h: known.h ?? box.height };
+}
+
+/**
+ * The width to lay a node out at: its drawn width when that is wider than the
+ * width assumed for every node. A long name makes a wide box, and spacing it at
+ * the assumed width overlaps its neighbours (#72). Narrower boxes keep the
+ * assumed width, so their spacing is unchanged.
  */
 function boxWidth(node: Node, assumed: number): number {
-  return Math.max(assumed, knownSize(node).w ?? 0);
+  return Math.max(assumed, node.type === "mechanismNode" ? drawnBox(node).w : knownSize(node).w ?? 0);
 }
 
 export function applyDagreLayout(
@@ -257,8 +271,9 @@ export function applyDagreLayout(
     if (!d) continue;
     const isGroup = node.type === "compositionNode";
     const insetSize = insetSizes?.get(node.id);
-    const w = isCluster(node.id) ? d.width : insetSize ? insetSize.width : isGroup ? 300 : boxWidth(node, nodeWidth);
-    const h = isCluster(node.id) ? d.height : insetSize ? insetSize.height : isGroup ? 200 : nodeHeight;
+    const isMechanism = node.type === "mechanismNode";
+    const w = isCluster(node.id) ? d.width : insetSize ? insetSize.width : isGroup ? 300 : isMechanism ? drawnBox(node).w : boxWidth(node, nodeWidth);
+    const h = isCluster(node.id) ? d.height : insetSize ? insetSize.height : isGroup ? 200 : isMechanism ? drawnBox(node).h : nodeHeight;
     topLeft.set(node.id, { x: d.x - w / 2, y: d.y - h / 2 });
   }
 
@@ -348,7 +363,7 @@ function nodeSize(node: Node): { w: number; h: number } {
     return typeof w === "number" && typeof h === "number" ? { w, h } : { w: 300, h: 200 };
   }
   if (node.type === "cimNode") return { w: 110, h: 30 };
-  return { w: 180, h: 60 };
+  return { w: Math.max(180, drawnBox(node).w), h: 60 };
 }
 
 // Apply center positions to top-level nodes, normalized so the bounding box
@@ -364,7 +379,7 @@ function repositionTopLevel(
   for (const node of nodes) {
     const c = centers.get(node.id);
     if (!c) continue;
-    const { w, h } = nodeSize(node);
+    const { w, h } = node.type === "mechanismNode" ? drawnBox(node) : nodeSize(node);
     const x = c.x - w / 2;
     const y = c.y - h / 2;
     topLeft.set(node.id, { x, y });
@@ -553,17 +568,24 @@ export function applyForceLayout(nodes: Node[], edges: Edge[]): Node[] {
   return repositionTopLevel(nodes, pos);
 }
 
+/** Bigger than any node's box: the default group box, or an open frame. */
+const NODE_AREA_LIMIT = 50_000;
+
 /**
  * Push overlapping top-level boxes apart (#35). Force treats nodes as points,
  * so a node could land on top of a big frame (EGO flattened: STATE and
  * PREDICTION inside EM's box). Each overlapping pair is separated along the
- * axis that needs the smaller move, and the smaller box moves, so a frame stays
- * where the simulation put it.
+ * axis that needs the smaller move, so a frame stays where the simulation put
+ * it.
  */
-function separateBoxes(top: Node[], centers: Map<string, { x: number; y: number }>) {
+function separateBoxes(nodes: Node[], centers: Map<string, { x: number; y: number }>) {
   const GAP = 30;
+  // Frames last: each pass ends by clearing them, whatever else moved (#210).
+  const top = [...nodes].sort((a, b) => Number(a.type === "compositionNode") - Number(b.type === "compositionNode"));
   const size = new Map(top.map((n) => [n.id, nodeSize(n)]));
-  for (let pass = 0; pass < 60; pass++) {
+  const biggest = top.reduce((a, b) => (size.get(b.id)!.w * size.get(b.id)!.h > size.get(a.id)!.w * size.get(a.id)!.h ? b : a), top[0]);
+  const anchor = biggest ? { ...centers.get(biggest.id)! } : { x: 0, y: 0 };
+  for (let pass = 0; pass < 200; pass++) {
     let moved = false;
     for (let i = 0; i < top.length; i++) {
       for (let j = i + 1; j < top.length; j++) {
@@ -573,7 +595,13 @@ function separateBoxes(top: Node[], centers: Map<string, { x: number; y: number 
         const ox = (sa.w + sb.w) / 2 + GAP - Math.abs(pa.x - pb.x);
         const oy = (sa.h + sb.h) / 2 + GAP - Math.abs(pa.y - pb.y);
         if (ox <= 0 || oy <= 0) continue;
-        const mover = sa.w * sa.h <= sb.w * sb.h ? pa : pb;
+        // A frame stays put. Of two nodes, the one further out moves, further
+        // out: moving the inner one can push it back onto the frame, and the
+        // two would trade places for ever.
+        const aFrame = sa.w * sa.h > NODE_AREA_LIMIT, bFrame = sb.w * sb.h > NODE_AREA_LIMIT;
+        const mover = aFrame !== bFrame
+          ? (aFrame ? pb : pa)
+          : Math.hypot(pa.x - anchor.x, pa.y - anchor.y) >= Math.hypot(pb.x - anchor.x, pb.y - anchor.y) ? pa : pb;
         const other = mover === pa ? pb : pa;
         if (ox < oy) mover.x += (mover.x >= other.x ? 1 : -1) * ox;
         else mover.y += (mover.y >= other.y ? 1 : -1) * oy;

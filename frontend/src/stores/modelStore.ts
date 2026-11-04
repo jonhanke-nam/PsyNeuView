@@ -161,10 +161,9 @@ function annotateEdgeBundles(edges: Edge[]) {
 }
 
 const GROUP_PADDING = { top: 50, bottom: 30, left: 20, right: 20 };
-// The size the layouts reserve for a node. A node is drawn at least this big
-// (MechanismNode), so one showing just its name (#122) fills its slot the way
-// a node with tags and a function line did, and edges meet it where the
-// layout expects.
+// The size a node is drawn with its type and role tags on (#122), and the room
+// a frame allows for a member. With just its name, a node is drawn the size
+// show_graph() draws it (#210, utils/nodeBox.ts), usually smaller than this.
 export const NODE_WIDTH = 170;
 export const NODE_HEIGHT = 80;
 

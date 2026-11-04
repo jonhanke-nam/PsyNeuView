@@ -10,6 +10,7 @@ import { usePortLayout } from "@/stores/portLayoutStore";
 import type { MechanismData } from "@/stores/modelStore";
 import { useGraphSettings, type GraphDirection } from "@/stores/graphSettingsStore";
 import { useModelStore, NODE_HEIGHT, NODE_WIDTH } from "@/stores/modelStore";
+import { outlineThickness, ovalBoxFor } from "@/utils/nodeBox";
 import { TYPE_COLORS, ROLE_COLORS, ROLE_TEXT_COLORS, ROLE_PRIORITY } from "@/constants/pnlTypes";
 import { toggleCompositionCollapse } from "@/utils/nodeActions";
 import { formatTraceValue } from "@/utils/traceValues";
@@ -409,8 +410,29 @@ export const MechanismNode = memo(function MechanismNode({
     : isCursorHighlighted
     ? "var(--pnv-cursor-highlight)"
     : undefined;
+  // #210: a node showing just its name is the size show_graph() draws it, by
+  // Graphviz's rule (utils/nodeBox.ts), so its text has show_graph's proportion
+  // and the Like show_graph layout needs hardly any enlarging. Its outline is
+  // inside the box, so the box allows for it at its heaviest, selected, and so
+  // doesn't change size when selected. With
+  // the type and role tags on, it is the roomier slot of #122.
+  const double = shape === "doublecircle" || shape === "doubleoctagon";
+  const outline = outlineThickness(double, borderWidth + NODE_OUTLINE_SELECTED_EXTRA);
+  const nameBox = useMemo(
+    () => ovalBoxFor(d.label || "", shape === "oval" || shape === "doublecircle" ? outline : 0),
+    [d.label, shape, outline],
+  );
+  const minBox = showNodeElements ? { width: NODE_WIDTH, height: NODE_HEIGHT } : nameBox;
+  // An octagon's cut corners, and a heavy or double line, need room round the
+  // name that an oval's own rule has already given it.
   const [padY, padX] =
-    shape === "doubleoctagon" ? [16, 48] : shape === "octagon" ? [12, 40] : shape === "doublecircle" ? [14, 30] : [10, 24];
+    shape === "doubleoctagon"
+      ? [Math.max(16, outline + 4), 37 + outline]
+      : shape === "octagon"
+      ? [Math.max(12, outline + 4), 36 + outline]
+      : showNodeElements
+      ? shape === "doublecircle" ? [14, 30] : [10, 24]
+      : [4, 8];
   // #211: a collapsed composition's Expand button sits at the node's right
   // edge, out of its middle, so a click on the node selects it rather than
   // opening it. The same room on the left keeps the name centred.
@@ -436,10 +458,9 @@ export const MechanismNode = memo(function MechanismNode({
           : isCursorHighlighted
           ? "0 0 0 2px var(--pnv-cursor-highlight), var(--pnv-cursor-glow)"
           : "var(--pnv-shadow-node)",
-        // #122: the size of the slot the layout reserves, so a node showing
-        // just its name keeps the size and edge geometry it had with details.
-        minWidth: NODE_WIDTH,
-        minHeight: NODE_HEIGHT,
+        boxSizing: "border-box",
+        minWidth: minBox.width,
+        minHeight: minBox.height,
         textAlign: "center" as const,
         display: "flex",
         flexDirection: "column" as const,
@@ -679,7 +700,15 @@ export const MechanismNode = memo(function MechanismNode({
           and the full-precision value — labels the pill so a reader knows
           what the bare array means. */}
       {activeValue !== undefined && (
-        <div style={{ position: "relative", marginTop: 4 }}>
+        // #210: a node showing just its name is only tall enough for that, so
+        // the pill hangs just below it, and stepping doesn't resize the node.
+        <div
+          style={
+            showNodeElements
+              ? { position: "relative", marginTop: 4 }
+              : { position: "absolute", top: "calc(100% + 2px)", left: "50%", transform: "translateX(-50%)", zIndex: 5 }
+          }
+        >
           <div
             data-testid={`value-pill-${d.label}`}
             onMouseEnter={() => setPillHovered(true)}

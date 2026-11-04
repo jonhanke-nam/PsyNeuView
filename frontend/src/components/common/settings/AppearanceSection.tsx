@@ -142,8 +142,8 @@ function AutomaticLayoutRow() {
       <SettingLabel title="How models are arranged" htmlFor="setting-graph-layout-default">
         The arrangement a model gets when you open it without a layout of your
         own. Like show_graph places every node where PsyNeuLink's show_graph()
-        draws it, enlarged to fit PsyNeuView's boxes. The layout menu on the
-        graph toolbar switches the model you have open without changing this.
+        draws it, at the size it draws it. The layout menu on the graph
+        toolbar switches the model you have open without changing this.
       </SettingLabel>
       <select
         id="setting-graph-layout-default"
