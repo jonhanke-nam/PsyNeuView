@@ -14,6 +14,7 @@ import { usePortLayout } from "@/stores/portLayoutStore";
 import { useValueViews } from "@/stores/valueViewStore";
 import { useGraphSettings } from "./graphSettingsStore";
 import { useExternalChangeStore } from "./externalChangeStore";
+import { useLayoutStore } from "./layoutStore";
 import type { GSCInfo, BasicConditionEntry, ConditionInfo, SchedulerConfig, DanglingProjectionInfo, BrokenProjectionInfo, CompositionExecutionModeInfo, InputSet, LearningProfile } from "@/types/model";
 import { buildStepNodeValues, type StepNodeValues } from "@/utils/traceValues";
 import { deriveTrialBoundaries } from "@/utils/trialBoundaries";
@@ -731,7 +732,15 @@ export const useModelStore = create<ModelState>((set, get) => ({
     const changed = path !== get().filePath;
     // The activity log (#1287): an explicit Open — a new path, or the same one
     // opened again (markFreshOpen ran first). A same-file reload is neither.
-    if (changed || pendingFreshOpenLayout) record("model", `${changed ? "Opened" : "Reopened"} ${path}`, { path });
+    if (changed || pendingFreshOpenLayout) {
+      record("model", `${changed ? "Opened" : "Reopened"} ${path}`, { path });
+      // #215: a model opened onto a blank screen brings the chosen panels
+      // with it (the graph by default); with any panel showing, nothing
+      // changes. Every explicit Open comes through here (Open menu, Open from
+      // path, catalogs, recent files, New Model, a dropped file), and a
+      // same-file reload does not.
+      useLayoutStore.getState().showPanelsForOpen();
+    }
     // A different file is a new model: re-apply collapse-by-default to its
     // nested compositions and wipe the previous model's run artifacts so the
     // Run panel starts clean. Same-file reloads (source edits, collapse
