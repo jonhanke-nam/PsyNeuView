@@ -23,18 +23,20 @@ import {
  * Change how a composition is shown and rebuild the graph (#194).
  *
  * `apply` makes the change to the stores; `what` names it for the status bar,
- * the busy wheel and the notice. A rebuild that fails shows the reason and
- * puts every setting back, so the canvas and the settings still agree: before,
- * the setting stayed changed while the graph showed nothing of it, and the
- * next unrelated rebuild applied it by surprise.
+ * the busy wheel and the notice, and `done` is what the History step is
+ * called once it has happened, in the Undo and Redo tooltips (#204). A
+ * rebuild that fails shows the reason and puts every setting back, so the
+ * canvas and the settings still agree: before, the setting stayed changed
+ * while the graph showed nothing of it, and the next unrelated rebuild
+ * applied it by surprise.
  */
-async function changeCompositionView(what: string, apply: () => void): Promise<void> {
+async function changeCompositionView(what: string, done: string, apply: () => void): Promise<void> {
   const before = captureView();
   const { setStatus, clearStatus } = useStatusStore.getState();
   apply();
   setStatus(`${what}...`);
   try {
-    const failure = await withBusy(what, rebuildGraph());
+    const failure = await withBusy(what, rebuildGraph(done));
     if (failure !== null) {
       applyView(before);
       useNotificationStore.getState().addNotification(
@@ -66,41 +68,56 @@ function leaveFlattenedViews() {
 export async function toggleCompositionCollapse(label: string) {
   const gs = useGraphSettings.getState();
   const folding = gs.flat || gs.pytorch || !gs.collapsedCompositions.has(label);
-  await changeCompositionView(folding ? `Collapsing ${label}` : `Expanding ${label}`, () => {
-    if (folding) leaveFlattenedViews();
-    if (folding === !useGraphSettings.getState().collapsedCompositions.has(label)) {
-      useGraphSettings.getState().toggleCollapsedComposition(label);
-    }
-  });
+  await changeCompositionView(
+    folding ? `Collapsing ${label}` : `Expanding ${label}`,
+    folding ? `Collapsed ${label}` : `Expanded ${label}`,
+    () => {
+      if (folding) leaveFlattenedViews();
+      if (folding === !useGraphSettings.getState().collapsedCompositions.has(label)) {
+        useGraphSettings.getState().toggleCollapsedComposition(label);
+      }
+    },
+  );
 }
 
 // #427 INSET mode: render a nested composition as a framed inset (internals
-// laid out independently, treated as one unit by the parent).
+// laid out independently, treated as one unit by the parent). Pressed again,
+// the composition is shown nested as before.
 export async function toggleCompositionInset(label: string) {
   const insetting = !useGraphSettings.getState().insetCompositions.has(label);
-  await changeCompositionView(insetting ? `Insetting ${label}` : `Un-insetting ${label}`, () => {
-    useGraphSettings.getState().toggleInsetComposition(label);
-  });
+  await changeCompositionView(
+    insetting ? `Insetting ${label}` : `Un-insetting ${label}`,
+    insetting ? `Inset ${label}` : `Un-inset ${label}`,
+    () => {
+      useGraphSettings.getState().toggleInsetComposition(label);
+    },
+  );
 }
 
 // #426 Focus mode, now "Enter" (#194): show a single nested composition on its
 // own as the graph root (pass its cleaned label), or leave it (pass null) and
 // return to the view that was showing before it was entered.
 export async function focusComposition(label: string | null) {
-  await changeCompositionView(label ? `Entering ${label}` : "Leaving the composition", () => {
-    const gs = useGraphSettings.getState();
-    const model = useModelStore.getState();
-    const from = getViewBeforeEntering();
-    if (label) {
-      if (!model.focusedComposition) setViewBeforeEntering({ flat: gs.flat, pytorch: gs.pytorch });
-      leaveFlattenedViews();
-    } else if (from) {
-      gs.setFlat(from.flat);
-      gs.setPytorch(from.pytorch);
-      setViewBeforeEntering(null);
-    }
-    model.setFocusedComposition(label);
-  });
+  // The step is named for the composition entered, or the one being left.
+  const leaving = useModelStore.getState().focusedComposition;
+  await changeCompositionView(
+    label ? `Entering ${label}` : "Leaving the composition",
+    label ? `Entered ${label}` : leaving ? `Left ${leaving}` : "Left the composition",
+    () => {
+      const gs = useGraphSettings.getState();
+      const model = useModelStore.getState();
+      const from = getViewBeforeEntering();
+      if (label) {
+        if (!model.focusedComposition) setViewBeforeEntering({ flat: gs.flat, pytorch: gs.pytorch });
+        leaveFlattenedViews();
+      } else if (from) {
+        gs.setFlat(from.flat);
+        gs.setPytorch(from.pytorch);
+        setViewBeforeEntering(null);
+      }
+      model.setFocusedComposition(label);
+    },
+  );
 }
 
 // #612/#737: rename a node's display name (the PsyNeuLink `name=`) via the

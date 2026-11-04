@@ -11,6 +11,16 @@ import { useHistoryStore, type SaveMark, type Snapshot } from "@/stores/historyS
 import type { MechanismData } from "@/stores/modelStore";
 import { captureView } from "@/utils/graphView";
 
+export interface RecordActionOptions {
+  /**
+   * Whether the step is an edit the user made to the model, which problem
+   * reports list (#177). Defaults to true. False for the app's own steps: a
+   * model loading or being rebuilt, and a frame button changing the view
+   * (#204), which change what is shown and not the model.
+   */
+  edit?: boolean;
+}
+
 /**
  * Capture the current state and push it as a history snapshot.
  * Call this BEFORE the action takes effect to record the "before" state,
@@ -18,11 +28,10 @@ import { captureView } from "@/utils/graphView";
  *
  * @param description - Human-readable description ("Modified gain in hidden_layer")
  */
-export function recordAction(description: string) {
-  // Every undo point is an edit the user made, for problem reports (#177).
-  // The description names what changed, never the new text or value. A
-  // model loading or being rebuilt is the app's doing, and logged elsewhere.
-  if (description !== "Model loaded" && description !== "Model updated") record("edit", description);
+export function recordAction(description: string, opts?: RecordActionOptions) {
+  // An edit the user made goes in the activity log, for problem reports
+  // (#177). The description names what changed, never the new text or value.
+  if (opts?.edit !== false) record("edit", description);
   const store = useModelStore.getState();
   const { source, nodes, edges, filePath } = store;
 
@@ -53,7 +62,7 @@ export function recordAction(description: string) {
  * This creates the baseline for undo — the first entry in the stack.
  */
 export function recordInitialState() {
-  recordAction("Model loaded");
+  recordAction("Model loaded", { edit: false });
 }
 
 /**
