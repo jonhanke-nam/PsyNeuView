@@ -31,6 +31,25 @@ describe("the declared set", () => {
     const del = SHORTCUTS.find((s) => s.id === "graph.deleteSelection");
     expect(del?.scope).toBe("outsideText");
   });
+
+  it("gives each panel one number key, in window order (#191)", () => {
+    // Graph, code, Inspector panel, Components panel: the order the issue set,
+    // and the order the Layout menu lists them in. All in View, so they are
+    // listed together in Settings.
+    const panels = [
+      ["layout.toggleGraph", "Mod+1"],
+      ["layout.toggleCode", "Mod+2"],
+      ["layout.toggleBottom", "Mod+3"],
+      ["layout.togglePalette", "Mod+4"],
+    ];
+    for (const [id, binding] of panels) {
+      const s = SHORTCUTS.find((x) => x.id === id);
+      expect(s?.defaultBinding, id).toBe(binding);
+      expect(s?.group, id).toBe("View");
+      // From the code editor too: hiding the editor you are reading is the point.
+      expect(s?.scope, id).toBe("codeEditorToo");
+    }
+  });
 });
 
 describe("overrides", () => {

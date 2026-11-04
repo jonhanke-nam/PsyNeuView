@@ -104,6 +104,39 @@ export const SHORTCUTS: Shortcut[] = [
     // the Inspector — but not from a rename box, where it would be a surprise.
     scope: "codeEditorToo",
   },
+  // #191: one key per panel, in the order they appear across the window. The
+  // graph-only default (#189) makes these the quick way to bring a panel back.
+  // Hiding the last visible panel is refused, and the shortcut says so.
+  // A browser keeps Cmd+1..9 for its tabs, so there they can be rebound in
+  // Settings; inside the Mac app they reach the page.
+  {
+    id: "layout.toggleGraph",
+    label: "Show or hide the graph",
+    group: "View",
+    defaultBinding: "Mod+1",
+    scope: "codeEditorToo",
+  },
+  {
+    id: "layout.toggleCode",
+    label: "Show or hide the code editor",
+    group: "View",
+    defaultBinding: "Mod+2",
+    scope: "codeEditorToo",
+  },
+  {
+    id: "layout.toggleBottom",
+    label: "Show or hide the Inspector panel",
+    group: "View",
+    defaultBinding: "Mod+3",
+    scope: "codeEditorToo",
+  },
+  {
+    id: "layout.togglePalette",
+    label: "Show or hide the Components panel",
+    group: "View",
+    defaultBinding: "Mod+4",
+    scope: "codeEditorToo",
+  },
   {
     id: "gesture.cancel",
     label: "Cancel the current gesture",
