@@ -46,7 +46,9 @@ jobs:
           fetch-depth: 0
       - id: f
         env:
-          PATTERN: '^(backend/|scripts/|\.github/workflows/backend-tests\.yml)'
+          # palette.css: tests/test_show_graph_palette.py checks the role
+          # colours against PsyNeuLink's show_graph (#190).
+          PATTERN: '^(backend/|scripts/|frontend/src/styles/palette\.css|\.github/workflows/backend-tests\.yml)'
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             # `github.sha` is the auto-generated merge commit, and its FIRST
