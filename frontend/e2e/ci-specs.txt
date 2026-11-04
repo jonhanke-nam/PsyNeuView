@@ -97,11 +97,13 @@ tour-menu-reopens.spec.ts
 tour-ring-behind-dialogs.spec.ts
 tour-ring-clear-of-text.spec.ts
 tour-ring-on-node.spec.ts
+tutorial-known-state.spec.ts
 tutorials-hide-course.spec.ts
 tutorials-menu-folding.spec.ts
 undo-depth.spec.ts
 undo-notices.spec.ts
 value-grid.spec.ts
+view-only-tags-setting.spec.ts
 walkthrough-layout-restore.spec.ts
 watch-status-in-bar.spec.ts
 where-things-live.spec.ts

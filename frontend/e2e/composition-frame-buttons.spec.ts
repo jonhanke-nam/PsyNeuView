@@ -135,7 +135,7 @@ test.describe("composition frame buttons (#194)", { tag: "@ci" }, () => {
       await new Promise((r) => setTimeout(r, 700));
       await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ detail: "no can do" }) });
     });
-    const wheel = page.locator("[data-testid=busy-indicator][data-visible=true]");
+    const wheel = page.getByTestId("busy-wheel");
     const button = page.getByTestId("graph-canvas").getByRole("button", { name: /^Collapse composition inner_comp$/ });
     const done = loaded(page);
     await button.click();

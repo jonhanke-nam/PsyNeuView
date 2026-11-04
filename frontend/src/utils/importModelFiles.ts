@@ -14,6 +14,7 @@
 import { useModelStore } from "@/stores/modelStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { guardOpen } from "@/utils/tutorialGuard";
 
 /** Extensions the importer understands — also the file picker's `accept`. */
 export const IMPORTABLE_EXTENSIONS = [".py", ".pnlproject"] as const;
@@ -150,6 +151,13 @@ export async function importModelFiles(
     );
     return false;
   }
+
+  // A walkthrough in progress gets a say first (#172). `importing` holds off the
+  // repeat firings of one drop while the question is up.
+  importing = true;
+  const passes = await guardOpen({ kind: "file", name: (projectFile ?? pyFile)!.name });
+  importing = false;
+  if (!passes) return false;
 
   // Warn before discarding unsaved edits (#345)
   {

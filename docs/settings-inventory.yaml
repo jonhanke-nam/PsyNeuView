@@ -246,19 +246,9 @@ settings:
     control: setting-busy-threshold
     notes: >-
       At once, 0.1 s, 0.2 s (default), 0.5 s or 1 s (#38). Anything the user
-      asks for that runs longer shows the spinning wheel in the toolbar and
-      over the graph, with a "progress" pointer.
-
-  - id: busy-timer
-    label: General ▸ Busy indicator ▸ Show how long it has been spinning
-    home: settings
-    section: general
-    storage: browser localStorage (psyneuview.busy.timerPlace); inside the Mac app, the app keeps it (PagePreferences, #218)
-    control: setting-busy-timer
-    notes: >-
-      Off, In the toolbar (default), Over the graph or Both (#176). Shows the
-      time so far beside the wheel once it has spun for a second. Problem
-      reports record each wait's start and stop times whatever this says.
+      asks for that runs longer shows one spinning wheel, over the graph or,
+      with the graph hidden, over the workspace (#220), with a "progress"
+      pointer.
 
   - id: activity-log-actions
     label: General ▸ Problem reports ▸ Keep a log of my actions for problem reports
@@ -433,6 +423,22 @@ settings:
       selected or running node + 2 px more. /rendering-defaults.json can retune the
       default; a width chosen here wins. The Style tab links here.
 
+  - id: graph-view-only-tags
+    label: Appearance ▸ Node tags ▸ Read-only tags
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.viewOnlyTags); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-graph-view-only-tags
+    notes: >-
+      Hidden, as in show_graph (default) or Shown (#211). Whether a node
+      whose declaration PsyNeuView can't edit (built in a loop, unpacked
+      from a list, made by a learning pathway) shows its small "view only"
+      tag above its name. PsyNeuLink's show_graph() draws no such tag. The
+      node's hover text and the Inspector's notice say it either way. The
+      type and role tags and the function line are the Advanced Graph View
+      Options' Type and role tags switch (#122, #123), listed under
+      `elsewhere`; this setting doesn't touch them.
+
   - id: edge-line-width
     label: Appearance ▸ Lines between nodes ▸ Line width
     home: settings
@@ -474,6 +480,21 @@ settings:
       legend's own Show/Hide folds it for the open model without changing
       this setting; only the legend's position is remembered by the legend
       (psynewview-gsc-legend).
+
+  - id: busy-timer
+    label: Appearance ▸ Busy wheel ▸ Show how long it has been spinning
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.busy.timerPlace); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-busy-timer
+    notes: >-
+      Off, Below the wheel (default) or In the centre of the wheel (#176,
+      #220). Shows the time so far once a second has passed, on the one busy
+      wheel. In the centre the wheel is larger, with its spokes round the rim
+      and the time in the clear space. Values stored before there was one
+      wheel: "off" stays Off; "toolbar", "canvas", "both" and anything else
+      not recognised read as Below the wheel. Problem reports record each
+      wait's start and stop times whatever this says.
 
   - id: graph-scheduling-arrows
     label: Appearance ▸ Scheduling arrows ▸ Scheduling-condition arrows
@@ -575,6 +596,17 @@ elsewhere:
       setting (components-start, #113). A walkthrough shows every panel while
       it runs and puts the stored layout back afterwards
       (psynewview_layout_before_walkthrough holds it meanwhile).
+
+  - id: graph-node-elements
+    label: Type and role tags
+    home: graph toolbar ▸ Advanced Graph View Options ▸ Nodes ▸ Type and role tags (data-testid graph-view-option-elements, #123)
+    storage: browser localStorage (psyneuview.graph.nodeElements; the Mac app keeps psyneuview. keys)
+    notes: >-
+      Off by default (#122): a node shows just its name, as show_graph()
+      draws it. On, it brings back the type and role tags above the name and
+      the function line below it. The "view only" tag is its own setting
+      (graph-view-only-tags, #211). A value someone already chose wins over
+      the default.
 
   - id: graph-show-ports
     label: Show ports

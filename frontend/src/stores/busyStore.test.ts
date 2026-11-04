@@ -161,13 +161,28 @@ describe("busyStore timings (#176)", () => {
     expect(formatBusyElapsed(3729)).toBe("1:02:09");
   });
 
-  it("remembers where the timer shows, defaulting to the toolbar", () => {
+  it("remembers where the timer shows, below the wheel by default", () => {
     store.delete("psyneuview.busy.timerPlace");
-    expect(loadBusyTimerPlace()).toBe("toolbar");
-    useBusyStore.getState().setTimerPlace("both");
-    expect(loadBusyTimerPlace()).toBe("both");
-    store.set("psyneuview.busy.timerPlace", "nonsense");
-    expect(loadBusyTimerPlace()).toBe("toolbar");
-    useBusyStore.getState().setTimerPlace("toolbar");
+    expect(loadBusyTimerPlace()).toBe("below");
+    useBusyStore.getState().setTimerPlace("center");
+    expect(store.get("psyneuview.busy.timerPlace")).toBe("center");
+    expect(loadBusyTimerPlace()).toBe("center");
+    useBusyStore.getState().setTimerPlace("off");
+    expect(loadBusyTimerPlace()).toBe("off");
+    useBusyStore.getState().setTimerPlace("below");
+    expect(loadBusyTimerPlace()).toBe("below");
+  });
+
+  it.each([
+    ["off", "off"],
+    ["toolbar", "below"],
+    ["canvas", "below"],
+    ["both", "below"],
+    ["nonsense", "below"],
+    ["", "below"],
+    ["ON", "below"],
+  ])("reads a value stored before one wheel (#220): %j is %s", (stored, expected) => {
+    store.set("psyneuview.busy.timerPlace", stored);
+    expect(loadBusyTimerPlace()).toBe(expected);
   });
 });

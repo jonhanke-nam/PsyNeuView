@@ -186,19 +186,19 @@ show_graph names its colours (`green`, `red`, `blue`, `purple`, `orange`,
 `pink`, `brown`, `black`), and Graphviz draws each name with its X11 value in
 show_graph's own PDF and PNG. (A browser reads the same names in an SVG with
 their CSS values, which differ for green, #008000, and purple, #800080; the
-app's show_graph tab redraws green as the PDF does, so the two agree.)
+app's show_graph tab redraws both as the PDF does, so the two agree.)
 PsyNeuView's role tokens (`--pnv-role-*` in `frontend/src/styles/palette.css`,
-#190) take the X11 values for red and green, which must match show_graph
-exactly; the other roles follow the browser's reading, except that orange and
-pink are too pale on white for an outline and use the nearest named orange and
-pink that still read:
+#190) take the X11 values for red, green and purple, which must match
+show_graph exactly; the other roles read the same both ways, except that orange
+and pink are too pale on white for an outline and use the nearest named orange
+and pink that still read:
 
 | Role | show_graph | PsyNeuView outline | As text |
 |------|-----------|--------------------|---------|
 | INPUT | green (#00ff00) | #00ff00 | #008000 |
 | OUTPUT | red (#ff0000) | #ff0000 | #dd0000 |
 | CONTROL | blue (#0000ff) | #0000ff | same |
-| Controller | purple (#a020f0 in its PDF; a browser reads the SVG's `purple` as #800080) | #800080 | same |
+| Controller and its objective | purple (#a020f0) | #a020f0 | same (5.3:1 on white) |
 | LEARNING | orange (#ffa500) | darkorange (#ff8c00) | #e65100 |
 | PROBE | pink (#ffc0cb) | hotpink (#ff69b4) | #d81b60 |
 | INPUT and OUTPUT | brown (#a52a2a) | #a52a2a | same |

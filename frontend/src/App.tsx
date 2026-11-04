@@ -18,7 +18,7 @@ import { RunStatePanel } from "./components/inspector/RunStatePanel";
 import { GraphStylePanel } from "./components/graph/GraphStylePanel";
 import { SchedulerPanel } from "./components/scheduler/SchedulerPanel";
 import { Toolbar } from "./components/layout/Toolbar";
-import { BusyIndicator } from "./components/common/BusyIndicator";
+import { BusyIndicator, BusyStatus } from "./components/common/BusyIndicator";
 import { NotificationBar } from "./components/common/NotificationBar";
 import { StatusBar } from "./components/common/StatusBar";
 import { TourBar } from "./components/common/TourBar";
@@ -31,6 +31,7 @@ import { useFrameFit } from "./hooks/useFrameFit";
 import { ExternalChangeModal } from "./components/common/ExternalChangeModal";
 import { ChangesSinceSaveDialog } from "./components/common/ChangesSinceSaveDialog";
 import { RevertToSaveDialog } from "./components/common/RevertToSaveDialog";
+import { TutorialChoiceDialog } from "./components/common/TutorialChoiceDialog";
 import { registerCommand } from "./shortcuts/commands";
 import { setPanelVisibleOrExplain } from "./shortcuts/lastPanel";
 import { useAppShortcuts } from "./shortcuts/useAppShortcuts";
@@ -151,11 +152,12 @@ export default function App() {
             </div>
           </div>
         )}
+        <BusyStatus />
         <Toolbar />
         <DiagnosticPanel />
         <NotificationBar />
         <StatusBar />
-        <div style={{ flex: 1, overflow: "hidden" }}>
+        <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
           <Allotment
             defaultSizes={outerSizes}
             onChange={(sizes) => {
@@ -181,7 +183,7 @@ export default function App() {
                 <Allotment.Pane minSize={200} visible={graphVisible}>
                   <GraphCanvas />
                   {/* #38: the wheel where the result will appear. */}
-                  <BusyIndicator placement="canvas" />
+                  <BusyIndicator place="graph" />
                 </Allotment.Pane>
                 <Allotment.Pane minSize={100} preferredSize={250} visible={bottomVisible}>
                   <div
@@ -299,11 +301,14 @@ export default function App() {
               </Allotment>
             </Allotment.Pane>
           </Allotment>
+          {/* #220: with no graph showing, the one wheel is over the workspace. */}
+          <BusyIndicator place="workspace" />
         </div>
 
         {/* What the unsaved changes are, against the file on disk (#1348). */}
         <ChangesSinceSaveDialog />
         <RevertToSaveDialog />
+        <TutorialChoiceDialog />
         {/* The file changed underneath unsaved edits — ask, never guess (#926). */}
         {pendingChange && (
           <ExternalChangeModal
