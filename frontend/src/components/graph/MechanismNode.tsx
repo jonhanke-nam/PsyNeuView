@@ -604,14 +604,21 @@ export const MechanismNode = memo(function MechanismNode({
             onClick={onExpandComposition}
             title="Expand this composition to show its contents"
             aria-label={`Expand composition ${d.label}`}
+            // The size of the frame's buttons (#194), so Expand is as easy
+            // to find and press as the Collapse it undoes.
             style={{
               marginLeft: 2,
               cursor: "pointer",
-              fontSize: 10,
+              fontSize: 15,
               lineHeight: 1,
-              padding: "1px 5px",
+              minWidth: 28,
+              height: 26,
+              padding: "0 6px",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
               border: "1px solid var(--pnv-composition-control-border)",
-              borderRadius: 3,
+              borderRadius: 4,
               background: "var(--pnv-surface)",
               color: "var(--pnv-composition-control-text)",
               fontWeight: 600,
