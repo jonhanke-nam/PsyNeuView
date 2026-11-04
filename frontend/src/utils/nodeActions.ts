@@ -9,74 +9,161 @@ import { useStatusStore } from "@/stores/statusStore";
 import { recordAction } from "@/utils/history";
 import { generateDefaultVarName } from "@/utils/defaultNaming";
 import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { useNotificationStore } from "@/stores/notificationStore";
+import { withBusy } from "@/stores/busyStore";
+import { errorDetail } from "@/utils/errorDetail";
 
-// modelStore reads collapsedCompositions at dispatch time (modelStore.ts
-// dispatch), so flipping the set isn't enough — the graph has to be
-// rebuilt. Refetching /api/model/load is the cheapest way to do that
-// today without caching raw modelData in the store.
-export async function toggleCompositionCollapse(label: string) {
-  useGraphSettings.getState().toggleCollapsedComposition(label);
+// Which of the three graph views is showing (#717): a frame button's reload
+// has to carry the same flags as any other reload, or the canvas silently
+// changes view (#194).
+interface ViewFlags {
+  flat: boolean;
+  pytorch: boolean;
+}
+
+// Everything a frame button changes before the graph is rebuilt, so a rebuild
+// that fails can put it all back exactly (#194).
+interface ViewSnapshot extends ViewFlags {
+  collapsed: Set<string>;
+  inset: Set<string>;
+  focused: string | null;
+  viewBeforeEntering: ViewFlags | null;
+}
+
+// The view (flattened or PyTorch) that was showing when a composition was
+// entered, so leaving it returns there. Entering shows the composition on its
+// own in the nested view (the flattened views have no such thing as a single
+// composition), and the view menu says so while it lasts.
+let viewBeforeEntering: ViewFlags | null = null;
+
+function snapshotView(): ViewSnapshot {
+  const gs = useGraphSettings.getState();
+  return {
+    flat: gs.flat,
+    pytorch: gs.pytorch,
+    collapsed: new Set(gs.collapsedCompositions),
+    inset: new Set(gs.insetCompositions),
+    focused: useModelStore.getState().focusedComposition,
+    viewBeforeEntering,
+  };
+}
+
+function restoreView(snap: ViewSnapshot) {
+  useGraphSettings.setState({
+    flat: snap.flat,
+    pytorch: snap.pytorch,
+    collapsedCompositions: snap.collapsed,
+    insetCompositions: snap.inset,
+  });
+  useModelStore.getState().setFocusedComposition(snap.focused);
+  viewBeforeEntering = snap.viewBeforeEntering;
+}
+
+// Rebuild the graph from the open file with the view settings as they now
+// stand. modelStore reads collapsedCompositions, insetCompositions and
+// focusedComposition at dispatch time, so flipping them isn't enough — the
+// graph has to be rebuilt, and refetching /api/model/load is the cheapest way
+// to do that today without caching raw modelData in the store. Returns null
+// when the graph was rebuilt, else the reason it wasn't.
+async function rebuildGraph(): Promise<string | null> {
   const { filePath, setSource, loadModelFromServer } = useModelStore.getState();
-  if (!filePath) return;
+  if (!filePath) return null;
+  const gs = useGraphSettings.getState();
   try {
     const resp = await fetch("/api/model/load", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
+      body: JSON.stringify({
+        file_path: filePath,
+        flat: gs.flat,
+        pytorch: gs.pytorch,
+        ...showGraphLoadRequest(),
+      }),
     });
-    if (!resp.ok) return;
+    if (!resp.ok) return await errorDetail(resp);
     const data = await resp.json();
     setSource(data.source);
-    loadModelFromServer(data.model, data.layout);
-  } catch {
-    // Best-effort: the toggle still applies; next load will pick it up.
+    // The labels, bundle and sidecars too: leaving them out clears the
+    // sidecar's port labels on every rebuild (#611).
+    loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
+    return null;
+  } catch (e) {
+    return (e as Error).message || "the server could not be reached";
   }
+}
+
+/**
+ * Change how a composition is shown and rebuild the graph (#194).
+ *
+ * `apply` makes the change to the stores; `what` names it for the status bar,
+ * the busy wheel and the notice. A rebuild that fails shows the reason and
+ * puts every setting back, so the canvas and the settings still agree: before,
+ * the setting stayed changed while the graph showed nothing of it, and the
+ * next unrelated rebuild applied it by surprise.
+ */
+async function changeCompositionView(what: string, apply: () => void): Promise<void> {
+  const before = snapshotView();
+  const { setStatus, clearStatus } = useStatusStore.getState();
+  apply();
+  setStatus(`${what}...`);
+  try {
+    const failure = await withBusy(what, rebuildGraph());
+    if (failure !== null) {
+      restoreView(before);
+      useNotificationStore.getState().addNotification(
+        "error",
+        `${what} failed: ${failure}. The graph is as it was.`,
+      );
+    }
+  } finally {
+    clearStatus();
+  }
+}
+
+// The flattened and PyTorch views draw every composition as a frame of its
+// own, so there is nothing there to fold; folding one shows the model nested,
+// with that composition as a single node. The view menu says so.
+function leaveFlattenedViews() {
+  const gs = useGraphSettings.getState();
+  if (gs.flat) gs.setFlat(false);
+  if (gs.pytorch) gs.setPytorch(false);
+}
+
+/** Fold a composition to a single node, or open a folded one (#395). */
+export async function toggleCompositionCollapse(label: string) {
+  const folding = !useGraphSettings.getState().collapsedCompositions.has(label);
+  await changeCompositionView(folding ? `Collapsing ${label}` : `Expanding ${label}`, () => {
+    if (folding) leaveFlattenedViews();
+    useGraphSettings.getState().toggleCollapsedComposition(label);
+  });
 }
 
 // #427 INSET mode: render a nested composition as a framed inset (internals
-// laid out independently, treated as one unit by the parent). Like collapse,
-// modelStore reads insetCompositions at build time, so the graph must be
-// rebuilt — refetch /api/model/load, mirroring toggleCompositionCollapse.
+// laid out independently, treated as one unit by the parent).
 export async function toggleCompositionInset(label: string) {
-  useGraphSettings.getState().toggleInsetComposition(label);
-  const { filePath, setSource, loadModelFromServer } = useModelStore.getState();
-  if (!filePath) return;
-  try {
-    const resp = await fetch("/api/model/load", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
-    });
-    if (!resp.ok) return;
-    const data = await resp.json();
-    setSource(data.source);
-    loadModelFromServer(data.model, data.layout);
-  } catch {
-    // Best-effort: the toggle still applies; next load will pick it up.
-  }
+  const insetting = !useGraphSettings.getState().insetCompositions.has(label);
+  await changeCompositionView(insetting ? `Insetting ${label}` : `Un-insetting ${label}`, () => {
+    useGraphSettings.getState().toggleInsetComposition(label);
+  });
 }
 
-// #426 Focus mode: render a single nested composition full-canvas as the graph
-// root (pass its cleaned label), or clear focus (pass null). Like collapse,
-// loadModelFromServer reads focusedComposition at dispatch time, so the graph
-// must be rebuilt — refetch /api/model/load, mirroring toggleCompositionCollapse.
+// #426 Focus mode, now "Enter" (#194): show a single nested composition on its
+// own as the graph root (pass its cleaned label), or leave it (pass null) and
+// return to the view that was showing before it was entered.
 export async function focusComposition(label: string | null) {
-  useModelStore.getState().setFocusedComposition(label);
-  const { filePath, setSource, loadModelFromServer } = useModelStore.getState();
-  if (!filePath) return;
-  try {
-    const resp = await fetch("/api/model/load", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
-    });
-    if (!resp.ok) return;
-    const data = await resp.json();
-    setSource(data.source);
-    loadModelFromServer(data.model, data.layout);
-  } catch {
-    // Best-effort: focus state still applies; next load picks it up.
-  }
+  await changeCompositionView(label ? `Entering ${label}` : "Leaving the composition", () => {
+    const gs = useGraphSettings.getState();
+    const model = useModelStore.getState();
+    if (label) {
+      if (!model.focusedComposition) viewBeforeEntering = { flat: gs.flat, pytorch: gs.pytorch };
+      leaveFlattenedViews();
+    } else if (viewBeforeEntering) {
+      gs.setFlat(viewBeforeEntering.flat);
+      gs.setPytorch(viewBeforeEntering.pytorch);
+      viewBeforeEntering = null;
+    }
+    model.setFocusedComposition(label);
+  });
 }
 
 // #612/#737: rename a node's display name (the PsyNeuLink `name=`) via the
