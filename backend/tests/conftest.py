@@ -1,8 +1,12 @@
 """Shared test utilities."""
 
+import os
 import re
 
 import pytest
+
+# FastAPI's test client calls itself "testserver".
+os.environ.setdefault("PSYNEUVIEW_ALLOWED_HOSTS", "testserver")
 
 # For the test of the real-preferences-file guard below (#1292).
 pytest_plugins = ["pytester"]
