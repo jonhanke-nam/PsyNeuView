@@ -8,6 +8,7 @@ import { MarkerType, type Node, type Edge } from "@xyflow/react";
 import { applyLayout } from "@/utils/layout";
 import { knownSize, placementFits } from "@/utils/showGraphLayout";
 import { cimAnchor, cimPosition } from "@/utils/cimPlacement";
+import { retargetFrameEdges } from "@/utils/frameEdges";
 import { useHistoryStore } from "./historyStore";
 import { recordAction } from "@/utils/history";
 import { usePortLayout } from "@/stores/portLayoutStore";
@@ -1665,6 +1666,11 @@ export const useModelStore = create<ModelState>((set, get) => ({
         },
       });
     }
+
+    // #209: a projection into or out of an open composition is drawn to the
+    // member inside it, as show_graph draws it, not to the frame's outline.
+    // Folded, the composition is one node and its edges stay on that node.
+    retargetFrameEdges(nodes, edges);
 
     // --- Stagger edge labels to prevent overlap ---
     // Resolve overlaps in pixel space using actual node positions.
