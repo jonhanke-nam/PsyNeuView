@@ -3,17 +3,15 @@
 show_graph names its colours ("green", "red", "purple", ...), and Graphviz
 keeps a name as it is when it writes an SVG. The PDF and PNG show_graph
 writes draw each name with its X11 value, but a browser reads the same name
-in an SVG with its CSS value, and the two differ for some names: X11 green
-is #00ff00, CSS green is #008000. So the show_graph tab, which shows that
-SVG, drew INPUT nodes a darker green than show_graph's own picture, and than
-the app's graph, whose INPUT outline is show_graph's green (#00ff00).
+in an SVG with its CSS value, and the two differ for two of its names: X11
+green is #00ff00, CSS green is #008000; X11 purple is #a020f0, CSS purple is
+#800080. So the show_graph tab, which shows that SVG, drew INPUT nodes and
+controllers darker than show_graph's own picture, and than the app's graph,
+whose outlines are show_graph's green (#00ff00) and purple (#a020f0).
 
 The tab's picture is redrawn here with the X11 value where the two differ,
-so the tab, the graph and show_graph's PDF agree. Only green is redrawn:
-red and green are the colours that must match show_graph exactly, and red
-is the same in both readings. Purple (#a020f0 in X11, #800080 in CSS) is
-left as a browser reads it, which is also what the graph's controller
-outline uses.
+so the tab, the graph and show_graph's PDF agree. Every other colour show_graph
+names reads the same both ways, so only these two are redrawn.
 """
 
 from __future__ import annotations
@@ -24,11 +22,12 @@ import re
 # a browser would otherwise read differently.
 GRAPHVIZ_COLOURS: dict[str, str] = {
     "green": "#00ff00",
+    "purple": "#a020f0",
 }
 
 # Bumped whenever the way the picture is redrawn changes, so a picture kept
 # in show_graph_cache before the change is not shown again (#22).
-PICTURE_VERSION = 1
+PICTURE_VERSION = 2
 
 # A colour as an SVG attribute: stroke="green", fill="green". Only the
 # attribute value, never the text of a node whose name happens to be a

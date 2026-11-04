@@ -1,7 +1,8 @@
-"""The show_graph tab's picture draws green as show_graph's PDF does (#190).
+"""The show_graph tab's picture draws green and purple as show_graph's PDF does (#190).
 
 Graphviz keeps show_graph's colour names in its SVG, and a browser reads
-"green" as #008000 where the PDF draws #00ff00. The worker redraws the SVG
+"green" as #008000 where the PDF draws #00ff00, and "purple" as #800080 where
+the PDF draws #a020f0. The worker redraws the SVG
 before the tab gets it, and the cache key of a picture carries the redraw's
 version, so a picture kept before the change is not shown again.
 """
@@ -27,21 +28,36 @@ def test_green_attributes_take_the_x11_value():
     )
 
 
-def test_other_colours_and_a_node_named_green_are_left_alone():
+def test_purple_attributes_take_the_x11_value():
+    svg = (
+        '<polygon fill="none" stroke="purple" points="0,0"/>\n'
+        '<text fill="purple">controller</text>'
+    )
+    assert as_graphviz_draws_it(svg) == (
+        '<polygon fill="none" stroke="#a020f0" points="0,0"/>\n'
+        '<text fill="#a020f0">controller</text>'
+    )
+
+
+def test_other_colours_and_nodes_named_for_a_colour_are_left_alone():
     svg = (
         '<ellipse fill="none" stroke="red"/>'
-        '<ellipse fill="none" stroke="purple"/>'
+        '<ellipse fill="none" stroke="blue"/>'
+        '<ellipse fill="none" stroke="orange"/>'
+        '<ellipse fill="none" stroke="pink"/>'
+        '<ellipse fill="none" stroke="brown"/>'
         '<ellipse fill="none" stroke="black"/>'
+        '<ellipse fill="none" stroke="mediumpurple"/>'
         '<text fill="black">green</text>'
-        '<title>green</title>'
+        '<title>purple</title>'
     )
     assert as_graphviz_draws_it(svg) == svg
 
 
-def test_only_green_is_redrawn():
-    """Red and green are the colours that must match show_graph; red reads
-    the same both ways, and the other roles are left as a browser reads them."""
-    assert GRAPHVIZ_COLOURS == {"green": "#00ff00"}
+def test_only_green_and_purple_are_redrawn():
+    """The two names show_graph uses that a browser reads differently from its
+    PDF. Its other colours read the same both ways."""
+    assert GRAPHVIZ_COLOURS == {"green": "#00ff00", "purple": "#a020f0"}
 
 
 @pytest.mark.skipif(shutil.which("dot") is None, reason="needs the Graphviz programs")
@@ -75,6 +91,35 @@ def test_the_tab_gets_the_redrawn_picture_of_a_real_model(tmp_path):
     result = response.json()
     assert '"#00ff00"' in result["svg"]
     assert '"green"' not in result["svg"]
+
+
+def test_the_tab_draws_a_controller_in_the_x11_purple(tmp_path):
+    """The route the tab calls hands it a controller drawn #a020f0."""
+    model = tmp_path / "with_controller.py"
+    model.write_text(
+        "import psyneulink as pnl\n"
+        'stimulus = pnl.TransferMechanism(name="stimulus")\n'
+        'decision = pnl.TransferMechanism(name="decision")\n'
+        'comp = pnl.Composition(name="with_controller")\n'
+        "comp.add_linear_processing_pathway([stimulus, decision])\n"
+        "comp.add_controller(pnl.OptimizationControlMechanism(\n"
+        '    name="controller",\n'
+        "    agent_rep=comp,\n"
+        "    state_features=[stimulus.input_port],\n"
+        "    objective_mechanism=pnl.ObjectiveMechanism(monitor=[decision]),\n"
+        "    function=pnl.GridSearch(),\n"
+        "    control_signals=[pnl.ControlSignal(\n"
+        '        modulates=("slope", decision), allocation_samples=[1.0, 2.0])],\n'
+        "))\n"
+    )
+    response = TestClient(app).post(
+        "/api/model/show-graph",
+        json={"file_path": str(model), "composition_name": "with_controller", "options": {"show_controller": True}},
+    )
+    assert response.status_code == 200, response.text
+    svg = response.json()["svg"]
+    assert '"#a020f0"' in svg
+    assert '"purple"' not in svg
 
 
 def test_a_picture_kept_before_the_redraw_changed_is_not_shown_again(tmp_path, monkeypatch):

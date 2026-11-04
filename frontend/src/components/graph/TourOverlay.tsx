@@ -36,6 +36,7 @@ import { isOnScreen, toScreenRect, type NodeBox } from "@/utils/offscreenNodes";
 import { cssEscape, nodeSelector } from "@/utils/nodeSelector";
 import { matchesNodeName } from "@/utils/tourStep";
 import { Z_TOUR_OVERLAY } from "@/constants/zLayers";
+import { useTutorialChoice } from "@/utils/tutorialGuard";
 
 interface Rect {
   left: number;
@@ -137,6 +138,8 @@ export function TourOverlay() {
   // The step whose test-id anchor was last scrolled into view, so it's
   // scrolled once when it appears and the learner can scroll away after.
   const scrolledFor = useRef<string | null>(null);
+  // Nothing to point at while the app asks whether to leave (#172).
+  const asking = useTutorialChoice((c) => c.pending !== null);
 
   // `?tour=<id>` still starts one, so a walkthrough can be linked from a doc
   // or an issue. The menu is the discoverable route; this is the shareable one.
@@ -341,6 +344,8 @@ export function TourOverlay() {
   const ringTop = Math.max(edge, rect.top - sides.top);
   const ringRight = Math.min(window.innerWidth - edge, rect.left + rect.width + sides.right);
   const ringBottom = Math.min(window.innerHeight - edge, rect.top + rect.height + sides.bottom);
+
+  if (asking) return null;
 
   return (
     <div

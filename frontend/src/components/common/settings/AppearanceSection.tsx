@@ -16,7 +16,9 @@
  * And how the Components panel opens (#113): the word list by default, or
  * the icon strip; the panel's own ◀/▶ only changes it for the session.
  * And the app's text size (#111): Small, Default or Large, remembered per
- * browser (stores/textSizeStore.ts). And the panels (#215): whether every
+ * browser (stores/textSizeStore.ts). And whether a node shows its "view
+ * only" tag (#211): hidden by default, as show_graph draws no such tag
+ * (stores/viewOnlyTagsStore.ts). And the panels (#215): whether every
  * panel may be hidden, and which ones a model opens onto a blank screen,
  * the second only available while the first is on (stores/layoutStore.ts).
  */
@@ -36,6 +38,12 @@ import {
   isSchedulingArrows,
   useSchedulingArrowsStore,
 } from "@/stores/schedulingArrowsStore";
+import {
+  DEFAULT_VIEW_ONLY_TAGS,
+  VIEW_ONLY_TAGS,
+  isViewOnlyTags,
+  useViewOnlyTagsStore,
+} from "@/stores/viewOnlyTagsStore";
 import {
   DEFAULT_LAYOUT_STYLE,
   LAYOUT_STYLES,
@@ -69,6 +77,7 @@ import {
   isPointerSize,
 } from "@/utils/graphCursor";
 import { TEXT_SIZES, TEXT_SIZE_LABELS, DEFAULT_TEXT_SIZE, isTextSize, useTextSizeStore } from "@/stores/textSizeStore";
+import { BUSY_TIMER_PLACES, DEFAULT_BUSY_TIMER_PLACE, useBusyStore } from "@/stores/busyStore";
 import { Group, SettingLabel, mutedStyle } from "./shared";
 
 export function AppearanceSection() {
@@ -86,6 +95,9 @@ export function AppearanceSection() {
       <Group id="node-outlines" title="Node outlines">
         <NodeOutlineRow />
       </Group>
+      <Group id="node-tags" title="Node tags">
+        <ViewOnlyTagsRow />
+      </Group>
       <Group id="lines-between-nodes" title="Lines between nodes">
         <EdgeLineRow />
       </Group>
@@ -94,6 +106,9 @@ export function AppearanceSection() {
       </Group>
       <Group id="graph-legend" title="Graph legend">
         <GraphLegendRow />
+      </Group>
+      <Group id="busy-wheel" title="Busy wheel">
+        <BusyTimerRow />
       </Group>
       <Group id="scheduling-arrows" title="Scheduling arrows">
         <SchedulingArrowsRow />
@@ -338,6 +353,37 @@ function SchedulingArrowsRow() {
   );
 }
 
+function ViewOnlyTagsRow() {
+  const tags = useViewOnlyTagsStore((s) => s.tags);
+  const setTags = useViewOnlyTagsStore((s) => s.setTags);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <SettingLabel title="Read-only tags" htmlFor="setting-graph-view-only-tags">
+        A node whose declaration can't be edited from PsyNeuView (one built in
+        a loop, say, or made by a learning pathway) can carry a small "view
+        only" tag above its name. PsyNeuLink's show_graph doesn't draw it, so
+        it is hidden to match its picture; the node's hover text and the
+        Inspector say it either way. The type and role tags have their own
+        switch in the graph's Advanced Graph View Options.
+      </SettingLabel>
+      <select
+        id="setting-graph-view-only-tags"
+        data-testid="setting-graph-view-only-tags"
+        value={tags}
+        onChange={(e) => isViewOnlyTags(e.target.value) && setTags(e.target.value)}
+        style={selectStyle}
+      >
+        {VIEW_ONLY_TAGS.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+            {o.id === DEFAULT_VIEW_ONLY_TAGS ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 const selectStyle = { marginTop: 6, fontSize: "var(--pnv-fs-12)", padding: "3px 6px" } as const;
 
 function GraphPointerRow() {
@@ -520,6 +566,37 @@ function TextSizeRow() {
         {TEXT_SIZES.map((t) => (
           <option key={t} value={t}>
             {TEXT_SIZE_LABELS[t]}{t === DEFAULT_TEXT_SIZE ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/** Whether the busy wheel shows how long it has been spinning, and where (#176, #220). */
+function BusyTimerRow() {
+  const place = useBusyStore((s) => s.timerPlace);
+  const setPlace = useBusyStore((s) => s.setTimerPlace);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <SettingLabel title="Show how long it has been spinning" htmlFor="setting-busy-timer">
+        Shows the time so far with the busy wheel, once a second has passed.
+        Problem reports record how long each wait took either way.
+      </SettingLabel>
+      <select
+        id="setting-busy-timer"
+        data-testid="setting-busy-timer"
+        value={place}
+        onChange={(e) => {
+          const chosen = BUSY_TIMER_PLACES.find((p) => p.place === e.target.value);
+          if (chosen) setPlace(chosen.place);
+        }}
+        style={selectStyle}
+      >
+        {BUSY_TIMER_PLACES.map((p) => (
+          <option key={p.place} value={p.place}>
+            {p.label}
+            {p.place === DEFAULT_BUSY_TIMER_PLACE ? " (default)" : ""}
           </option>
         ))}
       </select>

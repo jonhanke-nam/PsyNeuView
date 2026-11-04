@@ -97,6 +97,40 @@ describe("a walkthrough's layout (#189)", () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
+  // Each fresh import stands in for another window on the same storage (#172).
+  it("still puts the layout back after a second window took the stored copy", async () => {
+    const first = await freshStore();
+    const { usePaletteStore } = await import("./paletteStore");
+    usePaletteStore.getState().setOpen(false);
+    first.useLayoutStore.getState().showEverythingForWalkthrough();
+
+    // A window opened during it, with no walkthrough of its own, loads like this.
+    const second = await freshStore();
+    second.useLayoutStore.getState().restoreLayoutAfterWalkthrough();
+    expect(second.useLayoutStore.getState().codeVisible).toBe(false);
+    expect(localStorage.getItem(first.LS_BEFORE_WALKTHROUGH)).toBeNull();
+
+    first.useLayoutStore.getState().restoreLayoutAfterWalkthrough();
+    const after = first.useLayoutStore.getState();
+    expect([after.codeVisible, after.graphVisible, after.bottomVisible]).toEqual([false, true, false]);
+    expect(localStorage.getItem("psynewview_layout_code_visible")).toBe("false");
+  });
+
+  it("puts the layout back in both windows when each runs a walkthrough", async () => {
+    const first = await freshStore();
+    first.useLayoutStore.getState().showEverythingForWalkthrough();
+    const second = await freshStore();
+    second.useLayoutStore.getState().showEverythingForWalkthrough();
+
+    first.useLayoutStore.getState().restoreLayoutAfterWalkthrough();
+    second.useLayoutStore.getState().restoreLayoutAfterWalkthrough();
+    for (const { useLayoutStore } of [first, second]) {
+      const s = useLayoutStore.getState();
+      expect([s.codeVisible, s.graphVisible, s.bottomVisible]).toEqual([false, true, false]);
+    }
+    expect(localStorage.getItem(first.LS_BEFORE_WALKTHROUGH)).toBeNull();
+  });
+
   it("shows everything while it runs and puts the learner's layout back", async () => {
     const { useLayoutStore, LS_BEFORE_WALKTHROUGH } = await freshStore();
     const { usePaletteStore } = await import("./paletteStore");

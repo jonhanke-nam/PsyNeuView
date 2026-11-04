@@ -172,6 +172,13 @@ export const DEFAULT_CODE_VISIBLE = false;
 export const DEFAULT_GRAPH_VISIBLE = true;
 export const DEFAULT_BOTTOM_VISIBLE = false;
 
+/**
+ * The layout this window's own walkthrough puts back (#172). Storage is shared by
+ * every window on the origin, and a second window opened during a walkthrough
+ * takes the stored copy when it loads, so this window keeps one of its own.
+ */
+let layoutForThisWindow: PanelLayout | null = null;
+
 function loadBeforeWalkthrough(): PanelLayout | null {
   try {
     const raw = localStorage.getItem(LS_BEFORE_WALKTHROUGH);
@@ -389,10 +396,12 @@ export const useLayoutStore = create<LayoutState>((set, get) => {
       if (loadBeforeWalkthrough() === null) {
         localStorage.setItem(LS_BEFORE_WALKTHROUGH, JSON.stringify(currentLayout()));
       }
+      layoutForThisWindow = loadBeforeWalkthrough();
       applyLayout(PRESETS.everything);
     },
     restoreLayoutAfterWalkthrough: () => {
-      const before = loadBeforeWalkthrough();
+      const before = layoutForThisWindow ?? loadBeforeWalkthrough();
+      layoutForThisWindow = null;
       if (before === null) return;
       localStorage.removeItem(LS_BEFORE_WALKTHROUGH);
       // A walkthrough started from a blank screen ends on one, unless the

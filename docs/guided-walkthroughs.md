@@ -87,6 +87,16 @@ steps:
   `import …Yaml from "@/walkthroughs/<id>.yaml?raw"` and an entry in
   `WALKTHROUGHS`. A malformed file fails at app startup, on purpose.
 
+## Staying on the walkthrough's model
+
+Everything that replaces the model asks first while a walkthrough that uses one
+is running (`utils/tutorialGuard.ts`, #172): stay, leave, or open it in a new
+window with the walkthrough left on its step. The exception is what the current
+step asks for: its `act.openModel`, or New Model for its `act.newModel`. So a
+step that teaches opening a model needs that `act`, and this and the "right model
+open" check are the two places the app reads `act`. A walkthrough with no model
+of its own is never interrupted.
+
 ## `done` — when a step is finished
 
 An empty or unrecognised condition is **never** satisfied: a typo sticks rather

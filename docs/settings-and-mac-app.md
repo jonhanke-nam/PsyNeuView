@@ -85,6 +85,8 @@ How the app looks and feels, remembered per browser:
   - a bend handle or attachment dot shows the arrow (or the crosshair or circle) rather than the hand, so the exact point is clear
 - **Pointer size** — Small, Medium (default), Large, Extra large, covering the arrow, the hand, the crosshair, the circle and the grabbing hand while dragging (#40), with a preview. Window zoom doesn't scale cursors
   - this is the one control for the size
+- **Node tags** — whether a node whose declaration can't be edited shows its small "view only" tag: Hidden, as in show_graph (default) or Shown (#211)
+  - the node's hover text and the Inspector's notice say it either way; the type and role tags are the Advanced Graph View Options' own switch (#122)
 - **Automatic layout** — how models are arranged when they have no layout of your own: Like show_graph (default: where PsyNeuLink's show_graph() puts each node, with its edges, #24), Layered, Radial or Force (#19)
   - choosing Like show_graph also switches edges to Smooth, the default edge style (#41)
   - the toolbar's layout menu switches the open model

@@ -13,6 +13,17 @@ enough.
 
 ---
 
+## Your work and the walkthrough
+
+A walkthrough is written for one model, so PsyNeuView keeps the two together:
+
+- **Starting one** uses the current window when nothing is in progress. If you
+  have your own model open, unsaved changes, or another walkthrough running,
+  you choose: start in a new window and leave that as it is, or replace it here.
+- **Opening another model during one** asks first: open it in a new window with
+  the walkthrough left on its step, leave the walkthrough and open it here, or
+  stay. A file you dropped or chose can only open in the current window.
+
 ## Starting a walkthrough
 
 Open **Tutorials ▾** in the toolbar and pick one. A walkthrough can also be
