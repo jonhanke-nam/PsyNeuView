@@ -77,6 +77,8 @@ import { abbreviateHome } from "@/components/common/settings/shared";
 import { record as recordActivity } from "@/utils/activityLog";
 import { causedBy } from "@/utils/waitLog";
 import { noteModelOrigin } from "@/utils/diagnostics";
+import { windowRequest } from "@/utils/appWindow";
+import { chooseTutorialStart, guardOpen, useTutorialChoice } from "@/utils/tutorialGuard";
 import { SAVE_COPY_EVENT, requestSaveCopy } from "@/utils/saveRequest";
 import { stripProtectionLine } from "@/utils/protectionLine";
 import { AutosaveStatus } from "./AutosaveStatus";
@@ -800,6 +802,13 @@ export function Toolbar() {
 
   const { setStatus, clearStatus } = useStatusStore();
 
+  // A walkthrough in progress gets a say before its model is replaced (#172).
+  // The Open menu draws above dialogs, so it closes when the question comes up.
+  const tutorialQuestion = useTutorialChoice((s) => s.pending);
+  useEffect(() => {
+    if (tutorialQuestion) setDropdownOpen(false);
+  }, [tutorialQuestion]);
+
   // Open a local .pnlproject bundle in place (#348): the backend extracts it
   // to a working dir and reports the origin, so Save re-zips back into it.
   const openBundle = async (bundlePath: string) => {
@@ -855,6 +864,7 @@ export function Toolbar() {
    * which is the flow most likely to be used for a deliberate re-open.
    */
   const loadFromPath = async (path: string, { fresh = true }: { fresh?: boolean } = {}) => {
+    if (fresh && !(await guardOpen({ kind: "path", path }))) return;
     if (!confirmDiscard()) return;
     if (fresh) useModelStore.getState().markFreshOpen(); // #906
     if (path.endsWith(".pnlproject")) {
@@ -952,7 +962,8 @@ export function Toolbar() {
     }
   };
 
-  const loadDemo = async (demo: DemoModel) => {
+  const loadDemo = async (demo: DemoModel, { byTutorial = false }: { byTutorial?: boolean } = {}) => {
+    if (!byTutorial && !(await guardOpen({ kind: "catalog", label: demo.label, file: demo.pristine_path }))) return;
     if (!confirmDiscard()) return;
     setDropdownOpen(false);
     clearNotifications();
@@ -1022,10 +1033,15 @@ export function Toolbar() {
       },
       open: async (label) => {
         const { rm, demo } = find(label);
-        if (rm) await loadReference(rm);
-        else if (demo) await loadDemo(demo);
+        if (rm) await loadReference(rm, { byTutorial: true });
+        else if (demo) await loadDemo(demo, { byTutorial: true });
         else return false;
         return useCatalogOpener.getState().isOpen?.(label) ?? false;
+      },
+      // #172: a bundled model as it shipped, so replacing it loses nothing.
+      isUntouched: () => {
+        const { source } = useModelStore.getState();
+        return (!!currentDemo && source === pristineSource) || (!!currentReference && !referenceEdited);
       },
       // Both lists, not either: when demos answered first, a walkthrough
       // written for a reference model (Stroop) looked it up too early, found
@@ -1033,6 +1049,68 @@ export function Toolbar() {
       ready: bundledListsSettled >= 2 && (referenceModels.length > 0 || demos.length > 0),
     });
   });
+
+  const startNewModel = async () => {
+                setDropdownOpen(false);
+                if (!(await guardOpen({ kind: "newModel" }))) return;
+                setPromptState({
+                  title: "New model",
+                  message: "Name for new model:",
+                  placeholder: "my_model",
+                  onSubmit: async (name) => {
+                    setPromptState(null);
+                    const varName = name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "").toLowerCase();
+                    if (!varName) return;
+                try {
+                  // Fetch PNL version for the template header
+                  let pnlVer = "unknown";
+                  try {
+                    const vr = await fetch("/api/pnl-version");
+                    if (vr.ok) { const vd = await vr.json(); pnlVer = vd.version || "unknown"; }
+                  } catch { /* use default */ }
+
+                  const resp = await fetch("/api/models/save-as", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      source: newModelTemplate(pnlVer).replace(/my_model/g, varName),
+                      file_name: `${varName}.py`,
+                    }),
+                  });
+                  if (!resp.ok) {
+                    const detail = await errorDetail(resp);
+                    addNotification("error", `Failed: ${detail}`);
+                    return;
+                  }
+                  const data = await resp.json();
+                  setFilePath(data.file_path);
+                  setSource(data.source);
+                  loadModelFromServer(data.model);
+                  setCurrentDemo(null);
+                  setPristineSource(null);
+                  addNotification("success", `Created new model: ${varName}.py`);
+                } catch (e) {
+                  addNotification("error", `Failed to create model: ${e}`);
+                }
+                  },
+                });
+  };
+
+  // #172: a window opened to show something else while a walkthrough carries
+  // on in the first. Once only, and off the address so a reload doesn't repeat it.
+  const windowRequestDone = useRef(false);
+  const catalogSettled = bundledListsSettled >= 2;
+  useEffect(() => {
+    if (windowRequestDone.current || !catalogSettled) return;
+    windowRequestDone.current = true;
+    const request = windowRequest(window.location.search);
+    if (!request) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    if (request.path) void loadFromPath(request.path);
+    else if (request.model) void useCatalogOpener.getState().open?.(request.model);
+    else if (request.newModel) void startNewModel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalogSettled]);
 
   const resetCurrentDemo = async () => {
     if (!currentDemo) return;
@@ -1044,7 +1122,11 @@ export function Toolbar() {
   // can be put back to the bundled version (backend's restore_pristine).
   const [referenceEdited, setReferenceEdited] = useState(false);
 
-  const loadReference = async (rm: ReferenceModel, { restore = false }: { restore?: boolean } = {}) => {
+  const loadReference = async (
+    rm: ReferenceModel,
+    { restore = false, byTutorial = false }: { restore?: boolean; byTutorial?: boolean } = {},
+  ) => {
+    if (!restore && !byTutorial && !(await guardOpen({ kind: "catalog", label: rm.label, file: rm.pristine_path }))) return;
     if (restore) {
       if (!window.confirm(`Put ${rm.label} back to the bundled version? Your edits to it will be lost.`)) return;
     } else if (!confirmDiscard()) return;
@@ -1119,6 +1201,7 @@ export function Toolbar() {
   // source file into a working dir before loading, so the open reflects the
   // live source yet edits never mutate the PsyNeuLink source clone.
   const loadPnlExample = async (m: LibraryModel) => {
+    if (!(await guardOpen({ kind: "file", name: m.label }))) return;
     if (!confirmDiscard()) return;
     setDropdownOpen(false);
     clearNotifications();
@@ -1195,6 +1278,7 @@ export function Toolbar() {
     path: string;
     content: string;
   }) => {
+    if (!(await guardOpen({ kind: "file", name: file.path.split("/").pop() ?? file.path }))) return;
     if (!confirmDiscard()) return;
     setGithubLoaderOpen(false);
     clearNotifications();
@@ -1343,6 +1427,7 @@ export function Toolbar() {
     // Reset so the same file can be picked again later.
     e.target.value = "";
     if (!file) return;
+    if (!(await guardOpen({ kind: "file", name: file.name }))) return;
 
     clearNotifications();
     setStatus(`Importing MDF: ${file.name}...`);
@@ -1668,50 +1753,7 @@ export function Toolbar() {
 
             {/* New Model */}
             <button
-              onClick={() => {
-                setDropdownOpen(false);
-                setPromptState({
-                  title: "New model",
-                  message: "Name for new model:",
-                  placeholder: "my_model",
-                  onSubmit: async (name) => {
-                    setPromptState(null);
-                    const varName = name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "").toLowerCase();
-                    if (!varName) return;
-                try {
-                  // Fetch PNL version for the template header
-                  let pnlVer = "unknown";
-                  try {
-                    const vr = await fetch("/api/pnl-version");
-                    if (vr.ok) { const vd = await vr.json(); pnlVer = vd.version || "unknown"; }
-                  } catch { /* use default */ }
-
-                  const resp = await fetch("/api/models/save-as", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      source: newModelTemplate(pnlVer).replace(/my_model/g, varName),
-                      file_name: `${varName}.py`,
-                    }),
-                  });
-                  if (!resp.ok) {
-                    const detail = await errorDetail(resp);
-                    addNotification("error", `Failed: ${detail}`);
-                    return;
-                  }
-                  const data = await resp.json();
-                  setFilePath(data.file_path);
-                  setSource(data.source);
-                  loadModelFromServer(data.model);
-                  setCurrentDemo(null);
-                  setPristineSource(null);
-                  addNotification("success", `Created new model: ${varName}.py`);
-                } catch (e) {
-                  addNotification("error", `Failed to create model: ${e}`);
-                }
-                  },
-                });
-              }}
+              onClick={() => void startNewModel()}
               data-testid="open-menu-new-model"
               style={{
                 ...itemStyle,
@@ -3258,7 +3300,6 @@ const LAYOUT_PRESETS: { id: LayoutPreset; label: string; title: string }[] = [
  */
 function WalkthroughMenu() {
   const activeTourId = useTourStore((s) => s.activeTourId);
-  const startTour = useTourStore((s) => s.startTour);
   const stopTour = useTourStore((s) => s.stopTour);
 
   const [open, setOpen] = useState(false);
@@ -3314,7 +3355,7 @@ function WalkthroughMenu() {
       writeOfferChoice("started");
       setOfferChoice("started");
     }
-    startTour(id);
+    void chooseTutorialStart(id);
     setOpen(false);
   };
 

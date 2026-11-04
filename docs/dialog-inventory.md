@@ -65,6 +65,7 @@ Escape, which every row has.
 | Watching for changes (the file-watch status) | dialog | `common/SyncIndicator.tsx` | `sync-popover` | the ● status at the right end of the diagnostics bar (#103) | ×, click outside, the status again |
 | Changes since the last version that built | dialog | `graph/LastGoodDiff.tsx` | `last-good-diff` | Compare with that version, on the stale-graph banner | ×, click outside |
 | Changes since save | dialog | `common/ChangesSinceSaveDialog.tsx` | `changes-since-save` | the orange unsaved dot beside the model name; History ▸ Changes since save… | ×, click outside, Close |
+| Leave the tutorial? / Start in a new window? | dialog | `common/TutorialChoiceDialog.tsx` | `tutorial-choice` | opening another model during a walkthrough; starting one with something in progress | ×, click outside, Stay here or Cancel, its other answers |
 | Revert the file to this save | dialog | `common/RevertToSaveDialog.tsx` | `revert-to-save` | History ▸ a save marker ▸ Revert the file to this save…; History's "You've undone to" line | ×, click outside, Cancel, Revert the file (not while reverting) |
 | Convert to Standard Format? | dialog | `common/DiagnosticPanel.tsx` | `convert-confirm-dialog` | Convert to Standard Format, in the diagnostics panel | ×, click outside, Cancel, Convert |
 | Snippet menu | menu | `editor/CodeEditor.tsx` | `snippet-menu` | + Snippet in the editor header | the Snippet button, click outside, a pick |

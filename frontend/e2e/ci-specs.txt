@@ -96,6 +96,7 @@ tour-menu-reopens.spec.ts
 tour-ring-behind-dialogs.spec.ts
 tour-ring-clear-of-text.spec.ts
 tour-ring-on-node.spec.ts
+tutorial-known-state.spec.ts
 tutorials-hide-course.spec.ts
 tutorials-menu-folding.spec.ts
 undo-depth.spec.ts

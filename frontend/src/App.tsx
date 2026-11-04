@@ -30,6 +30,7 @@ import { useLayeredLayoutFit } from "./hooks/useLayeredLayoutFit";
 import { ExternalChangeModal } from "./components/common/ExternalChangeModal";
 import { ChangesSinceSaveDialog } from "./components/common/ChangesSinceSaveDialog";
 import { RevertToSaveDialog } from "./components/common/RevertToSaveDialog";
+import { TutorialChoiceDialog } from "./components/common/TutorialChoiceDialog";
 import { registerCommand } from "./shortcuts/commands";
 import { setPanelVisibleOrExplain } from "./shortcuts/lastPanel";
 import { useAppShortcuts } from "./shortcuts/useAppShortcuts";
@@ -305,6 +306,7 @@ export default function App() {
         {/* What the unsaved changes are, against the file on disk (#1348). */}
         <ChangesSinceSaveDialog />
         <RevertToSaveDialog />
+        <TutorialChoiceDialog />
         {/* The file changed underneath unsaved edits — ask, never guess (#926). */}
         {pendingChange && (
           <ExternalChangeModal
