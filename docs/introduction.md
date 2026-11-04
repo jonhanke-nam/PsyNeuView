@@ -72,6 +72,16 @@ you can look at a working model before building one.
 | **Trace bar** | Step through a completed run one execution step at a time. |
 | **Run State** | What every node held at the step you are looking at. |
 
+The window opens with the canvas alone. The **Layout** menu brings the others
+in, and so does a key each: ⌘2 for the code editor, ⌘3 for the Inspector and
+the other bottom tabs (Run, Learn, Run State, Scheduler), ⌘4 for the
+Components panel, and ⌘1 for the canvas itself while another panel is showing
+(Ctrl in place of ⌘ outside a Mac). The keys are listed under Settings ▸
+Keyboard shortcuts, where they can be changed; a browser keeps ⌘1 to ⌘9 for
+its own tabs, so there the Layout menu is the way. Whatever you choose is
+remembered. A guided walkthrough shows every panel while it runs and puts your
+layout back afterwards.
+
 ## Where to go next
 
 - **Want to try it?** [Loading a model](tutorials/01-loading-a-model.md) starts

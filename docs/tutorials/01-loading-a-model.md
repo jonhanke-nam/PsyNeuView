@@ -14,7 +14,9 @@ How to get a PsyNeuLink model onto the PsyNeuView canvas.
 ## 1. Open the app
 
 When PsyNeuView starts with no model, the canvas is empty and prompts you to
-load one.
+load one. Only the canvas shows at first: the code editor and the Inspector
+are a key away (⌘2 and ⌘3; Ctrl outside a Mac) or in the **Layout** menu, and
+the later tutorials bring them in as they need them.
 
 ![PsyNeuView on first launch, with an empty canvas](assets/loading/01-initial.png)
 
