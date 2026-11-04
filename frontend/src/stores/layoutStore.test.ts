@@ -271,6 +271,21 @@ describe("a blank screen by choice (#215)", () => {
     expect(localStorage.getItem("psynewview_layout_graph_visible")).toBe("false");
   });
 
+  it("a model opened through the model store brings the panels, and a Save As doesn't", async () => {
+    const { useLayoutStore } = await freshStore();
+    const { useModelStore } = await import("./modelStore");
+    const hide = () => useLayoutStore.getState().setPanelVisible("graph", false);
+    useLayoutStore.getState().setAllowBlank(true);
+    hide();
+
+    useModelStore.getState().setFilePath("/models/one.py");
+    expect(useLayoutStore.getState().graphVisible).toBe(true);
+
+    hide();
+    useModelStore.getState().setFilePath("/models/copy.py", { keepPanels: true });
+    expect(useLayoutStore.getState().isBlank()).toBe(true);
+  });
+
   it("a walkthrough started from blank shows its panels and ends on blank, or the graph if the setting went off", async () => {
     const { useLayoutStore } = await freshStore();
     useLayoutStore.getState().setAllowBlank(true);
