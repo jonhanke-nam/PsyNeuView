@@ -23,6 +23,26 @@ interface CompositionData {
   outputPorts?: CompositionPort[];
 }
 
+// The frame's three buttons (#194). The size of the canvas's zoom and Fit
+// controls (26 px), so they are as easy to see and press as those; they were
+// 22 x 16 px before, too small to find on a big model and to hit at low zoom.
+const controlStyle: React.CSSProperties = {
+  cursor: "pointer",
+  fontSize: 15,
+  lineHeight: 1,
+  minWidth: 30,
+  height: 26,
+  padding: "0 8px",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  border: "1px solid var(--pnv-composition-control-border)",
+  borderRadius: 4,
+  background: "var(--pnv-surface)",
+  color: "var(--pnv-composition-control-text)",
+  fontWeight: 600,
+};
+
 // Distribute N handles evenly along an edge, leaving margins at the corners.
 function portOffsetPct(i: number, count: number): string {
   if (count <= 1) return "50%";
@@ -36,6 +56,9 @@ export const CompositionNode = memo(function CompositionNode({
   const d = data as unknown as CompositionData;
   const showNodeNames = useGraphSettings((s) => s.showNodeNames);
   const showNodeElements = useGraphSettings((s) => s.showNodeElements);
+  // The flattened and PyTorch views: every composition is a frame of its own
+  // there, which changes what two of the buttons can do (#194).
+  const flattened = useGraphSettings((s) => s.flat || s.pytorch);
 
   const onCollapse = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -131,7 +154,7 @@ export const CompositionNode = memo(function CompositionNode({
           left: 12,
           right: 12,
           display: "flex",
-          alignItems: "baseline",
+          alignItems: "center",
           gap: 6,
         }}
       >
@@ -166,58 +189,40 @@ export const CompositionNode = memo(function CompositionNode({
         )}
         <button
           onClick={onFocus}
-          title="Focus this composition (fill the canvas)"
-          aria-label={`Focus composition ${d.label}`}
-          style={{
-            marginLeft: "auto",
-            cursor: "pointer",
-            fontSize: 10,
-            lineHeight: 1,
-            padding: "2px 6px",
-            border: "1px solid var(--pnv-composition-control-border)",
-            borderRadius: 3,
-            background: "var(--pnv-surface)",
-            color: "var(--pnv-composition-control-text)",
-            fontWeight: 600,
-          }}
+          title="Enter this composition: show only what is inside it (the breadcrumb leads back out)"
+          aria-label={`Enter composition ${d.label}`}
+          style={{ ...controlStyle, marginLeft: "auto" }}
         >
-          ⛶
+          ⤵
         </button>
-        <button
-          onClick={onInset}
-          title="Toggle inset view (independent framed sub-graph)"
-          aria-label={`Toggle inset view for composition ${d.label}`}
-          style={{
-            marginLeft: 4,
-            cursor: "pointer",
-            fontSize: 10,
-            lineHeight: 1,
-            padding: "2px 6px",
-            border: `1px solid ${d.inset ? "var(--pnv-composition-inset)" : "var(--pnv-composition-control-border)"}`,
-            borderRadius: 3,
-            background: d.inset ? "var(--pnv-composition-inset)" : "var(--pnv-surface)",
-            color: d.inset ? "var(--pnv-on-primary)" : "var(--pnv-composition-control-text)",
-            fontWeight: 600,
-          }}
-        >
-          ▣
-        </button>
+        {/* The flattened and PyTorch views draw every composition as an inset
+            frame already, so the toggle has nothing to do there (#194). */}
+        {!flattened && (
+          <button
+            onClick={onInset}
+            title={d.inset
+              ? "Shown as an inset: a framed sub-graph laid out on its own. Press to show it nested again"
+              : "Show as an inset: a framed sub-graph laid out on its own"}
+            aria-label={`Inset composition ${d.label}`}
+            aria-pressed={!!d.inset}
+            style={{
+              ...controlStyle,
+              marginLeft: 4,
+              border: `1px solid ${d.inset ? "var(--pnv-composition-inset)" : "var(--pnv-composition-control-border)"}`,
+              background: d.inset ? "var(--pnv-composition-inset)" : "var(--pnv-surface)",
+              color: d.inset ? "var(--pnv-on-primary)" : "var(--pnv-composition-control-text)",
+            }}
+          >
+            ▣
+          </button>
+        )}
         <button
           onClick={onCollapse}
-          title="Collapse this composition to a single node"
+          title={flattened
+            ? "Collapse this composition to a single node (shows the model nested, not flattened)"
+            : "Collapse this composition to a single node"}
           aria-label={`Collapse composition ${d.label}`}
-          style={{
-            marginLeft: 4,
-            cursor: "pointer",
-            fontSize: 10,
-            lineHeight: 1,
-            padding: "2px 6px",
-            border: "1px solid var(--pnv-composition-control-border)",
-            borderRadius: 3,
-            background: "var(--pnv-surface)",
-            color: "var(--pnv-composition-control-text)",
-            fontWeight: 600,
-          }}
+          style={{ ...controlStyle, marginLeft: 4 }}
         >
           −
         </button>
