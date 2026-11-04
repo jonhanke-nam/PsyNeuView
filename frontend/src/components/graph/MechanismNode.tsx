@@ -10,7 +10,7 @@ import { usePortLayout } from "@/stores/portLayoutStore";
 import type { MechanismData } from "@/stores/modelStore";
 import { useGraphSettings, type GraphDirection } from "@/stores/graphSettingsStore";
 import { useModelStore, NODE_HEIGHT, NODE_WIDTH } from "@/stores/modelStore";
-import { TYPE_COLORS, ROLE_COLORS, ROLE_PRIORITY } from "@/constants/pnlTypes";
+import { TYPE_COLORS, ROLE_COLORS, ROLE_TEXT_COLORS, ROLE_PRIORITY } from "@/constants/pnlTypes";
 import { toggleCompositionCollapse } from "@/utils/nodeActions";
 import { formatTraceValue } from "@/utils/traceValues";
 import { ValueGrid, poolValues, useNodeGrid } from "@/components/common/ValueGrid";
@@ -114,6 +114,16 @@ function getRoleColor(roles: string[], custom: Record<string, string> | null): s
     if (roles.includes(role)) return colors[role] || ROLE_COLORS[role] || "var(--pnv-role-internal)";
   }
   return colors.INTERNAL || "var(--pnv-role-internal)";
+}
+
+// The role's colour as text or behind white text: darker than the outline
+// for the roles whose outline colour is too light to read (#190). A colour
+// chosen in Graph ▸ Style is the user's, and is used as it is.
+function getRoleTextColor(roles: string[], custom: Record<string, string> | null): string {
+  if (custom) return getRoleColor(roles, custom);
+  if (roles.includes("INPUT") && roles.includes("OUTPUT")) return ROLE_COLORS.SINGLETON;
+  const role = ROLE_PRIORITY.find((r) => roles.includes(r));
+  return (role && (ROLE_TEXT_COLORS[role] || ROLE_COLORS[role])) || ROLE_COLORS.INTERNAL;
 }
 
 function getRoleBorderWidth(roles: string[], regular: number, emphasis: number): number {
@@ -246,6 +256,7 @@ export const MechanismNode = memo(function MechanismNode({
   const customRoleColors = useGraphSettings((s) => s.customRoleColors);
   const roleColor = getRoleColor(d.roles || [], customRoleColors);
   const accentColor = colorByRole ? roleColor : typeColor;
+  const accentTextColor = colorByRole ? getRoleTextColor(d.roles || [], customRoleColors) : typeColor;
   const borderWidth = colorByRole
     ? getRoleBorderWidth(d.roles || [], nodeBorderWidth, nodeBorderWidthEmphasis)
     : nodeBorderWidth;
@@ -547,7 +558,7 @@ export const MechanismNode = memo(function MechanismNode({
             data-testid="node-type-tag"
             style={{
               fontSize: 10,
-              color: accentColor,
+              color: accentTextColor,
               fontWeight: 600,
               letterSpacing: "0.03em",
               textTransform: "uppercase",
@@ -562,7 +573,7 @@ export const MechanismNode = memo(function MechanismNode({
             style={{
               fontSize: 9,
               color: "var(--pnv-on-primary)",
-              background: accentColor,
+              background: accentTextColor,
               padding: "0px 5px",
               borderRadius: 3,
               fontWeight: 600,
