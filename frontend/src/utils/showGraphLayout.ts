@@ -8,10 +8,13 @@
  * the node of the same name, so rows, left-to-right order and the bottom-to-top
  * flow all match show_graph.
  *
- * PsyNeuView's boxes are bigger than show_graph's ovals, so show_graph's picture
- * is enlarged, evenly, just enough that every box fits where its oval was. The
- * arrangement is unchanged: nothing is re-laid-out, so the order within a row
- * can't drift from show_graph's.
+ * PsyNeuView draws each node the size show_graph draws its oval, by Graphviz's
+ * own rule for the name (utils/nodeBox.ts, #210), so show_graph's picture is
+ * usually shown at its own size, and the node text at show_graph's proportion.
+ * Where a box is bigger than its oval (a longer font, the type and role tags
+ * on, an expanded node), the picture is enlarged, evenly, just enough that
+ * every box fits where its oval was. The arrangement is unchanged: nothing is
+ * re-laid-out, so the order within a row can't drift from show_graph's.
  *
  * Fetching and laying out are asynchronous, while the layout engines in
  * layout.ts are synchronous. So the work is split: `computeShowGraphPlacement`
@@ -33,7 +36,7 @@ const DEFAULT_SIZE = { w: 180, h: 60 };
 
 // An open frame's header row, as in layout.ts, and the least room between a
 // member and the frame's other edges.
-const FRAME_HEADER = 30;
+const FRAME_HEADER = 34;
 const FRAME_MARGIN = 10;
 
 export interface ShowGraphPlacement {
@@ -323,9 +326,11 @@ async function computeOnce(
 }
 
 // Clear space kept between neighbouring boxes once enlarged: across a row,
-// and between rows (where the arrows and their labels run).
-const GAP_X = 40;
-const GAP_Y = 70;
+// and between rows (where the arrows run). Graphviz's own least separations
+// (nodesep 0.25in, ranksep 0.5in), so a picture whose boxes are no bigger than
+// its ovals is shown at its own size (#210).
+const GAP_X = 18;
+const GAP_Y = 36;
 
 /**
  * How much show_graph's picture must grow so that PsyNeuView's boxes, which
