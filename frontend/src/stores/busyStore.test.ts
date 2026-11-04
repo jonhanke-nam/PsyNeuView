@@ -5,6 +5,7 @@ import {
   formatBusyElapsed,
   installBusyFetch,
   isBackgroundRequest,
+  loadBusyStyle,
   loadBusyTimerPlace,
   oldestTask,
   requestLabel,
@@ -169,5 +170,16 @@ describe("busyStore timings (#176)", () => {
     store.set("psyneuview.busy.timerPlace", "nonsense");
     expect(loadBusyTimerPlace()).toBe("toolbar");
     useBusyStore.getState().setTimerPlace("toolbar");
+  });
+
+  it("remembers the indicator's style, defaulting to the classic wheel (#169)", () => {
+    store.delete("psyneuview.busy.style");
+    expect(loadBusyStyle()).toBe("wheel");
+    useBusyStore.getState().setStyle("network");
+    expect(loadBusyStyle()).toBe("network");
+    expect(useBusyStore.getState().style).toBe("network");
+    store.set("psyneuview.busy.style", "nonsense");
+    expect(loadBusyStyle()).toBe("wheel");
+    useBusyStore.getState().setStyle("wheel");
   });
 });
