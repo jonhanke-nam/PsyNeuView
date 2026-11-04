@@ -243,8 +243,9 @@ def test_review_routes_accept_only_the_apps_own_page(state, route):
     null_origin = {"host": "127.0.0.1:8000", "origin": "null"}
     for headers in (foreign_origin, foreign_host, null_origin):
         resp = client.post(route, json=body, headers=headers)
+        # The server-wide request guard refuses these first; test_is_own_page_rules
+        # covers the assistant's own check behind it.
         assert resp.status_code == 403, (headers, resp.text)
-        assert resp.json()["detail"]["reason"] == "not_app_page"
     assert review.status(p) == {"tracked": True, "runnable": False}
     assert not state["marker"].exists()
     resp = client.post(route, json=body, headers=own)
