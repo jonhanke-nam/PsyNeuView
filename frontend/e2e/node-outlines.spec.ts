@@ -66,6 +66,21 @@ test("node outlines: show_graph's colours and heavier defaults, one width in Set
   });
   const before = await outlineWidths(page);
 
+  // The show_graph tab draws the same green: Graphviz names the colour in
+  // its SVG, which a browser would read as #008000, and the picture is
+  // redrawn with the value show_graph's own PDF draws (#190).
+  await page.getByTestId("tab-show_graph").click();
+  const picture = page.locator("svg").filter({ has: page.locator("g.node") }).first();
+  await expect(picture).toBeVisible({ timeout: 60_000 });
+  expect(await picture.evaluate((svg) => {
+    const node = Array.from(svg.querySelectorAll("g.node")).find((g) => g.querySelector("title")?.textContent === "colour");
+    return {
+      input: node?.querySelector("ellipse")?.getAttribute("stroke"),
+      named: (svg.outerHTML.match(/="green"/g) || []).length,
+    };
+  })).toEqual({ input: "#00ff00", named: 0 });
+  await page.getByTestId("tab-inspector").click();
+
   // Choose 5 px in Settings; the canvas follows without a reload, and the
   // heavier outlines move with it.
   await page.getByTestId("settings-button").click();
