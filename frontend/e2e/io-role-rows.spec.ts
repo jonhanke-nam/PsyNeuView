@@ -57,17 +57,7 @@ const REFERENCE_MODELS = [
  * A model whose show_graph picture broke the convention would be listed
  * the same way, since the canvas follows show_graph (#34).
  */
-const AGREED_EXCEPTIONS: Record<string, string[]> = {
-  // The three recurrent Stroop models ship hand-arranged layouts that show
-  // the flow inputs → hidden layers → RESPONSE on three rows. PsyNeuLink
-  // gives the hidden layers the OUTPUT role too, only because they sit in a
-  // cycle with RESPONSE; show_graph puts all four on the top row, and the
-  // automatic layout follows it. The shipped layouts keep the flow readable
-  // instead (#212).
-  "Botvinick_conflict_monitoring_model — as opened (saved layout)": ["outputs COLOR HIDDEN and RESPONSE on different rows"],
-  "Cohen_Huston1994_horse_race — as opened (saved layout)": ["outputs COLORS HIDDEN and RESPONSE on different rows"],
-  "Cohen_Huston1994 — as opened (saved layout)": ["outputs COLOR HIDDEN and RESPONSE on different rows"],
-};
+const AGREED_EXCEPTIONS: Record<string, string[]> = {};
 
 /** What the load gives for a node, as far as this needs. */
 interface NodeInfo {
