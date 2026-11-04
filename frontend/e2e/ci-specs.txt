@@ -5,6 +5,7 @@ arrowheads-at-end.spec.ts
 busy-indicator.spec.ts
 components-panel-start-setting.spec.ts
 composition-cim-edges.spec.ts
+composition-expand-geometry.spec.ts
 composition-frame-buttons.spec.ts
 composition-frame-undo.spec.ts
 developer-mode-marking.spec.ts
