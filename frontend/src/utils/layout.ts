@@ -159,13 +159,23 @@ export function applyDagreLayout(
   // Dropping the edges that close a cycle leaves a graph acyclic by
   // construction, so depth is defined for every node. Those edges still render;
   // like the scheduler edges above, they simply don't influence placement.
+  // #209: an edge drawn to a member of an inset frame is, for the parent
+  // layout, an edge to the frame (the members are laid out on their own).
+  const parentOf = new Map(nodes.map((n) => [n.id, n.parentId]));
+  const insetOwner = (id: string): string => {
+    let owner = id;
+    for (let cur = parentOf.get(id), i = 0; cur && i < 50; cur = parentOf.get(cur), i++) {
+      if (insetFrameIds.has(cur)) owner = cur;
+    }
+    return owner;
+  };
   const rankable = acyclicEdges(
     nodes.filter((n) => g.hasNode(n.id)).map((n) => ({ id: n.id })),
     edges
       .filter((e) => e.type !== "gscEdge")
       .map((e) => ({
-        source: e.source,
-        target: e.target,
+        source: insetOwner(e.source),
+        target: insetOwner(e.target),
         feedback: Boolean((e.data as { feedback?: boolean } | undefined)?.feedback),
         control: (e.data as { type?: string } | undefined)?.type === "ControlProjection",
       })),
