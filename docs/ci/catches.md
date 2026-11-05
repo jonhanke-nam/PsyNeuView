@@ -22,6 +22,24 @@ don't use a single GitHub issue as the ledger — it gets noisy and is awkward t
 format.) Tracked as a process in #709.
 
 
+## Two changes that each passed alone broke two things together (2026-11-04)
+
+**Caught by:** `e2e` → `show-graph-agreement.spec.ts` and
+`edge-routing-no-crossings.spec.ts`, on `devel` after #218 and #225 had each
+passed alone; both failed on retry too (#209, #210)
+
+Ending projections on members inside a frame (#218) lifted those edges above the
+frame, and in the nested demo one left through the header right across the
+frame's Enter button. A press there selected the edge and Enter did nothing.
+Fixed by drawing the frame's buttons above the canvas, in the same place. Separately, an
+edge reroutes around other nodes only when it is redrawn, and React Flow redraws
+it only when one of its own ends moves. That gap was old, but nodes now settle
+into a second layout more often (#225), so an edge could keep a route around a
+node's old place: in EGO's PyTorch view on the Linux runner's font, one ran through
+`CONTEXT [RETRIEVED]`. It passed on a Mac only because the Mac's font happens to
+place the nodes clear of it. Fixed by rerouting edges whenever any node moves or changes
+size, with `@ci` tests for both.
+
 ## Hiding a node's tag put a folded composition's Expand button under the pointer (2026-11-04)
 
 **Caught by:** `tutorials` → `tour-demo.tutorial.spec.ts`, EGO walkthrough, step

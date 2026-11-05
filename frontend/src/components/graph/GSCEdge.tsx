@@ -26,6 +26,7 @@ import { useState } from "react";
 import { routeAroundObstacles, type Rect } from "@/utils/edgeRouter";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useModelStore } from "@/stores/modelStore";
+import { useNodeBoxes } from "@/hooks/useNodeBoxes";
 
 /** Point on `node`'s bounding box where the ray toward (tx, ty) exits it. */
 function boundaryPoint(node: InternalNode, tx: number, ty: number) {
@@ -96,6 +97,7 @@ export function GSCEdge({
   const avoidNodes = useGraphSettings((s) => s.avoidNodes);
   const edgeNodeClearance = useGraphSettings((s) => s.edgeNodeClearance);
   const nodeLookup = useStore((s) => s.nodeLookup);
+  useNodeBoxes(); // nodeLookup is updated in place: route again when a node moves
 
   // Floating endpoints on the node boundaries facing each other. Falls back to
   // React Flow's port-anchored coords if a node hasn't been measured yet.
