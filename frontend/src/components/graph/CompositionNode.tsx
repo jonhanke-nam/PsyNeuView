@@ -4,8 +4,8 @@
  * so cross-composition edges can connect to it.
  */
 
-import { memo, useCallback } from "react";
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
+import { Handle, Position, useStore, ViewportPortal, type NodeProps } from "@xyflow/react";
 import { toggleCompositionCollapse, focusComposition, toggleCompositionInset } from "@/utils/nodeActions";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 
@@ -49,11 +49,37 @@ function portOffsetPct(i: number, count: number): string {
   return `${20 + (i * 60) / (count - 1)}%`;
 }
 
+// Above every node and edge in the canvas, selected ones included: selecting a
+// node lifts it by 1000, and what is inside it and the edges to those with it.
+// It holds only within the canvas's viewport, so panels and menus stay on top.
+const CONTROLS_Z_INDEX = 5000;
+// The frame's outline, which an offset inside the frame starts after.
+const FRAME_BORDER = 2;
+// Room between the buttons.
+const CONTROLS_GAP = 10;
+
 export const CompositionNode = memo(function CompositionNode({
+  id,
   data,
   selected,
+  positionAbsoluteX,
+  positionAbsoluteY,
 }: NodeProps) {
   const d = data as unknown as CompositionData;
+  // A frame resized is drawn again, and its buttons with it.
+  useStore((s) => s.nodeLookup.get(id)?.measured?.width);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const slotRef = useRef<HTMLDivElement>(null);
+  const [slot, setSlot] = useState<{ x: number; y: number } | null>(null);
+  // Where the buttons' room in the header is, within the frame. Offsets are
+  // unaffected by the canvas's zoom. On every draw, as it costs a read or two.
+  useLayoutEffect(() => {
+    const header = headerRef.current, room = slotRef.current;
+    if (!header || !room) return;
+    const x = FRAME_BORDER + header.offsetLeft + room.offsetLeft;
+    const y = FRAME_BORDER + header.offsetTop + room.offsetTop;
+    setSlot((was) => (was?.x === x && was?.y === y ? was : { x, y }));
+  });
   const showNodeNames = useGraphSettings((s) => s.showNodeNames);
   const showNodeElements = useGraphSettings((s) => s.showNodeElements);
   // The flattened and PyTorch views: every composition is a frame of its own
@@ -148,6 +174,7 @@ export const CompositionNode = memo(function CompositionNode({
           with the COMPOSITION tag off by default they no longer sit right
           after a short name, where an edge leaving the frame often runs). */}
       <div
+        ref={headerRef}
         style={{
           position: "absolute",
           top: 8,
@@ -187,46 +214,74 @@ export const CompositionNode = memo(function CompositionNode({
             ({d.childCount} nodes)
           </span>
         )}
-        <button
-          onClick={onFocus}
-          title="Enter this composition: show only what is inside it (the breadcrumb leads back out)"
-          aria-label={`Enter composition ${d.label}`}
-          style={{ ...controlStyle, marginLeft: "auto" }}
-        >
-          ⤵
-        </button>
-        {/* The flattened and PyTorch views draw every composition as an inset
-            frame already, so the toggle has nothing to do there (#194). */}
-        {!flattened && (
-          <button
-            onClick={onInset}
-            title={d.inset
-              ? "Shown as an inset: a framed sub-graph laid out on its own. Press to show it nested again"
-              : "Show as an inset: a framed sub-graph laid out on its own"}
-            aria-label={`Inset composition ${d.label}`}
-            aria-pressed={!!d.inset}
+        {/* The buttons' room in the row, so the name stops short of them. They
+            are drawn above the canvas (below), exactly here. */}
+        <div ref={slotRef} aria-hidden style={{ display: "flex", flexShrink: 0, gap: CONTROLS_GAP, marginLeft: "auto", visibility: "hidden" }}>
+          {["⤵", ...(flattened ? [] : ["▣"]), "−"].map((glyph) => (
+            <span key={glyph} style={{ ...controlStyle, boxSizing: "border-box" }}>{glyph}</span>
+          ))}
+        </div>
+      </div>
+      {/* The frame's buttons. A projection to or from a member is drawn above
+          the frame (React Flow lifts it to the member's level), so one leaving
+          through the header lay over a button drawn in the frame, and a press
+          selected the edge instead (#209). Drawn here they are above it all. */}
+      {slot && (
+        <ViewportPortal>
+          <div
+            className="nodrag nopan"
             style={{
-              ...controlStyle,
-              marginLeft: 4,
-              border: `1px solid ${d.inset ? "var(--pnv-composition-inset)" : "var(--pnv-composition-control-border)"}`,
-              background: d.inset ? "var(--pnv-composition-inset)" : "var(--pnv-surface)",
-              color: d.inset ? "var(--pnv-on-primary)" : "var(--pnv-composition-control-text)",
+              position: "absolute",
+              left: 0,
+              top: 0,
+              transform: `translate(${positionAbsoluteX + slot.x}px, ${positionAbsoluteY + slot.y}px)`,
+              zIndex: CONTROLS_Z_INDEX,
+              display: "flex",
+              gap: CONTROLS_GAP,
+              pointerEvents: "all",
             }}
           >
-            ▣
-          </button>
-        )}
-        <button
-          onClick={onCollapse}
-          title={flattened
-            ? "Collapse this composition to a single node (shows the model nested, not flattened)"
-            : "Collapse this composition to a single node"}
-          aria-label={`Collapse composition ${d.label}`}
-          style={{ ...controlStyle, marginLeft: 4 }}
-        >
-          −
-        </button>
-      </div>
+            <button
+              onClick={onFocus}
+              title="Enter this composition: show only what is inside it (the breadcrumb leads back out)"
+              aria-label={`Enter composition ${d.label}`}
+              style={controlStyle}
+            >
+              ⤵
+            </button>
+            {/* The flattened and PyTorch views draw every composition as an inset
+                frame already, so the toggle has nothing to do there (#194). */}
+            {!flattened && (
+              <button
+                onClick={onInset}
+                title={d.inset
+                  ? "Shown as an inset: a framed sub-graph laid out on its own. Press to show it nested again"
+                  : "Show as an inset: a framed sub-graph laid out on its own"}
+                aria-label={`Inset composition ${d.label}`}
+                aria-pressed={!!d.inset}
+                style={{
+                  ...controlStyle,
+                  border: `1px solid ${d.inset ? "var(--pnv-composition-inset)" : "var(--pnv-composition-control-border)"}`,
+                  background: d.inset ? "var(--pnv-composition-inset)" : "var(--pnv-surface)",
+                  color: d.inset ? "var(--pnv-on-primary)" : "var(--pnv-composition-control-text)",
+                }}
+              >
+                ▣
+              </button>
+            )}
+            <button
+              onClick={onCollapse}
+              title={flattened
+                ? "Collapse this composition to a single node (shows the model nested, not flattened)"
+                : "Collapse this composition to a single node"}
+              aria-label={`Collapse composition ${d.label}`}
+              style={controlStyle}
+            >
+              −
+            </button>
+          </div>
+        </ViewportPortal>
+      )}
     </div>
   );
 });
