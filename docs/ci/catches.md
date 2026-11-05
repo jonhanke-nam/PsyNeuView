@@ -34,7 +34,7 @@ frame's Enter button. A press there selected the edge and Enter did nothing.
 Fixed by drawing the frame's buttons above the canvas, in the same place. Separately, an
 edge reroutes around other nodes only when it is redrawn, and React Flow redraws
 it only when one of its own ends moves. That gap was old, but nodes now settle
-into a second layout on most opens (#225), so an edge could keep a route around a
+into a second layout more often (#225), so an edge could keep a route around a
 node's old place: in EGO's PyTorch view on the Linux runner's font, one ran through
 `CONTEXT [RETRIEVED]`. It passed on a Mac only because the Mac's font happens to
 place the nodes clear of it. Fixed by rerouting edges whenever any node moves or changes
