@@ -35,6 +35,7 @@ import { useModelStore } from "@/stores/modelStore";
 import { EDGE_LINE_HIGHLIGHT_EXTRA, EDGE_LINE_HOVER_EXTRA, edgeArrowheadScale, useEdgeLineWidth } from "@/stores/edgeLineStore";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useNotificationStore } from "@/stores/notificationStore";
+import { useNodeBoxes } from "@/hooks/useNodeBoxes";
 
 const FAN_SPACING_PX = 18;
 // Label width estimate: monospace 10px font ≈ 6px per char, plus ~12px
@@ -135,9 +136,10 @@ export function ProjectionEdge({
   // per-point; the dots tracked only the *edge*, so hovering one grew both and
   // the two kinds of point answered the pointer differently.
   const [hoveredEnd, setHoveredEnd] = useState<EdgeEnd | null>(null);
-  // #902 (DOF b): node-avoiding routing. `nodeLookup` is a stable Map ref that
-  // changes when node internals do (i.e. when nodes move) — exactly when we need
-  // to recompute obstacle boxes. Gated by the `avoidNodes` render setting (#912).
+  // #902 (DOF b): node-avoiding routing, gated by the `avoidNodes` render setting
+  // (#912). `nodeLookup` is updated in place, so it says nothing about when to
+  // route again; useNodeBoxes does, whenever any node moves or changes size.
+  useNodeBoxes();
   const avoidNodes = useGraphSettings((s) => s.avoidNodes);
   const floatingPorts = useGraphSettings((s) => s.floatingPorts);
   const showPortDots = useGraphSettings((s) => s.showPortDots);
