@@ -45,6 +45,18 @@ describe("a reshape", () => {
     arrowShaped("after the canvas is gone");
     expect(seen).toEqual(["before", "Reshaped arrow a_to_b"]);
   });
+
+  it("says whether it took the layout from Auto, so Undo can go back to Auto", () => {
+    const seen: boolean[] = [];
+    const off = registerArrowShapeCommit({ before: () => {}, done: (_d, fromAuto) => seen.push(fromAuto) });
+    startShapingArrow(); // Auto → Custom
+    startShapingArrow(); // the same gesture, moving on
+    arrowShaped("Reshaped arrow a_to_b");
+    startShapingArrow(); // already Custom
+    arrowShaped("Reshaped arrow a_to_b");
+    off();
+    expect(seen).toEqual([true, false]);
+  });
 });
 
 describe("Undo reaching a step with the arrows shaped otherwise", () => {

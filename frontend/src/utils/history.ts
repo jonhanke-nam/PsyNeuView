@@ -32,6 +32,8 @@ export interface RecordActionOptions {
    * changed, though the code and the graph did not. See `Snapshot.reshapes`.
    */
   reshapes?: boolean;
+  /** The reshape took the layout from Auto to Custom (#164). See `Snapshot.fromAuto`. */
+  fromAuto?: boolean;
   /**
    * The nodes as the canvas has them (#164). The store's nodes don't follow a
    * drag on the canvas, so a step taken there passes the canvas's own.
@@ -79,6 +81,7 @@ export function recordAction(description: string, opts?: RecordActionOptions) {
     })(),
     ...(opts?.moves ? { moves: true } : {}),
     ...(opts?.reshapes ? { reshapes: true } : {}),
+    ...(opts?.fromAuto ? { fromAuto: true } : {}),
   };
 
   useHistoryStore.getState().pushSnapshot(snapshot);

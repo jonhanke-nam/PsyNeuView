@@ -101,6 +101,11 @@ export interface Snapshot {
    * differ from the step before, though the code and the graph are the same.
    */
   reshapes?: boolean;
+  /**
+   * The reshape took the layout from Auto to Custom (#164): undoing it puts
+   * the layout back to Auto, and redoing it makes it Custom again.
+   */
+  fromAuto?: boolean;
 }
 
 /** How a save came about. */
@@ -509,8 +514,10 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       lastEntry.description &&
       getBatchKey(lastEntry.description) === getBatchKey(snapshot.description)
     ) {
-      // Replace the last entry instead of adding a new one
-      const next = admit({ ...snapshot, timestamp: now }, state.past[state.past.length - 2]);
+      // Replace the last entry instead of adding a new one. A reshape that
+      // left Auto still did once merged with the next one (#164).
+      const merged = lastEntry.fromAuto ? { ...snapshot, fromAuto: true } : snapshot;
+      const next = admit({ ...merged, timestamp: now }, state.past[state.past.length - 2]);
       rebaseOnto(state.past, lastEntry, next);
       set({
         past: [...state.past.slice(0, -1), next],

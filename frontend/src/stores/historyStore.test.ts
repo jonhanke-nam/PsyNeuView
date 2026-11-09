@@ -218,4 +218,15 @@ describe("steps that only reshape arrows", () => {
     h.pushSnapshot(snap({ description: "Reshaped arrow a_to_b", reshapes: true, ...route(50) }));
     expect(useHistoryStore.getState().canUndo()).toBe(false);
   });
+
+  it("a reshape that left Auto still did once merged with the next", () => {
+    const h = useHistoryStore.getState();
+    h.pushSnapshot(snap({ description: "Model loaded", edgeRoutes: {} }));
+    h.pushSnapshot(snap({ description: "Reshaped arrow a_to_b", reshapes: true, fromAuto: true, ...route(50) }));
+    h.pushSnapshot(snap({ description: "Reshaped arrow a_to_b", reshapes: true, ...route(90) }));
+    const past = useHistoryStore.getState().past;
+    expect(past).toHaveLength(2);
+    expect(past[1].fromAuto).toBe(true);
+    expect(past[1].edgeRoutes).toEqual(route(90).edgeRoutes);
+  });
 });
