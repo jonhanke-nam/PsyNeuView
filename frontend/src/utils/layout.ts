@@ -15,6 +15,8 @@ import { applyShowGraphPlacementWithCurves, knownSize } from "./showGraphLayout"
 import { useShowGraphCurves } from "@/stores/showGraphCurvesStore";
 import { placeCims } from "./cimPlacement";
 import { ovalBoxFor } from "./nodeBox";
+import { tidyIoRows } from "./ioRows";
+import { ioRowsNotApplying, useIoRowsStore, type IoRows } from "@/stores/ioRowsStore";
 
 interface LayoutOptions {
   direction?: "TB" | "BT" | "LR" | "RL";
@@ -26,6 +28,9 @@ interface LayoutOptions {
   // added to the parent graph as a single fixed-size node (its children are
   // excluded and laid out independently by layoutInsetInternals).
   insetSizes?: Map<string, { width: number; height: number }>;
+  // Settings ▸ Appearance ▸ Keep inputs on the bottom and outputs on top
+  // (#219); read from the setting when not given.
+  ioRows?: IoRows;
 }
 
 /** Height of one edge label including padding and buffer. */
@@ -736,14 +741,28 @@ export function applyLayout(
   options: LayoutOptions = {},
 ): Node[] {
   const cims = new Set(nodes.filter((n) => n.type === "cimNode").map((n) => n.id));
-  if (cims.size === 0) return layOut(style, nodes, edges, options);
+  if (cims.size === 0) return keepIoRows(style, layOut(style, nodes, edges, options), options);
   const laid = layOut(
     style,
     nodes.filter((n) => !cims.has(n.id)),
     edges.filter((e) => !cims.has(e.source) && !cims.has(e.target)),
     options,
   );
-  return placeCims([...laid, ...nodes.filter((n) => cims.has(n.id))]);
+  return placeCims([...keepIoRows(style, laid, options), ...nodes.filter((n) => cims.has(n.id))]);
+}
+
+/**
+ * #219: inputs on the bottom row and outputs on the top, inside each
+ * composition, where the setting asks for it and the layout has a bottom and
+ * a top (Like show_graph, and Layered flowing bottom-to-top). Before the CIMs
+ * go on, since a frame can grow to keep what moved inside it.
+ */
+function keepIoRows(style: LayoutStyle, nodes: Node[], options: LayoutOptions): Node[] {
+  const setting = options.ioRows ?? useIoRowsStore.getState().ioRows;
+  // Layered's own default is top-down (applyDagreLayout); show_graph's is bottom-to-top.
+  const direction = style === "showgraph" ? "BT" : options.direction ?? "TB";
+  if (setting === "off" || ioRowsNotApplying(style, direction)) return nodes;
+  return tidyIoRows(nodes).nodes;
 }
 
 function layOut(
