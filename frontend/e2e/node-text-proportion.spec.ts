@@ -56,12 +56,17 @@ async function fitAndSettle(page: Page) {
     page.locator(".react-flow__node").evaluateAll((els) =>
       JSON.stringify(els.map((e) => [e.getAttribute("data-id"), (e as HTMLElement).offsetWidth, (e as HTMLElement).offsetHeight, (e as HTMLElement).style.transform])),
     );
+  // Settled: no busy wheel, and the nodes still for a second. A setting
+  // change lays the graph out again, and the wheel shows only after 200 ms
+  // of it, so half a second of stillness could fall before the new layout.
+  const wheel = page.getByTestId("busy-wheel");
   await expect
     .poll(async () => {
+      if (await wheel.isVisible()) return false;
       const a = await read();
-      await page.waitForTimeout(500);
-      return a === (await read());
-    }, { timeout: 30_000 })
+      await page.waitForTimeout(1000);
+      return !(await wheel.isVisible()) && a === (await read());
+    }, { timeout: 60_000 })
     .toBe(true);
   await page.locator(".react-flow__controls-fitview").click();
   await page.waitForTimeout(600);
