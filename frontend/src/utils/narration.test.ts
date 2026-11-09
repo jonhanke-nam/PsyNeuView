@@ -5,6 +5,8 @@ import {
   NARRATION_RATE,
   NARRATION_RATE_KEY,
   NARRATION_VOICE_KEY,
+  RECORDED_DEFAULT_KEY,
+  adoptRecordedDefaultOnce,
   listNarrationVoices,
   loadNarrationPref,
   loadNarrationRate,
@@ -302,5 +304,34 @@ describe("a recorded voice (#159)", () => {
   it("names the voice on the bar", () => {
     expect(narrationVoiceName([], "recorded:heart")).toBe("Heart");
     expect(narrationVoiceName([], "recorded:michael")).toBe("Michael");
+  });
+});
+
+describe("the one-time move to the recorded default (#159)", () => {
+  const store = (init: Record<string, string> = {}) => {
+    const m = new Map(Object.entries(init));
+    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k), m };
+  };
+  const KAREN = "com.apple.voice.premium.en-AU.Karen";
+
+  it("a system voice chosen before gives way to Heart, once", () => {
+    const s = store({ [NARRATION_VOICE_KEY]: KAREN });
+    expect(adoptRecordedDefaultOnce(s)).toBe(true);
+    expect(loadNarrationVoice(s)).toBe("recorded:heart");
+    // Karen chosen again afterwards is kept.
+    s.setItem(NARRATION_VOICE_KEY, KAREN);
+    expect(adoptRecordedDefaultOnce(s)).toBe(false);
+    expect(loadNarrationVoice(s)).toBe(KAREN);
+  });
+
+  it("keeps a recorded voice, Automatic chosen on purpose, or nothing chosen", () => {
+    for (const v of ["recorded:michael", "system:automatic"]) {
+      const s = store({ [NARRATION_VOICE_KEY]: v });
+      expect(adoptRecordedDefaultOnce(s)).toBe(false);
+      expect(loadNarrationVoice(s)).toBe(v);
+    }
+    const none = store();
+    expect(adoptRecordedDefaultOnce(none)).toBe(false);
+    expect(none.m.get(RECORDED_DEFAULT_KEY)).toBe("done");
   });
 });

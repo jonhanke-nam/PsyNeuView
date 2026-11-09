@@ -22,6 +22,8 @@ async function stubSpeech(page: Page) {
   await page.addInitScript(() => {
     // These specs test the computer's own voice; the default is recorded (#159).
     if (localStorage.getItem("psyneuview.tour.narrationVoice") === null) localStorage.setItem("psyneuview.tour.narrationVoice", "system:automatic");
+    // and a system voice they choose is not moved to Heart (the one-time move, #159).
+    localStorage.setItem("psyneuview.tour.narrationVoiceRecordedDefault", "done");
     const spoken: { text: string; voice: string | null }[] = [];
     const rates: number[] = [];
     (window as unknown as { __spoken: typeof spoken; __rates: number[] }).__spoken = spoken;
@@ -137,6 +139,26 @@ test.describe("Narration voice setting", { tag: "@ci" }, () => {
     expect(await page.evaluate((k) => localStorage.getItem(k), VOICE_KEY)).toBe("system:automatic");
     await select.selectOption("recorded:heart");
     expect(await page.evaluate((k) => localStorage.getItem(k), VOICE_KEY)).toBeNull();
+  });
+
+  test("a system voice chosen before the recorded voices gives way to Heart, once (#159)", async ({ page }) => {
+    // Updating from 0.6.9: Karen was chosen, and nothing has moved it yet.
+    await page.addInitScript((k) => {
+      if (!sessionStorage.getItem("seeded")) {
+        localStorage.setItem(k, "com.apple.voice.premium.en-AU.Karen");
+        sessionStorage.setItem("seeded", "1");
+      }
+    }, VOICE_KEY);
+    await page.goto("/");
+    await openNarrationSettings(page);
+    await expect(page.getByTestId("setting-narration-voice")).toHaveValue("recorded:heart");
+    expect(await page.evaluate((k) => localStorage.getItem(k), VOICE_KEY)).toBeNull();
+
+    // Karen chosen again is kept from now on.
+    await page.getByTestId("setting-narration-voice").selectOption("system:automatic");
+    await page.reload();
+    await openNarrationSettings(page);
+    await expect(page.getByTestId("setting-narration-voice")).toHaveValue("system:automatic");
   });
 
   test("a recorded voice is the default, and plays the caption's clip (#159)", async ({ page }) => {

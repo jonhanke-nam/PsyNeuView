@@ -37,6 +37,8 @@ async function recordVoice(page: Page) {
   await page.addInitScript((key) => {
     // This spec tests the computer's own voice; the default is recorded (#159).
     if (localStorage.getItem("psyneuview.tour.narrationVoice") === null) localStorage.setItem("psyneuview.tour.narrationVoice", "system:automatic");
+    // and a system voice they choose is not moved to Heart (the one-time move, #159).
+    localStorage.setItem("psyneuview.tour.narrationVoiceRecordedDefault", "done");
     localStorage.setItem(key, "on");
     const spoken: string[] = [];
     const calls: string[] = [];
