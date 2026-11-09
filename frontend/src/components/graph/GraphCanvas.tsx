@@ -51,6 +51,7 @@ import { registerCommand } from "@/shortcuts/commands";
 import { LastGoodDiff } from "./LastGoodDiff";
 import { serializeRoutes, type RoutableEdge } from "@/utils/edgeRoutes";
 import { positionsOnScreen } from "@/utils/positionsOnScreen";
+import { registerArrowShapeCommit } from "@/utils/arrowShapes";
 import { useEdgeAttach } from "@/stores/edgeAttachStore";
 import { prunePositions } from "@/utils/prunePositions";
 import { useGraphPointerStore } from "@/stores/graphPointerStore";
@@ -579,6 +580,19 @@ export function GraphCanvas() {
       }
     },
     [filePath, setNodes]
+  );
+
+  // #164: an arrow bent, an end moved, a route reset. One History step, and
+  // saved on its own: the layout file gets the arrow's route, with the nodes
+  // where they are on screen (in Auto the reshape has just made the layout
+  // Custom, and these are the places it keeps).
+  useEffect(
+    () =>
+      registerArrowShapeCommit((description) => {
+        recordAction(description, { reshapes: true });
+        if (filePath) saveLayoutDebounced(filePath, nodesRef.current.map((n) => ({ ...n })));
+      }),
+    [filePath],
   );
 
   // #219: the Layout menu's Tidy inputs and outputs. The canvas holds the
