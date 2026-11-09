@@ -2,9 +2,9 @@
  * The spinning wheel of patience (#38): shown once anything the user asked
  * for has run past the threshold (busyStore).
  *
- * One wheel at a time (#220): centred over the graph when the graph is
- * showing, otherwise over the workspace (only code, only the Inspector, or
- * nothing at all). Settings ▸ Appearance can show how long it has been
+ * One wheel at a time (#220), always centred over the whole workspace below
+ * the toolbar, whichever panels are open (#222 follow-up), so it never moves
+ * when a panel is shown or hidden. Settings ▸ Appearance can show how long it has been
  * spinning (#176), below the wheel or in its centre, once a second has passed.
  * With reduced motion the wheel stands still.
  *
@@ -15,7 +15,6 @@
 
 import { useEffect, useState } from "react";
 import { formatBusyElapsed, oldestTask, useBusyStore } from "@/stores/busyStore";
-import { useLayoutStore } from "@/stores/layoutStore";
 
 /** True once the oldest in-flight task has run for the threshold. */
 export function useBusyVisible(): boolean {
@@ -94,7 +93,7 @@ function Wheel({ rim }: { rim: boolean }) {
   );
 }
 
-function WheelCard({ place }: { place: BusyPlace }) {
+function WheelCard() {
   const timerPlace = useBusyStore((s) => s.timerPlace);
   const seconds = useBusySeconds(timerPlace !== "off");
   const inCentre = timerPlace === "center";
@@ -103,7 +102,6 @@ function WheelCard({ place }: { place: BusyPlace }) {
   return (
     <div
       data-testid="busy-wheel"
-      data-place={place}
       aria-hidden="true"
       style={{
         position: "absolute",
@@ -144,17 +142,11 @@ function WheelCard({ place }: { place: BusyPlace }) {
   );
 }
 
-export type BusyPlace = "graph" | "workspace";
-
-/**
- * Mounted in both places; only the one that applies draws anything. Layout is
- * read here so that one wheel at a time holds however the panels change.
- */
-export function BusyIndicator({ place }: { place: BusyPlace }) {
+/** The one wheel, mounted once over the workspace. */
+export function BusyIndicator() {
   const visible = useBusyVisible();
-  const graphVisible = useLayoutStore((s) => s.graphVisible);
-  if (!visible || graphVisible !== (place === "graph")) return null;
-  return <WheelCard place={place} />;
+  if (!visible) return null;
+  return <WheelCard />;
 }
 
 /** The "progress" pointer and the announcement, whatever is on screen. */

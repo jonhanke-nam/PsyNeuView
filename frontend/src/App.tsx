@@ -187,7 +187,6 @@ export default function App() {
                 <Allotment.Pane minSize={200} visible={graphVisible}>
                   <GraphCanvas />
                   {/* #38: the wheel where the result will appear. */}
-                  <BusyIndicator place="graph" />
                 </Allotment.Pane>
                 <Allotment.Pane minSize={100} preferredSize={250} visible={bottomVisible}>
                   <div
@@ -305,8 +304,8 @@ export default function App() {
               </Allotment>
             </Allotment.Pane>
           </Allotment>
-          {/* #220: with no graph showing, the one wheel is over the workspace. */}
-          <BusyIndicator place="workspace" />
+          {/* #220: the one wheel, centred over the whole workspace. */}
+          <BusyIndicator />
         </div>
 
         {/* What the unsaved changes are, against the file on disk (#1348). */}

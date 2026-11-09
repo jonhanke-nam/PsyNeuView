@@ -3,8 +3,9 @@
  * with a "progress" pointer; anything quicker shows nothing; covers a save and
  * an undo.
  *
- * One wheel at a time (#220): over the graph when it shows, otherwise over the
- * workspace, even with no panels at all; nothing in the toolbar moves.
+ * One wheel at a time (#220), always centred over the whole workspace below
+ * the toolbar, whatever panels are open, even none (#222 follow-up); nothing in
+ * the toolbar moves, and the status bar has no spinner of its own.
  *
  * Each slow request is made slow on purpose with page.route. Screenshots
  * land in `$SHOTS_DIR` when it is set.
@@ -120,6 +121,9 @@ async function expectOneWheelOver(page: Page, area: import("@playwright/test").L
   expectNear(centre(await box(page, "busy-wheel-box")), centre(over));
 }
 
+/** The area the one wheel hangs in: the whole workspace below the toolbar. */
+const workspaceOf = (page: Page) => page.getByTestId("busy-wheel").locator("..");
+
 async function idle(page: Page) {
   await expect(page.getByTestId("busy-indicator")).toHaveAttribute("data-visible", "false", { timeout: 30_000 });
 }
@@ -201,7 +205,7 @@ test.describe("Busy wheel (#38)", { tag: "@ci" }, () => {
     await expect(page.getByTestId("busy-elapsed")).toHaveText(/^[1-9] s$/, { timeout: 3_000 });
     await expectTimerBelow(page);
     await expectNear(centre(await box(page, "busy-wheel-box")), wheelBefore);
-    await expectOneWheelOver(page, page.getByTestId("graph-canvas"));
+    await expectOneWheelOver(page, workspaceOf(page));
     await expect(page.locator(".pnv-busy-wheel")).toHaveCount(1);
     // Hidden from screen readers, which would otherwise read it out every second.
     expect(await page.getByTestId("busy-elapsed").evaluate((e) => !!e.closest('[aria-hidden="true"]'))).toBe(true);
@@ -234,7 +238,7 @@ test.describe("Busy wheel (#38)", { tag: "@ci" }, () => {
     await expect(page.getByTestId("busy-elapsed")).toHaveText(/^[1-9] s$/, { timeout: 3_000 });
     await expectTimerCentred(page);
     expect(await box(page, "busy-wheel-box")).toEqual(size);
-    await expectOneWheelOver(page, page.getByTestId("graph-canvas"));
+    await expectOneWheelOver(page, workspaceOf(page));
     await shot(page, "04-timer-centre");
     await idle(page);
 
@@ -290,13 +294,13 @@ test.describe("Busy wheel (#38)", { tag: "@ci" }, () => {
       // Any slow request the user asked for; this page needn't have a model.
       await slowDown(page, "**/api/models/dirs", 2_500);
       const held = page.evaluate(() => fetch("/api/models/dirs").then((r) => r.text()));
-      await expect(page.getByTestId("busy-wheel")).toHaveAttribute("data-place", "workspace");
+      await expect(page.getByTestId("busy-wheel")).toBeVisible();
       await expect(page.getByTestId("busy-indicator")).toHaveText("Working…");
       await expect(page.locator("html")).toHaveClass(/pnv-busy/);
       await expect(page.getByTestId("busy-elapsed")).toHaveText(/^[1-9] s$/, { timeout: 3_000 });
       await expect(page.locator(".pnv-busy-wheel")).toHaveCount(1);
       // The area it hangs in is the whole workspace: the window's width, below the toolbar.
-      const workspace = page.getByTestId("busy-wheel").locator("..");
+      const workspace = workspaceOf(page);
       const area = await workspace.boundingBox();
       expect(area?.width).toBe(page.viewportSize()?.width);
       expect(area!.y).toBeGreaterThanOrEqual((await box(page, "app-toolbar")).height);
@@ -309,17 +313,23 @@ test.describe("Busy wheel (#38)", { tag: "@ci" }, () => {
     });
   }
 
-  test("the wheel moves when the graph is hidden while it spins, and never doubles", async ({ page }) => {
+  test("the wheel stays put when the graph is hidden while it spins, and never doubles", async ({ page }) => {
     test.setTimeout(120_000);
     await seed(page, { psynewview_layout_code_visible: "true" });
     await page.goto("/");
     await expect(page.getByTestId("open-menu")).toBeEnabled();
     await slowDown(page, "**/api/models/dirs", 6_000);
     const held = page.evaluate(() => fetch("/api/models/dirs").then((r) => r.text()));
-    await expect(page.getByTestId("busy-wheel")).toHaveAttribute("data-place", "graph");
+    await expect(page.getByTestId("busy-wheel")).toBeVisible();
+    // Centred on the whole workspace, not on the graph beside the code.
+    await expectOneWheelOver(page, workspaceOf(page));
+    const area = await workspaceOf(page).boundingBox();
+    expect(area?.width).toBe(page.viewportSize()?.width);
+    const before = centre(await box(page, "busy-wheel-box"));
     await page.getByTestId("layout-menu-button").click();
     await page.getByTestId("layout-menu-list").getByTestId("layout-menu-panel-graph").click();
-    await expect(page.getByTestId("busy-wheel")).toHaveAttribute("data-place", "workspace");
+    await expect(page.getByTestId("graph-canvas")).toBeHidden();
+    await expectNear(centre(await box(page, "busy-wheel-box")), before);
     await expect(page.locator(".pnv-busy-wheel")).toHaveCount(1);
     await held;
   });
