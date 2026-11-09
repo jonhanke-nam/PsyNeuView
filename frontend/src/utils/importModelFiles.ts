@@ -74,21 +74,35 @@ async function importPython(file: File): Promise<void> {
     const dirsResp = await fetch("/api/models/dirs");
     const dirsData = await dirsResp.json();
     const dir = dirsData.default_save_dir || "";
-    const fullPath = `${dir}/${fileName}`;
+    let fullPath = `${dir}/${fileName}`;
 
-    // Ensure directory exists and write file directly (no conflict check)
-    await fetch("/api/model/save-source", {
+    // A file of that name already in the models folder is written over, with
+    // no conflict check: dropping it again means "use this version".
+    const saveResp = await fetch("/api/model/save-source", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ file_path: fullPath, source }),
-    }).catch(() => {
-      // If save-source fails (file doesn't exist yet), create via save-as
-      return fetch("/api/models/save-as", {
+    });
+    if (saveResp.status === 404) {
+      // A new name: save-source only writes files that exist, so create it
+      // with save-as (#227). The server answers 404 here, it does not throw.
+      const createResp = await fetch("/api/models/save-as", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ source, file_name: fileName }),
       });
-    });
+      if (!createResp.ok) {
+        const err = await createResp.json().catch(() => ({ detail: createResp.statusText }));
+        notify.addNotification("error", `Import failed: ${err.detail}`);
+        return;
+      }
+      const created = await createResp.json().catch(() => ({}));
+      if (created.file_path) fullPath = created.file_path;
+    } else if (!saveResp.ok) {
+      const err = await saveResp.json().catch(() => ({ detail: saveResp.statusText }));
+      notify.addNotification("error", `Import failed: ${err.detail}`);
+      return;
+    }
 
     // Load the file (handles star import conversion)
     const loadResp = await fetch("/api/model/load", {

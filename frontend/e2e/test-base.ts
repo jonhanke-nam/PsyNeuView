@@ -39,6 +39,14 @@ const TUTORIALS_FOLDED_KEY = "psyneuview.tutorials.foldedSections";
  */
 const LAYOUT_DEFAULT_KEY = "psyneuview.graph.layoutDefault";
 /**
+ * Keep inputs on the bottom and outputs on top (#219). On in automatic
+ * layouts by default, which moves nodes in Layered layouts the suite's
+ * positions were written against, so the suite has it off unless a spec asks
+ * otherwise. Like show_graph keeps the rule already (io-role-rows.spec.ts).
+ * A spec about the setting sets the key in its own `addInitScript`.
+ */
+const IO_ROWS_KEY = "psyneuview.graph.ioRows";
+/**
  * Which panels show (#189). The window now opens with the graph alone; the
  * suite was written with the code editor and the bottom panel (Inspector, Run,
  * Learn…) on screen, so it keeps them on unless a spec asks otherwise. A spec
@@ -96,6 +104,10 @@ async function expandOpenMenuSections(page: import("@playwright/test").Page) {
   await page.addInitScript((key) => {
     if (localStorage.getItem(key) === null) localStorage.setItem(key, "layered");
   }, LAYOUT_DEFAULT_KEY);
+  // #219: inputs and outputs left where the layout puts them (see above).
+  await page.addInitScript((key) => {
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, "off");
+  }, IO_ROWS_KEY);
   // #189: the code editor and the bottom panel on, as the suite expects.
   await page.addInitScript(
     (keys) => {

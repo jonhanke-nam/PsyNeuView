@@ -258,12 +258,8 @@ test.describe("a blank screen by choice (#215)", { tag: "@ci" }, () => {
     await picker.selectOption("__flat__");
     await expectPanels(page, GRAPH_ONLY);
 
-    // A file dropped on the window, then the same file again. It is saved
-    // first: the import only writes over a file already in the models folder.
+    // A file dropped on the window, then the same file again.
     const dropped = readFileSync(fixturePath("two_mech_projection"), "utf8");
-    expect((await page.request.post("/api/models/save-as", {
-      data: { source: dropped, file_name: "blank215_dropped.py", overwrite: true },
-    })).ok()).toBe(true);
     const dropModel = async () => {
       const dt = await page.evaluateHandle((source) => {
         const data = new DataTransfer();

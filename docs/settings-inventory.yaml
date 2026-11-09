@@ -468,6 +468,26 @@ settings:
       (Graphviz in the page, so nothing to install). The layout menu on the
       graph toolbar switches the open model without changing this setting.
 
+  - id: graph-io-rows
+    label: Appearance ▸ Automatic layout ▸ Keep inputs on the bottom and outputs on top
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.ioRows); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-graph-io-rows
+    notes: >-
+      Off, In automatic layouts (default) or Also while dragging (#219, the
+      convention of #212). Inside each composition, inputs on the lowest
+      row and outputs on the highest; learning and control nodes may sit
+      above the outputs, and a node that is both an input and an output
+      stays where the layout puts it. Applies to Like show_graph and to
+      Layered flowing bottom-to-top; Radial, Force and a top-down or
+      sideways Layered layout are left alone, and the setting says so.
+      While dragging, inputs and outputs slide along their row and other
+      nodes stay between the two rows; frames stay free. Saved layouts
+      never move by themselves: the Layout menu's Tidy inputs and outputs
+      does it, and can be undone. Changing it re-arranges the open model
+      if its layout is automatic.
+
   - id: graph-legend-start
     label: Appearance ▸ Graph legend ▸ How the legend opens
     home: settings

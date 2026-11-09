@@ -21,6 +21,10 @@
  * (stores/viewOnlyTagsStore.ts). And the panels (#215): whether every
  * panel may be hidden, and which ones a model opens onto a blank screen,
  * the second only available while the first is on (stores/layoutStore.ts).
+ * And whether inputs are kept on the bottom and outputs on top (#219): in
+ * automatic layouts by default, or also while dragging, or off
+ * (stores/ioRowsStore.ts), with a word when the open model's layout is one
+ * it doesn't apply to.
  */
 
 import { LEGEND_STARTS, isLegendStart, useGraphLegendStore } from "@/stores/graphLegendStore";
@@ -51,6 +55,7 @@ import {
   useGraphLayoutDefaultStore,
 } from "@/stores/graphLayoutDefaultStore";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
+import { DEFAULT_IO_ROWS, IO_ROWS, isIoRows, ioRowsNotApplying, useIoRowsStore } from "@/stores/ioRowsStore";
 import { useModelStore } from "@/stores/modelStore";
 import { applyLayout } from "@/utils/layout";
 import { applyShowGraphLayoutNow } from "@/hooks/useShowGraphLayout";
@@ -103,6 +108,9 @@ export function AppearanceSection() {
       </Group>
       <Group id="automatic-layout" title="Automatic layout">
         <AutomaticLayoutRow />
+        <div style={{ marginTop: 14 }}>
+          <IoRowsRow />
+        </div>
       </Group>
       <Group id="graph-legend" title="Graph legend">
         <GraphLegendRow />
@@ -174,6 +182,53 @@ function AutomaticLayoutRow() {
         ))}
       </select>
       {hint && <div style={{ ...mutedStyle, marginTop: 4 }}>{hint}</div>}
+    </div>
+  );
+}
+
+// #219: inputs on the bottom, outputs on top. Changing it re-arranges the
+// open model if its layout is automatic, like the layout setting above.
+function IoRowsRow() {
+  const ioRows = useIoRowsStore((s) => s.ioRows);
+  const setIoRows = useIoRowsStore((s) => s.setIoRows);
+  const style = useGraphSettings((s) => s.layoutStyle);
+  const direction = useGraphSettings((s) => s.direction);
+  const notApplying = ioRows === "off" ? null : ioRowsNotApplying(style, direction);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <SettingLabel title="Keep inputs on the bottom and outputs on top" htmlFor="setting-graph-io-rows">
+        Inside each composition, its input nodes sit on the lowest row and
+        its output nodes on the highest, as show_graph draws them; learning
+        and control nodes may sit above the outputs. While dragging, an input
+        or output slides along its row, and other nodes stay between the two
+        rows. A layout you saved never moves by itself: the Layout menu's
+        Tidy inputs and outputs does it, and can be undone. Radial and Force
+        have no direction, and a top-down Layered layout wins, so it doesn't
+        apply to them.
+      </SettingLabel>
+      <select
+        id="setting-graph-io-rows"
+        data-testid="setting-graph-io-rows"
+        value={ioRows}
+        onChange={(e) => {
+          if (!isIoRows(e.target.value)) return;
+          setIoRows(e.target.value);
+          applyToOpenModel(useGraphSettings.getState().layoutStyle);
+        }}
+        style={selectStyle}
+      >
+        {IO_ROWS.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+            {o.id === DEFAULT_IO_ROWS ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+      {notApplying && (
+        <div data-testid="io-rows-not-applying" style={{ ...mutedStyle, marginTop: 4 }}>
+          Doesn't apply to the layout in use: {notApplying}
+        </div>
+      )}
     </div>
   );
 }

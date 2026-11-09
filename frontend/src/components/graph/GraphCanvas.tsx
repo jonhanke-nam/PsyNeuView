@@ -50,11 +50,14 @@ import { isProjectionType, findDefByType } from "@/constants/pnlTypes";
 import { registerCommand } from "@/shortcuts/commands";
 import { LastGoodDiff } from "./LastGoodDiff";
 import { serializeRoutes, type RoutableEdge } from "@/utils/edgeRoutes";
+import { positionsOnScreen } from "@/utils/positionsOnScreen";
 import { useEdgeAttach } from "@/stores/edgeAttachStore";
 import { prunePositions } from "@/utils/prunePositions";
 import { useGraphPointerStore } from "@/stores/graphPointerStore";
 import { graphCursorVars, graphPointerClass } from "@/utils/graphCursor";
 import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { clampIoDrag, tidyIoRows } from "@/utils/ioRows";
+import { ioRowsNotApplying, registerCanvasTidy, useIoRowsStore } from "@/stores/ioRowsStore";
 
 const nodeTypes = {
   mechanismNode: MechanismNode,
@@ -73,18 +76,8 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 function saveLayoutDebounced(filePath: string, nodes: any[]) {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    const positions: Record<string, { x: number; y: number }> = {};
-    for (const node of nodes) {
-      // #697/#713: cluster frames are reconstructed each load — never persist.
-      if (node.id.startsWith("cluster::")) continue;
-      let key = (node.data as MechanismData)?.varName || node.id;
-      // CIM nodes have PNL numeric suffixes that change each load;
-      // save with a stable key by stripping the suffix.
-      if (node.type === "cimNode") {
-        key = key.replace(/-\d+\s/, " ");
-      }
-      positions[key] = { x: node.position.x, y: node.position.y };
-    }
+    // #697/#713: cluster frames are never saved; CIMs by a stable key.
+    const positions = positionsOnScreen(nodes);
     // #659: merge over the last loaded layout so positions for nodes not
     // currently on the canvas survive — e.g. a nested composition's group node
     // while flattened — keeping flat↔nested round-trips intact.
@@ -350,19 +343,30 @@ export function GraphCanvas() {
     [nodes, shiftTable],
   );
 
+  // #219: Settings ▸ Appearance ▸ Keep inputs on the bottom and outputs on
+  // top, Also while dragging: inputs and outputs slide along their row, and
+  // other nodes stay between the two rows, where the layout has a bottom and
+  // a top.
+  const ioRows = useIoRowsStore((s) => s.ioRows);
+  const layoutStyle = useGraphSettings((s) => s.layoutStyle);
+  const keepIoRowsWhileDragging = ioRows === "drag" && !ioRowsNotApplying(layoutStyle, direction);
+
   // Inverse-transform position changes from React Flow before they hit
   // canonical state — drag deltas arrive in rendered space.
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       const remapped = changes.map((c) => {
         if (c.type === "position" && c.position) {
-          return { ...c, position: unshiftPosition(c.id, c.position, shiftTable) };
+          let position = unshiftPosition(c.id, c.position, shiftTable);
+          const node = keepIoRowsWhileDragging ? nodesRef.current.find((n) => n.id === c.id) : undefined;
+          if (node) position = clampIoDrag(node, position, nodesRef.current);
+          return { ...c, position };
         }
         return c;
       });
       onNodesChangeRaw(remapped);
     },
-    [onNodesChangeRaw, shiftTable],
+    [onNodesChangeRaw, shiftTable, keepIoRowsWhileDragging],
   );
 
   // #53: Settings ▸ Appearance can hide scheduling-condition arrows, as
@@ -575,6 +579,33 @@ export function GraphCanvas() {
       }
     },
     [filePath, setNodes]
+  );
+
+  // #219: the Layout menu's Tidy inputs and outputs. The canvas holds the
+  // positions as dragged, so it tidies them here. Recorded as two History
+  // steps at most: the positions before (only if they differ from the step
+  // already there, as after a drag, which the model store hasn't caught up
+  // with) and the tidied ones, so one Undo puts them back.
+  useEffect(
+    () =>
+      registerCanvasTidy({
+        nodes: () => nodesRef.current,
+        tidy: () => {
+          const before = nodesRef.current.map((n) => ({ ...n }));
+          const { nodes: tidied, moved } = tidyIoRows(before);
+          if (moved.length === 0) return;
+          const after = tidied.map((n) => ({ ...n }));
+          if (usesFlatPositions()) autoSizeGroups(after);
+          else fitFramesAndMakeRoom(after);
+          const store = useModelStore.getState();
+          store.setNodes(before);
+          recordAction("Positions before tidying", { edit: false, moves: true });
+          store.setNodes(after);
+          recordAction("Tidied inputs and outputs", { moves: true });
+          if (filePath) saveLayoutDebounced(filePath, after);
+        },
+      }),
+    [filePath],
   );
 
   // Delete selected node with Backspace/Delete key

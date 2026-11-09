@@ -83,6 +83,8 @@ import { SAVE_COPY_EVENT, requestSaveCopy } from "@/utils/saveRequest";
 import { stripProtectionLine } from "@/utils/protectionLine";
 import { AutosaveStatus } from "./AutosaveStatus";
 import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { ioRowViolations } from "@/utils/ioRows";
+import { canvasTidyHandle } from "@/stores/ioRowsStore";
 
 function newModelTemplate(pnlVersion: string) {
   return `# PsyNeuLink Model File
@@ -2999,6 +3001,53 @@ function EditModeBadge() {
 }
 
 /**
+ * Tidy inputs and outputs, as a row of the Layout menu (#219).
+ *
+ * A layout you saved never moves by itself, whatever Settings ▸ Appearance ▸
+ * Keep inputs on the bottom and outputs on top says. Where one breaks the
+ * rule (utils/ioRows.ts), this puts each composition's inputs on its bottom
+ * row and its outputs on its top row, as a History step that Undo takes back.
+ * Shown while a model is open; greyed out, saying why, when the layout is
+ * automatic (the setting looks after that) or there is nothing to tidy.
+ */
+function TidyIoRowsMenuItem({ onDone }: { onDone: () => void }) {
+  const filePath = useModelStore((s) => s.filePath);
+  const autoLayout = useModelStore((s) => s.autoLayout);
+  if (!filePath) return null;
+  const canvas = canvasTidyHandle();
+  const broken = canvas ? ioRowViolations(canvas.nodes()).length > 0 : false;
+  const why = !canvas
+    ? "Show the graph to tidy its inputs and outputs"
+    : autoLayout
+      ? "The layout is automatic: Settings ▸ Appearance ▸ Keep inputs on the bottom and outputs on top looks after it"
+      : !broken
+        ? "Every composition already has its inputs on the bottom row and its outputs on the top"
+        : null;
+  return (
+    <>
+      <button
+        data-testid="layout-menu-tidy-io-rows"
+        aria-disabled={why ? true : undefined}
+        onClick={() => {
+          if (why) return;
+          onDone();
+          canvas?.tidy();
+        }}
+        title={why ?? "Move each composition's inputs onto its bottom row and its outputs onto its top row. Undo puts them back."}
+        style={{ ...menuRowStyle(false), cursor: why ? "not-allowed" : "pointer", opacity: why ? 0.5 : 1 }}
+        onMouseEnter={(e) => {
+          if (!why) e.currentTarget.style.background = MENU_ROW_HOVER;
+        }}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
+        Tidy inputs and outputs
+      </button>
+      <span style={{ display: "block", height: 1, background: "var(--pnv-border-faint)", margin: "4px 4px" }} />
+    </>
+  );
+}
+
+/**
  * Lock / Unlock, as a row of the Layout menu (#1309).
  *
  * Hidden when no model is open, and for a PsyNeuLink that PsyNeuView manages
@@ -3686,6 +3735,7 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
             </button>
           ))}
           <span style={{ display: "block", height: 1, background: "var(--pnv-border-faint)", margin: "4px 4px" }} />
+          <TidyIoRowsMenuItem onDone={() => setOpen(false)} />
           <LockModelMenuItem onDone={() => setOpen(false)} />
           <button
             onClick={() => {

@@ -153,3 +153,35 @@ describe("save marks", () => {
     expect(useHistoryStore.getState().past[0].saves?.map((m) => m.kind)).toEqual(["manual", "auto"]);
   });
 });
+
+// A step that only moves nodes (#219): Tidy inputs and outputs changes no
+// code and no graph, only where the nodes are.
+describe("steps that only move nodes", () => {
+  beforeEach(() => {
+    useHistoryStore.getState().clear();
+  });
+
+  const at = (y: number) => ({ positions: { a: { x: 0, y } } });
+
+  it("is kept when the positions changed, so it can be undone", () => {
+    const h = useHistoryStore.getState();
+    h.pushSnapshot(snap({ description: "Model loaded", ...at(0) }));
+    h.pushSnapshot(snap({ description: "Tidied inputs and outputs", moves: true, ...at(100) }));
+    expect(useHistoryStore.getState().canUndo()).toBe(true);
+    expect(useHistoryStore.getState().undo()?.positions).toEqual({ a: { x: 0, y: 0 } });
+  });
+
+  it("is skipped when nothing moved", () => {
+    const h = useHistoryStore.getState();
+    h.pushSnapshot(snap({ description: "Model loaded", ...at(0) }));
+    h.pushSnapshot(snap({ description: "Positions before tidying", moves: true, ...at(0) }));
+    expect(useHistoryStore.getState().canUndo()).toBe(false);
+  });
+
+  it("other steps are still told apart by their code and graph alone", () => {
+    const h = useHistoryStore.getState();
+    h.pushSnapshot(snap({ description: "Model loaded", ...at(0) }));
+    h.pushSnapshot(snap({ description: "Model updated", ...at(100) }));
+    expect(useHistoryStore.getState().canUndo()).toBe(false);
+  });
+});
