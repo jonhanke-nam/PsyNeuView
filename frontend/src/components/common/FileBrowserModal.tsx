@@ -16,6 +16,7 @@ import { useState, useEffect, useCallback } from "react";
 import { DialogHeader } from "./dialog/DialogHeader";
 import { useDismiss } from "./dialog/useDismiss";
 import { Button } from "./Button";
+import { DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
 
 interface Root {
   path: string;
@@ -163,7 +164,7 @@ export function FileBrowserModal({ onSelect, onCancel }: Props) {
 }
 
 const OVERLAY: React.CSSProperties = {
-  position: "fixed", inset: 0, background: "var(--pnv-scrim)",
+  position: "fixed", inset: 0, bottom: DIALOG_SCRIM_BOTTOM, background: "var(--pnv-scrim)",
   display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10000,
 };
 const CARD: React.CSSProperties = {

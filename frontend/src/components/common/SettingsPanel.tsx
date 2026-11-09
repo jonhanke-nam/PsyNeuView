@@ -40,6 +40,7 @@ import {
 } from "./settings/sections";
 import type { InstallCapabilities, SettingsInfo } from "./settings/types";
 import { Button } from "./Button";
+import { DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
 
 interface Props {
   isOpen: boolean;
@@ -142,7 +143,7 @@ export function SettingsPanel({ isOpen, onClose, section: requested = null }: Pr
     <div
       style={{
         position: "fixed",
-        inset: 0,
+        inset: 0, bottom: DIALOG_SCRIM_BOTTOM,
         background: "var(--pnv-scrim)",
         display: "flex",
         alignItems: "center",
@@ -164,6 +165,8 @@ export function SettingsPanel({ isOpen, onClose, section: requested = null }: Pr
           maxWidth: 880,
           width: "92%",
           height: "min(85vh, 720px)",
+          // Within the backdrop, which stops above a walkthrough's bar.
+          maxHeight: `calc(100vh - ${DIALOG_SCRIM_BOTTOM} - 24px)`,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",

@@ -389,6 +389,13 @@
   --pnv-type-learning-signal: #e65100;
 }
 
+/* The walkthrough bar's height while a walkthrough is running, set on the
+   page root by TourBar; 0 otherwise. Dialog backdrops stop above it
+   (DIALOG_SCRIM_BOTTOM in constants/zLayers.ts). */
+:root {
+  --pnv-tour-bar-height: 0px;
+}
+
 /* Type sizes (#111): not colours, but tokens all the same. The app's text
    size, Settings ▸ Appearance ▸ Text size, sets --pnv-text-scale (stores/textSizeStore.ts); every UI font size is one of
    these variables, so they all follow it. 1.1 is the default; the canvas's

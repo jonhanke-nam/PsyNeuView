@@ -41,6 +41,7 @@ import { openSettings } from "./sections";
 import { Group, PathBox, abbreviateHome, errorStyle, linkStyle, mutedStyle } from "./shared";
 import { LocationRow, useLocations } from "./WhereThingsLive";
 import { Button } from "../Button";
+import { DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
 
 /** `/api/catalog-sources`: where each built-in section reads its models from. */
 interface CatalogSources {
@@ -518,7 +519,7 @@ function MoveProjectFolderDialog({
   const field: React.CSSProperties = { ...fieldStyle, flex: 1, padding: "4px 6px", border: "1px solid var(--pnv-border)", borderRadius: 4, fontFamily: "monospace" };
   return (
     <div
-      style={{ position: "fixed", inset: 0, background: "var(--pnv-scrim)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10001 }}
+      style={{ position: "fixed", inset: 0, bottom: DIALOG_SCRIM_BOTTOM, background: "var(--pnv-scrim)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10001 }}
       onClick={onClose}
     >
       <div

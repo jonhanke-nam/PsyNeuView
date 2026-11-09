@@ -18,6 +18,7 @@ import { Combobox } from "./Combobox";
 import { DialogHeader } from "./dialog/DialogHeader";
 import { useDismiss } from "./dialog/useDismiss";
 import { Button } from "./Button";
+import { DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
 
 const DEFAULT_REPO = "PrincetonUniversity/PsyNeuLink";
 const DEFAULT_REF = "devel";
@@ -175,7 +176,7 @@ function useTree(repo: string, ref: string): TreeState {
 
 const overlayStyle: React.CSSProperties = {
   position: "fixed",
-  inset: 0,
+  inset: 0, bottom: DIALOG_SCRIM_BOTTOM,
   background: "var(--pnv-scrim)",
   display: "flex",
   alignItems: "center",
