@@ -9,7 +9,7 @@
  */
 
 import { withBusy } from "@/stores/busyStore";
-import { useModelStore } from "@/stores/modelStore";
+import { useModelStore, usesFlatPositions } from "@/stores/modelStore";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useHistoryStore, type Snapshot } from "@/stores/historyStore";
 import { useNotificationStore } from "@/stores/notificationStore";
@@ -156,13 +156,22 @@ async function moveInHistoryNow(redo: boolean, steps: number, origin: HistoryMov
     if (filePath) {
       // The layout sidecar is written, as a node move is when it is made.
       if (snapshot.positions) {
+        // Under the key of the view the positions belong to (#226), as a node
+        // move saves them (#719): the flattened and PyTorch views have their
+        // own, so an Undo there leaves the nested view's saved layout alone.
+        // The step's view is the one set now — applyView ran above. Cluster
+        // frames are rebuilt on every load and never saved (#697).
+        const positions = Object.fromEntries(
+          Object.entries(snapshot.positions).filter(([key]) => !key.startsWith("cluster::")),
+        );
         await fetch("/api/model/save-layout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            file_path: filePath,
-            positions: snapshot.positions,
-          }),
+          body: JSON.stringify(
+            usesFlatPositions()
+              ? { file_path: filePath, flatPositions: positions }
+              : { file_path: filePath, positions },
+          ),
         }).catch(() => {});
       }
 

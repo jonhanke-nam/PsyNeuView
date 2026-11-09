@@ -174,7 +174,10 @@ test.describe("node shapes follow show_graph (#192, #193)", { tag: "@ci" }, () =
     await shot(page, "ego-nested-ours.png");
     await nodeShots(page, "COMBINED SCORES", "combined-scores-octagon");
 
-    // Collapse brings the rectangle back.
+    // Collapse brings the rectangle back. The legend sits over the graph's top
+    // right corner, where EM's frame (and its Collapse button) can be, so it is
+    // hidden first, as a person would move it out of the way.
+    await page.getByTestId("gsc-legend-hide").click();
     await page.getByRole("button", { name: "Collapse composition EM" }).click();
     await expect(canvasNode(page, "EM").first().locator('[data-node-shape="rectangle"]')).toBeVisible({ timeout: 30_000 });
   });
