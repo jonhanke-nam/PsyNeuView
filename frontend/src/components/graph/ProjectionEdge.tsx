@@ -658,6 +658,7 @@ export function ProjectionEdge({
         onPointerDown={startEdgeShape}
         onDoubleClick={() => {
           if (!(waypoints && waypoints.length)) return;
+          startShapingArrow();
           useEdgeAttach.getState().clearWaypoints(id);
           arrowShaped(reshapeDescription(arrowName, "reset")); // #164
         }}
@@ -767,6 +768,7 @@ export function ProjectionEdge({
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     if (!wp.forced) {
+                      startShapingArrow();
                       useEdgeAttach.getState().removeWaypoint(id, i);
                       arrowShaped(reshapeDescription(arrowName)); // #164
                       return;

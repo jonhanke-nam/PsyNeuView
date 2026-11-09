@@ -585,12 +585,22 @@ export function GraphCanvas() {
   // #164: an arrow bent, an end moved, a route reset. One History step, and
   // saved on its own: the layout file gets the arrow's route, with the nodes
   // where they are on screen (in Auto the reshape has just made the layout
-  // Custom, and these are the places it keeps).
+  // Custom, and these are the places it keeps). Steps take the canvas's
+  // nodes: the store's don't follow a drag, nor always a fit after a load.
   useEffect(
     () =>
-      registerArrowShapeCommit((description) => {
-        recordAction(description, { reshapes: true });
-        if (filePath) saveLayoutDebounced(filePath, nodesRef.current.map((n) => ({ ...n })));
+      registerArrowShapeCommit({
+        before: () =>
+          recordAction("Positions before reshaping an arrow", {
+            edit: false,
+            moves: true,
+            nodes: nodesRef.current.map((n) => ({ ...n })),
+          }),
+        done: (description) => {
+          const onScreen = nodesRef.current.map((n) => ({ ...n }));
+          recordAction(description, { reshapes: true, nodes: onScreen });
+          if (filePath) saveLayoutDebounced(filePath, onScreen);
+        },
       }),
     [filePath],
   );

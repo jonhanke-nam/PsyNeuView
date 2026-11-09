@@ -35,14 +35,15 @@ describe("a drag on an arrow in Auto", () => {
   });
 });
 
-describe("a finished reshape", () => {
-  it("goes to what the canvas registered, by name", () => {
+describe("a reshape", () => {
+  it("goes to what the canvas registered: before it starts, and by name once done", () => {
     const seen: string[] = [];
-    const off = registerArrowShapeCommit((d) => seen.push(d));
+    const off = registerArrowShapeCommit({ before: () => seen.push("before"), done: (d) => seen.push(d) });
+    startShapingArrow();
     arrowShaped("Reshaped arrow a_to_b");
     off();
     arrowShaped("after the canvas is gone");
-    expect(seen).toEqual(["Reshaped arrow a_to_b"]);
+    expect(seen).toEqual(["before", "Reshaped arrow a_to_b"]);
   });
 });
 

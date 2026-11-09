@@ -10,6 +10,7 @@ import { record } from "@/utils/activityLog";
 import { useHistoryStore, type SaveMark, type Snapshot } from "@/stores/historyStore";
 import type { MechanismData } from "@/stores/modelStore";
 import { captureView } from "@/utils/graphView";
+import type { Node } from "@xyflow/react";
 import { serializeRoutes, type RoutableEdge } from "@/utils/edgeRoutes";
 import { useEdgeAttach } from "@/stores/edgeAttachStore";
 
@@ -31,6 +32,11 @@ export interface RecordActionOptions {
    * changed, though the code and the graph did not. See `Snapshot.reshapes`.
    */
   reshapes?: boolean;
+  /**
+   * The nodes as the canvas has them (#164). The store's nodes don't follow a
+   * drag on the canvas, so a step taken there passes the canvas's own.
+   */
+  nodes?: Node[];
 }
 
 /**
@@ -45,7 +51,8 @@ export function recordAction(description: string, opts?: RecordActionOptions) {
   // (#177). The description names what changed, never the new text or value.
   if (opts?.edit !== false) record("edit", description);
   const store = useModelStore.getState();
-  const { source, nodes, edges, filePath } = store;
+  const { source, edges, filePath } = store;
+  const nodes = opts?.nodes ?? store.nodes;
 
   // Capture current node positions for layout restore
   const positions: Record<string, { x: number; y: number }> = {};

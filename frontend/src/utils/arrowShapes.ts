@@ -26,14 +26,24 @@ import {
   type RoutableEdge,
 } from "@/utils/edgeRoutes";
 
-type Commit = (description: string) => void;
-let commit: Commit | null = null;
+/** What the canvas does when an arrow starts to move, and once it is shaped. */
+export interface ArrowShapeCommit {
+  /**
+   * Before anything changes: History's last step must hold the nodes where
+   * they are on screen, so that undoing the reshape moves no node. (A layout
+   * fitted after a load, or a node moved by hand, may not be in it yet.)
+   */
+  before: () => void;
+  /** The reshape is done: one named History step, and saved. */
+  done: (description: string) => void;
+}
+let commit: ArrowShapeCommit | null = null;
 
-/** The canvas says what a finished reshape does. Returns the unregister. */
-export function registerArrowShapeCommit(fn: Commit): () => void {
-  commit = fn;
+/** The canvas says what a reshape does. Returns the unregister. */
+export function registerArrowShapeCommit(handle: ArrowShapeCommit): () => void {
+  commit = handle;
   return () => {
-    if (commit === fn) commit = null;
+    if (commit === handle) commit = null;
   };
 }
 
@@ -42,13 +52,14 @@ export function registerArrowShapeCommit(fn: Commit): () => void {
  * Custom where it stands; nothing is laid out again.
  */
 export function startShapingArrow(): void {
+  commit?.before();
   const store = useModelStore.getState();
   if (store.autoLayout) store.setAutoLayout(false);
 }
 
 /** A reshape is done: record it in History and save it. */
 export function arrowShaped(description: string): void {
-  commit?.(description);
+  commit?.done(description);
 }
 
 /** History's name for a reshape of the arrow called `name`. */
