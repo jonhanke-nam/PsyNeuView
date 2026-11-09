@@ -20,6 +20,8 @@ const DANIEL = "com.apple.voice.compact.en-GB.Daniel";
 /** A speechSynthesis with a fixed set of voices that records what it read, and in which voice. */
 async function stubSpeech(page: Page) {
   await page.addInitScript(() => {
+    // These specs test the computer's own voice; the default is recorded (#159).
+    if (localStorage.getItem("psyneuview.tour.narrationVoice") === null) localStorage.setItem("psyneuview.tour.narrationVoice", "system:automatic");
     const spoken: { text: string; voice: string | null }[] = [];
     const rates: number[] = [];
     (window as unknown as { __spoken: typeof spoken; __rates: number[] }).__spoken = spoken;
@@ -111,8 +113,12 @@ test.describe("Narration voice setting", { tag: "@ci" }, () => {
 
     const select = page.getByTestId("setting-narration-voice");
     const labels = await select.locator("option").allTextContents();
-    expect(labels[0]).toBe("Automatic — best available (now: Karen (Premium))");
-    expect(labels.slice(1)).toEqual([
+    expect(labels.slice(0, 3)).toEqual([
+      "Heart · American (default)",
+      "Michael · American",
+      "Automatic — best available (now: Karen (Premium))",
+    ]);
+    expect(labels.slice(3)).toEqual([
       "Karen (Premium) · Australian",
       "Karen · Australian",
       "Daniel · British",
@@ -126,9 +132,38 @@ test.describe("Narration voice setting", { tag: "@ci" }, () => {
     await page.getByTestId("narration-voice-sample").click();
     await expect.poll(async () => (await spoken(page)).at(-1)?.voice).toBe("Daniel");
 
-    // Back to Automatic clears the choice.
-    await select.selectOption("");
+    // Automatic is kept as a choice; Heart, the default, clears it.
+    await select.selectOption("system:automatic");
+    expect(await page.evaluate((k) => localStorage.getItem(k), VOICE_KEY)).toBe("system:automatic");
+    await select.selectOption("recorded:heart");
     expect(await page.evaluate((k) => localStorage.getItem(k), VOICE_KEY)).toBeNull();
+  });
+
+  test("a recorded voice is the default, and plays the caption's clip (#159)", async ({ page }) => {
+    await stubSpeech(page);
+    // As a new user: nothing chosen.
+    await page.addInitScript((k) => localStorage.removeItem(k), VOICE_KEY);
+    const clips: string[] = [];
+    await page.route("**/narration/**", (route) => {
+      clips.push(new URL(route.request().url()).pathname);
+      return route.continue();
+    });
+    await page.goto("/");
+    await openNarrationSettings(page);
+    const select = page.getByTestId("setting-narration-voice");
+    await expect(select).toHaveValue("recorded:heart");
+    await expect(page.getByTestId("narration-voice-help")).toHaveCount(0);
+    await page.getByTestId("narration-voice-sample").click();
+    await expect.poll(() => clips).toEqual([expect.stringMatching(/^\/narration\/heart\/[0-9a-f]{14}\.m4a$/)]);
+    // The clip is there, so the computer's voice is not used.
+    const status = await page.evaluate((url) => fetch(url).then((r) => r.status), clips[0]);
+    expect(status).toBe(200);
+    expect(await spoken(page)).toEqual([]);
+
+    await select.selectOption("recorded:michael");
+    expect(await page.evaluate((k) => localStorage.getItem(k), VOICE_KEY)).toBe("recorded:michael");
+    await page.getByTestId("narration-voice-sample").click();
+    await expect.poll(() => clips.at(-1)).toMatch(/^\/narration\/michael\//);
   });
 
   test("on a Mac, it says which Premium voices to download and links to Spoken Content", async ({ page }) => {

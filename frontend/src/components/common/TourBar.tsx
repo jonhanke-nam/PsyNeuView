@@ -41,7 +41,7 @@ import { useTourHighlightStore } from "@/stores/tourHighlightStore";
 import { tourIdFromUrl, useTourStore } from "@/stores/tourStore";
 import { useUIStore } from "@/stores/uiStore";
 import { openSettings } from "./settings/sections";
-import { loadNarrationVoice, narrationAvailable, resolveVoice, speakCaption, stopSpeaking, voiceShortName, type SpeechEngine } from "@/utils/narration";
+import { narrationAvailable, narrationVoiceName, pauseSpeaking, resumeSpeaking, speakCaption, stopSpeaking, type SpeechEngine } from "@/utils/narration";
 import { matchesNodeName, type TourStep } from "@/utils/tourStep";
 
 /** Where a docs page is read: the repo's `docs/` folder on devel. */
@@ -219,8 +219,8 @@ export function TourBar() {
   useEffect(() => {
     const engine = speechEngine();
     if (!engine) return;
-    if (paused) engine.pause();
-    else engine.resume();
+    if (paused) pauseSpeaking(engine);
+    else resumeSpeaking(engine);
   }, [paused]);
 
   // Whatever happens to the walkthrough, no voice outlives it.
@@ -231,7 +231,7 @@ export function TourBar() {
   const docs = walkthrough.docs ?? [];
   // Narration on and a caption to read: the caption leads the bar (#86).
   const leads = narration && Boolean(step?.say) && !finished && !complete && !holdForPointer;
-  const voice = narration ? voiceShortName(resolveVoice(speechEngine()?.getVoices?.() ?? [], loadNarrationVoice())) : null;
+  const voice = narration ? narrationVoiceName(speechEngine()?.getVoices?.() ?? []) : null;
   const instruction = finished
     ? "✓ Walkthrough complete."
     : complete

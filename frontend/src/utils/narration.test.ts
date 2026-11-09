@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   NARRATION_KEY,
@@ -15,6 +15,10 @@ import {
   saveNarrationPref,
   saveNarrationRate,
   saveNarrationVoice,
+  narrationVoiceName,
+  pauseSpeaking,
+  resumeSpeaking,
+  setClipPlayer,
   speakCaption,
   voiceShortName,
   stopSpeaking,
@@ -163,7 +167,7 @@ describe("choosing a narration voice in Settings", () => {
     expect(s.map.get(NARRATION_VOICE_KEY)).toBe("com.apple.voice.compact.en-GB.Daniel");
     expect(loadNarrationVoice(s)).toBe("com.apple.voice.compact.en-GB.Daniel");
     saveNarrationVoice(null, s);
-    expect(loadNarrationVoice(s)).toBeNull();
+    expect(loadNarrationVoice(s)).toBe("recorded:heart"); // the default (#159)
   });
 
   it("reads in the chosen voice, and falls back to the best one when it's gone", () => {
@@ -224,5 +228,79 @@ describe("speakCaption never throws (#93)", () => {
   it("returns false when the engine rejects the utterance", () => {
     const e = { cancel() {}, speak() { throw new TypeError("Failed to convert value to 'SpeechSynthesisVoice'"); }, pause() {}, resume() {}, getVoices: () => [] };
     expect(speakCaption("Look here.", e as never, (t) => ({ text: t }) as never)).toBe(false);
+  });
+});
+
+describe("a recorded voice (#159)", () => {
+  const engine = () => ({ speak: vi.fn(), cancel: vi.fn(), pause: vi.fn(), resume: vi.fn() });
+  const utterance = (text: string) => ({ text, rate: 0 }) as unknown as SpeechSynthesisUtterance;
+  type Fake = { url: string; play: ReturnType<typeof vi.fn>; pause: ReturnType<typeof vi.fn>; playbackRate: number; onplay: null | (() => void); onended: null | (() => void); onerror: null | (() => void) };
+  let clips: Fake[];
+  let playResult: () => Promise<void>;
+  beforeEach(() => {
+    clips = [];
+    playResult = () => Promise.resolve();
+    setClipPlayer((url) => {
+      const c: Fake = { url, play: vi.fn(() => playResult()), pause: vi.fn(), playbackRate: 1, onplay: null, onended: null, onerror: null };
+      clips.push(c);
+      return c as never;
+    });
+  });
+  afterEach(() => setClipPlayer(null));
+
+  it("plays the caption's clip, at the chosen rate against the default, and says when it starts and ends", () => {
+    const e = engine();
+    const onStart = vi.fn();
+    const onEnd = vi.fn();
+    expect(speakCaption("Look here.", e, utterance, "recorded:michael", 1.25 * NARRATION_RATE, { onStart, onEnd })).toBe(true);
+    expect(clips).toHaveLength(1);
+    expect(clips[0].url).toMatch(/^\/narration\/michael\/[0-9a-f]{14}\.m4a$/);
+    expect(clips[0].playbackRate).toBeCloseTo(1.25);
+    expect(e.speak).not.toHaveBeenCalled();
+    clips[0].onplay?.();
+    clips[0].onended?.();
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(onEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it("with no clip for the caption, the computer's voice reads it", () => {
+    const e = engine();
+    speakCaption("A caption reworded since the clips were made.", e, utterance, "recorded:heart", NARRATION_RATE);
+    clips[0].onerror?.();
+    expect(e.speak).toHaveBeenCalledTimes(1);
+    expect((e.speak.mock.calls[0][0] as { text: string }).text).toBe("A caption reworded since the clips were made.");
+  });
+
+  it("when the browser won't play it, the computer's voice reads it", async () => {
+    const e = engine();
+    playResult = () => Promise.reject(new Error("NotAllowedError"));
+    speakCaption("Look here.", e, utterance, "recorded:heart", NARRATION_RATE);
+    await vi.waitFor(() => expect(e.speak).toHaveBeenCalledTimes(1));
+  });
+
+  it("stops, pauses and resumes with the walkthrough; a stopped line is not read instead", () => {
+    const e = engine();
+    speakCaption("Look here.", e, utterance, "recorded:heart", NARRATION_RATE);
+    pauseSpeaking(e);
+    expect(clips[0].pause).toHaveBeenCalledTimes(1);
+    resumeSpeaking(e);
+    expect(clips[0].play).toHaveBeenCalledTimes(2);
+    stopSpeaking(e);
+    expect(clips[0].pause).toHaveBeenCalledTimes(2);
+    clips[0].onerror?.(); // the stopped clip's late error
+    expect(e.speak).not.toHaveBeenCalled();
+  });
+
+  it("the next line replaces the clip playing", () => {
+    const e = engine();
+    speakCaption("One.", e, utterance, "recorded:heart", NARRATION_RATE);
+    speakCaption("Two.", e, utterance, "recorded:heart", NARRATION_RATE);
+    expect(clips[0].pause).toHaveBeenCalled();
+    expect(clips).toHaveLength(2);
+  });
+
+  it("names the voice on the bar", () => {
+    expect(narrationVoiceName([], "recorded:heart")).toBe("Heart");
+    expect(narrationVoiceName([], "recorded:michael")).toBe("Michael");
   });
 });

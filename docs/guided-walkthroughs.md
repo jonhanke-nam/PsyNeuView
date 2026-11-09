@@ -167,6 +167,20 @@ Automatic picks the best English voice installed (Premium/Enhanced first, then
 Karen, Daniel, …, never the novelty voices; `pickVoice` in
 `utils/narration.ts`), reading at 0.95. Never required: the caption is always on screen.
 
+**Recorded voices (#159).** By default narration plays clips recorded ahead
+of time in Heart's voice; Michael is the other recorded voice, and the
+computer's own voices are still in the list. The clips are made with Kokoro, a
+free voice model (Apache 2.0) run on your own Mac, and ship in
+`frontend/public/narration/<voice>/`, one `.m4a` per caption, named by a hash
+of the words said (the caption after `pronunciations.yaml`). A caption with no
+clip is read by the computer's voice, so nothing is silent, but
+`utils/recordedNarration.test.ts` fails on any caption without a clip, or a
+clip without a caption. **When you add or reword a `say:` caption (or a
+respelling), run `npm run narration:render` in `frontend/` and commit the
+clips.** It makes only the missing clips and removes those no longer needed.
+It needs `uv` (`brew install uv`) and, on first run, downloads the model
+(about 350 MB) to `~/.psyneuview/kokoro`. Never in CI.
+
 **What narration reads, and how the bar shows it (#86).** Narration reads only
 the caption, never the instruction. Captions run about 11 words (a few
 seconds), instructions about 33 (up to 81), too long to hear on every step.
@@ -272,9 +286,8 @@ python3 scripts/tutorial-review-book.py --out /tmp/review-book --voice Daniel  #
 the book renders a preview of each step with `say`, in the voice the app picks
 by default (Karen, else Daniel) at the narration rate, with the dictionary's
 respellings applied. The previews are written only to the output folder,
-never committed. If the repo ever carries recorded narration
-(`narration-manifest.json`), the book plays those recordings instead and also
-flags stale or missing ones.
+never committed. The app's default voice is now recorded (#159,
+`frontend/public/narration/`); the book still previews with `say`.
 
 It writes `index.html` with `shots/` (JPEG, shrunk with `sips` on macOS) and
 `audio/` (AAC `.mp4`, which an Artifact serves; it won't serve `.m4a`) beside

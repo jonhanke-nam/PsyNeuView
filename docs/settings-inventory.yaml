@@ -310,11 +310,15 @@ settings:
     storage: browser localStorage (psyneuview.tour.narrationVoice); inside the Mac app, the app keeps it (PagePreferences, #218)
     control: setting-narration-voice
     notes: >-
-      Automatic (nothing stored) reads in the best English voice installed:
+      Nothing stored means Heart, a recorded voice that ships with the app
+      (#159, utils/recordedNarration.ts); Michael is the other. A recorded
+      voice plays the caption's clip from public/narration/<voice>/, and a
+      caption with no clip is read by the system voice. System voices:
+      Automatic (system:automatic) reads in the best English voice installed:
       Premium and Enhanced first, then Karen, Daniel, and the other standard
       voices that read well; never the novelty voices (utils/narration.ts).
-      A chosen voice is stored by its voiceURI and falls back to Automatic
-      when it is no longer installed. The list is the browser's own voices,
+      A chosen system voice is stored by its voiceURI and falls back to
+      Automatic when it is no longer installed. The list is the browser's own voices,
       so it differs between machines. Turning narration on or off stays on
       the walkthrough bar's speaker button. Captions are read with the
       respellings in frontend/src/walkthroughs/pronunciations.yaml (#1407).
