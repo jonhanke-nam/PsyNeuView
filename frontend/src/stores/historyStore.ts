@@ -53,6 +53,7 @@
 import { create } from "zustand";
 import { sameView, type GraphView } from "@/utils/graphView";
 import type { Node, Edge } from "@xyflow/react";
+import { sameRoutes, type EdgeRouteMap } from "@/utils/edgeRoutes";
 
 export interface Snapshot {
   /** Python source code */
@@ -90,6 +91,16 @@ export interface Snapshot {
    * graph are the same. Other steps are told apart by their code and graph.
    */
   moves?: boolean;
+  /**
+   * The arrows shaped by hand (#164), keyed by their ends as the layout file
+   * keeps them. Undo and redo put them back.
+   */
+  edgeRoutes?: EdgeRouteMap;
+  /**
+   * A step that only reshapes arrows (#164): kept when its arrows' routes
+   * differ from the step before, though the code and the graph are the same.
+   */
+  reshapes?: boolean;
 }
 
 /** How a save came about. */
@@ -349,6 +360,7 @@ function admit(step: Snapshot, previous: Snapshot | undefined): Snapshot {
   if (previous && !deltas.has(previous)) {
     if (step.source === previous.source) step.source = previous.source;
     if (positionsEqual(step.positions, previous.positions)) step.positions = previous.positions;
+    if (step.edgeRoutes && sameRoutes(step.edgeRoutes, previous.edgeRoutes)) step.edgeRoutes = previous.edgeRoutes;
   }
   const sourceShared = previous !== undefined && !deltas.has(previous) && step.source === previous.source;
   metas.set(step, {
@@ -476,7 +488,12 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     const lastEntry = state.past[state.past.length - 1];
 
     // Skip if snapshot is identical to the last one
-    if (lastEntry && snapshotsEqual(lastEntry, snapshot) && !(snapshot.moves && !samePositions(lastEntry, snapshot))) return;
+    if (
+      lastEntry &&
+      snapshotsEqual(lastEntry, snapshot) &&
+      !(snapshot.moves && !samePositions(lastEntry, snapshot)) &&
+      !(snapshot.reshapes && !sameRoutes(lastEntry.edgeRoutes, snapshot.edgeRoutes))
+    ) return;
 
     // The redo steps are about to go; the current step may hold its code as a
     // delta from one of them.

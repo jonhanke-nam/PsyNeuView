@@ -10,6 +10,8 @@ import { record } from "@/utils/activityLog";
 import { useHistoryStore, type SaveMark, type Snapshot } from "@/stores/historyStore";
 import type { MechanismData } from "@/stores/modelStore";
 import { captureView } from "@/utils/graphView";
+import { serializeRoutes, type RoutableEdge } from "@/utils/edgeRoutes";
+import { useEdgeAttach } from "@/stores/edgeAttachStore";
 
 export interface RecordActionOptions {
   /**
@@ -24,6 +26,11 @@ export interface RecordActionOptions {
    * though the code and the graph did not. See `Snapshot.moves`.
    */
   moves?: boolean;
+  /**
+   * The step only reshapes arrows (#164): kept when the arrows' routes
+   * changed, though the code and the graph did not. See `Snapshot.reshapes`.
+   */
+  reshapes?: boolean;
 }
 
 /**
@@ -57,7 +64,14 @@ export function recordAction(description: string, opts?: RecordActionOptions) {
     positions,
     // The view the graph was built in, so undo puts it back too (#194).
     view: captureView(),
+    // The arrows shaped by hand (#164), as the layout file keeps them, so
+    // Undo puts an arrow's shape back.
+    edgeRoutes: (() => {
+      const ea = useEdgeAttach.getState();
+      return serializeRoutes(edges as unknown as RoutableEdge[], ea.shaped, ea.waypoints, ea.overrides);
+    })(),
     ...(opts?.moves ? { moves: true } : {}),
+    ...(opts?.reshapes ? { reshapes: true } : {}),
   };
 
   useHistoryStore.getState().pushSnapshot(snapshot);
