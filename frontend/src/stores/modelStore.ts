@@ -34,7 +34,8 @@ import {
   type SidecarView,
 } from "@/utils/sidecarApi";
 import { useEdgeAttach } from "./edgeAttachStore";
-import { hydrateRoutes, type EdgeRouteMap, type RoutableEdge } from "@/utils/edgeRoutes";
+import { hydrateRoutes, serializeRoutes, type EdgeRouteMap, type RoutableEdge } from "@/utils/edgeRoutes";
+import { positionsOnScreen } from "@/utils/positionsOnScreen";
 import { record } from "@/utils/activityLog";
 import { paletteColor } from "@/utils/paletteColor";
 
@@ -1057,6 +1058,12 @@ export const useModelStore = create<ModelState>((set, get) => ({
     const positionsView = isFlatView ? "flat" : "nested";
     const viewChanged = lastPositionsView !== null && lastPositionsView !== positionsView;
     lastPositionsView = positionsView;
+    // #164: a reload of the graph on screen — the code changed, a setting was
+    // flipped, the file was saved elsewhere — rather than a model opened or a
+    // switch to the other view, which has positions of its own.
+    const screenNodes = get().nodes;
+    const screenEdges = get().edges;
+    const isReload = !pendingFreshOpenLayout && !viewChanged && screenNodes.length > 0;
     if (pendingFreshOpenLayout || viewChanged) {
       pendingFreshOpenLayout = false;
       set({ autoLayout: Object.keys(savedPositions).length === 0 });
@@ -1879,6 +1886,23 @@ export const useModelStore = create<ModelState>((set, get) => ({
     // connected graph and produces a good layout. CIMs overlay on top.
     const hasSavedPositions = Object.keys(savedPositions).length > 0;
     const { autoLayout } = get();
+    // #164: in a custom layout a reload moves nothing. A node goes where the
+    // layout saved it, else where it is on screen; only a node the graph did
+    // not have is placed by the layout engine. A load that brings no layout
+    // (an unsaved edit's preview, the file saved in another editor) goes by
+    // the layout saved last. Without this, a custom layout with nothing saved
+    // yet was laid out afresh on every reload, and one with positions saved
+    // lost them on a reload that brought none: every node moved.
+    //
+    // Saved positions come first because the store's nodes don't follow a
+    // drag on the canvas; the drag is saved (and so known here) instead.
+    const placed: Record<string, { x: number; y: number }> = !autoLayout && isReload
+      ? {
+          ...positionsOnScreen(screenNodes),
+          ...(layout === undefined ? get().lastLayoutPositions : savedPositions),
+        }
+      : savedPositions;
+    const hasPlaced = Object.keys(placed).length > 0;
 
     let layoutNodes: Node[];
     if (autoLayout) {
@@ -1901,13 +1925,13 @@ export const useModelStore = create<ModelState>((set, get) => ({
       } catch {
         dagred = nodes; // layout failed → keep processComposition() positions
       }
-      if (hasSavedPositions) {
+      if (hasPlaced) {
         // Apply saved positions to known nodes; collect the rest as "fresh".
         const fresh: Node[] = [];
         layoutNodes = dagred.map((n) => {
           const varName = (n.data as { varName?: string } | undefined)?.varName;
           const saved =
-            (varName && savedPositions[varName]) || savedPositions[n.id];
+            (varName && placed[varName]) || placed[n.id];
           if (saved) return { ...n, position: saved };
           fresh.push(n);
           return n;
@@ -1926,7 +1950,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
           (byParentComp.get(parent) ?? byParentComp.set(parent, []).get(parent)!).push(n);
         }
         for (const [parent, members] of byParentComp) {
-          const anchor = savedPositions[parent];
+          const anchor = placed[parent];
           if (!anchor) continue; // composition had no saved position → keep Dagre
           const cx = members.reduce((s, m) => s + m.position.x, 0) / members.length;
           const cy = members.reduce((s, m) => s + m.position.y, 0) / members.length;
@@ -1957,7 +1981,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     // (the shortest way), and leave every other position as saved. A layout
     // engine places frames clear of their neighbours itself, and the flat
     // views have no folding.
-    if (!autoLayout && hasSavedPositions && !isFlatView) {
+    if (!autoLayout && hasPlaced && !isFlatView) {
       makeRoomForFrames(layoutNodes, sizeForRoom, { refit: () => autoSizeGroups(layoutNodes) });
     }
 
@@ -2001,7 +2025,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
           // (e.g., "outer_comp-5 Input_CIM" vs "outer_comp-12 Input_CIM"),
           // so strip the suffix for a stable lookup key.
           const cimStableKey = cimNode.name.replace(/-\d+\s/, " ");
-          const saved = savedPositions[cimNode.name] || savedPositions[cimStableKey];
+          const saved = placed[cimNode.name] || placed[cimStableKey];
           const fromSaved = !!saved && !autoLayout;
           const pos = fromSaved ? saved : cimPosition(anchor, cimType, cimIdx);
           // Kept so a later layout can put it back in its place (#72).
@@ -2136,14 +2160,18 @@ export const useModelStore = create<ModelState>((set, get) => ({
       // it — keeps positions for nodes not currently rendered (e.g. a nested
       // composition's group node while flattened, or its inner nodes while
       // nested), so flat↔nested round-trips don't clobber each other.
-      lastLayoutPositions: savedPositions,
+      // A load that brings no layout leaves what is saved as it was (#164).
+      lastLayoutPositions: layout === undefined && isReload ? get().lastLayoutPositions : savedPositions,
     });
     // #282: hydrate dragged-port overrides from the sidecar. Persisted keyed by
     // varName (like positions); remap to the runtime node ids the graph uses.
     const savedPorts = (layout as any)?.portPositions as
       | Record<string, Record<string, number>>
       | undefined;
-    if (savedPorts) {
+    if (layout === undefined) {
+      // #164: no layout came with this load (a preview, the file watcher), so
+      // the ports stay where they were dragged, as #1387 keeps value views.
+    } else if (savedPorts) {
       const varToId: Record<string, string> = {};
       for (const n of layoutNodes) {
         const vn = (n.data as any)?.varName || n.id;
@@ -2170,9 +2198,17 @@ export const useModelStore = create<ModelState>((set, get) => ({
         ? "flatEdgeRoutes"
         : "edgeRoutes"
     ] as EdgeRouteMap | undefined;
+    // #164: an edge shaped in this session keeps its shape through a reload.
+    // Shapes are saved only with the node positions, so the layout a reload
+    // brings may not have them yet, and a load with no layout has none at all.
+    // Carried over by endpoint, as they are saved.
+    const ea = useEdgeAttach.getState();
+    const shapedHere = isReload
+      ? serializeRoutes(screenEdges as unknown as RoutableEdge[], ea.shaped, ea.waypoints, ea.overrides)
+      : {};
     useEdgeAttach
       .getState()
-      .hydrate(hydrateRoutes(edges as unknown as RoutableEdge[], savedRoutes));
+      .hydrate(hydrateRoutes(edges as unknown as RoutableEdge[], { ...(savedRoutes ?? {}), ...shapedHere }));
     // Push snapshot for undo history, under the frame button's name when one
     // asked for this rebuild (#204). A load is the app's doing, not an edit
     // the user made: the edits that lead to one are recorded where they are

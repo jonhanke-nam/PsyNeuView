@@ -50,6 +50,7 @@ import { isProjectionType, findDefByType } from "@/constants/pnlTypes";
 import { registerCommand } from "@/shortcuts/commands";
 import { LastGoodDiff } from "./LastGoodDiff";
 import { serializeRoutes, type RoutableEdge } from "@/utils/edgeRoutes";
+import { positionsOnScreen } from "@/utils/positionsOnScreen";
 import { useEdgeAttach } from "@/stores/edgeAttachStore";
 import { prunePositions } from "@/utils/prunePositions";
 import { useGraphPointerStore } from "@/stores/graphPointerStore";
@@ -75,18 +76,8 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 function saveLayoutDebounced(filePath: string, nodes: any[]) {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    const positions: Record<string, { x: number; y: number }> = {};
-    for (const node of nodes) {
-      // #697/#713: cluster frames are reconstructed each load — never persist.
-      if (node.id.startsWith("cluster::")) continue;
-      let key = (node.data as MechanismData)?.varName || node.id;
-      // CIM nodes have PNL numeric suffixes that change each load;
-      // save with a stable key by stripping the suffix.
-      if (node.type === "cimNode") {
-        key = key.replace(/-\d+\s/, " ");
-      }
-      positions[key] = { x: node.position.x, y: node.position.y };
-    }
+    // #697/#713: cluster frames are never saved; CIMs by a stable key.
+    const positions = positionsOnScreen(nodes);
     // #659: merge over the last loaded layout so positions for nodes not
     // currently on the canvas survive — e.g. a nested composition's group node
     // while flattened — keeping flat↔nested round-trips intact.
