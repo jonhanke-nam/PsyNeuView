@@ -15,6 +15,7 @@ import { useHistoryStore, type Snapshot } from "@/stores/historyStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { record } from "@/utils/activityLog";
 import { applyView, captureView, rebuildGraph, sameView } from "@/utils/graphView";
+import { restoreRoutes } from "@/utils/arrowShapes";
 import {
   continuingBurst,
   historyNoticeText,
@@ -177,6 +178,10 @@ async function moveInHistoryNow(redo: boolean, steps: number, origin: HistoryMov
       // and Learn use the preview copy, so they run what you see.
       await previewRestored(filePath, snapshot.source, rebuild ? snapshot.positions ?? {} : undefined);
     }
+    // The arrows as the step had them (#164), saved as a reshape is. A step
+    // rebuilt in another view, or a compact one, gets them from the layout
+    // file with its graph.
+    if (!rebuild && snapshot.edgeRoutes) restoreRoutes(snapshot.edgeRoutes, filePath);
   } finally {
     // Allow recording again after a short delay
     // (the preview's model load records a step a tick later)

@@ -185,3 +185,37 @@ describe("steps that only move nodes", () => {
     expect(useHistoryStore.getState().canUndo()).toBe(false);
   });
 });
+
+// A step that only reshapes an arrow (#164): bending it or moving an end
+// changes no code, no graph and no node, only the arrow's route.
+describe("steps that only reshape arrows", () => {
+  beforeEach(() => {
+    useHistoryStore.getState().clear();
+  });
+
+  const route = (x: number) => ({ edgeRoutes: { "a|out|b|in": { waypoints: [{ x, y: 0 }] } } });
+
+  it("is kept when an arrow's route changed, and Undo gives back the route before", () => {
+    const h = useHistoryStore.getState();
+    h.pushSnapshot(snap({ description: "Model loaded", edgeRoutes: {} }));
+    h.pushSnapshot(snap({ description: "Reshaped arrow a_to_b", reshapes: true, ...route(50) }));
+    expect(useHistoryStore.getState().canUndo()).toBe(true);
+    expect(useHistoryStore.getState().undo()?.edgeRoutes).toEqual({});
+  });
+
+  it("each reshape is a step of its own once the last one is done", () => {
+    const h = useHistoryStore.getState();
+    h.pushSnapshot(snap({ description: "Model loaded", edgeRoutes: {} }));
+    h.pushSnapshot(snap({ description: "Reshaped arrow a_to_b", reshapes: true, ...route(50), timestamp: 0 }));
+    useHistoryStore.setState({ lastPushTime: 0 }); // past the batching window
+    h.pushSnapshot(snap({ description: "Reshaped arrow a_to_b", reshapes: true, ...route(90) }));
+    expect(useHistoryStore.getState().past).toHaveLength(3);
+  });
+
+  it("is skipped when the route is as it was", () => {
+    const h = useHistoryStore.getState();
+    h.pushSnapshot(snap({ description: "Model loaded", ...route(50) }));
+    h.pushSnapshot(snap({ description: "Reshaped arrow a_to_b", reshapes: true, ...route(50) }));
+    expect(useHistoryStore.getState().canUndo()).toBe(false);
+  });
+});

@@ -109,11 +109,6 @@ button:hover {
   cursor: var(--graph-pointer-grabbing-cursor, grabbing);
 }
 
-/* #41: in an automatic layout an edge can be selected but not shaped. */
-.graph-pointer-hand .projection-edge-hit.projection-edge-hit-auto {
-  cursor: pointer;
-}
-
 /* #40: a drag in progress — the canvas being panned, a node being moved —
    shows the closed hand at the chosen size under every setting. */
 .graph-pointer-image .react-flow__pane.dragging,
