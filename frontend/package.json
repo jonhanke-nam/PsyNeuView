@@ -15,7 +15,9 @@
     "test:e2e:headed": "npm run build && playwright test --headed",
     "test:e2e:ui": "npm run build && playwright test --ui",
     "test:e2e:ci": "npm run build && playwright test --grep \"@ci\\b\"",
-    "tutorials:capture": "PW_DEV=1 playwright test e2e/tutorials"
+    "tutorials:capture": "PW_DEV=1 playwright test e2e/tutorials",
+    "narration:list": "vite-node scripts/narration-list.ts",
+    "narration:render": "vite-node scripts/narration-list.ts | uv run --no-project --python 3.12 --with kokoro-onnx==0.6.1 --with soundfile python ../scripts/render-narration.py public/narration"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.1",

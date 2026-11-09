@@ -35,6 +35,8 @@ function respelt(text: string): string {
 /** Narration on, and the browser's voice replaced by a recorder of every call. */
 async function recordVoice(page: Page) {
   await page.addInitScript((key) => {
+    // This spec tests the computer's own voice; the default is recorded (#159).
+    if (localStorage.getItem("psyneuview.tour.narrationVoice") === null) localStorage.setItem("psyneuview.tour.narrationVoice", "system:automatic");
     localStorage.setItem(key, "on");
     const spoken: string[] = [];
     const calls: string[] = [];

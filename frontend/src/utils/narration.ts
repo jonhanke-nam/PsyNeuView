@@ -1,6 +1,7 @@
 /**
- * Narration for guided walkthroughs (#1310): each step's caption, read aloud
- * by the browser's own speech (the Web Speech API, `speechSynthesis`).
+ * Narration for guided walkthroughs (#1310): each step's caption, read aloud,
+ * by a recorded voice that ships with the app (#159, utils/recordedNarration)
+ * or by the browser's own speech (the Web Speech API, `speechSynthesis`).
  *
  * Three rules:
  *
@@ -17,6 +18,7 @@
  */
 
 import { spokenText } from "./pronunciation";
+import { DEFAULT_NARRATION_VOICE, clipUrl, recordedVoice } from "./recordedNarration";
 
 export const NARRATION_KEY = "psyneuview.tour.narration";
 
@@ -151,19 +153,22 @@ export function pickVoice(voices: SpeechSynthesisVoice[], preferredLang: string 
   return best;
 }
 
-/** Where the chosen voice is kept: its `voiceURI`, or nothing for Automatic. */
+/**
+ * Where the chosen voice is kept: a recorded voice (`recorded:heart`), a
+ * system voice's `voiceURI`, or `system:automatic`; nothing for the default.
+ */
 export const NARRATION_VOICE_KEY = "psyneuview.tour.narrationVoice";
 
-/** The chosen voice's `voiceURI`; null for Automatic, or when storage is blocked. */
-export function loadNarrationVoice(storage: Pick<Storage, "getItem"> | null = safeStorage()): string | null {
+/** The chosen voice; the default (Heart, recorded, #159) when none is chosen or storage is blocked. */
+export function loadNarrationVoice(storage: Pick<Storage, "getItem"> | null = safeStorage()): string {
   try {
-    return storage?.getItem(NARRATION_VOICE_KEY) || null;
+    return storage?.getItem(NARRATION_VOICE_KEY) || DEFAULT_NARRATION_VOICE;
   } catch {
-    return null;
+    return DEFAULT_NARRATION_VOICE;
   }
 }
 
-/** Remember a voice by its `voiceURI`; null goes back to Automatic. */
+/** Remember a voice; null goes back to the default. */
 export function saveNarrationVoice(
   voiceURI: string | null,
   storage: Pick<Storage, "setItem" | "removeItem"> | null = safeStorage(),
@@ -239,11 +244,36 @@ export function resolveVoice(voices: SpeechSynthesisVoice[], chosen: string | nu
 /** What Settings' ▶ Play sample reads. */
 export const SAMPLE_CAPTION = "Select the hidden layer. Watch its values change as the model runs, one trial at a time.";
 
+/** The one recorded clip playing, or paused (#159). */
+interface Clip {
+  play: () => Promise<void> | void;
+  pause: () => void;
+  playbackRate: number;
+  ended?: boolean;
+  onplay: ((this: never, ev: Event) => unknown) | null;
+  onended: ((this: never, ev: Event) => unknown) | null;
+  onerror: OnErrorEventHandler | ((this: never, ev: Event) => unknown) | null;
+}
+let clip: Clip | null = null;
+let makeClip: ((url: string) => Clip) | null = typeof Audio === "function" ? (url) => new Audio(url) : null;
+
+/** Tests: what plays a clip. Null: no audio here, so recorded voices read live. */
+export function setClipPlayer(make: ((url: string) => Clip) | null): void {
+  makeClip = make;
+}
+
+function stopClip(): void {
+  const c = clip;
+  clip = null;
+  c?.pause();
+}
+
 /**
  * Read one caption aloud, replacing whatever was being read. A blank caption
  * only silences what was playing. It reads in the voice and at the rate
- * chosen in Settings (or the best available voice and the default rate), with
- * the words voices misread respelt (`pronunciations.yaml`, #1407).
+ * chosen in Settings (or the default voice and rate), with the words voices
+ * misread respelt (`pronunciations.yaml`, #1407). A recorded voice plays the
+ * caption's clip; with no clip for it, the computer's own voice reads it.
  */
 export function speakCaption(
   text: string,
@@ -272,8 +302,41 @@ function speakLine(
   events: { onStart?: () => void; onEnd?: () => void },
 ): boolean {
   engine.cancel();
+  stopClip();
   const line = text.trim();
   if (!line) return false;
+  const recorded = recordedVoice(chosenVoice);
+  if (recorded && makeClip) {
+    const c = makeClip(clipUrl(recorded, line));
+    // The rates are the live voice's; the clips are at the voice's own pace,
+    // which Settings' Default stands for.
+    c.playbackRate = rate / NARRATION_RATE;
+    if (events.onStart) c.onplay = events.onStart;
+    if (events.onEnd) c.onended = events.onEnd;
+    // No clip (a caption changed since the clips were made), or the browser
+    // won't play it: the computer's voice reads the line instead. Not once
+    // the line has been stopped or replaced.
+    const instead = () => {
+      if (clip !== c) return;
+      clip = null;
+      readLive(line, engine, makeUtterance, null, rate, events);
+    };
+    c.onerror = instead;
+    clip = c;
+    void Promise.resolve(c.play()).catch(instead);
+    return true;
+  }
+  return readLive(line, engine, makeUtterance, chosenVoice, rate, events);
+}
+
+function readLive(
+  line: string,
+  engine: SpeechEngine,
+  makeUtterance: (text: string) => SpeechSynthesisUtterance,
+  chosenVoice: string | null,
+  rate: number,
+  events: { onStart?: () => void; onEnd?: () => void },
+): boolean {
   const utterance = makeUtterance(spokenText(line));
   const voice = resolveVoice(engine.getVoices?.() ?? [], chosenVoice);
   if (voice) {
@@ -294,6 +357,24 @@ function speakLine(
 /** Stop reading, for when the walkthrough ends or narration is turned off. */
 export function stopSpeaking(engine: SpeechEngine | null): void {
   engine?.cancel();
+  stopClip();
+}
+
+/** Pause the line being read, with the walkthrough. */
+export function pauseSpeaking(engine: SpeechEngine | null): void {
+  engine?.pause();
+  clip?.pause();
+}
+
+/** Carry on with the line, where it was paused. */
+export function resumeSpeaking(engine: SpeechEngine | null): void {
+  engine?.resume();
+  if (clip && !clip.ended) void Promise.resolve(clip.play()).catch(() => {});
+}
+
+/** The name of the voice narration reads in, for the bar (#93). */
+export function narrationVoiceName(voices: SpeechSynthesisVoice[], chosen: string = loadNarrationVoice()): string | null {
+  return recordedVoice(chosen)?.name ?? voiceShortName(resolveVoice(voices, chosen));
 }
 
 /**
