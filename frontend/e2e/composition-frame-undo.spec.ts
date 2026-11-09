@@ -15,11 +15,27 @@
  */
 import { mutatingTest as test, expect, closePalette } from "./test-base";
 import type { Page } from "@playwright/test";
+import { copyFileSync, mkdtempSync, readFileSync } from "fs";
+import { tmpdir } from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const EGO = path.resolve(__dirname, "..", "..", "backend", "reference_models", "Giallanza2024_ego_study2.py");
+const REFERENCE = path.resolve(__dirname, "..", "..", "backend", "reference_models");
+const EGO_NAME = "Giallanza2024_ego_study2";
+
+/**
+ * A private copy of the EGO model, with its layout files (#226). Undo writes
+ * the layout file, so a test run on the bundled model rewrote it in the repo.
+ */
+function egoCopy(): { model: string; layout: string } {
+  const dir = mkdtempSync(path.join(tmpdir(), "frame-undo-"));
+  for (const ext of [".py", ".pnlview.json", ".psyneuview.json"]) {
+    copyFileSync(path.join(REFERENCE, EGO_NAME + ext), path.join(dir, EGO_NAME + ext));
+  }
+  return { model: path.join(dir, `${EGO_NAME}.py`), layout: path.join(dir, `${EGO_NAME}.pnlview.json`) };
+}
+const readLayout = (file: string) => JSON.parse(readFileSync(file, "utf8"));
 
 const loaded = (page: Page) =>
   page.waitForResponse((r) => r.url().includes("/api/model/load"), { timeout: 60_000 });
@@ -67,7 +83,7 @@ const frameButton = (page: Page, name: RegExp) => page.getByTestId("graph-canvas
 
 test.describe("undo after a composition frame button (#194)", { tag: "@ci" }, () => {
   test("Enter, then Undo: the flattened view again, with EM's frame; Redo enters again", async ({ page }) => {
-    await openFromPath(page, EGO);
+    await openFromPath(page, egoCopy().model);
     await expect(frame(page, "EM")).toBeVisible();
     await press(page, /^Enter composition EM$/);
     await expect(crumb(page)).toBeVisible({ timeout: 15_000 });
@@ -111,7 +127,11 @@ test.describe("undo after a composition frame button (#194)", { tag: "@ci" }, ()
   });
 
   test("Collapse, then Undo: EM open in the flattened view again; Redo folds it", async ({ page }) => {
-    await openFromPath(page, EGO);
+    const ego = egoCopy();
+    // The nested view's saved layout, before anything is done in this view.
+    const nestedBefore = readLayout(ego.layout).positions;
+    expect(Object.keys(nestedBefore)).toContain("EM");
+    await openFromPath(page, ego.model);
     await expect(canvasText(page, "COMBINED SCORES")).toBeVisible();
     await press(page, /^Collapse composition EM$/);
     const folded = page.getByTestId("graph-canvas").locator('.react-flow__node-mechanismNode[data-id="EM"]');
@@ -130,6 +150,15 @@ test.describe("undo after a composition frame button (#194)", { tag: "@ci" }, ()
     await expect(viewMenu(page)).toHaveValue("__flat__");
     await expectTooltips(page, null, "Collapsed EM");
 
+    // The Undo saved the flattened view's positions under its own key, and
+    // left the nested view's saved layout as it was (#226). Before, they went
+    // under the nested view's key, frames and all. The save is made before
+    // the rebuild `step` waits for, so the file is written by now.
+    const after = readLayout(ego.layout);
+    expect(after.positions).toEqual(nestedBefore);
+    expect(Object.keys(after.flatPositions ?? {})).toContain("prediction_layer");
+    expect(Object.keys(after.flatPositions).some((k) => k.startsWith("cluster::"))).toBe(false);
+
     await step(page, "redo");
     await expect(folded).toBeVisible({ timeout: 15_000 });
     await expect(canvasText(page, "COMBINED SCORES")).toHaveCount(0);
@@ -138,7 +167,7 @@ test.describe("undo after a composition frame button (#194)", { tag: "@ci" }, ()
   });
 
   test("Inset, then Undo: EM nested and open again; Redo insets it", async ({ page }) => {
-    await openFromPath(page, EGO);
+    await openFromPath(page, egoCopy().model);
     // Inset belongs to the nested view, where EM opens folded (#395).
     const menu = viewMenu(page);
     const nested = await menu.locator("option").filter({ hasText: /^EGO$/ }).first().getAttribute("value");
