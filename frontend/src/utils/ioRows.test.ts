@@ -118,6 +118,40 @@ describe("tidyIoRows", () => {
   });
 });
 
+describe("tidyIoRows in an automatic layout", () => {
+  it("closes up the empty rows the outputs leave behind (Botvinick's case)", () => {
+    // Four outputs on four rows, 60 px apart; the inputs below them.
+    const nodes = [
+      mech("o1", 0, 0, ["OUTPUT"]),
+      mech("o2", 200, 100, ["OUTPUT"]),
+      mech("o3", 400, 200, ["OUTPUT"]),
+      mech("o4", 600, 300, ["OUTPUT"]),
+      mech("in", 0, 400, ["INPUT"]),
+    ];
+    const kept = tidyIoRows(nodes).nodes;
+    expect(ioRowViolations(kept)).toEqual([]);
+    expect(at(kept, "in").y - at(kept, "o1").y, "Tidy keeps the inputs where they were").toBe(400);
+    const closed = tidyIoRows(nodes, { closeUp: true }).nodes;
+    expect(ioRowViolations(closed)).toEqual([]);
+    expect(at(closed, "in").y - at(closed, "o1").y, "no wider a gap than before").toBe(100);
+  });
+
+  it("moves what is below a frame down as far as the frame grew", () => {
+    const nodes = [
+      frame("F", 0, 0, 300, 200),
+      mech("fin", 20, 40, ["INPUT"], "F"),
+      mech("loose", 150, 140, [], "F"),
+      mech("fout", 20, 90, ["OUTPUT"], "F"),
+      mech("under", 0, 260),
+    ];
+    const out = tidyIoRows(nodes).nodes;
+    const f = out.find((n) => n.id === "F")!;
+    const grew = (f.style!.height as number) - 200;
+    expect(grew).toBeGreaterThan(0);
+    expect(at(out, "under").y).toBe(260 + grew);
+  });
+});
+
 describe("clampIoDrag", () => {
   const nodes = [mech("in", 0, 300, ["INPUT"]), mech("mid", 0, 150), mech("out", 0, 0, ["OUTPUT"]), mech("loss", 200, 0, ["LEARNING"])];
   const node = (id: string) => nodes.find((n) => n.id === id)!;

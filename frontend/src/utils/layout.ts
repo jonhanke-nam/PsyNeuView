@@ -762,7 +762,7 @@ function keepIoRows(style: LayoutStyle, nodes: Node[], options: LayoutOptions): 
   // Layered's own default is top-down (applyDagreLayout); show_graph's is bottom-to-top.
   const direction = style === "showgraph" ? "BT" : options.direction ?? "TB";
   if (setting === "off" || ioRowsNotApplying(style, direction)) return nodes;
-  return tidyIoRows(nodes).nodes;
+  return tidyIoRows(nodes, { closeUp: true }).nodes;
 }
 
 function layOut(

@@ -213,37 +213,107 @@ function tidyLevel(members: Node[]): boolean {
   return members.some((n) => before.get(n.id) !== at(n));
 }
 
+interface Extent {
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+function extentOf(members: Node[]): Extent {
+  const boxes = members.map(boxOf);
+  return {
+    top: Math.min(...boxes.map((b) => b.y)),
+    right: Math.max(...boxes.map((b) => b.x + b.w)),
+    bottom: Math.max(...boxes.map((b) => b.y + b.h)),
+  };
+}
+
+/**
+ * Close up a gap between rows that tidying left wider than any gap the
+ * composition had before (Botvinick's outputs, once on four rows, leave three
+ * empty ones), by moving everything beyond it closer. For an automatic layout
+ * only: Tidy on a layout of your own moves nothing but the inputs and outputs.
+ */
+function closeUp(members: Node[], widest: number): void {
+  const sorted = [...members].sort((a, b) => a.position.y - b.position.y);
+  let bandBottom = -Infinity;
+  let shift = 0;
+  for (const n of sorted) {
+    const b = boxOf(n);
+    const y = b.y - shift;
+    if (isFinite(bandBottom) && y - bandBottom > widest) shift += y - bandBottom - widest;
+    n.position = { x: n.position.x, y: b.y - shift };
+    bandBottom = Math.max(bandBottom, n.position.y + b.h);
+  }
+}
+
+/** The widest clear gap between two rows of a composition. */
+function widestGap(members: Node[]): number {
+  const sorted = members.map(boxOf).sort((a, b) => a.y - b.y);
+  let widest = 0;
+  let bandBottom = -Infinity;
+  for (const b of sorted) {
+    if (isFinite(bandBottom) && b.y > bandBottom) widest = Math.max(widest, b.y - bandBottom);
+    bandBottom = Math.max(bandBottom, b.y + b.h);
+  }
+  return widest;
+}
+
 /**
  * A frame whose members moved keeps them inside: they shift down together by
- * as much as one rose above the topmost member before, and the frame grows to
- * fit what moved right or down. A frame never shrinks here.
+ * as much as one rose above the topmost member before, and the frame's size
+ * follows what moved right or down (growing only, unless `shrink`). Returns
+ * how much wider and taller the frame got.
  */
-function refit(frame: Node, members: Node[], was: { top: number; right: number; bottom: number }): void {
-  const boxes = () => members.map(boxOf);
-  const top = Math.min(...boxes().map((b) => b.y));
+function refit(frame: Node, members: Node[], was: Extent, shrink: boolean): { dw: number; dh: number } {
+  const top = extentOf(members).top;
   if (top < was.top) {
     for (const n of members) n.position = { x: n.position.x, y: n.position.y + (was.top - top) };
   }
   const w = frame.style?.width, h = frame.style?.height;
-  if (typeof w !== "number" || typeof h !== "number") return; // sized after layout (autoSizeGroups)
-  const right = Math.max(...boxes().map((b) => b.x + b.w));
-  const bottom = Math.max(...boxes().map((b) => b.y + b.h));
-  frame.style = {
-    ...frame.style,
-    width: Math.max(w, w + right - was.right),
-    height: Math.max(h, h + bottom - was.bottom),
-  };
-  if (frame.measured) frame.measured = { width: frame.style.width as number, height: frame.style.height as number };
+  if (typeof w !== "number" || typeof h !== "number") return { dw: 0, dh: 0 }; // sized after layout (autoSizeGroups)
+  const now = extentOf(members);
+  const width = shrink ? Math.max(100, w + now.right - was.right) : Math.max(w, w + now.right - was.right);
+  const height = shrink ? Math.max(100, h + now.bottom - was.bottom) : Math.max(h, h + now.bottom - was.bottom);
+  frame.style = { ...frame.style, width, height };
+  if (frame.measured) frame.measured = { width, height };
+  return { dw: width - w, dh: height - h };
+}
+
+/**
+ * Make room beside a frame that changed size: what was below it moves down
+ * (or up) by as much as it grew (or shrank), and what was beside it, to its
+ * right and level with it, moves right by as much as it widened.
+ */
+function makeRoom(frame: Node, siblings: Node[], old: Box, by: { dw: number; dh: number }): void {
+  for (const n of siblings) {
+    if (n.id === frame.id) continue;
+    const b = boxOf(n);
+    if (by.dh && b.y >= old.y + old.h) n.position = { x: n.position.x, y: n.position.y + by.dh };
+    else if (by.dw > 0 && b.x >= old.x + old.w && b.y < old.y + old.h + by.dh && b.y + b.h > old.y) {
+      n.position = { x: n.position.x + by.dw, y: n.position.y };
+    }
+  }
+}
+
+export interface TidyOptions {
+  /**
+   * Close up the empty rows tidying leaves, and let frames shrink to fit:
+   * for an automatic layout, which is being made anew. Off for Tidy on a
+   * layout of your own, which moves only what it has to.
+   */
+  closeUp?: boolean;
 }
 
 /**
  * Move each composition's inputs and outputs onto their rows, where the
- * composition breaks the rule; a composition that keeps it is left exactly
- * as it is. Returns new nodes (the given ones are not changed) and the ids
- * of those that moved. The deepest compositions go first, so a frame that
- * grew to fit its members is then kept clear of in its own composition.
+ * composition breaks the rule; a composition that keeps it is left as it is
+ * (but for room made for a frame inside it that grew). Returns new nodes (the
+ * given ones are not changed) and the ids of those that moved. The deepest
+ * compositions go first, so a frame that grew to fit its members then makes
+ * room in its own composition before that is tidied.
  */
-export function tidyIoRows(nodes: Node[]): { nodes: Node[]; moved: string[] } {
+export function tidyIoRows(nodes: Node[], options: TidyOptions = {}): { nodes: Node[]; moved: string[] } {
   const copies = nodes.map((n) => ({ ...n, position: { ...n.position }, ...(n.style ? { style: { ...n.style } } : {}) }));
   const byId = new Map(copies.map((n) => [n.id, n]));
   const depth = (id: string): number => {
@@ -251,20 +321,22 @@ export function tidyIoRows(nodes: Node[]): { nodes: Node[]; moved: string[] } {
     for (let cur = byId.get(id); cur?.parentId && d < 50; cur = byId.get(cur.parentId)) d++;
     return d;
   };
-  const order = [...levels(copies)].sort(([a], [b]) => (b ? depth(b) + 1 : 0) - (a ? depth(a) + 1 : 0));
-  const before = new Map(copies.map((n) => [n.id, `${n.position.x},${n.position.y}`]));
+  const byLevel = levels(copies);
+  const order = [...byLevel].sort(([a], [b]) => (b ? depth(b) + 1 : 0) - (a ? depth(a) + 1 : 0));
+  const at = (n: Node) => `${n.position.x},${n.position.y}`;
+  const before = new Map(copies.map((n) => [n.id, at(n)]));
+  const was = new Map([...byLevel].map(([parent, members]) => [parent, extentOf(members)]));
   for (const [parent, members] of order) {
-    const boxes = members.map(boxOf);
-    const was = {
-      top: Math.min(...boxes.map((b) => b.y)),
-      right: Math.max(...boxes.map((b) => b.x + b.w)),
-      bottom: Math.max(...boxes.map((b) => b.y + b.h)),
-    };
-    if (!tidyLevel(members)) continue;
+    const widest = Math.max(widestGap(members), rowGap(members));
+    if (tidyLevel(members) && options.closeUp) closeUp(members, widest);
     const frame = parent ? byId.get(parent) : undefined;
-    if (frame) refit(frame, members, was);
+    if (!frame || !members.some((n) => before.get(n.id) !== at(n))) continue;
+    const old = boxOf(frame);
+    const grew = refit(frame, members, was.get(parent)!, !!options.closeUp);
+    const siblings = byLevel.get(frame.parentId ?? "");
+    if (siblings && (grew.dw || grew.dh)) makeRoom(frame, siblings, old, grew);
   }
-  const moved = copies.filter((n) => before.get(n.id) !== `${n.position.x},${n.position.y}`).map((n) => n.id);
+  const moved = copies.filter((n) => before.get(n.id) !== at(n)).map((n) => n.id);
   return { nodes: moved.length ? copies : nodes, moved };
 }
 
