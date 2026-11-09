@@ -13,6 +13,9 @@ The graph toolbar controls how the model is drawn:
 
 - **Layout: Auto / Custom** — auto-layout vs. your hand-arranged positions, plus
   **Reset Custom Layout** and the layout (**Like show_graph**, **Layered**, …).
+  Bending an arrow, or dragging one of its ends, shapes that arrow only: in
+  Auto it switches the layout to Custom where it stands, and no node moves.
+  The arrow's shape is saved with the layout, and Undo takes it back.
 - **Advanced Graph View Options ▾** — one panel that stays open while you
   change things, grouped as **Nodes** (names, type and role tags, full type
   names, colour by role, dimensions, run order, show ports, expand or collapse
