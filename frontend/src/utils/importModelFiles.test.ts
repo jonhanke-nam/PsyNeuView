@@ -103,6 +103,69 @@ describe("format precedence", () => {
   });
 });
 
+describe("a dropped .py file (#227)", () => {
+  type Reply = { status: number; body: unknown };
+  /** Answers each endpoint from `replies`, recording the order of calls. */
+  function serve(replies: Record<string, Reply>) {
+    const calls: { url: string; body: unknown }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
+      const u = String(url);
+      calls.push({ url: u, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      const key = Object.keys(replies).find((k) => u.endsWith(k));
+      const r = key ? replies[key] : { status: 500, body: { detail: "unexpected" } };
+      return new Response(JSON.stringify(r.body), { status: r.status });
+    });
+    return calls;
+  }
+  const loaded = {
+    status: 200,
+    body: { source: "x = 1", model: { compositions: [], lineMap: {} } },
+  };
+
+  it("creates a file whose name is new to the models folder, then opens it", async () => {
+    // save-source answers 404 for a file that is not there yet; that answer,
+    // not a thrown error, has to lead to save-as.
+    const calls = serve({
+      "/api/models/dirs": { status: 200, body: { default_save_dir: "/models" } },
+      "/api/model/save-source": { status: 404, body: { detail: "File not found: /models/new.py" } },
+      "/api/models/save-as": { status: 200, body: { file_path: "/models/new.py" } },
+      "/api/model/load": loaded,
+    });
+    expect(await importModelFiles([file("new.py", "x = 1")], "drop")).toBe(true);
+
+    expect(calls.map((c) => c.url)).toEqual([
+      "/api/models/dirs", "/api/model/save-source", "/api/models/save-as", "/api/model/load",
+    ]);
+    expect(calls[2].body).toMatchObject({ source: "x = 1", file_name: "new.py" });
+    expect(calls[3].body).toMatchObject({ file_path: "/models/new.py" });
+    expect(useModelStore.getState().filePath).toBe("/models/new.py");
+    expect(JSON.stringify(notifications())).not.toMatch(/Import failed/);
+    expect(JSON.stringify(notifications())).toMatch(/Imported new\.py/);
+  });
+
+  it("writes over a file of that name already there, without save-as", async () => {
+    const calls = serve({
+      "/api/models/dirs": { status: 200, body: { default_save_dir: "/models" } },
+      "/api/model/save-source": { status: 200, body: {} },
+      "/api/model/load": loaded,
+    });
+    await importModelFiles([file("old.py", "x = 1")], "drop");
+    expect(calls.some((c) => c.url.includes("save-as"))).toBe(false);
+    expect(useModelStore.getState().filePath).toBe("/models/old.py");
+  });
+
+  it("says why, and loads nothing, when the file cannot be written", async () => {
+    const calls = serve({
+      "/api/models/dirs": { status: 200, body: { default_save_dir: "/models" } },
+      "/api/model/save-source": { status: 404, body: { detail: "File not found" } },
+      "/api/models/save-as": { status: 403, body: { detail: "That folder is read-only" } },
+    });
+    await importModelFiles([file("new.py", "x = 1")], "drop");
+    expect(calls.some((c) => c.url.includes("/api/model/load"))).toBe(false);
+    expect(JSON.stringify(notifications())).toMatch(/Import failed: That folder is read-only/);
+  });
+});
+
 describe("reentrancy", () => {
   it("is not importing once a call settles", async () => {
     // One drop gesture fires several times; the guard must not latch on.
