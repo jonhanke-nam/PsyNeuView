@@ -8,6 +8,11 @@ import "./index.css";
 import { useUIStore } from "./stores/uiStore";
 import { syncDeveloperModeWithMacApp } from "./utils/macAppSettings";
 import { installBusyFetch } from "./stores/busyStore";
+import { adoptRecordedDefaultOnce } from "./utils/narration";
+
+// A system voice chosen before the recorded voices gives way, once, to the
+// recorded default (#159).
+adoptRecordedDefaultOnce();
 
 // Every backend request the user causes shows the wheel of patience once it
 // runs past the threshold (#38).

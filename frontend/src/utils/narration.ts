@@ -168,6 +168,32 @@ export function loadNarrationVoice(storage: Pick<Storage, "getItem"> | null = sa
   }
 }
 
+/** Set once the one-time move to the recorded default (#159) has been made. */
+export const RECORDED_DEFAULT_KEY = "psyneuview.tour.narrationVoiceRecordedDefault";
+
+/**
+ * Once, for everyone: a system voice chosen before the recorded voices came
+ * (#159) gives way to the recorded default, Heart. Before them, Automatic
+ * read in Karen on most Macs, and choosing Karen herself sounded the same, so
+ * many choices of a system voice were choices of "the good voice". After
+ * this one move, any choice, a system voice included, is kept. Returns
+ * whether a choice was cleared. Called at start-up, before any narration.
+ */
+export function adoptRecordedDefaultOnce(storage: Pick<Storage, "getItem" | "setItem" | "removeItem"> | null = safeStorage()): boolean {
+  try {
+    if (!storage || storage.getItem(RECORDED_DEFAULT_KEY)) return false;
+    storage.setItem(RECORDED_DEFAULT_KEY, "done");
+    const chosen = storage.getItem(NARRATION_VOICE_KEY);
+    // A recorded voice, or Automatic chosen on purpose, was chosen with the
+    // recorded voices on offer: kept.
+    if (!chosen || chosen.startsWith("recorded:") || chosen === "system:automatic") return false;
+    storage.removeItem(NARRATION_VOICE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Remember a voice; null goes back to the default. */
 export function saveNarrationVoice(
   voiceURI: string | null,

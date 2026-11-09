@@ -318,7 +318,10 @@ settings:
       Premium and Enhanced first, then Karen, Daniel, and the other standard
       voices that read well; never the novelty voices (utils/narration.ts).
       A chosen system voice is stored by its voiceURI and falls back to
-      Automatic when it is no longer installed. The list is the browser's own voices,
+      Automatic when it is no longer installed.
+      Once, at start-up, a system voice chosen before the recorded voices came
+      gives way to Heart (adoptRecordedDefaultOnce, psyneuview.tour.narrationVoiceRecordedDefault);
+      choices made after that are kept. The list is the browser's own voices,
       so it differs between machines. Turning narration on or off stays on
       the walkthrough bar's speaker button. Captions are read with the
       respellings in frontend/src/walkthroughs/pronunciations.yaml (#1407).

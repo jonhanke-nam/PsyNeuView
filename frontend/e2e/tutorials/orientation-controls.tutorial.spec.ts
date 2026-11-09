@@ -33,6 +33,8 @@ async function stubSpeech(page: Page) {
   await page.addInitScript(() => {
     // This spec tests the computer's own voice; the default is recorded (#159).
     if (localStorage.getItem("psyneuview.tour.narrationVoice") === null) localStorage.setItem("psyneuview.tour.narrationVoice", "system:automatic");
+    // and a system voice they choose is not moved to Heart (the one-time move, #159).
+    localStorage.setItem("psyneuview.tour.narrationVoiceRecordedDefault", "done");
     const spoken: string[] = [];
     (window as unknown as { __spoken: string[] }).__spoken = spoken;
     class Utterance {
