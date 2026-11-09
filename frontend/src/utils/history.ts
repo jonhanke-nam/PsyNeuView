@@ -19,6 +19,11 @@ export interface RecordActionOptions {
    * (#204), which change what is shown and not the model.
    */
   edit?: boolean;
+  /**
+   * The step only moves nodes (#219): kept when the positions changed,
+   * though the code and the graph did not. See `Snapshot.moves`.
+   */
+  moves?: boolean;
 }
 
 /**
@@ -52,6 +57,7 @@ export function recordAction(description: string, opts?: RecordActionOptions) {
     positions,
     // The view the graph was built in, so undo puts it back too (#194).
     view: captureView(),
+    ...(opts?.moves ? { moves: true } : {}),
   };
 
   useHistoryStore.getState().pushSnapshot(snapshot);
