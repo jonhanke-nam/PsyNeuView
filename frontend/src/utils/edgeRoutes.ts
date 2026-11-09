@@ -108,3 +108,24 @@ export function hydrateRoutes(
   }
   return { waypoints, overrides, shaped };
 }
+
+/**
+ * Whether two saved route maps shape every arrow the same way (#164). Used to
+ * tell an arrow's reshape apart from the step before it in History, and to
+ * skip writing the layout file when an Undo leaves the arrows as they are.
+ */
+export function sameRoutes(a: EdgeRouteMap | undefined, b: EdgeRouteMap | undefined): boolean {
+  const [ra, rb] = [a ?? {}, b ?? {}];
+  const keys = Object.keys(rb);
+  if (keys.length !== Object.keys(ra).length) return false;
+  const close = (p?: number, q?: number) =>
+    p === q || (p !== undefined && q !== undefined && Math.abs(p - q) < 1e-6);
+  return keys.every((k) => {
+    const [x, y] = [ra[k], rb[k]];
+    if (!x) return false;
+    const [wx, wy] = [x.waypoints ?? [], y.waypoints ?? []];
+    if (wx.length !== wy.length) return false;
+    if (!wx.every((p, i) => Math.abs(p.x - wy[i].x) < 0.5 && Math.abs(p.y - wy[i].y) < 0.5)) return false;
+    return close(x.ends?.s, y.ends?.s) && close(x.ends?.t, y.ends?.t);
+  });
+}
