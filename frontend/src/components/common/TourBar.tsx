@@ -223,6 +223,22 @@ export function TourBar() {
     else resumeSpeaking(engine);
   }, [paused]);
 
+  // Dialogs stop just above the bar (DIALOG_SCRIM_BOTTOM), which is drawn
+  // above them: it never covers a dialog's last rows, Settings' included.
+  const [barEl, setBarEl] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!barEl) return;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty("--pnv-tour-bar-height", `${barEl.offsetHeight}px`);
+    publish();
+    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(publish) : null;
+    ro?.observe(barEl);
+    return () => {
+      ro?.disconnect();
+      root.style.removeProperty("--pnv-tour-bar-height");
+    };
+  }, [barEl]);
+
   // Whatever happens to the walkthrough, no voice outlives it.
   useEffect(() => () => stopSpeaking(speechEngine()), []);
 
@@ -242,6 +258,7 @@ export function TourBar() {
 
   return (
     <div
+      ref={setBarEl}
       data-testid="tour-bar"
       data-paused={paused ? "true" : "false"}
       style={{

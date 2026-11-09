@@ -2,7 +2,7 @@
  * Top toolbar with file operations, model browser, and demo models.
  */
 
-import { Z_MENU } from "@/constants/zLayers";
+import { Z_MENU, DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { errorDetail } from "@/utils/errorDetail";
 import { Button } from "@/components/common/Button";
@@ -2478,7 +2478,7 @@ export function Toolbar() {
         <div
           style={{
             position: "fixed",
-            inset: 0,
+            inset: 0, bottom: DIALOG_SCRIM_BOTTOM,
             background: "var(--pnv-scrim)",
             display: "flex",
             alignItems: "center",

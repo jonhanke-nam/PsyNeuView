@@ -22,6 +22,7 @@ import { chooseTutorialStart } from "@/utils/tutorialGuard";
 import { readOfferChoice, shouldOfferOrientation, writeOfferChoice } from "@/utils/orientationOffer";
 import { orientationWalkthroughs } from "@/utils/tourStep";
 import { Button } from "@/components/common/Button";
+import { DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
 
 /** How long after the page is up before the offer shows. */
 const OFFER_DELAY_MS = 1500;
@@ -65,7 +66,7 @@ export function OrientationOffer() {
       onClick={later}
       style={{
         position: "fixed",
-        inset: 0,
+        inset: 0, bottom: DIALOG_SCRIM_BOTTOM,
         background: "var(--pnv-scrim)",
         display: "flex",
         alignItems: "center",

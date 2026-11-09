@@ -10,6 +10,7 @@ import { useModelStore } from "@/stores/modelStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { toggleCompositionCollapse, renameNode } from "@/utils/nodeActions";
 import { useDismiss } from "@/components/common/dialog/useDismiss";
+import { Z_MENU } from "@/constants/zLayers";
 
 interface Props {
   nodeId: string;
@@ -103,7 +104,8 @@ export function NodeContextMenu({ nodeId, nodeLabel, nodeType, x, y, onClose }: 
         border: "1px solid var(--pnv-border-light)",
         borderRadius: 6,
         boxShadow: "var(--pnv-shadow-popover)",
-        zIndex: 10000,
+        // A menu: above the walkthrough ring, so its pulse never covers an item.
+        zIndex: Z_MENU,
         minWidth: 160,
         padding: "4px 0",
         fontSize: "var(--pnv-fs-13)",
