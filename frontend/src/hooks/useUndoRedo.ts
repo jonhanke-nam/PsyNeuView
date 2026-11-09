@@ -92,6 +92,10 @@ async function moveInHistoryNow(redo: boolean, steps: number, origin: HistoryMov
 
   // What a single step's notice names: the step undone, or the step redone.
   const single = redo ? history.redoDescription() : history.undoDescription();
+  // The steps this move crosses: undone, or redone.
+  const crossed = redo
+    ? history.future.slice(0, steps)
+    : history.past.slice(Math.max(1, history.past.length - steps));
   const result = history.move(redo ? steps : -steps);
   if (!result) {
     // Holding ⌘Z past the start keeps the burst's notice; otherwise say so.
@@ -132,6 +136,10 @@ async function moveInHistoryNow(redo: boolean, steps: number, origin: HistoryMov
   try {
     // Restore state
     const store = useModelStore.getState();
+    // A reshape that took the layout from Auto to Custom (#164): undoing it
+    // goes back to Auto, redoing it to Custom. The nodes stay where the step
+    // has them; Auto had laid them out so.
+    if (crossed.some((s) => s.fromAuto)) store.setAutoLayout(!redo);
     store.setSource(snapshot.source);
     // The step's view, when it is not the one showing (#194): the settings
     // go back first, and the graph is rebuilt in that view below, as a

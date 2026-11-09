@@ -596,9 +596,9 @@ export function GraphCanvas() {
             moves: true,
             nodes: nodesRef.current.map((n) => ({ ...n })),
           }),
-        done: (description) => {
+        done: (description, fromAuto) => {
           const onScreen = nodesRef.current.map((n) => ({ ...n }));
-          recordAction(description, { reshapes: true, nodes: onScreen });
+          recordAction(description, { reshapes: true, fromAuto, nodes: onScreen });
           if (filePath) saveLayoutDebounced(filePath, onScreen);
         },
       }),

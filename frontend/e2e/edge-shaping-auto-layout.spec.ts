@@ -7,7 +7,8 @@
  *
  * The reshape is saved to the model's layout file on its own (no node move
  * needed), under the nested view's key, and is one named History step: Undo
- * puts the arrow back, in the file too, and Redo bends it again.
+ * puts the arrow back, in the file too, and the layout back to Auto; Redo
+ * bends it again, in Custom.
  *
  * edge-bend-drag.spec.ts covers bending in depth; arrow-drag-keeps-layout
  * covers the arrow's ends and reloads.
@@ -132,15 +133,18 @@ test("a drag on an arrow in Auto makes the layout Custom and bends it; saved, an
   expect(Object.keys(saved.positions ?? {}).sort()).toEqual(["receiver_mech", "sender_mech"]);
   expect(saved.flatEdgeRoutes).toBeUndefined();
 
-  // Undo: the arrow's automatic route again, in the file too. Nodes stay.
+  // Undo: the arrow's automatic route again, in the file too, and the layout
+  // is Auto again, as it was. Nodes stay.
   await page.getByTestId("undo-button").click();
   await expect.poll(() => drawnPath(page).getAttribute("d")).toBe(straight);
+  await expect(layout).toHaveText("Layout: Auto");
   await expect.poll(savedRoutes(model), { timeout: 10_000 }).toEqual({});
   expect((await settled(page)).nodes).toEqual(start.nodes);
 
   // Redo: bent again, and saved again.
   await page.getByTestId("redo-button").click();
   await expect.poll(() => drawnPath(page).getAttribute("d")).toBe(bent);
+  await expect(layout).toHaveText("Layout: Custom");
   await expect.poll(() => Object.keys(savedRoutes(model)() ?? {}).length, { timeout: 10_000 }).toBe(1);
 
   // Opened again, the model is in Custom, with the arrow as shaped.

@@ -10,7 +10,8 @@
  *  - It is saved to the model's layout file on its own, under the view it was
  *    made in (nested, or flattened and PyTorch), without waiting for a node
  *    to move.
- *  - It is one History step, named, that Undo takes back.
+ *  - It is one History step, named, that Undo takes back. Undo also puts the
+ *    layout back to Auto when the reshape took it to Custom.
  *
  * The edge component reports the gesture; the canvas, which holds the nodes
  * as they are on screen and the save, registers what is done with it.
@@ -34,10 +35,16 @@ export interface ArrowShapeCommit {
    * fitted after a load, or a node moved by hand, may not be in it yet.)
    */
   before: () => void;
-  /** The reshape is done: one named History step, and saved. */
-  done: (description: string) => void;
+  /**
+   * The reshape is done: one named History step, and saved. `fromAuto` says
+   * the reshape took the layout from Auto to Custom, so Undo goes back to Auto.
+   */
+  done: (description: string, fromAuto: boolean) => void;
 }
 let commit: ArrowShapeCommit | null = null;
+
+/** The reshape under way took the layout from Auto to Custom. */
+let leftAuto = false;
 
 /** The canvas says what a reshape does. Returns the unregister. */
 export function registerArrowShapeCommit(handle: ArrowShapeCommit): () => void {
@@ -54,12 +61,17 @@ export function registerArrowShapeCommit(handle: ArrowShapeCommit): () => void {
 export function startShapingArrow(): void {
   commit?.before();
   const store = useModelStore.getState();
-  if (store.autoLayout) store.setAutoLayout(false);
+  if (store.autoLayout) {
+    store.setAutoLayout(false);
+    leftAuto = true;
+  }
 }
 
 /** A reshape is done: record it in History and save it. */
 export function arrowShaped(description: string): void {
-  commit?.done(description);
+  const fromAuto = leftAuto;
+  leftAuto = false;
+  commit?.done(description, fromAuto);
 }
 
 /** History's name for a reshape of the arrow called `name`. */
