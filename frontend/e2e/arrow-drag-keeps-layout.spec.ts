@@ -5,7 +5,8 @@
  * moving one arrow re-laid out the whole graph. Whatever the gesture —
  * reshaping the arrow's route, moving its end around its node, or letting go
  * of an end over another node — and whatever the layout setting, no node
- * moves.
+ * moves. In Auto the first such gesture makes the layout Custom where it
+ * stands (edge-shaping-auto-layout.spec.ts covers the line itself).
  *
  * Nor does a reload afterwards. A custom layout lost its arrangement on any
  * load that brought no layout with it (the file saved in another editor, an
@@ -160,20 +161,16 @@ test("moving an arrow, in Auto or Custom, moves no node, nor does a reload after
   let start = await settled(page);
   expect(Object.keys(start).sort()).toEqual(["receiver_mech", "sender_mech", "third_mech"]);
 
-  // Auto: reshaping the route, moving an end, and letting an end go over
-  // another node leave every node in place.
-  await dragRoute(page);
+  // Auto: moving an end of the arrow makes the layout Custom where it stands
+  // (#164), shapes the arrow, and leaves every node in place.
+  const straight = await firstArrow(page);
   await dragEnd(page, 0);
-  await dropEndOn(page, 1, "third_mech");
-  expect(await settled(page)).toEqual(start);
-
-  // Switching to Custom moves nothing.
-  await layout.click();
   await expect(layout).toHaveText("Layout: Custom");
   expect(await settled(page)).toEqual(start);
+  expect(await firstArrow(page)).not.toBe(straight);
 
-  // Custom: the same gestures shape the arrow, and still move no node.
-  const straight = await firstArrow(page);
+  // Custom: reshaping the route, moving an end, and letting an end go over
+  // another node shape the arrow, and still move no node.
   await dragRoute(page);
   await dragEnd(page, 0);
   await dropEndOn(page, 1, "third_mech");
