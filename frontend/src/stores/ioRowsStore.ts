@@ -57,11 +57,11 @@ export function loadIoRows(): IoRows {
  */
 export function ioRowsNotApplying(style: LayoutStyle, direction: GraphDirection): string | null {
   if (style === "radial" || style === "force") {
-    return `${style === "radial" ? "Radial" : "Force"} arranges nodes without a direction, so this doesn't apply to it.`;
+    return `${style === "radial" ? "Radial" : "Force"} arranges nodes without a direction.`;
   }
   if (style === "layered" && direction !== "BT") {
     const way = direction === "TB" ? "top-down" : "sideways";
-    return `Layered is set to flow ${way} (Advanced Graph View Options ▸ Direction), and that choice wins, so this doesn't apply.`;
+    return `Layered is set to flow ${way} (Advanced Graph View Options ▸ Direction), and that choice wins.`;
   }
   return null;
 }
