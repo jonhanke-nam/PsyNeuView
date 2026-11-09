@@ -84,6 +84,12 @@ export interface Snapshot {
    * later settings, with no breadcrumb or frame buttons to leave by.
    */
   view?: GraphView;
+  /**
+   * A step that only moves nodes (#219, Tidy inputs and outputs): kept when
+   * its positions differ from the step before, though the code and the
+   * graph are the same. Other steps are told apart by their code and graph.
+   */
+  moves?: boolean;
 }
 
 /** How a save came about. */
@@ -443,6 +449,14 @@ function snapshotsEqual(a: Snapshot, b: Snapshot): boolean {
   return a.nodes.length === b.nodes.length && a.edges.length === b.edges.length;
 }
 
+/** Whether two steps have every node at the same place. */
+function samePositions(a: Snapshot, b: Snapshot): boolean {
+  const [pa, pb] = [a.positions ?? {}, b.positions ?? {}];
+  const keys = Object.keys(pb);
+  if (keys.length !== Object.keys(pa).length) return false;
+  return keys.every((k) => pa[k] && Math.abs(pa[k].x - pb[k].x) < 0.5 && Math.abs(pa[k].y - pb[k].y) < 0.5);
+}
+
 export const useHistoryStore = create<HistoryState>((set, get) => ({
   past: [],
   future: [],
@@ -462,7 +476,7 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     const lastEntry = state.past[state.past.length - 1];
 
     // Skip if snapshot is identical to the last one
-    if (lastEntry && snapshotsEqual(lastEntry, snapshot)) return;
+    if (lastEntry && snapshotsEqual(lastEntry, snapshot) && !(snapshot.moves && !samePositions(lastEntry, snapshot))) return;
 
     // The redo steps are about to go; the current step may hold its code as a
     // delta from one of them.

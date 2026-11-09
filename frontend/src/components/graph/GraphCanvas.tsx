@@ -592,9 +592,9 @@ export function GraphCanvas() {
 
   // #219: the Layout menu's Tidy inputs and outputs. The canvas holds the
   // positions as dragged, so it tidies them here. Recorded as two History
-  // steps at most: the positions before (only if a drag left the model store
-  // behind, else that step is the one already there) and the tidied ones, so
-  // one Undo puts them back.
+  // steps at most: the positions before (only if they differ from the step
+  // already there, as after a drag, which the model store hasn't caught up
+  // with) and the tidied ones, so one Undo puts them back.
   useEffect(
     () =>
       registerCanvasTidy({
@@ -608,9 +608,9 @@ export function GraphCanvas() {
           else fitFramesAndMakeRoom(after);
           const store = useModelStore.getState();
           store.setNodes(before);
-          recordAction("Positions before tidying", { edit: false });
+          recordAction("Positions before tidying", { edit: false, moves: true });
           store.setNodes(after);
-          recordAction("Tidied inputs and outputs");
+          recordAction("Tidied inputs and outputs", { moves: true });
           if (filePath) saveLayoutDebounced(filePath, after);
         },
       }),
