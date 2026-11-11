@@ -2532,8 +2532,8 @@ wheels = [
 
 [[package]]
 name = "psyneulink"
-version = "0.19.0.0+55.gb0a750db1"
-source = { git = "https://github.com/PrincetonUniversity/PsyNeuLink.git?rev=b0a750db14f0e18f13f4af6d4228e5824a7f2797#b0a750db14f0e18f13f4af6d4228e5824a7f2797" }
+version = "0.21.0.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beartype" },
     { name = "cmaes" },
@@ -2560,6 +2560,10 @@ dependencies = [
     { name = "toposort" },
     { name = "torch", marker = "(implementation_name == 'cpython' and platform_machine == 'AMD64' and platform_python_implementation == 'CPython') or (implementation_name == 'cpython' and platform_machine == 'aarch64' and platform_python_implementation == 'CPython') or (implementation_name == 'cpython' and platform_machine == 'arm64' and platform_python_implementation == 'CPython') or (implementation_name == 'cpython' and platform_machine == 'x86_64' and platform_python_implementation == 'CPython')" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/3d/ad/d7726454090ca0cedc5990e3c345d046f05efe59eeed79c35502673175dd/psyneulink-0.21.0.0.tar.gz", hash = "sha256:36c21798c79608dff7085300e891bfaa62e9f30d69399f3709db97b7e5a80453", size = 2738357, upload-time = "2026-10-10T11:28:17.822Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2c/f6/4bd71184e027b63ebd26a5744c897f9d12619e595ad021477e0f27a529e3/psyneulink-0.21.0.0-py3-none-any.whl", hash = "sha256:8d2cb769e6dea91050d89ec2b9ea35e0ab4523e2478b15992f84f601601ee0ed", size = 2125894, upload-time = "2026-10-10T11:28:15.972Z" },
+]
 
 [[package]]
 name = "psynewview"
@@ -2585,7 +2589,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.110.0" },
-    { name = "psyneulink", git = "https://github.com/PrincetonUniversity/PsyNeuLink.git?rev=b0a750db14f0e18f13f4af6d4228e5824a7f2797" },
+    { name = "psyneulink" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23" },
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.5" },

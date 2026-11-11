@@ -26,9 +26,3 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["app*"]
-
-[tool.uv.sources]
-# The PsyNeuLink CI tests against (#247): the commit pinned as
-# PSYNEULINK_GIT_REF in the workflows and the Dockerfile. uv sync installs
-# exactly this; a user's own source is installed over it.
-psyneulink = { git = "https://github.com/PrincetonUniversity/PsyNeuLink.git", rev = "b0a750db14f0e18f13f4af6d4228e5824a7f2797" }

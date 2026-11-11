@@ -100,14 +100,15 @@ drift. An image built from a ref CI never tested makes "the tests passed"
 meaningless for the thing that actually ships.
 
 **The lock** (#247). `backend/uv.lock` holds every Python package at an exact
-version, PsyNeuLink included: `[tool.uv.sources]` in `backend/pyproject.toml`
-pins it to the same commit. CI builds its environments with
-`uv sync --frozen`, so it tests exactly what the lock says. `backend-tests.yml`
-fails if the lock is stale (`uv lock --check`) or if pyproject's commit differs
-from `PSYNEULINK_GIT_REF`. To move the pin, change the commit in
-`pyproject.toml`, run `uv lock` in `backend/`, and bump `PSYNEULINK_GIT_REF`
-as above. To update the other packages, run `uv lock --upgrade` and let CI test
-the result.
+version. CI builds from it with `uv sync --frozen --no-install-package
+psyneulink`, then installs PsyNeuLink from `PSYNEULINK_GIT_REF` on top, the
+same way the Mac app installs a user's chosen PsyNeuLink over the lock. The
+lock's own PsyNeuLink is the PyPI release, used by a fresh `make install`.
+PsyNeuLink's source is deliberately *not* pinned in `pyproject.toml`
+(`[tool.uv.sources]`): `uv pip install -e backend/` obeys such a pin, and
+would replace the PsyNeuLink every existing Mac app and Settings switch chose.
+`backend-tests.yml` fails if the lock is stale (`uv lock --check`). To update
+the packages, run `uv lock --upgrade` in `backend/` and let CI test the result.
 
 **Path filters** keep doc-only or unrelated PRs from spending CI minutes.
 

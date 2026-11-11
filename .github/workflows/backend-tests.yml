@@ -129,9 +129,10 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # The environment comes from backend/uv.lock (#247): every package,
-      # PsyNeuLink included (the commit pinned as PSYNEULINK_GIT_REF), at
-      # exactly the versions CI tests. --frozen fails rather than re-resolve.
+      # The environment comes from backend/uv.lock (#247): every package at
+      # exactly the lock's version, except PsyNeuLink, which goes in on top
+      # from the commit pinned as PSYNEULINK_GIT_REF, the way the Mac app puts
+      # a user's chosen source on top. --frozen fails rather than re-resolve.
       # No uv cache, for the reason setup-python has none (#1368).
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
@@ -141,19 +142,15 @@ jobs:
 
       - name: Install backend from the lock
         working-directory: backend
-        run: uv sync --frozen --extra dev --python "$(command -v python)"
-
-      # A lock that no longer matches pyproject.toml, or a PsyNeuLink pin that
-      # drifted from PSYNEULINK_GIT_REF, fails here rather than testing
-      # something other than what users get.
-      - name: The lock is current and pins CI's PsyNeuLink
-        working-directory: backend
         run: |
-          uv lock --check
-          grep -q "rev = \"${PSYNEULINK_GIT_REF}\"" pyproject.toml || {
-            echo "::error::backend/pyproject.toml pins a different PsyNeuLink than PSYNEULINK_GIT_REF (${PSYNEULINK_GIT_REF})"
-            exit 1
-          }
+          uv sync --frozen --extra dev --no-install-package psyneulink --python "$(command -v python)"
+          uv pip install --python .venv/bin/python "git+https://github.com/PrincetonUniversity/PsyNeuLink.git@${PSYNEULINK_GIT_REF}"
+
+      # A lock that no longer matches pyproject.toml fails here, rather than
+      # CI testing something other than what users get.
+      - name: The lock is current
+        working-directory: backend
+        run: uv lock --check
 
       - name: Run backend tests
         working-directory: backend
@@ -216,9 +213,10 @@ jobs:
         with:
           python-version: "3.14"
 
-      # The environment comes from backend/uv.lock (#247): every package,
-      # PsyNeuLink included (the commit pinned as PSYNEULINK_GIT_REF), at
-      # exactly the versions CI tests. --frozen fails rather than re-resolve.
+      # The environment comes from backend/uv.lock (#247): every package at
+      # exactly the lock's version, except PsyNeuLink, which goes in on top
+      # from the commit pinned as PSYNEULINK_GIT_REF, the way the Mac app puts
+      # a user's chosen source on top. --frozen fails rather than re-resolve.
       # No uv cache, for the reason setup-python has none (#1368).
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
@@ -228,7 +226,9 @@ jobs:
 
       - name: Install backend from the lock
         working-directory: backend
-        run: uv sync --frozen --extra dev --python "$(command -v python)"
+        run: |
+          uv sync --frozen --extra dev --no-install-package psyneulink --python "$(command -v python)"
+          uv pip install --python .venv/bin/python "git+https://github.com/PrincetonUniversity/PsyNeuLink.git@${PSYNEULINK_GIT_REF}"
 
       - name: Run backend tests
         working-directory: backend
