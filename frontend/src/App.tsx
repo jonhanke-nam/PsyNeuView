@@ -17,6 +17,8 @@ import { ShowGraphPanel } from "./components/inspector/ShowGraphPanel";
 import { RunStatePanel } from "./components/inspector/RunStatePanel";
 import { GraphStylePanel } from "./components/graph/GraphStylePanel";
 import { SchedulerPanel } from "./components/scheduler/SchedulerPanel";
+import { AssistantPanel } from "./components/assistant/AssistantPanel";
+import { useAssistantStore } from "./stores/assistantStore";
 import { Toolbar } from "./components/layout/Toolbar";
 import { BlankScreen } from "./components/layout/BlankScreen";
 import { BusyIndicator, BusyStatus } from "./components/common/BusyIndicator";
@@ -44,7 +46,7 @@ import { installDiagnostics, noteUiFact } from "./utils/diagnostics";
 // #111: loading the store puts the remembered text size on <html> at startup.
 import "./stores/textSizeStore";
 
-type BottomTab = "inspector" | "scheduler" | "run" | "learn" | "runstate" | "showgraph" | "style";
+type BottomTab = "inspector" | "scheduler" | "run" | "learn" | "runstate" | "showgraph" | "style" | "assistant";
 
 export default function App() {
   const [bottomTab, setBottomTab] = useState<BottomTab>("inspector");
@@ -61,6 +63,15 @@ export default function App() {
   useLayeredLayoutFit();
   useFrameFit();
   useAppShortcuts();
+
+  // The Assistant tab (#179) exists only while the assistant is on; the
+  // backend holds the setting, so ask it once at startup.
+  const assistantOn = useAssistantStore((s) => s.available === true && s.settings.enabled);
+  const loadAssistant = useAssistantStore((s) => s.load);
+  useEffect(() => void loadAssistant(), [loadAssistant]);
+  useEffect(() => {
+    if (!assistantOn && bottomTab === "assistant") setBottomTab("inspector");
+  }, [assistantOn, bottomTab]);
 
   // #1112: Cmd+I shows the Inspector, the Mac convention for Show Inspector.
   // Registered here because App owns which bottom tab is selected. The bottom
@@ -253,6 +264,14 @@ export default function App() {
                         active={bottomTab === "style"}
                         onClick={() => setBottomTab("style")}
                       />
+                      {/* The AI assistant (#179): only while it is turned on in Settings. */}
+                      {assistantOn && (
+                        <TabButton
+                          label="Assistant"
+                          active={bottomTab === "assistant"}
+                          onClick={() => setBottomTab("assistant")}
+                        />
+                      )}
                       {/* Collapse the bottom panel (#226). Blocked by the store
                           when it's the last visible pane, and the shared notice
                           says why (#213). */}
@@ -298,6 +317,11 @@ export default function App() {
                       <div style={{ display: bottomTab === "style" ? "block" : "none", height: "100%" }}>
                         <GraphStylePanel />
                       </div>
+                      {assistantOn && (
+                        <div data-testid="panel-assistant" style={{ display: bottomTab === "assistant" ? "block" : "none", height: "100%" }}>
+                          <AssistantPanel />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Allotment.Pane>
