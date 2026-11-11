@@ -1,4 +1,6 @@
 about-release-dates.spec.ts
+ai-assistant-real.spec.ts
+ai-assistant.spec.ts
 app-shell.spec.ts
 app-update-notice.spec.ts
 arrow-drag-keeps-layout.spec.ts

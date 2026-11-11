@@ -51,6 +51,18 @@ except ImportError:
         pass
 
 
+# The import guard for assistant-written files (#179): loaded by path, since
+# ``app`` doesn't resolve in this script, and installed before any task so a
+# model's imports are vetted against the review state the server names.
+import os as _os
+
+_guard_spec = importlib.util.spec_from_file_location(
+    "psyneuview_import_guard", _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "assistant", "import_guard.py"),
+)
+_guard = importlib.util.module_from_spec(_guard_spec)
+_guard_spec.loader.exec_module(_guard)
+_guard.install()
+
 RESULT_MARKER = "###PSYNEWVIEW_RESULT###"
 
 # Emitted on stdout *before* RESULT_MARKER by streaming-capable tasks
@@ -267,6 +279,10 @@ def load_module(file_path, run_user_code=False, reset_registry=False,
         except Exception:
             pass
 
+    # Whatever started this worker, the model's own path is checked here
+    # against the review state (#179, #187); the guard's hooks cover its imports.
+    _guard.refresh()
+    _guard.check_model_path(file_path)
     spec = importlib.util.spec_from_file_location("user_model", file_path)
     module = importlib.util.module_from_spec(spec)
     sys.modules["user_model"] = module
@@ -332,6 +348,8 @@ def load_module_resilient(file_path, run_user_code=False):
     """
     import ast
 
+    _guard.refresh()
+    _guard.check_model_path(file_path)
     with open(file_path) as f:
         source = f.read()
 
@@ -4031,7 +4049,12 @@ def _handle_one_task(payload_str: str) -> str:
                 for mod_name in list(sys.modules.keys()):
                     if mod_name.startswith("user_model"):
                         del sys.modules[mod_name]
+                # The review state as it is now, for this task's imports (#179);
+                # a tracked file cached by an earlier task is dropped here.
+                _guard.refresh(payload.get("review_state"), payload.get("exempt_roots"))
                 result = handler(params)
+            except _guard.UnreviewedImport as e:
+                result = {"error": str(e), "unreviewed_import": e.path, "unreviewed_state": e.state_unreadable}
             except Exception as e:
                 result = {"error": exception_text(e, params.get("file_path"))}
 

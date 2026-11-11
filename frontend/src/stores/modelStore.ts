@@ -820,6 +820,13 @@ export const useModelStore = create<ModelState>((set, get) => ({
         // Changed on disk: ask, exactly as Save does, instead of writing.
         const err = await resp.json().catch(() => null);
         const detail = err?.detail;
+        if (detail?.reason === "assistant_code_unreviewed") {
+          // Written, not rebuilt (#179): the text is on disk, so the edit
+          // that needed it may go ahead; it meets the same guard itself.
+          set({ savedSource: source });
+          record("model", `Saved ${filePath}; not rebuilt until the assistant's code is reviewed`, { path: filePath });
+          return true;
+        }
         if (detail && typeof detail.disk_source === "string") {
           useExternalChangeStore.getState().setPending({
             filePath,

@@ -15,7 +15,7 @@
 #                                      (pnvSettings bridge present)
 #   section        the sidebar section it is in, one of the ids in
 #                  frontend/src/components/common/settings/sections.ts:
-#                  about | general | appearance | open-menu | folders | shortcuts | reports | developer
+#                  about | general | appearance | open-menu | folders | assistant | shortcuts | reports | developer
 #                  (reports is the Mac app's Problem reports, listed only inside it)
 #   storage        who stores it (the side that acts on it owns it)
 #   control        data-testid of its one control, always "setting-<…>", written
@@ -39,6 +39,7 @@ sections:
   - tutorials-voice
   - open-menu
   - folders
+  - assistant
   - shortcuts
   - reports
   - developer
@@ -637,6 +638,150 @@ settings:
       One email address. The default contact is the Mac app's
       ReportDefaults.contactEmail, reported by the bridge as
       reportSendToDefault; empty means that default.
+
+  # ─── AI assistant (#179) — every value is held by the backend ───
+
+  - id: assistant-enabled
+    label: AI assistant ▸ On or off ▸ Use an AI assistant
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-enabled
+    notes: >-
+      Off by default. Turning it on raises a permission: the backend answers with a 409 and the page asks first (confirm_raise). The first time, a short explanation says what is shared, with whom, and what it can do.
+
+  - id: assistant-agent-type
+    label: AI assistant ▸ Agent ▸ Which agent
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-agent-type
+    notes: >-
+      none, anthropic or openai_compatible. The section says where messages go for the chosen agent.
+
+  - id: assistant-agent-model
+    label: AI assistant ▸ Agent ▸ Model
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-agent-model
+    notes: >-
+      Saved when the field loses focus.
+
+  - id: assistant-agent-base-url
+    label: AI assistant ▸ Agent ▸ Server address
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-agent-base-url
+    notes: >-
+      Shown only for an OpenAI-compatible agent.
+
+  - id: assistant-api-key
+    label: AI assistant ▸ Agent ▸ API key
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-api-key
+    notes: >-
+      Write-only: PUT /api/assistant/key; the page shows only set or not set (GET returns {set}), never the key.
+
+  - id: assistant-autonomy
+    label: AI assistant ▸ What it may do ▸ Autonomy
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-autonomy
+    notes: >-
+      answer, suggest or app_edits. Raising it asks for confirmation.
+
+  - id: assistant-saving
+    label: AI assistant ▸ What it may do ▸ Saving
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-saving
+    notes: >-
+      always_ask or structured_without_asking. Raising it asks for confirmation.
+
+  - id: assistant-folders
+    label: AI assistant ▸ What it may do ▸ Folders it may reach
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-folders
+    notes: >-
+      A list of paths with read or read_write access; adding one or making it writable asks for confirmation.
+
+  - id: assistant-visibility-model
+    label: AI assistant ▸ What it can see ▸ The open model's code
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-visibility-model
+
+  - id: assistant-visibility-selection
+    label: AI assistant ▸ What it can see ▸ What is selected
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-visibility-selection
+
+  - id: assistant-visibility-errors
+    label: AI assistant ▸ What it can see ▸ Errors shown in the diagnostics bar
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-visibility-errors
+
+  - id: assistant-visibility-results
+    label: AI assistant ▸ What it can see ▸ Run results
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-visibility-results
+
+  - id: assistant-visibility-files
+    label: AI assistant ▸ What it can see ▸ Model files in the allowed folders
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-visibility-files
+    notes: >-
+      Lets it list and read files in the allowed folders; it never runs them.
+
+  - id: assistant-limit-tool-calls
+    label: AI assistant ▸ Limits and log ▸ Tool calls per turn
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-limit-tool-calls
+
+  - id: assistant-limit-minutes
+    label: AI assistant ▸ Limits and log ▸ Minutes per turn
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-limit-minutes
+
+  - id: assistant-limit-max-tokens
+    label: AI assistant ▸ Limits and log ▸ Tokens per session
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-limit-max-tokens
+    notes: >
+      Spending: the tokens the agent's service reports (input and output), summed over a session; the turn ends
+      with done reason "limit" when reached. Default 100000. Raising it asks for confirmation.
+
+  - id: assistant-keep-log
+    label: AI assistant ▸ Limits and log ▸ Keep a log of tool calls
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-keep-log
+    notes: >-
+      Local only (GET /api/assistant/log). Prompts, replies and source stay out of problem reports.
 
 # Remembered choices whose one control lives outside Settings. Settings has no
 # control for these (a second control would break "one control per setting");

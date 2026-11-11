@@ -530,6 +530,16 @@ export function CodeEditor() {
         // theirs — is one the user already knows (#926). Nothing was written:
         // the buffer is intact and so is the file.
         const err = await resp.json();
+        if (err?.detail?.reason === "assistant_code_unreviewed" || err?.reason === "assistant_code_unreviewed") {
+          // Written, but not rebuilt: the file holds code the assistant wrote
+          // that nobody has reviewed yet (#179). The save stands; the review
+          // offer the fetch wrapper raised says what to do next.
+          useModelStore.setState({ savedSource: currentSource });
+          recordSave(currentSource, { at: Date.now(), kind: opts.automatic ? "auto" : "manual" });
+          if (!silent) addNotification("warning", "Saved. The model won't be rebuilt until you have reviewed the assistant's code.");
+          setSyncStatusWithClear("synced");
+          return;
+        }
         if (err?.reason === "psyneulink_source_protected") {
           // Not a conflict: this PsyNeuLink file can't be edited here (#1225).
           if (!silent) addNotification("error", err.detail);

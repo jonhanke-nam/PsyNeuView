@@ -19,6 +19,8 @@ import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
+from app.services.assistant import review as assistant_review
+from app.services.assistant.review import require_runnable
 from typing import Callable, Optional
 
 from app.services.stderr_summary import (
@@ -199,7 +201,7 @@ class WarmWorker:
             if not self.is_alive():
                 return {"error": "Warm worker failed to start"}
 
-            payload = json.dumps({"task": task, "params": params})
+            payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras()})
             t0 = time.time()
 
             try:
@@ -352,6 +354,10 @@ def run_in_sandbox(task: str, params: dict, timeout: int | None = None) -> dict:
 
     Falls back to cold-start subprocess if the warm worker fails.
     """
+    # Every task that executes a model file names it here. Assistant-written
+    # content runs only once reviewed (#179); a user's own file costs one lookup.
+    require_runnable(params.get("file_path"))
+
     if timeout is None:
         # introspect with developer_mode=True actually runs the script's
         # .run/.learn calls (#273 / #249), so it needs the longer run-timeout.
@@ -372,14 +378,25 @@ def run_in_sandbox(task: str, params: dict, timeout: int | None = None) -> dict:
     # If the warm worker failed, try a cold-start fallback
     if "error" in result and "Worker" in result["error"]:
         logger.info("Falling back to cold-start subprocess...")
-        return _run_cold(task, params, timeout)
+        result = _run_cold(task, params, timeout)
 
+    _raise_if_unreviewed_import(result)
     return result
+
+
+def _raise_if_unreviewed_import(result: dict) -> None:
+    """The worker's import guard stopped a tracked, unapproved file from
+    being imported (#179): the same 409 as a refused open, naming that file."""
+    if isinstance(result, dict) and result.get("unreviewed_import"):
+        raise assistant_review.UnreviewedAssistantCode(
+            result["unreviewed_import"], result.get("error"),
+            reason="assistant_review_state_unreadable" if result.get("unreviewed_state") else None,
+        )
 
 
 def _run_cold(task: str, params: dict, timeout: int) -> dict:
     """Cold-start fallback: spawn a fresh subprocess (slow but reliable)."""
-    payload = json.dumps({"task": task, "params": params})
+    payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras()})
     t0 = time.time()
 
     try:

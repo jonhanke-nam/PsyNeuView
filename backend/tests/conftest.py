@@ -94,6 +94,16 @@ def _guard_real_preferences_file(request):
 
 
 @pytest.fixture(autouse=True)
+def _isolate_assistant_state(tmp_path, monkeypatch):
+    """The AI assistant's state (#179) lives under ``~/.psyneuview`` by default:
+    the review state, previous versions of files it wrote, and its log. Every
+    test gets its own, so no test writes there."""
+    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_REVIEW_FILE", str(tmp_path / "assistant-state" / "review.json"))
+    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_STATE_DIR", str(tmp_path / "assistant-state"))
+    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_LOG", str(tmp_path / "assistant-state" / "log.jsonl"))
+
+
+@pytest.fixture(autouse=True)
 def _isolate_working_copies(tmp_path, monkeypatch):
     """Point every test at a throwaway working-copies folder (#1319).
 

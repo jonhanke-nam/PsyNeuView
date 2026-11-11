@@ -96,6 +96,13 @@ const harnessEnv: Record<string, string> = {
   // Unsaved edits run from a private preview copy (#1029), by default under
   // ~/.psyneuview/previews. Keep this run's copies in its own temp dir (#160).
   PSYNEUVIEW_PREVIEW_ROOT: path.join(sessionTmp, "previews"),
+  // The AI assistant (#179): its review state, previous versions, log and
+  // key live in the session's temp folder, never in ~/.psyneuview or the
+  // Keychain.
+  PSYNEUVIEW_ASSISTANT_REVIEW_FILE: path.join(sessionTmp, "assistant", "review.json"),
+  PSYNEUVIEW_ASSISTANT_STATE_DIR: path.join(sessionTmp, "assistant"),
+  PSYNEUVIEW_ASSISTANT_LOG: path.join(sessionTmp, "assistant", "log.jsonl"),
+  PSYNEUVIEW_ASSISTANT_KEY_STORE: "memory",
 };
 
 const prodWebServer = {
