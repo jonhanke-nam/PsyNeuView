@@ -658,7 +658,7 @@ def test_github_flow_runs_pip_when_state_changed(monkeypatch):
     # The log shows the planned actions and at least one streamed line.
     full_log = "\n".join(job.log)
     assert "Cloning" in full_log
-    assert "pip install -e" in full_log
+    assert "✓ install -e with pip in" in full_log
 
 
 def test_github_flow_skips_pip_when_already_editable_and_unchanged(monkeypatch):
@@ -689,7 +689,7 @@ def test_github_flow_skips_pip_when_already_editable_and_unchanged(monkeypatch):
     assert job.status == "succeeded"
     assert job.exit_code == 0
     assert calls["mark_installed"] == []  # didn't re-run pip → no remark
-    assert any("skipping pip install -e" in line for line in job.log)
+    assert any("skipping the reinstall" in line for line in job.log)
     assert callback_calls == [True]
 
 
@@ -787,5 +787,5 @@ def test_pip_flow_emits_total_timing(monkeypatch):
     _run_synchronously(manager, job)
 
     log = "\n".join(job.log)
-    assert "✓ pip install in" in log
+    assert "✓ install with pip in" in log
     assert any(line.startswith("Total: ") for line in job.log)
