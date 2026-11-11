@@ -19,6 +19,7 @@ import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
+from app.services.assistant.review import require_runnable
 from typing import Callable, Optional
 
 from app.services.stderr_summary import (
@@ -352,6 +353,10 @@ def run_in_sandbox(task: str, params: dict, timeout: int | None = None) -> dict:
 
     Falls back to cold-start subprocess if the warm worker fails.
     """
+    # Every task that executes a model file names it here. Assistant-written
+    # content runs only once reviewed (#179); a user's own file costs one lookup.
+    require_runnable(params.get("file_path"))
+
     if timeout is None:
         # introspect with developer_mode=True actually runs the script's
         # .run/.learn calls (#273 / #249), so it needs the longer run-timeout.
