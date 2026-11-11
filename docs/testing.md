@@ -99,6 +99,16 @@ lockstep — including the `ARG PSYNEULINK_GIT_REF` in the `Dockerfile`, which
 drift. An image built from a ref CI never tested makes "the tests passed"
 meaningless for the thing that actually ships.
 
+**The lock** (#247). `backend/uv.lock` holds every Python package at an exact
+version, PsyNeuLink included: `[tool.uv.sources]` in `backend/pyproject.toml`
+pins it to the same commit. CI builds its environments with
+`uv sync --frozen`, so it tests exactly what the lock says. `backend-tests.yml`
+fails if the lock is stale (`uv lock --check`) or if pyproject's commit differs
+from `PSYNEULINK_GIT_REF`. To move the pin, change the commit in
+`pyproject.toml`, run `uv lock` in `backend/`, and bump `PSYNEULINK_GIT_REF`
+as above. To update the other packages, run `uv lock --upgrade` and let CI test
+the result.
+
 **Path filters** keep doc-only or unrelated PRs from spending CI minutes.
 
 **Playwright browser install** (`e2e.yml`, `tutorials.yml`; #931). The install
@@ -130,9 +140,15 @@ under 10 GB.
 # Tutorials — also regenerates docs/tutorials/assets/ screenshots
 cd frontend && npm run tutorials:capture
 
+# Backend environment, from backend/uv.lock (#247). A new one gets the lock's
+# PsyNeuLink; an existing one keeps whichever PsyNeuLink you chose.
+make install
+
 # Backend suite (do NOT set PSYNEWVIEW_TEST_MODE globally — tests set their own
-# mode; setting it breaks the "reset endpoint hidden in production" test)
-cd backend && .venv/bin/python -m pytest tests -q
+# mode; setting it breaks the "reset endpoint hidden in production" test).
+# --no-sync: a plain `uv run` first re-syncs to the lock, which would put the
+# locked PsyNeuLink back over one you chose.
+cd backend && uv run --no-sync pytest tests -q
 
 # Typecheck
 cd frontend && npx tsc -b

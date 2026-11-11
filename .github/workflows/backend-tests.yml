@@ -129,17 +129,31 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Install PsyNeuLink from the pinned SHA first so the editable backend
-      # install doesn't pull whatever PyPI happens to have.
-      - name: Create venv + install PsyNeuLink (pinned, hook-capable)
-        run: |
-          python -m venv backend/.venv
-          backend/.venv/bin/pip install --upgrade pip wheel
-          backend/.venv/bin/pip install "git+https://github.com/PrincetonUniversity/PsyNeuLink.git@${PSYNEULINK_GIT_REF}"
+      # The environment comes from backend/uv.lock (#247): every package,
+      # PsyNeuLink included (the commit pinned as PSYNEULINK_GIT_REF), at
+      # exactly the versions CI tests. --frozen fails rather than re-resolve.
+      # No uv cache, for the reason setup-python has none (#1368).
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.11"
+          enable-cache: false
 
-      # [dev] pulls pytest + pytest-asyncio (the base install doesn't).
-      - name: Install backend with test deps
-        run: backend/.venv/bin/pip install -e "backend/[dev]"
+      - name: Install backend from the lock
+        working-directory: backend
+        run: uv sync --frozen --extra dev --python "$(command -v python)"
+
+      # A lock that no longer matches pyproject.toml, or a PsyNeuLink pin that
+      # drifted from PSYNEULINK_GIT_REF, fails here rather than testing
+      # something other than what users get.
+      - name: The lock is current and pins CI's PsyNeuLink
+        working-directory: backend
+        run: |
+          uv lock --check
+          grep -q "rev = \"${PSYNEULINK_GIT_REF}\"" pyproject.toml || {
+            echo "::error::backend/pyproject.toml pins a different PsyNeuLink than PSYNEULINK_GIT_REF (${PSYNEULINK_GIT_REF})"
+            exit 1
+          }
 
       - name: Run backend tests
         working-directory: backend
@@ -202,14 +216,19 @@ jobs:
         with:
           python-version: "3.14"
 
-      - name: Create venv + install PsyNeuLink (pinned, hook-capable)
-        run: |
-          python -m venv backend/.venv
-          backend/.venv/bin/pip install --upgrade pip wheel
-          backend/.venv/bin/pip install "git+https://github.com/PrincetonUniversity/PsyNeuLink.git@${PSYNEULINK_GIT_REF}"
+      # The environment comes from backend/uv.lock (#247): every package,
+      # PsyNeuLink included (the commit pinned as PSYNEULINK_GIT_REF), at
+      # exactly the versions CI tests. --frozen fails rather than re-resolve.
+      # No uv cache, for the reason setup-python has none (#1368).
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.11"
+          enable-cache: false
 
-      - name: Install backend with test deps
-        run: backend/.venv/bin/pip install -e "backend/[dev]"
+      - name: Install backend from the lock
+        working-directory: backend
+        run: uv sync --frozen --extra dev --python "$(command -v python)"
 
       - name: Run backend tests
         working-directory: backend

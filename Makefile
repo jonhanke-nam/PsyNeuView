@@ -19,6 +19,14 @@ PYTHON ?= python3
 PYTHON_SUPPORTED := python3.14 python3.13 python3.12
 PIP := $(VENV_DIR)/bin/pip
 PYTHON_VENV := $(VENV_DIR)/bin/python
+# uv builds the environment from backend/uv.lock when it's installed (#247);
+# without it, the targets fall back to venv + pip as before.
+UV := $(shell command -v uv 2>/dev/null)
+export UV_PROJECT_ENVIRONMENT := $(abspath $(VENV_DIR))
+# `uv run --no-sync`: run in the environment `make install` built. A plain
+# `uv run` re-syncs it to the lock first, which would put back the locked
+# PsyNeuLink over one chosen in Settings or with make install-pnl.
+UV_RUN := $(UV) run --frozen --no-sync
 PSYNEULINK_DIR ?= ../PsyNeuLink
 
 # Port configuration — SLOT provides a simple offset for parallel branches
@@ -87,15 +95,36 @@ $(VENV_DIR)/bin/activate:
 
 # --- Installation targets ---
 
-install: venv ## Install backend (editable) + its declared deps from pyproject.toml
+# With uv (#247): every package at backend/uv.lock's version. A new
+# environment gets the lock's PsyNeuLink (the commit CI tests); an existing one
+# keeps whichever PsyNeuLink it has, so a source chosen in Settings or with
+# install-pnl survives `make backend`. --inexact leaves anything else you
+# added alone. Run `make clean-venv install` for an environment exactly the
+# lock's.
+install: ## Install the backend and its dependencies (from backend/uv.lock with uv; pyproject.toml with pip)
+ifneq ($(UV),)
+	@cd backend && if [ ! -x "$(UV_PROJECT_ENVIRONMENT)/bin/python" ]; then \
+		$(UV) sync --frozen --extra dev --quiet $(if $(filter command line,$(origin PYTHON)),--python $(PYTHON)); \
+	else \
+		$(UV) sync --frozen --extra dev --inexact --no-install-package psyneulink --quiet; \
+		"$(UV_PROJECT_ENVIRONMENT)/bin/python" -c "import importlib.util as u, sys; sys.exit(u.find_spec('psyneulink') is None)" \
+			|| $(UV) sync --frozen --extra dev --inexact --quiet; \
+	fi
+else
+	@$(MAKE) --no-print-directory venv
 	$(PIP) install --quiet -e backend/
+endif
 
-install-pnl: venv ## Install PsyNeuLink from local repo (editable)
+# Installing a PsyNeuLink of your own over the lock's is the one deliberate
+# `uv pip` (#247): a per-developer source can't live in a shared lock.
+install-pnl: install ## Install PsyNeuLink from local repo (editable)
+ifneq ($(UV),)
+	$(UV) pip install --quiet --python $(PYTHON_VENV) --no-deps --reinstall-package psyneulink -e "$(PSYNEULINK_DIR)"
+else
 	$(PIP) install --quiet -e "$(PSYNEULINK_DIR)"
+endif
 
-install-all: venv ## Install local PsyNeuLink (editable) + backend (editable)
-	$(PIP) install --quiet -e "$(PSYNEULINK_DIR)"
-	$(PIP) install --quiet -e backend/
+install-all: install-pnl ## Install local PsyNeuLink (editable) + backend (editable)
 
 # Reinstall when the lockfile content changes (survives branch switches, where
 # mtime is unreliable) OR when the install is incomplete. Gate on the vite
@@ -398,7 +427,11 @@ status: ## Show all running PsyNewView instances, and which checkout each serves
 # --- Testing ---
 
 test: install ## Run backend test suite
+ifneq ($(UV),)
+	cd backend && $(UV_RUN) pytest tests/ -v
+else
 	cd backend && $(realpath $(VENV_DIR))/bin/python -m pytest tests/ -v
+endif
 
 # --- Cleanup ---
 
@@ -415,13 +448,13 @@ clean: clean-venv clean-frontend ## Full clean (venv + node_modules + build arti
 
 # --- Info ---
 
-info: venv ## Show installed versions
+info: install ## Show installed versions
 	@echo "Python: $$($(PYTHON_VENV) --version)"
 	@echo ""
-	@$(PIP) show psyneulink 2>/dev/null || echo "PsyNeuLink: not installed (run: make install or make install-pnl)"
+	@$(if $(UV),$(UV) pip show --python $(PYTHON_VENV),$(PIP) show) psyneulink 2>/dev/null || echo "PsyNeuLink: not installed (run: make install or make install-pnl)"
 	@echo ""
 	@echo "Backend packages:"
-	@$(PIP) list --format=columns 2>/dev/null | grep -iE "fastapi|uvicorn|websocket|watchdog|psyneulink" || true
+	@$(if $(UV),$(UV) pip list --python $(PYTHON_VENV),$(PIP) list --format=columns) 2>/dev/null | grep -iE "fastapi|uvicorn|websocket|watchdog|psyneulink" || true
 	@echo ""
 	@cd frontend && node -e "var p=require('./package.json'); console.log('Frontend: ' + p.name + ' v' + p.version)" 2>/dev/null || echo "Frontend: package.json not found"
 
