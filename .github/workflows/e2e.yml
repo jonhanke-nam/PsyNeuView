@@ -146,16 +146,22 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      # Create backend/.venv at the path playwright.config.ts expects, with
-      # PsyNeuLink from the pinned hook-capable SHA installed first.
-      - name: Create backend venv + install PsyNeuLink (pinned, hook-capable)
-        run: |
-          python -m venv backend/.venv
-          backend/.venv/bin/pip install --upgrade pip wheel
-          backend/.venv/bin/pip install "git+https://github.com/PrincetonUniversity/PsyNeuLink.git@${PSYNEULINK_GIT_REF}"
+      # The environment comes from backend/uv.lock (#247): every package at
+      # exactly the lock's version, except PsyNeuLink, which goes in on top
+      # from the commit pinned as PSYNEULINK_GIT_REF, the way the Mac app puts
+      # a user's chosen source on top. --frozen fails rather than re-resolve.
+      # No uv cache, for the reason setup-python has none (#1368).
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.11"
+          enable-cache: false
 
-      - name: Install backend (editable)
-        run: backend/.venv/bin/pip install -e backend/
+      - name: Install backend from the lock
+        working-directory: backend
+        run: |
+          uv sync --frozen --no-install-package psyneulink --python "$(command -v python)"
+          uv pip install --python .venv/bin/python "git+https://github.com/PrincetonUniversity/PsyNeuLink.git@${PSYNEULINK_GIT_REF}"
 
       - name: Install frontend dependencies
         working-directory: frontend
