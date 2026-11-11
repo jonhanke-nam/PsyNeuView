@@ -34,6 +34,14 @@ def _clear_pnl_registries():
 
 
 @pytest.fixture(autouse=True)
+def _installs_use_pip_unless_a_test_says(monkeypatch):
+    """Install tests fake pip's subprocess. A developer's or a runner's own
+    uv must not take the uv route under them (#244); tests of that route set
+    ``PSYNEUVIEW_UV`` themselves."""
+    monkeypatch.setenv("PSYNEUVIEW_UV", "off")
+
+
+@pytest.fixture(autouse=True)
 def _isolate_user_preferences(tmp_path, monkeypatch):
     """Point every test at a throwaway preferences file (#1025).
 

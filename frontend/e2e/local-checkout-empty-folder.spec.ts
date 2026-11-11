@@ -48,7 +48,7 @@ async function typePath(page: Page, folder: string) {
 async function stubInstall(page: Page, posted: Array<Record<string, unknown>>) {
   const job = (status: string) => ({
     id: JOB, source: "local", ref: null, path: posted[0]?.path ?? null, repo: null, status,
-    log: ["✓ download PsyNeuLink in 41.0s", "✓ checkout devel in 0.4s", "✓ pip install -e in 6.2s", "Total: 47.6s"],
+    log: ["✓ download PsyNeuLink in 41.0s", "✓ checkout devel in 0.4s", "✓ install -e with uv in 6.2s", "Total: 47.6s"],
     exit_code: status === "succeeded" ? 0 : null, started_at: 0, finished_at: status === "succeeded" ? 48 : null,
     download_repo: posted[0]?.download_repo ?? null, download_ref: posted[0]?.download_ref ?? null,
   });

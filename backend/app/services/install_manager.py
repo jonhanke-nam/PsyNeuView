@@ -1,7 +1,7 @@
 """Install/restart manager for switching the PsyNeuLink venv install (#130).
 
-For source=pypi/local, runs ``pip install --force-reinstall --no-deps`` in a
-background thread. A local checkout that is already the editable install,
+For source=pypi/local, runs ``install --force-reinstall --no-deps`` in a
+background thread, with uv when there is one and pip otherwise (#244). A local checkout that is already the editable install,
 with an unchanged ``pyproject.toml``, skips pip entirely (#1276). For source=github, orchestrates a managed clone
 via :mod:`clone_manager` (#262) — clone if missing, fetch + reset to
 the requested ref, and only re-run ``pip install -e`` when
@@ -20,8 +20,10 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import threading
@@ -407,6 +409,55 @@ def _venv_pip() -> str:
     return str(Path(sys.executable).parent / "pip")
 
 
+#: The uv to install with (#244). The Mac app sets it to the uv it bundles;
+#: ``off`` makes every install use pip.
+UV_ENV = "PSYNEUVIEW_UV"
+
+
+def _find_uv() -> Optional[str]:
+    """The uv to install with, or None for pip (#244).
+
+    The Mac app's own setup has always used its bundled uv, which on the same
+    machine installed in 217 s what pip took 1,032 s over; switching
+    PsyNeuLink here used pip regardless. ``PSYNEUVIEW_UV`` names the app's uv;
+    without it, a ``uv`` on ``PATH`` (a developer's) is used. The cache comes
+    from ``UV_CACHE_DIR`` in the environment, which the Mac app sets to its own,
+    so a switch reuses what setup already downloaded.
+    """
+    named = os.environ.get(UV_ENV, "").strip()
+    if named.lower() == "off":
+        return None
+    if named:
+        return named if os.access(named, os.X_OK) else None
+    return shutil.which("uv")
+
+
+def _uv_args(pip_args: list[str]) -> list[str]:
+    """pip's ``install`` arguments as uv's, for the same environment (#244).
+
+    The packages and flags carry over. ``--force-reinstall`` with
+    ``--no-deps`` becomes ``--reinstall-package psyneulink``: the one package
+    replaced, as before, and ``--refresh-package`` so a branch is asked for its
+    tip rather than the commit uv cached. ``--link-mode=clone`` copies from the
+    cache by APFS clone, as the Mac app's installs do.
+    """
+    if not pip_args or pip_args[0] != "install":
+        raise ValueError(f"not a pip install: {pip_args!r}")
+    out = ["pip", "install", "--python", sys.executable, "--link-mode=clone"]
+    for arg in pip_args[1:]:
+        if arg == "--force-reinstall":
+            out += ["--reinstall-package", "psyneulink", "--refresh-package", "psyneulink"]
+        else:
+            out.append(arg)
+    return out
+
+
+def _install_command(pip_args: list[str]) -> list[str]:
+    """The command the first attempt runs: uv's when there is a uv."""
+    uv = _find_uv()
+    return [uv] + _uv_args(pip_args) if uv else [_venv_pip()] + pip_args
+
+
 def psyneulink_import_problem(python: Optional[str] = None, env: Optional[dict] = None) -> Optional[str]:
     """None when a fresh Python in this environment imports PsyNeuLink whole;
     otherwise, in plain words, why not (#1396).
@@ -513,7 +564,7 @@ class InstallManager:
                     folder.reason
                     or f"{folder.path} is already a PsyNeuLink checkout: switch to it without a download"
                 )
-            display_command = [f"# download {download_repo}@{download_ref} → {folder.path}, then pip install -e"]
+            display_command = [f"# download {download_repo}@{download_ref} → {folder.path}, then install it editable"]
         else:
             if source == "local":
                 # The same plain words the panel shows under the Path field
@@ -527,8 +578,7 @@ class InstallManager:
                         f"{folder.path} {state}: choose Download PsyNeuLink here "
                         "to put a copy of PsyNeuLink in it."
                     )
-            pip_args = _build_pip_args(source, ref, path, repo)
-            display_command = [_venv_pip()] + pip_args
+            display_command = _install_command(_build_pip_args(source, ref, path, repo))
 
         with self._lock:
             if self._running_id is not None:
@@ -573,6 +623,28 @@ class InstallManager:
             self._append(job, line.rstrip("\n"))
         return proc.wait()
 
+    def _install(self, job: InstallJob, timer: _StepTimer, what: str, pip_args: list[str]) -> int:
+        """Run one install with uv, then with pip if uv failed (#244).
+
+        Each attempt is its own timed step, named after the tool that ran,
+        so the log never says pip when uv did the work. uv's failure is pip's
+        turn, whatever the cause, as in the Mac app: a slow install is much
+        better than none.
+        """
+        uv = _find_uv()
+        if uv:
+            with timer.step(f"{what} with uv"):
+                exit_code = self._stream_subprocess([uv] + _uv_args(pip_args), job)
+            if exit_code == 0:
+                return 0
+            self._append(
+                job,
+                f"uv exited with code {exit_code} — retrying with pip. "
+                "uv's output above says what it objected to.",
+            )
+        with timer.step(f"{what} with pip"):
+            return self._stream_subprocess([_venv_pip()] + pip_args, job)
+
     def _run(self, job: InstallJob) -> None:
         """Worker entry point — dispatches by source.
 
@@ -610,8 +682,8 @@ class InstallManager:
         on_line = lambda line: self._append(job, line)
         timer = _StepTimer(on_line)
         try:
-            with timer.step("pip install"):
-                exit_code = self._stream_subprocess(job.command, job)
+            pip_args = _build_pip_args(job.source, job.ref, job.path, job.repo)
+            exit_code = self._install(job, timer, "install", pip_args)
             if exit_code == 0 and job.source == "local" and job.path:
                 _mark_local_installed(Path(job.path).expanduser())
             timer.finish()
@@ -642,7 +714,9 @@ class InstallManager:
             spec = f"psyneulink=={job.version}"
             kept = pnl_releases.kept_file_for(job.version)
             if kept is None:
-                with timer.step("pip download"):
+                # uv has no download command, so keeping the release's file
+                # stays with pip; installing it is uv's like any other (#244).
+                with timer.step("download with pip"):
                     exit_code = self._stream_subprocess(
                         [_venv_pip(), "download", "--no-deps", "--dest", str(folder), spec], job,
                     )
@@ -652,11 +726,9 @@ class InstallManager:
                     return
             else:
                 self._append(job, f"Using the kept copy {kept.name} — no download needed")
-            with timer.step("pip install"):
-                exit_code = self._stream_subprocess(
-                    [_venv_pip(), "install", "--upgrade", "--find-links", str(folder), spec],
-                    job,
-                )
+            exit_code = self._install(
+                job, timer, "install", ["install", "--upgrade", "--find-links", str(folder), spec]
+            )
             timer.finish()
             self._finalize(job, exit_code)
         except Exception as e:
@@ -671,7 +743,7 @@ class InstallManager:
         self._append(
             job,
             f"psyneulink already editable at {Path(job.path).expanduser().resolve()} "
-            "and pyproject.toml unchanged — skipping pip install -e",
+            "and pyproject.toml unchanged — skipping the reinstall",
         )
         self._finalize(job, exit_code=0)
 
@@ -715,9 +787,9 @@ class InstallManager:
                 _remove_staging_folder(staging, on_line)
                 raise
             on_line(f"Downloaded {repo} @ {ref} → {sha[:10]} into {target}")
-            pip_cmd = [_venv_pip()] + _build_pip_args("local", None, str(target))
-            with timer.step("pip install -e"):
-                exit_code = self._stream_subprocess(pip_cmd, job)
+            exit_code = self._install(
+                job, timer, "install -e", _build_pip_args("local", None, str(target))
+            )
             if exit_code == 0:
                 _mark_local_installed(target)
             # A known checkout from now on (#1276): the folder holds
@@ -766,24 +838,17 @@ class InstallManager:
             if state.can_skip_pip:
                 on_line(
                     f"psyneulink already editable at {clone_path} "
-                    "and pyproject.toml unchanged — skipping pip install -e"
+                    "and pyproject.toml unchanged — skipping the reinstall"
                 )
                 timer.finish()
                 self._finalize(job, exit_code=0)
                 return
 
-            on_line(f"Running pip install -e {clone_path}")
-            pip_cmd = [
-                _venv_pip(),
-                "install",
-                "--upgrade",
-                "--force-reinstall",
-                "--no-deps",
-                "-e",
-                str(clone_path),
-            ]
-            with timer.step("pip install -e"):
-                exit_code = self._stream_subprocess(pip_cmd, job)
+            on_line(f"Installing {clone_path} editable")
+            exit_code = self._install(
+                job, timer, "install -e",
+                ["install", "--upgrade", "--force-reinstall", "--no-deps", "-e", str(clone_path)],
+            )
             if exit_code == 0:
                 with timer.step("mark_installed"):
                     clone_manager.mark_installed(clone_path)
