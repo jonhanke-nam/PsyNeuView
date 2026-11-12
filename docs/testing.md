@@ -135,6 +135,19 @@ then re-downloaded on about 40% of runs. Before adding a cache, check
 `gh api repos/OWNER/PsyNeuView/actions/cache/usage` and keep the total well
 under 10 GB.
 
+### Automatic code review (CodeRabbit)
+
+Every PR to `devel` gets a review from CodeRabbit, a GitHub App, within minutes (#246). It isn't a required check: its comments are advice, and the gate stays CI. Its instructions are our house rules, in `.coderabbit.yaml` at the repo root:
+- no other people's names;
+- plain English;
+- installs use uv;
+- the palette and `<button>` rules;
+- one control per setting;
+- show_graph's conventions;
+- a regression test with every fix.
+
+When a reviewer, human or CodeRabbit, keeps catching the same thing, add it there, and add it as a check to the standing code scan (#243). Ask CodeRabbit follow-up questions by mentioning `@coderabbitai` in a PR comment.
+
 ## Running locally
 
 ```bash
