@@ -17,6 +17,7 @@ One job at a time — concurrent install requests are rejected.
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import logging
@@ -427,9 +428,24 @@ def _find_uv() -> Optional[str]:
     named = os.environ.get(UV_ENV, "").strip()
     if named.lower() == "off":
         return None
-    if named:
-        return named if os.access(named, os.X_OK) else None
-    return shutil.which("uv")
+    candidate = named or shutil.which("uv")
+    if not candidate:
+        return None
+    if not _uv_runs(candidate):
+        # A `uv` that is there but doesn't run (a broken shim, a half-removed
+        # install) must not take installs away from pip (#259).
+        logger.warning("install_manager: %s doesn't run (uv --version failed); installing with pip", candidate)
+        return None
+    return candidate
+
+
+@functools.lru_cache(maxsize=8)
+def _uv_runs(path: str) -> bool:
+    """Whether ``path --version`` succeeds: once per path per server."""
+    try:
+        return subprocess.run([path, "--version"], capture_output=True, timeout=10).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
 
 
 def _uv_args(pip_args: list[str]) -> list[str]:

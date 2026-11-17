@@ -41,6 +41,8 @@ def uv(tmp_path, monkeypatch):
     stub.write_text("#!/bin/sh\n")
     stub.chmod(0o755)
     monkeypatch.setenv(im.UV_ENV, str(stub))
+    # Checked now, before `runs` fakes subprocesses: it runs (#259).
+    assert im._uv_runs(str(stub))
     return str(stub)
 
 
@@ -86,7 +88,44 @@ def test_a_named_uv_that_cannot_run_means_pip(tmp_path, monkeypatch):
 def test_unnamed_falls_back_to_a_uv_on_the_path(monkeypatch):
     monkeypatch.delenv(im.UV_ENV, raising=False)
     monkeypatch.setattr(im.shutil, "which", lambda name: "/opt/bin/uv" if name == "uv" else None)
+    monkeypatch.setattr(im, "_uv_runs", lambda path: True)
     assert _find_uv() == "/opt/bin/uv"
+
+
+# ── A uv that doesn't run means pip (#259) ───────────────────────────────
+
+
+def _script(tmp_path, body: str) -> str:
+    path = tmp_path / "uv"
+    path.write_text("#!/bin/sh\n" + body)
+    path.chmod(0o755)
+    return str(path)
+
+
+def test_a_uv_on_the_path_that_fails_means_pip(tmp_path, monkeypatch):
+    broken = _script(tmp_path, "exit 1\n")
+    monkeypatch.delenv(im.UV_ENV, raising=False)
+    monkeypatch.setattr(im.shutil, "which", lambda name: broken)
+    assert _find_uv() is None
+
+
+def test_a_named_uv_that_fails_means_pip(tmp_path, monkeypatch):
+    monkeypatch.setenv(im.UV_ENV, _script(tmp_path, "exit 3\n"))
+    assert _find_uv() is None
+
+
+def test_no_uv_at_all_means_pip(monkeypatch):
+    monkeypatch.delenv(im.UV_ENV, raising=False)
+    monkeypatch.setattr(im.shutil, "which", lambda name: None)
+    assert _find_uv() is None
+
+
+def test_a_working_uv_is_checked_once(tmp_path, monkeypatch):
+    counter = tmp_path / "count"
+    good = _script(tmp_path, f"echo x >> {counter}\necho uv 0.0.0\n")
+    monkeypatch.setenv(im.UV_ENV, good)
+    assert _find_uv() == good and _find_uv() == good
+    assert counter.read_text().count("x") == 1
 
 
 # ── Translating pip's arguments ──────────────────────────────────────────
