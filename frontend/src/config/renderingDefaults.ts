@@ -33,7 +33,7 @@ export interface RenderingDefaults {
   /**
    * Node oval border width for emphasis roles (INPUT/OUTPUT/CONTROL…), px.
    * Since #42 nodes draw this as nodeBorderWidth + NODE_OUTLINE_EMPHASIS_EXTRA
-   * (stores/nodeOutlineStore.ts; + 4 since #190), so this value is not read for nodes.
+   * (stores/nodeOutlineStore.ts; + 3, was + 4 from #190), so this value is not read for nodes.
    */
   nodeBorderWidthEmphasis: number;
 }
