@@ -32,6 +32,7 @@ import { ALL_PNL_DEFS, ROLE_TOKENS } from "./constants/pnlTypes";
  */
 const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
   "components/common/SettingsPanel.tsx": { count: 1, what: "the sidebar's section items" },
+  "components/common/settings/SettingsSearch.tsx": { count: 1, what: "Settings search results, in the sidebar like its section items (#271)" },
   "components/common/settings/shared.tsx": { count: 1, what: "a group's fold heading" },
   "components/common/settings/InstallControls.tsx": { count: 1, what: "the Switch to trigger, drawn like a select" },
   "components/common/settings/OpenMenuSection.tsx": { count: 1, what: "the ▲ ▼ reorder arrows" },
