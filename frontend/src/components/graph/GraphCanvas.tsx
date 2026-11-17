@@ -6,6 +6,8 @@
 
 import { CanvasContextMenu, EdgeContextMenu } from "./GraphMenus";
 import { arrowShaped, reshapeDescription, startShapingArrow } from "@/utils/arrowShapes";
+import { PortChooser, type ConnectionOption } from "./PortChooser";
+import { CONNECT_HANDLE, NODE_TARGET_HANDLE } from "./connectHandles";
 import { registerVisibleCentre } from "@/utils/graphViewport";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
@@ -429,8 +431,66 @@ export function GraphCanvas() {
   }, [storeNodes, storeEdges, setNodes, setEdges, fitGraph, showProjectionLabels, showDimensions, schedulingArrows]);
 
   // When user draws a connection between nodes → create a projection
+  // #253: a connection dragged from a node's connector to anywhere on
+  // another node. What it connects is PsyNeuLink's answer, not a guess:
+  // one option is made at once, several ask which input, a refusal says why.
+  const [portChooser, setPortChooser] = useState<{
+    x: number; y: number; sender: string; receiver: string; receiverLabel: string; options: ConnectionOption[];
+  } | null>(null);
+  const connectFromDrag = useCallback(async (sourceId: string, targetId: string) => {
+    if (!filePath) return;
+    const node = (id: string) => nodesRef.current.find((n) => n.id === id);
+    const varOf = (id: string) => ((node(id)?.data as any)?.varName as string) || id;
+    const sender = varOf(sourceId), receiver = varOf(targetId);
+    const resp = await fetch("/api/model/connection-options", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_path: filePath, sender, receiver }),
+    });
+    if (!resp.ok) {
+      addNotification("error", "Couldn't work out what to connect.");
+      return;
+    }
+    const data = await resp.json();
+    if (data.refused) {
+      addNotification("info", data.refused);
+      return;
+    }
+    const options: ConnectionOption[] = data.options || [];
+    if (options.length === 1) {
+      void makeDraggedConnection(sender, receiver, options[0]);
+      return;
+    }
+    const el = document.querySelector(`.react-flow__node[data-id="${CSS.escape(targetId)}"]`);
+    const box = el?.getBoundingClientRect();
+    setPortChooser({
+      x: box ? box.left + box.width / 2 : 200, y: box ? box.bottom + 6 : 200,
+      sender, receiver, receiverLabel: ((node(targetId)?.data as any)?.label as string) || receiver, options,
+    });
+  }, [filePath, addNotification]);
+  const makeDraggedConnection = useCallback(async (sender: string, receiver: string, o: ConnectionOption) => {
+    if (!filePath) return;
+    const resp = await fetch("/api/model/load", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_path: filePath, ...modelLoadOptions() }),
+    });
+    const data = await resp.json();
+    const compVarName = data.model?.compositions?.[0]?.varName;
+    if (!compVarName) return;
+    createProjectionOnServer(
+      filePath, sender, receiver, compVarName, setSource, loadModelFromServer,
+      o.sender_port, o.receiver_port, o.type,
+    );
+  }, [filePath, setSource, loadModelFromServer]);
+
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
+      if (connection.source && connection.target
+          && (connection.sourceHandle === CONNECT_HANDLE || connection.targetHandle === NODE_TARGET_HANDLE)) {
+        void connectFromDrag(connection.source, connection.target);
+        return;
+      }
       // Optimistic: add edge locally
       setEdges((eds) => addEdge(connection, eds));
 
@@ -463,7 +523,7 @@ export function GraphCanvas() {
         loadAndConnect();
       }
     },
-    [filePath, setEdges, setSource, loadModelFromServer]
+    [filePath, setEdges, setSource, loadModelFromServer, connectFromDrag]
   );
 
   const setSelectedEdgeId = useModelStore((s) => s.setSelectedEdgeId);
@@ -933,6 +993,16 @@ export function GraphCanvas() {
               Click where the new <b>{armed.label}</b> should go.{" "}
               <span style={{ opacity: 0.8 }}>Option-click to put down several. Esc to cancel.</span>
             </div>
+          )}
+          {portChooser && (
+            <PortChooser
+              x={portChooser.x}
+              y={portChooser.y}
+              receiver={portChooser.receiverLabel}
+              options={portChooser.options}
+              onPick={(o) => { void makeDraggedConnection(portChooser.sender, portChooser.receiver, o); setPortChooser(null); }}
+              onClose={() => setPortChooser(null)}
+            />
           )}
           {pendingProjectionGesture && (
             <div

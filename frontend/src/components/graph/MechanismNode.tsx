@@ -4,7 +4,8 @@
  */
 
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { Handle, Position, useConnection, type NodeProps } from "@xyflow/react";
+import { CONNECT_HANDLE, NODE_TARGET_HANDLE } from "./connectHandles";
 import { useSafeUpdateNodeInternals } from "@/hooks/useSafeUpdateNodeInternals";
 import { usePortLayout } from "@/stores/portLayoutStore";
 import type { MechanismData } from "@/stores/modelStore";
@@ -170,6 +171,8 @@ export const MechanismNode = memo(function MechanismNode({
   const direction = useGraphSettings((s) => s.direction);
   // Settings ▸ Appearance ▸ Node outlines (#42).
   const nodeBorderWidth = useNodeOutlineWidth();
+  // #253: a connection is being dragged, so this node accepts the drop.
+  const connecting = useConnection((c) => c.inProgress);
   const nodeBorderWidthEmphasis = nodeBorderWidth + NODE_OUTLINE_EMPHASIS_EXTRA;
   const expanded = useGraphSettings((s) => s.expandedNodes.has(d.label || ""));
 
@@ -1006,6 +1009,40 @@ export const MechanismNode = memo(function MechanismNode({
           </>
         );
       })()}
+      {/* #253: drag from the connector (shown on hover, on the output side)
+          to another node to connect them, ports shown or not. While a
+          connection is being dragged, the whole node is the drop target;
+          otherwise that target takes no pointer at all, so a click anywhere
+          on the node still selects it (#250). */}
+      <Handle
+        type="source"
+        id={CONNECT_HANDLE}
+        position={Position.Top}
+        className="pnv-connector"
+        data-testid="node-connector"
+        title="Drag to another node to connect them"
+      />
+      <Handle
+        type="target"
+        id={NODE_TARGET_HANDLE}
+        position={Position.Top}
+        isConnectableStart={false}
+        data-testid="node-drop-target"
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          transform: "none",
+          left: 0,
+          top: 0,
+          borderRadius: shape === "rectangle" ? 0 : "50%",
+          border: "none",
+          background: "transparent",
+          opacity: 0,
+          pointerEvents: connecting ? "all" : "none",
+        }}
+      />
     </div>
   );
 });

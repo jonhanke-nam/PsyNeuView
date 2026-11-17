@@ -3675,3 +3675,25 @@ def pnl_source_protect(request: PnlSourceProtectRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"owned": True, **owned}
+
+class ConnectionOptionsRequest(BaseModel):
+    file_path: str
+    sender: str
+    receiver: str
+
+
+@router.post("/model/connection-options")
+def connection_options_endpoint(request: ConnectionOptionsRequest):
+    """What dragging from ``sender`` to ``receiver`` would connect (#253),
+    asked of PsyNeuLink on the model's own objects. Both are variable names."""
+    path = Path(request.file_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {path}")
+    from app.services.sandbox import run_in_sandbox
+
+    result = run_in_sandbox("connection_options", {
+        "file_path": str(path), "sender": request.sender, "receiver": request.receiver,
+    })
+    if "error" in result and "options" not in result and "refused" not in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
