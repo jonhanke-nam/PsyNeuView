@@ -7,6 +7,7 @@
 
 import { useLivePreviewStore } from "@/stores/livePreviewStore";
 import { BACKGROUND_HEADER } from "@/stores/busyStore";
+import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
 import { useEffect, useRef, useCallback, useMemo, useState, type CSSProperties } from "react";
 import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { python } from "@codemirror/lang-python";
@@ -443,7 +444,8 @@ export function CodeEditor() {
         // Background (#256): nobody asked for it, so no busy wheel or busy
         // pointer while you type; the editor's sync status says it's updating.
         headers: { "Content-Type": "application/json", [BACKGROUND_HEADER]: "1" },
-        body: JSON.stringify({ file_path: filePath, source: currentSource }),
+        // The view the user is looking at (#257), or an edit rebuilt it nested.
+        body: JSON.stringify({ file_path: filePath, source: currentSource, ...modelLoadOptions() }),
         signal,
       });
       if (!resp.ok) {
