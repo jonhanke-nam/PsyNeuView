@@ -61,6 +61,7 @@ Escape, which every row has.
 | History | dialog | `common/HistoryPanel.tsx` | `history-panel` | the History button | ×, click outside, the History button |
 | Advanced Graph View Options | dialog | `graph/GraphViewOptionsMenu.tsx` | `graph-view-options-menu` | Advanced Graph View Options ▾ in the graph toolbar (it took in the More menu, #123) | ×, its button, click outside; stays open while you change options |
 | Node context menu | menu | `graph/NodeContextMenu.tsx` | `node-context-menu` | right-click on a node | click outside, a pick |
+| Port chooser | menu | `graph/PortChooser.tsx` | `port-chooser` | dragging a connection onto a node with several input ports (#253) | click outside, a pick |
 | Palette's compact flyout | menu | `graph/PaletteSidebar.tsx` | `palette-compact-flyout` | a category in the compact palette | click outside, the category again, its ‹ |
 | Watching for changes (the file-watch status) | dialog | `common/SyncIndicator.tsx` | `sync-popover` | the ● status at the right end of the diagnostics bar (#103) | ×, click outside, the status again |
 | Changes since the last version that built | dialog | `graph/LastGoodDiff.tsx` | `last-good-diff` | Compare with that version, on the stale-graph banner | ×, click outside |

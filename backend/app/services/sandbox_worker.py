@@ -2091,6 +2091,55 @@ def _output_labels(comp):
     return labels
 
 
+def task_connection_options(params):
+    """What a drag from one node to another would connect (#253).
+
+    Asks PsyNeuLink, on the model's own objects, rather than a table kept by
+    hand: both ends must be mechanisms, and different ones; a sender that is a
+    control, gating or learning mechanism is not connected by dragging yet
+    (its projection targets a parameter, a port or an arrow, which needs a
+    choice the gesture can't make on its own: #253's second stage); an
+    existing connection between the two is not made twice. Otherwise it is a
+    MappingProjection from the sender's primary output port, with one option
+    per input port of the receiver.
+
+    Returns ``{"options": [{type, sender_port, receiver_port}]}`` or
+    ``{"refused": "<plain reason>"}``.
+    """
+    import psyneulink as pnl
+
+    module = load_module(params["file_path"], reset_registry=True, tolerate_exec_error=True)
+    sender = getattr(module, params.get("sender") or "", None)
+    receiver = getattr(module, params.get("receiver") or "", None)
+    if not isinstance(sender, pnl.Mechanism) or not isinstance(receiver, pnl.Mechanism):
+        return {"refused": "Drag from one mechanism to another to connect them."}
+    if sender is receiver:
+        return {"refused": "A mechanism can't be connected to itself by dragging."}
+    kinds = [
+        ("GatingMechanism", "a gating mechanism"),
+        ("LearningMechanism", "a learning mechanism"),
+        ("ControlMechanism", "a control mechanism"),
+    ]
+    for cls_name, what in kinds:
+        cls = getattr(pnl, cls_name, None)
+        if cls is not None and isinstance(sender, cls):
+            return {"refused": (
+                f"{sender.name} is {what}. Its projections go to a parameter, a port "
+                "or an arrow, which dragging can't choose yet; add it in the code for now."
+            )}
+    for proj in getattr(receiver, "path_afferents", []):
+        owner = getattr(getattr(proj, "sender", None), "owner", None)
+        if owner is sender:
+            return {"refused": f"{sender.name} is already connected to {receiver.name}."}
+    if not sender.output_ports or not receiver.input_ports:
+        return {"refused": f"{sender.name} has no output, or {receiver.name} no input, to connect."}
+    out = sender.output_ports[0].name
+    return {"options": [
+        {"type": "MappingProjection", "sender_port": out, "receiver_port": port.name}
+        for port in receiver.input_ports
+    ]}
+
+
 def task_get_input_nodes(params):
     """Get input nodes for a composition.
 
@@ -4081,6 +4130,7 @@ def _handle_one_task(payload_str: str) -> str:
         "show_graph": task_show_graph,
         "export_mdf": task_export_mdf,
         "mdf_gaps": task_mdf_gaps,
+        "connection_options": task_connection_options,
     }
 
     try:

@@ -789,6 +789,26 @@ def _remove_node(source: str, changes: dict) -> str:
     return "\n".join(result)
 
 
+def _last_definition_line(source: str, names: list[str]) -> int | None:
+    """The line (1-based, its last) ending the later top-level definition of
+    any of ``names``, or None when one of them isn't defined at the top level."""
+    import ast
+
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return None
+    ends: dict[str, int] = {}
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id in names:
+                    ends[target.id] = node.end_lineno or node.lineno
+    if not all(name in ends for name in names):
+        return None
+    return max(ends.values())
+
+
 def _add_projection(source: str, changes: dict) -> str:
     """Add a new projection declaration to the Projections section."""
     var_name = changes["var_name"]
@@ -827,7 +847,16 @@ def _add_projection(source: str, changes: dict) -> str:
         if comp_start >= 0:
             lines.insert(comp_start - 1, declaration)
         else:
-            lines.append(declaration)
+            # #253: a model without section headers. Appending at the end
+            # put the declaration after the `comp.add_projection(...)` that
+            # uses it, so the model failed with "name ... is not defined".
+            # It goes straight after whichever of its sender and receiver is
+            # defined later: the first place it can be defined.
+            after = _last_definition_line(source, [sender, receiver])
+            if after is not None:
+                lines.insert(after, declaration)
+            else:
+                lines.append(declaration)
 
     source = "\n".join(lines)
 

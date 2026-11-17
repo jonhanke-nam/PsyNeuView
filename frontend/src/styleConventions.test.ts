@@ -107,6 +107,7 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
   "components/graph/ValidationPanel.tsx": { count: 3, what: "the list's fold heading; a projection's name, which jumps to its line, for an unconnected and for a refused connection" },
   "components/graph/FocusBreadcrumb.tsx": { count: 2, what: "the breadcrumb's ⌂ Full model and a parent composition's crumb" },
   "components/graph/NodeContextMenu.tsx": { count: 1, what: "a menu row" },
+  "components/graph/PortChooser.tsx": { count: 1, what: "a menu row, as NodeContextMenu's (#253)" },
   "components/graph/OffscreenNodesIndicator.tsx": { count: 1, what: "the off-screen notice over the canvas, which fits the graph" },
   "components/common/Combobox.tsx": { count: 1, what: "the ▼ inside the field that opens its list" },
 };

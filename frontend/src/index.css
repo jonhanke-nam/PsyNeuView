@@ -247,3 +247,22 @@ html.pnv-busy * {
 .graph-placing .react-flow__node {
   cursor: crosshair !important;
 }
+
+/* #253: the connector on each node, for dragging a connection to another
+   node. Shown while the pointer is on the node, or during a connection. */
+.react-flow__handle.pnv-connector {
+  width: 10px;
+  height: 10px;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 50%;
+  border: 2px solid var(--pnv-surface);
+  background: var(--pnv-port-output);
+  opacity: 0;
+  transition: opacity 0.12s;
+  cursor: crosshair;
+}
+.react-flow__node:hover .react-flow__handle.pnv-connector,
+.react-flow__handle.pnv-connector.connectingfrom {
+  opacity: 1;
+}
