@@ -167,4 +167,4 @@ What each gesture means on the graph, as in Finder and Keynote. `frontend/e2e/gr
 | Shift-drag on empty canvas | draw a selection box |
 | Drag on empty canvas | pan |
 
-Every object has a menu: nodes (Inspect, Rename…, Collapse/Expand…), arrows (Select sender, Select receiver, Reset shape) and the canvas (Select All, Fit the graph to the window, Show Components…). A menu offers only actions that exist elsewhere too, and the web view's own menu (Reload, Inspect Element) never appears on the graph. Still to come: a menu that acts on a whole multi-selection.
+Every object has a menu: nodes (Inspect, Rename…, Collapse/Expand…), arrows (Select sender, Select receiver, Reset shape, Rename…, Delete), scheduling arrows and their labels (Edit condition, Delete) and the canvas (Select All, Fit the graph to the window, Show Components…). A menu offers only actions that exist elsewhere too, and the web view's own menu (Reload, Inspect Element) never appears on the graph. Still to come: a menu that acts on a whole multi-selection.

@@ -24,6 +24,7 @@ fit-frames-edges.spec.ts
 flat-layout-namespace.spec.ts
 flat-view.spec.ts
 github-file-loader.spec.ts
+graph-arrow-menus.spec.ts
 graph-click-conventions.spec.ts
 graph-fills-window.spec.ts
 graph-hit-areas.spec.ts

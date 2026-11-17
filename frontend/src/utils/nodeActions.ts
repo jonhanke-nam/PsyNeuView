@@ -130,13 +130,72 @@ export async function renameNode(
   currentName: string,
   newName: string,
 ): Promise<string | null> {
-  const trimmed = newName.trim();
-  const { filePath, nodes, setSource, loadModelFromServer } = useModelStore.getState();
-  if (!filePath || !trimmed || trimmed === currentName) return null;
-  const existing = nodes
+  const existing = useModelStore.getState().nodes
     .filter((n) => n.type === "mechanismNode" || n.type === "compositionNode")
     .map((n) => (n.data as { label?: string } | undefined)?.label)
     .filter((l): l is string => !!l);
+  return renameDeclaration(varName, currentName, newName, existing);
+}
+
+/**
+ * #261: rename an arrow (a projection's `name=`), from its menu or the
+ * Inspector's header. The same rename as a node's; its name must differ from
+ * the other projections'.
+ */
+export async function renameProjection(
+  varName: string,
+  currentName: string,
+  newName: string,
+): Promise<string | null> {
+  const existing = useModelStore.getState().edges
+    .filter((e) => e.type === "projectionEdge")
+    .map((e) => (e.data as { label?: string } | undefined)?.label)
+    .filter((l): l is string => !!l);
+  return renameDeclaration(varName, currentName, newName, existing);
+}
+
+/** Apply a structural change and load the result; null, or what went wrong. */
+async function structuralChange(changes: Record<string, unknown>): Promise<string | null> {
+  const { filePath, setSource, loadModelFromServer } = useModelStore.getState();
+  if (!filePath) return "No model is open";
+  try {
+    await useModelStore.getState().flushBuffer();
+    const resp = await fetch("/api/model/structural-change", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_path: filePath, changes }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) return data.detail || "The file couldn't be changed";
+    setSource(data.source);
+    loadModelFromServer(data.model, data.layout);
+    return null;
+  } catch (e) {
+    return (e as Error).message;
+  }
+}
+
+/** #261: delete an arrow (a projection) from the file. */
+export async function deleteProjection(varName: string, label: string): Promise<string | null> {
+  recordAction(`Deleted projection ${label}`);
+  return structuralChange({ action: "remove_projection", var_name: varName });
+}
+
+/** #261: delete a scheduling arrow: the condition it draws. */
+export async function deleteSchedulingCondition(owner: string, gscType: string, target: string): Promise<string | null> {
+  recordAction(`Removed ${gscType} condition on ${owner}`);
+  return structuralChange({ action: "remove_gsc", owner_var: owner, gsc_type: gscType, target_var: target });
+}
+
+async function renameDeclaration(
+  varName: string,
+  currentName: string,
+  newName: string,
+  existing: string[],
+): Promise<string | null> {
+  const trimmed = newName.trim();
+  const { filePath, setSource, loadModelFromServer } = useModelStore.getState();
+  if (!filePath || !trimmed || trimmed === currentName) return null;
   try {
     // #1029: rename is applied to the file on disk, so unsaved editor text
     // must reach it first or the rename is computed from stale source.
