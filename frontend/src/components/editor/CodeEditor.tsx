@@ -5,6 +5,8 @@
  * Ctrl+S / Cmd+S saves the code to the file and re-introspects the model.
  */
 
+import { useLivePreviewStore } from "@/stores/livePreviewStore";
+import { BACKGROUND_HEADER } from "@/stores/busyStore";
 import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
 import { useEffect, useRef, useCallback, useMemo, useState, type CSSProperties } from "react";
 import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
@@ -439,7 +441,9 @@ export function CodeEditor() {
     try {
       const resp = await fetch("/api/model/preview", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        // Background (#256): nobody asked for it, so no busy wheel or busy
+        // pointer while you type; the editor's sync status says it's updating.
+        headers: { "Content-Type": "application/json", [BACKGROUND_HEADER]: "1" },
         // The view the user is looking at (#257), or an edit rebuilt it nested.
         body: JSON.stringify({ file_path: filePath, source: currentSource, ...modelLoadOptions() }),
         signal,
@@ -1177,7 +1181,10 @@ export function CodeEditor() {
                 setSyncStatus("idle");
                 // #1029: preview, don't save. Typing must not write a file an
                 // external editor has open; ⌘S is what writes.
-                autoRefreshTimer.current = setTimeout(() => previewAndRefresh(), 1500);
+                // #255: when, or whether, is a setting; off, the graph
+                // updates on save.
+                const delay = useLivePreviewStore.getState().delayMs;
+                if (delay > 0) autoRefreshTimer.current = setTimeout(() => previewAndRefresh(), delay);
               }
             }}
             theme="light"
