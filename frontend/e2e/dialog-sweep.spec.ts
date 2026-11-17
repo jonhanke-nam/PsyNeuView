@@ -103,7 +103,7 @@ test.describe("dialog sweep (#1289)", { tag: "@ci" }, () => {
 
   test("the dialogs the Open menu opens, and a list inside one", async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem("psynewview_ui_prefs_developerMode", "true");
+      localStorage.setItem("psyneuview_ui_prefs_developerMode", "true");
     });
     // The GitHub loader lists a repo's files; a stub keeps the test off the network.
     await page.route("**/api/model/github/tree*", (route) =>
@@ -241,7 +241,7 @@ test.describe("dialog sweep (#1289)", { tag: "@ci" }, () => {
     test.setTimeout(180_000);
     await page.addInitScript(() => {
       localStorage.setItem("psyneuview.components.start", "strip");
-      localStorage.setItem("psynewview_palette_open", "true");
+      localStorage.setItem("psyneuview_palette_open", "true");
     });
     await openFromPath(page, scratchModel());
     const palette = page.getByTestId("palette-sidebar");

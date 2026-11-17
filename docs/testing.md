@@ -157,7 +157,7 @@ make install
 # Without uv: venv + pip from backend/pyproject.toml, whatever is installed
 make install USE_UV=0
 
-# Backend suite (do NOT set PSYNEWVIEW_TEST_MODE globally — tests set their own
+# Backend suite (do NOT set PSYNEUVIEW_TEST_MODE globally — tests set their own
 # mode; setting it breaks the "reset endpoint hidden in production" test).
 # --no-sync: a plain `uv run` first re-syncs to the lock, which would put the
 # locked PsyNeuLink back over one you chose.

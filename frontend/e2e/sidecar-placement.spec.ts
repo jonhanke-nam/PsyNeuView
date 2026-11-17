@@ -13,7 +13,7 @@
  * The *global default* control is covered below too. It persists to the user's
  * preferences file, which the harness redirects into the session temp dir via
  * PSYNEUVIEW_CONFIG_FILE (#1025) — before that, exercising it would have written
- * to the developer's real ~/.psynewview.json.
+ * to the developer's real ~/.psyneuview.json.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 import { mkdtempSync, copyFileSync, existsSync, readFileSync } from "fs";
@@ -115,8 +115,8 @@ test("global placement default is followed, and stays out of the real prefs file
   // The harness points the server at a session-local preferences file. Reading
   // it back proves the spawned server honours the override; the checksum of the
   // real one proves nothing leaked (the hazard #1025 was filed for).
-  const sessionPrefs = path.join(process.env.PW_SESSION_TMP ?? "", "psynewview.json");
-  const realPrefs = path.join(homedir(), ".psynewview.json");
+  const sessionPrefs = path.join(process.env.PW_SESSION_TMP ?? "", "psyneuview.json");
+  const realPrefs = path.join(homedir(), ".psyneuview.json");
   const readReal = () => (existsSync(realPrefs) ? readFileSync(realPrefs, "utf8") : null);
   const realBefore = readReal();
 
@@ -185,7 +185,7 @@ test("global placement default is followed, and stays out of the real prefs file
     await request.post("/api/settings/sidecar-placement", { data: { placement: null } });
   }
 
-  expect(readReal(), "the suite modified the developer's real ~/.psynewview.json").toBe(realBefore);
+  expect(readReal(), "the suite modified the developer's real ~/.psyneuview.json").toBe(realBefore);
 });
 
 // The editor header used to fold to its compact layout only below a fixed

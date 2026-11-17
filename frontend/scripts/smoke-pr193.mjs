@@ -26,8 +26,8 @@ page.on("pageerror", (e) => console.error("[pageerror]", e.message));
 // Clear localStorage so the defaults (both visible) apply.
 await page.goto(FRONTEND, { waitUntil: "domcontentloaded" });
 await page.evaluate(() => {
-  localStorage.removeItem("psynewview_layout_code_visible");
-  localStorage.removeItem("psynewview_layout_graph_visible");
+  localStorage.removeItem("psyneuview_layout_code_visible");
+  localStorage.removeItem("psyneuview_layout_graph_visible");
 });
 await page.reload({ waitUntil: "networkidle" });
 

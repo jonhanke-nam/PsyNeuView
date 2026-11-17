@@ -71,10 +71,10 @@ The harness gives each test session a fresh backend environment:
 
 - **Dynamic port**: the production webServer binds a free port picked at config-load time. Override via `PW_PROD_PORT`.
 - **Per-session temp dir** under `os.tmpdir()/psyneuview-e2e-XXXXXX`, exposed to the backend as:
-  - `PSYNEWVIEW_MODELS_DIR=<tmp>/models` — model browse paths point here (real user models stay invisible to tests)
-  - `PSYNEWVIEW_WORKING_DIR=<tmp>/working` — working copies of included models (`/demos/reset`, `/reference-models/load`) go here instead of `~/.psyneuview/working-copies` (#1319)
+  - `PSYNEUVIEW_MODELS_DIR=<tmp>/models` — model browse paths point here (real user models stay invisible to tests)
+  - `PSYNEUVIEW_WORKING_DIR=<tmp>/working` — working copies of included models (`/demos/reset`, `/reference-models/load`) go here instead of `~/.psyneuview/working-copies` (#1319)
   - `PSYNEUVIEW_LAYOUTS_DIR=<tmp>/layouts` — layouts and labels for read-only PsyNeuLink files (a stand-in declared through `/api/test/pnl-install`) go here instead of `~/.psyneuview/layouts`, and the startup migration stays off (#1321). `/api/test/reset` empties it.
-- **Test-mode gate**: `PSYNEWVIEW_TEST_MODE=1` opens `POST /api/test/reset` on the backend, which is the endpoint `mutatingTest` hits. Production builds never see this endpoint — it's only mounted when the env var is set.
+- **Test-mode gate**: `PSYNEUVIEW_TEST_MODE=1` opens `POST /api/test/reset` on the backend, which is the endpoint `mutatingTest` hits. Production builds never see this endpoint — it's only mounted when the env var is set.
 
 Temp dirs are deliberately *not* cleaned up on exit so trace failures can be inspected post-mortem. They accumulate under `os.tmpdir()` — sweep manually if it gets noisy.
 

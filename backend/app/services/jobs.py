@@ -27,7 +27,7 @@ from app.services.sandbox import WORKER_PATH, RESULT_MARKER
 
 logger = logging.getLogger(__name__)
 
-PROGRESS_MARKER = "###PSYNEWVIEW_PROGRESS###"
+PROGRESS_MARKER = "###PSYNEUVIEW_PROGRESS###"
 
 # Hard cap so a hung job can't block the one-at-a-time slot forever.
 JOB_TIMEOUT = 3600

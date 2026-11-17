@@ -1,10 +1,11 @@
 """Test-only endpoints for the Playwright E2E harness (#147).
 
-Mounted by app.main only when PSYNEWVIEW_TEST_MODE=1. Never include in
+Mounted by app.main only when PSYNEUVIEW_TEST_MODE=1. Never include in
 production builds — the reset endpoint is destructive (it wipes the
 working dir and restarts the warm worker).
 """
 
+from app.services.env_names import env
 import json
 import logging
 import os
@@ -27,7 +28,7 @@ class ModelsDirRequest(BaseModel):
 
 @router.post("/test/models-dir")
 async def set_models_dir_for_test(request: ModelsDirRequest) -> dict:
-    """Set or clear ``PSYNEWVIEW_MODELS_DIR`` in the running backend (#1295).
+    """Set or clear ``PSYNEUVIEW_MODELS_DIR`` in the running backend (#1295).
 
     The harness fixes the project folder through that variable, and while it
     is set the folder can't be moved — by design. A spec about moving it
@@ -145,7 +146,7 @@ async def reset_for_test() -> dict:
     from app.services import sandbox
 
     cleared: list[str] = []
-    working_env = os.environ.get("PSYNEWVIEW_WORKING_DIR")
+    working_env = env("WORKING_DIR")
     if working_env:
         working = Path(working_env).expanduser().resolve()
         if working.exists():

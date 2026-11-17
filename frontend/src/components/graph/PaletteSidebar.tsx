@@ -104,7 +104,7 @@ export function PaletteSidebar() {
 
   const handleDragStart = (e: DragEvent, item: PnlObjectDef) => {
     e.dataTransfer.setData(
-      "application/psynewview-node",
+      "application/psyneuview-node",
       JSON.stringify({ type: item.type, defaults: item.defaults }),
     );
     e.dataTransfer.effectAllowed = "move";

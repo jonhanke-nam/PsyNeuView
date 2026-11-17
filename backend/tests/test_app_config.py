@@ -1,6 +1,6 @@
 """The preferences-file path resolves through one accessor (#1025).
 
-Four modules read and write the same ``~/.psynewview.json``. They used to
+Four modules read and write the same ``~/.psyneuview.json``. They used to
 hardcode it separately, so an override could isolate one of them and leave the
 rest writing to the developer's real file — isolation that *looks* like it
 worked, which is worse than none. These tests pin the two properties that make
@@ -20,7 +20,7 @@ from app.services.app_config import CONFIG_ENV, DEFAULT_CONFIG_FILE, app_config_
 def test_defaults_to_the_real_home_file(monkeypatch):
     monkeypatch.delenv(CONFIG_ENV, raising=False)
     assert app_config_path() == DEFAULT_CONFIG_FILE
-    assert app_config_path().name == ".psynewview.json"  # legacy spelling is load-bearing
+    assert app_config_path().name == ".psyneuview.json"  # legacy spelling is load-bearing
 
 
 def test_env_override_wins(monkeypatch, tmp_path):
@@ -85,7 +85,7 @@ def test_all_four_modules_write_to_the_same_redirected_file(monkeypatch, tmp_pat
     config = json.loads(target.read_text())
     config["model_dirs"] = [str(models)]
     target.write_text(json.dumps(config))
-    monkeypatch.delenv("PSYNEWVIEW_MODELS_DIR", raising=False)
+    monkeypatch.delenv("PSYNEUVIEW_MODELS_DIR", raising=False)
     assert models.resolve() in model_dirs.get_model_dirs()
 
 
@@ -98,7 +98,7 @@ def test_real_home_file_is_untouched_by_the_suite(monkeypatch, tmp_path):
     app_settings.set_default_placement(None)
 
     after = DEFAULT_CONFIG_FILE.read_bytes() if DEFAULT_CONFIG_FILE.exists() else None
-    assert after == before, "the suite modified the developer's real ~/.psynewview.json"
+    assert after == before, "the suite modified the developer's real ~/.psyneuview.json"
 
 
 def test_the_guard_names_a_test_that_writes_the_real_file(pytester, monkeypatch, tmp_path):
@@ -127,4 +127,4 @@ def test_the_guard_names_a_test_that_writes_the_real_file(pytester, monkeypatch,
     result = pytester.runpytest_subprocess("-p", "no:cacheprovider", "-p", "no:randomly", "-q")
     result.assert_outcomes(passed=2, errors=1)
     result.stdout.fnmatch_lines(["*test_writes_the_real_preferences_file changed the real preferences file*"])
-    assert (home / ".psynewview.json").exists()  # the write really happened, in the throwaway home
+    assert (home / ".psyneuview.json").exists()  # the write really happened, in the throwaway home

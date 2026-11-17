@@ -786,7 +786,7 @@ class LoadModelResponse(BaseModel):
     starImportConverted: bool = False
     # Absolute path of the working copy the model was loaded into. Set by the
     # reference/demo loaders so the client doesn't have to guess it from the
-    # pristine path — the working dir may be isolated (e.g. PSYNEWVIEW_WORKING_DIR
+    # pristine path — the working dir may be isolated (e.g. PSYNEUVIEW_WORKING_DIR
     # under the E2E harness), where the guess "backend/<name>.py" is wrong.
     file_path: str | None = None
     # #864: server-side load timing (milliseconds) so the client can log one
@@ -997,7 +997,7 @@ def _github_files_http_status(reason: str) -> int:
 async def github_tree(repo: str, ref: str):
     """List ``.py`` paths in ``repo`` at ``ref``, plus the user's recently
     opened files for that (repo, ref). Tree is cached 5 min; recents are
-    read from ``~/.psynewview.json`` on every call (cheap)."""
+    read from ``~/.psyneuview.json`` on every call (cheap)."""
     try:
         listing = github_files.list_tree(repo, ref)
     except github_files.GithubFilesError as e:
@@ -2755,7 +2755,7 @@ DEMOS_DIR = Path(__file__).resolve().parent.parent.parent / "demos"
 def _demo_working_dir() -> Path:
     """Where the working copy of an included model goes: a Demo (reset on
     every open), a Reference Model, or a PsyNeuLink Example from a managed
-    install. One answer for all three (#1319): ``PSYNEWVIEW_WORKING_DIR``
+    install. One answer for all three (#1319): ``PSYNEUVIEW_WORKING_DIR``
     when set (the e2e harness), otherwise ``~/.psyneuview/working-copies``
     — a per-user folder outside every install, so edits survive an app
     update. It used to be ``backend/`` itself; working copies left there are

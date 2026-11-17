@@ -22,7 +22,7 @@ import { useModelStore } from "@/stores/modelStore";
 import { DialogCloseButton } from "@/components/common/dialog/DialogHeader";
 import { nodeShapeFor, polygonPoints, shapeTooltip, SHAPE_INFO, SHAPE_ORDER, type NodeShape } from "@/utils/nodeShape";
 
-const STORAGE_KEY = "psynewview-gsc-legend";
+const STORAGE_KEY = "psyneuview-gsc-legend";
 const LEGEND_MARGIN = 12;
 
 type Corner = "tl" | "tr" | "bl" | "br";

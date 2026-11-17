@@ -94,7 +94,7 @@ Until #1319, `backend/` — the working directory when the app runs — was also
 where the working copies of Reference Models and Demos went, with every sidecar
 written beside them, so each one a session opened landed in the checkout as an
 untracked file. They now go to `~/.psyneuview/working-copies` (or
-`PSYNEWVIEW_WORKING_DIR`), and copies left in `backend/` from before are moved
+`PSYNEUVIEW_WORKING_DIR`), and copies left in `backend/` from before are moved
 there when the backend starts — except files git tracks, which are left alone
 ([where things live](where-things-live.md#working-copies-of-included-models)).
 Anything else that lands in the checkout is still nobody's deliberate work, and

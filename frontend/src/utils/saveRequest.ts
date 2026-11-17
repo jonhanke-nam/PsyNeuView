@@ -14,7 +14,7 @@
  * changed on disk, the same errors.
  */
 
-export const SAVE_EVENT = "psynewview:save";
+export const SAVE_EVENT = "psyneuview:save";
 
 export interface SaveRequestDetail {
   /** Set by the listener, synchronously, when it takes the request. */
@@ -45,7 +45,7 @@ export function requestSave(opts: SaveRequestOptions = {}): Promise<boolean> {
  * Open **Save a copy as…** (#1346). The dialog lives in the toolbar; the code
  * editor's banner for a permanently protected model points to it with this.
  */
-export const SAVE_COPY_EVENT = "psynewview:save-copy";
+export const SAVE_COPY_EVENT = "psyneuview:save-copy";
 
 export function requestSaveCopy(): void {
   window.dispatchEvent(new CustomEvent(SAVE_COPY_EVENT));

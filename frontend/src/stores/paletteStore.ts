@@ -6,17 +6,17 @@
  * Whether the panel is the word list or the icon strip is not remembered: it
  * starts as Settings ▸ Appearance ▸ Components panel says (#113), and the
  * panel's ◀/▶ button changes it for this session only, so nobody is left
- * stuck on the strip. The old remembered value (psynewview_palette_compact)
+ * stuck on the strip. The old remembered value (psyneuview_palette_compact)
  * is no longer read.
  */
 
 import { create } from "zustand";
 import { loadComponentsStart } from "./componentsPanelStartStore";
 
-const LS_FAVORITES = "psynewview_palette_favorites";
-const LS_RECENTS = "psynewview_palette_recents";
-const LS_OPEN = "psynewview_palette_open";
-const LS_EXPANDED = "psynewview_palette_expanded";
+const LS_FAVORITES = "psyneuview_palette_favorites";
+const LS_RECENTS = "psyneuview_palette_recents";
+const LS_OPEN = "psyneuview_palette_open";
+const LS_EXPANDED = "psyneuview_palette_expanded";
 const MAX_RECENTS = 8;
 
 function loadJson<T>(key: string, fallback: T): T {

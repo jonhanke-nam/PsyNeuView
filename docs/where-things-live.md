@@ -115,7 +115,7 @@ source, never Remove for the one in use; removing only takes it off the
 list. The source in use is put on the list the first time Settings sees it,
 so a checkout installed by the Mac app's setup or a terminal stays known
 after you switch away. A placeholder like `owner/repo` is never recorded,
-and one already in `~/.psynewview.json` is dropped when read
+and one already in `~/.psyneuview.json` is dropped when read
 ([#1292](https://github.com/jonhanke-nam/PsyNeuView/issues/1292)).
 
 **Automatic updates** ([#1304](https://github.com/jonhanke-nam/PsyNeuView/issues/1304)).
@@ -197,7 +197,7 @@ changed. All working copies go in one folder, outside every install
 | | Folder |
 |---|---|
 | Default | `~/.psyneuview/working-copies`, hidden, one per user, created on first use |
-| Set by hand | `PSYNEWVIEW_WORKING_DIR` (developer setups and the test suite) |
+| Set by hand | `PSYNEUVIEW_WORKING_DIR` (developer setups and the test suite) |
 
 **Settings ▸ Folders** shows it as **Working copies of included models**,
 with Show in Finder. What it means for your edits:
@@ -233,7 +233,7 @@ rules as [Moving your folder](#moving-your-folder):
   the difference is recorded;
 - the outcome goes in the preferences file (`working_copies_last_migration`)
   so Report a Problem can include it;
-- nothing happens while `PSYNEWVIEW_WORKING_DIR` is set, or in a container or
+- nothing happens while `PSYNEUVIEW_WORKING_DIR` is set, or in a container or
   the hosted service.
 
 ### Layouts for read-only PsyNeuLink files
@@ -313,7 +313,7 @@ What a move promises:
 The one-time offer in Settings ▸ Folders (for a folder still at
 `~/.psyneuview/models`) uses the same move. "Not now" is remembered.
 
-When the folder is fixed by the `PSYNEWVIEW_MODELS_DIR` environment variable
+When the folder is fixed by the `PSYNEUVIEW_MODELS_DIR` environment variable
 (developer setups and the test suite), it can't be changed or moved from
 Settings, and no offer is made.
 
@@ -356,7 +356,7 @@ each naming the remote branch it uses (`origin/devel`):
   changed, switch to it again in Which PsyNeuLink is installed.)
 
 Each switch and the last check and pull are kept per checkout in
-`~/.psynewview.json` (`checkout_updates`, `checkout_update_state`).
+`~/.psyneuview.json` (`checkout_updates`, `checkout_update_state`).
 
 ### Managed copies
 
@@ -395,10 +395,10 @@ source again clones it afresh. The copy in use can't be removed.
         examples-status.json  whether each PsyNeuLink example loads, for the marks on
                               the Open menu, keyed by the source's commit and the
                               example files' names, sizes and modification times (#175)
-~/.psynewview.json            the preferences file (the misspelling is historical and load-bearing)
+~/.psyneuview.json            the preferences file (the misspelling is historical and load-bearing)
 ```
 
-`~/.psynewview.json` holds `model_dirs` (My Project Folder first), `catalogs`,
+`~/.psyneuview.json` holds `model_dirs` (My Project Folder first), `catalogs`,
 `pnl_sources` (the remembered sources), `source_history` and `file_history`
 (typeahead history), `sidecar_placement_default`,
 `psyneulink_checkouts_protected` (the checkouts you protected from edits;
@@ -418,18 +418,18 @@ Writes are atomic.
 
 | Variable | Effect |
 |---|---|
-| `PSYNEWVIEW_MODELS_DIR` | Colon-separated model folders; the first is My Project Folder. Wins over the preferences file; Settings can't change or move the folder while it is set. The Mac app sets it today. |
-| `PSYNEUVIEW_CONFIG_FILE` | Another preferences file instead of `~/.psynewview.json` (the e2e harness uses a temp one). |
+| `PSYNEUVIEW_MODELS_DIR` | Colon-separated model folders; the first is My Project Folder. Wins over the preferences file; Settings can't change or move the folder while it is set. The Mac app sets it today. |
+| `PSYNEUVIEW_CONFIG_FILE` | Another preferences file instead of `~/.psyneuview.json` (the e2e harness uses a temp one). |
 | `PSYNEUVIEW_CLONE_ROOT` | Another folder for managed copies instead of `~/.psyneuview/sources`. |
 | `PSYNEUVIEW_RELEASES_DIR` | Another folder for kept official releases (and the PyPI listing copy) instead of `~/.psyneuview/releases`. |
 | `PSYNEUVIEW_DEPLOYMENT_MODE` | `local`, `mac_app`, `container` or `hosted` ([deployment modes](deployment-modes.md)). The visible default folder applies to `local` and `mac_app` on macOS only. |
 | `PSYNEUVIEW_PNL_UPDATE_CHECKS` | `0` keeps the scheduled PsyNeuLink update checks, the start-time install and the launch pulls off in this process (#1304). They are also off in test mode and wherever installing isn't possible. |
-| `PSYNEWVIEW_WORKING_DIR` | Another folder for the working copies of included models instead of `~/.psyneuview/working-copies` (the e2e harness uses a temp one). While it is set, no working copies are moved out of old installs. |
+| `PSYNEUVIEW_WORKING_DIR` | Another folder for the working copies of included models instead of `~/.psyneuview/working-copies` (the e2e harness uses a temp one). While it is set, no working copies are moved out of old installs. |
 | `PSYNEUVIEW_LAYOUTS_DIR` | Another folder for the layouts and labels of read-only PsyNeuLink files instead of `~/.psyneuview/layouts` (the e2e harness and the backend tests use a temp one). While it is set, nothing is moved there from the old places (#1321). |
 | `PSYNEUVIEW_CACHE_DIR` | Another folder for answers kept only to save time (the PsyNeuLink examples' load status) instead of `~/.psyneuview/cache` (the e2e harness and the backend tests use a temp one) (#175). |
-| `PSYNEWVIEW_TEST_MODE` | The test-only endpoints ([testing](testing.md)). |
+| `PSYNEUVIEW_TEST_MODE` | The test-only endpoints ([testing](testing.md)). |
 
-Note the two spellings: `PSYNEWVIEW_` is historical and kept; newer
+Note the two spellings: `PSYNEUVIEW_` is historical and kept; newer
 variables use `PSYNEUVIEW_`.
 
 ### The API
@@ -466,7 +466,7 @@ variables use `PSYNEUVIEW_`.
   including the clashing names.
 - `POST /api/catalogs/project-folder/move-offer/dismiss` — "Not now".
 - Test mode only: `POST /api/test/models-dir` clears or sets
-  `PSYNEWVIEW_MODELS_DIR` in the running backend, so a spec can move the
+  `PSYNEUVIEW_MODELS_DIR` in the running backend, so a spec can move the
   folder and put the variable back.
 
 ## How PsyNeuView names things it makes for you

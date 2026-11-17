@@ -254,7 +254,7 @@ def test_a_local_checkout_example_opens_in_place_and_editable(local_model):
 
 
 def test_a_github_example_opens_as_a_copy(github_model, tmp_path, monkeypatch):
-    monkeypatch.setenv("PSYNEWVIEW_WORKING_DIR", str(tmp_path / "working"))
+    monkeypatch.setenv("PSYNEUVIEW_WORKING_DIR", str(tmp_path / "working"))
     example = _with_example(github_model)
     resp = client.post("/api/psyneulink-examples/load", json={"name": "Demo"})
     assert resp.status_code == 200

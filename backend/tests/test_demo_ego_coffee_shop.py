@@ -30,17 +30,17 @@ def loaded(tmp_path_factory):
     # than with the function-scoped monkeypatch.
     import os
 
-    saved = os.environ.get("PSYNEWVIEW_WORKING_DIR")
-    os.environ["PSYNEWVIEW_WORKING_DIR"] = str(tmp_path_factory.mktemp("ego"))
+    saved = os.environ.get("PSYNEUVIEW_WORKING_DIR")
+    os.environ["PSYNEUVIEW_WORKING_DIR"] = str(tmp_path_factory.mktemp("ego"))
     try:
         resp = client.post("/api/demos/reset", json={"demo_name": COMPOSITION})
         assert resp.status_code == 200, resp.text
         yield resp.json()
     finally:
         if saved is None:
-            os.environ.pop("PSYNEWVIEW_WORKING_DIR", None)
+            os.environ.pop("PSYNEUVIEW_WORKING_DIR", None)
         else:
-            os.environ["PSYNEWVIEW_WORKING_DIR"] = saved
+            os.environ["PSYNEUVIEW_WORKING_DIR"] = saved
 
 
 def _sets(loaded):

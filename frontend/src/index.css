@@ -142,11 +142,11 @@ button:hover {
 /* #409: brief flash highlight on the labels.yaml line the Inspector
    just jumped to, in the amber of the YAML-cursor row (#1302). The fade-out is purely visual — the StateField
    clears the decoration after FLASH_DURATION_MS regardless. */
-.psynewview-yaml-flash {
+.psyneuview-yaml-flash {
   background: color-mix(in srgb, var(--pnv-warning-border) 55%, transparent);
-  animation: psynewview-yaml-flash-fade 1.2s ease-out;
+  animation: psyneuview-yaml-flash-fade 1.2s ease-out;
 }
-@keyframes psynewview-yaml-flash-fade {
+@keyframes psyneuview-yaml-flash-fade {
   0%   { background: color-mix(in srgb, var(--pnv-warning-border) 85%, transparent); }
   100% { background: color-mix(in srgb, var(--pnv-warning-border) 0%, transparent); }
 }
