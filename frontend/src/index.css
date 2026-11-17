@@ -142,11 +142,11 @@ button:hover {
 /* #409: brief flash highlight on the labels.yaml line the Inspector
    just jumped to, in the amber of the YAML-cursor row (#1302). The fade-out is purely visual — the StateField
    clears the decoration after FLASH_DURATION_MS regardless. */
-.psynewview-yaml-flash {
+.psyneuview-yaml-flash {
   background: color-mix(in srgb, var(--pnv-warning-border) 55%, transparent);
-  animation: psynewview-yaml-flash-fade 1.2s ease-out;
+  animation: psyneuview-yaml-flash-fade 1.2s ease-out;
 }
-@keyframes psynewview-yaml-flash-fade {
+@keyframes psyneuview-yaml-flash-fade {
   0%   { background: color-mix(in srgb, var(--pnv-warning-border) 85%, transparent); }
   100% { background: color-mix(in srgb, var(--pnv-warning-border) 0%, transparent); }
 }
@@ -265,4 +265,16 @@ html.pnv-busy * {
 .react-flow__node:hover .react-flow__handle.pnv-connector,
 .react-flow__handle.pnv-connector.connectingfrom {
   opacity: 1;
+}
+/* Settings search (#271): the control a search result took you to. */
+@keyframes pnv-setting-flash {
+  0%, 40% { background: var(--pnv-primary-tint); box-shadow: 0 0 0 3px var(--pnv-primary-tint); }
+  100% { background: transparent; box-shadow: 0 0 0 3px transparent; }
+}
+.pnv-setting-flash {
+  border-radius: 6px;
+  animation: pnv-setting-flash 1.6s ease-out;
+}
+.pnv-settings-search-result:hover {
+  background: var(--pnv-primary-tint) !important;
 }

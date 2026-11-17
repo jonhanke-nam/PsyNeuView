@@ -14,7 +14,7 @@
  * footprint, #652/#653).
  *
  * Read-only: it loads models but never resets backend state, so it can run
- * against any backend (it does not require PSYNEWVIEW_TEST_MODE).
+ * against any backend (it does not require PSYNEUVIEW_TEST_MODE).
  */
 // #1010: mutatingTest, not readOnlyTest. This spec loads "Stroop — Basic",
 // which code.tutorial replaces wholesale (nodes alpha/beta) and saves earlier in

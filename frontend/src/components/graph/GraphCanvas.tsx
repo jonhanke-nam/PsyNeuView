@@ -4,6 +4,8 @@
  * Handles: drag layout saving, new connections → projections, node deletion.
  */
 
+import { CanvasContextMenu, EdgeContextMenu } from "./GraphMenus";
+import { arrowShaped, reshapeDescription, startShapingArrow } from "@/utils/arrowShapes";
 import { PortChooser, type ConnectionOption } from "./PortChooser";
 import { CONNECT_HANDLE, NODE_TARGET_HANDLE } from "./connectHandles";
 import { registerVisibleCentre } from "@/utils/graphViewport";
@@ -62,6 +64,20 @@ import { graphCursorVars, graphPointerClass } from "@/utils/graphCursor";
 import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
 import { clampIoDrag, tidyIoRows } from "@/utils/ioRows";
 import { ioRowsNotApplying, registerCanvasTidy, useIoRowsStore } from "@/stores/ioRowsStore";
+
+/** A Mac, judged as the graph library judges it (by the user agent). */
+const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
+
+/** #261: Command (Ctrl off the Mac) and Shift both add to or take from the selection. */
+const MULTI_SELECT_KEYS = IS_MAC ? ["Meta", "Shift"] : ["Control", "Shift"];
+
+/**
+ * #261: on a Mac, Control-click is a secondary click. macOS usually turns it
+ * into one before the page sees it, but not always (nor in a browser told it
+ * is on a Mac), so a Control-click that arrives as a click is routed to the
+ * menu here.
+ */
+const isMacSecondaryClick = (e: React.MouseEvent | MouseEvent) => IS_MAC && e.ctrlKey && !e.metaKey;
 
 const nodeTypes = {
   mechanismNode: MechanismNode,
@@ -604,9 +620,15 @@ export function GraphCanvas() {
         }
         return;
       }
+      // #261: a plain click on a node inside a multi-selection selects just
+      // that node, as in Finder. The graph library keeps the group (so it can
+      // be dragged together); a click, not a drag, is the user picking one.
+      if (!(_.metaKey || _.ctrlKey || _.shiftKey) && nodesRef.current.some((n) => n.selected && n.id !== node.id)) {
+        setNodes((ns) => ns.map((n) => (n.selected === (n.id === node.id) ? n : { ...n, selected: n.id === node.id })));
+      }
       setSelectedNodeId(node.id);
     },
-    [setSelectedNodeId, setPendingConditionGesture, setPendingProjectionGesture, filePath, setSource, loadModelFromServer, placeArmed]
+    [setSelectedNodeId, setPendingConditionGesture, setPendingProjectionGesture, filePath, setSource, loadModelFromServer, setNodes, placeArmed]
   );
 
   // Esc cancels an armed condition gesture.
@@ -632,11 +654,48 @@ export function GraphCanvas() {
   const onNodeContextMenu = useCallback(
     (e: React.MouseEvent, node: any) => {
       e.preventDefault();
+      // #261: a secondary click on an unselected node makes it the selection,
+      // so the menu is about what is selected; inside a selection, the
+      // selection stays.
+      if (!node.selected) {
+        setNodes((ns) => ns.map((n) => (n.selected === (n.id === node.id) ? n : { ...n, selected: n.id === node.id })));
+        setEdges((es) => es.map((ed) => (ed.selected ? { ...ed, selected: false } : ed)));
+        setSelectedNodeId(node.id);
+      }
+      setGraphMenu(null);
       const label = (node.data as any)?.label || node.id;
       setContextMenu({ nodeId: node.id, nodeLabel: label, nodeType: node.type || "", x: e.clientX, y: e.clientY });
     },
-    []
+    [setNodes, setEdges, setSelectedNodeId]
   );
+
+  // #261: an arrow's menu and the canvas's, so everything on the graph has one.
+  const [graphMenu, setGraphMenu] = useState<
+    | { kind: "edge"; edgeId: string; source: string; target: string; name: string; x: number; y: number }
+    | { kind: "pane"; x: number; y: number }
+    | null
+  >(null);
+  const onEdgeContextMenu = useCallback(
+    (e: React.MouseEvent, edge: any) => {
+      e.preventDefault();
+      setContextMenu(null);
+      setSelectedEdgeId(edge.id);
+      const name = typeof edge.data?.label === "string" ? edge.data.label : (typeof edge.label === "string" ? edge.label : edge.id);
+      setGraphMenu({ kind: "edge", edgeId: edge.id, source: edge.source, target: edge.target, name, x: e.clientX, y: e.clientY });
+    },
+    [],
+  );
+  const onPaneContextMenu = useCallback((e: React.MouseEvent | MouseEvent) => {
+    // Never the web view's own menu (Reload, Inspect Element) on the graph.
+    e.preventDefault();
+    setContextMenu(null);
+    setGraphMenu({ kind: "pane", x: e.clientX, y: e.clientY });
+  }, []);
+  const selectOnly = useCallback((nodeIds: string[] | "all") => {
+    setNodes((ns) => ns.map((n) => ({ ...n, selected: nodeIds === "all" || nodeIds.includes(n.id) })));
+    setEdges((es) => es.map((ed) => (ed.selected ? { ...ed, selected: false } : ed)));
+    if (nodeIds !== "all" && nodeIds.length === 1) setSelectedNodeId(nodeIds[0]);
+  }, [setNodes, setEdges, setSelectedNodeId]);
 
   const onEdgeClick = useCallback(
     (_: React.MouseEvent, edge: any) => {
@@ -760,7 +819,7 @@ export function GraphCanvas() {
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      const data = e.dataTransfer.getData("application/psynewview-node");
+      const data = e.dataTransfer.getData("application/psyneuview-node");
       if (!data || !filePath) return;
       const { type: mechType, defaults } = JSON.parse(data);
 
@@ -957,12 +1016,17 @@ export function GraphCanvas() {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
-              onNodeClick={onNodeClick}
+              onNodeClick={(e, n) => (isMacSecondaryClick(e) ? onNodeContextMenu(e, n) : onNodeClick(e, n))}
               onNodeContextMenu={onNodeContextMenu}
-              onEdgeClick={onEdgeClick}
+              onEdgeContextMenu={onEdgeContextMenu}
+              onPaneContextMenu={onPaneContextMenu}
+              // #261: Shift-click extends the selection as Command-click does
+              // (Ctrl-click off the Mac); Shift-drag still draws a box.
+              multiSelectionKeyCode={MULTI_SELECT_KEYS}
+              onEdgeClick={(e, ed) => (isMacSecondaryClick(e) ? onEdgeContextMenu(e, ed) : onEdgeClick(e, ed))}
               onNodeDrag={onNodeDrag}
               onNodeDragStop={onNodeDragStop}
-              onPaneClick={onPaneClick}
+              onPaneClick={(e) => (isMacSecondaryClick(e) ? onPaneContextMenu(e) : onPaneClick(e))}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               nodesDraggable={!autoLayout}
@@ -989,6 +1053,33 @@ export function GraphCanvas() {
               </Controls>
               {/* TODO: Re-add MiniMap as a toggleable overlay with repositioning support */}
             </ReactFlow>
+          )}
+          {graphMenu?.kind === "edge" && (
+            <EdgeContextMenu
+              x={graphMenu.x}
+              y={graphMenu.y}
+              shaped={(useEdgeAttach.getState().waypoints[graphMenu.edgeId]?.length ?? 0) > 0}
+              onSelectSender={() => { selectOnly([graphMenu.source]); setGraphMenu(null); }}
+              onSelectReceiver={() => { selectOnly([graphMenu.target]); setGraphMenu(null); }}
+              onResetShape={() => {
+                // The same as double-clicking a shaped arrow (#164): one step.
+                startShapingArrow();
+                useEdgeAttach.getState().clearWaypoints(graphMenu.edgeId);
+                arrowShaped(reshapeDescription(graphMenu.name, "reset"));
+                setGraphMenu(null);
+              }}
+              onClose={() => setGraphMenu(null)}
+            />
+          )}
+          {graphMenu?.kind === "pane" && (
+            <CanvasContextMenu
+              x={graphMenu.x}
+              y={graphMenu.y}
+              onSelectAll={() => { selectOnly("all"); setGraphMenu(null); }}
+              onFit={() => { fitGraph(); setGraphMenu(null); }}
+              onShowComponents={() => { usePaletteStore.getState().setOpen(true); setGraphMenu(null); }}
+              onClose={() => setGraphMenu(null)}
+            />
           )}
           {contextMenu && (
             <NodeContextMenu

@@ -21,7 +21,7 @@ frontend/test-results
 frontend/playwright-report
 frontend/tsconfig.tsbuildinfo
 backend/*.egg-info
-backend/psynewview.egg-info
+backend/psyneuview.egg-info
 
 # Tests and their fixtures: the image ships the app, not the suite. CI runs
 # pytest against a checkout, not against this image.

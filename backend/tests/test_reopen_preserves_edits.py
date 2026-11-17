@@ -25,7 +25,7 @@ def _load(**body):
 @pytest.fixture
 def working(tmp_path, monkeypatch):
     """Point the working dir at a tmp path so tests never touch backend/."""
-    monkeypatch.setenv("PSYNEWVIEW_WORKING_DIR", str(tmp_path))
+    monkeypatch.setenv("PSYNEUVIEW_WORKING_DIR", str(tmp_path))
     return tmp_path / f"{MODEL}.py"
 
 

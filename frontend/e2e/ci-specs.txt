@@ -25,6 +25,7 @@ fit-frames-edges.spec.ts
 flat-layout-namespace.spec.ts
 flat-view.spec.ts
 github-file-loader.spec.ts
+graph-click-conventions.spec.ts
 graph-fills-window.spec.ts
 graph-hit-areas.spec.ts
 graph-legend.spec.ts
@@ -88,6 +89,7 @@ run-record-yaml.spec.ts
 run-set-survives-edit.spec.ts
 scheduling-arrows-setting.spec.ts
 settings-panel.spec.ts
+settings-search.spec.ts
 shape-mismatch-explained.spec.ts
 show-cims-at-once.spec.ts
 show-graph-agreement.spec.ts
@@ -115,4 +117,5 @@ value-grid.spec.ts
 view-only-tags-setting.spec.ts
 walkthrough-layout-restore.spec.ts
 watch-status-in-bar.spec.ts
+watch-two-windows.spec.ts
 where-things-live.spec.ts

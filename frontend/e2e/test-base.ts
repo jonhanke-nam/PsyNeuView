@@ -5,7 +5,7 @@
  *   - `readOnlyTest`: no per-test reset. Use for tests that only read
  *     backend state (the app-shell smoke is the canonical example).
  *   - `mutatingTest`: POSTs /api/test/reset before each test, which
- *     clears PSYNEWVIEW_WORKING_DIR and restarts the warm worker. Use
+ *     clears PSYNEUVIEW_WORKING_DIR and restarts the warm worker. Use
  *     when a test loads a demo, edits source, runs a model, etc.
  *
  * `mutatingTest` is markedly slower because the warm worker re-imports
@@ -52,8 +52,8 @@ const IO_ROWS_KEY = "psyneuview.graph.ioRows";
  * Learn…) on screen, so it keeps them on unless a spec asks otherwise. A spec
  * about the default sets the keys in its own `addInitScript`.
  */
-const LAYOUT_CODE_VISIBLE_KEY = "psynewview_layout_code_visible";
-const LAYOUT_BOTTOM_VISIBLE_KEY = "psynewview_layout_bottom_visible";
+const LAYOUT_CODE_VISIBLE_KEY = "psyneuview_layout_code_visible";
+const LAYOUT_BOTTOM_VISIBLE_KEY = "psyneuview_layout_bottom_visible";
 
 /**
  * Start with the Open menu's catalog sections expanded.
@@ -135,7 +135,7 @@ export const mutatingTest = base.extend({
     if (!resp.ok()) {
       throw new Error(
         `mutatingTest beforeEach: /api/test/reset returned ${resp.status()} — ` +
-          `is the backend running with PSYNEWVIEW_TEST_MODE=1?`,
+          `is the backend running with PSYNEUVIEW_TEST_MODE=1?`,
       );
     }
     await expandOpenMenuSections(page);

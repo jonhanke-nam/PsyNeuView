@@ -7,7 +7,7 @@ manages. The remembered-sources list Settings switches between (#1276) lives
 beside it, under its own key; see ``remember_source`` below. Auto-populated on each install submit — the user doesn't have to
 "save" anything; we just remember.
 
-Storage: a ``source_history`` key inside ``~/.psynewview.json``, the same
+Storage: a ``source_history`` key inside ``~/.psyneuview.json``, the same
 config file that already holds ``model_dirs``. Schema:
 
     {
@@ -411,7 +411,7 @@ def _write_config_atomic(path: Path, config: dict) -> None:
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(
-        prefix=".psynewview.", suffix=".tmp", dir=str(path.parent)
+        prefix=".psyneuview.", suffix=".tmp", dir=str(path.parent)
     )
     try:
         with os.fdopen(fd, "w") as f:

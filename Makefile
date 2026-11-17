@@ -1,4 +1,4 @@
-# PsyNewView Makefile
+# PsyNeuView Makefile
 # One-command setup and launch for the PsyNeuLink visual editor.
 #
 # Multi-branch testing:
@@ -45,7 +45,7 @@ FRONTEND_PORT ?= $(shell echo $$((5173 + $(SLOT))))
         release-pdfs
 
 help: ## Show this help message
-	@echo "PsyNewView Development Makefile"
+	@echo "PsyNeuView Development Makefile"
 	@echo ""
 	@echo "Usage: make <target>"
 	@echo ""
@@ -169,7 +169,7 @@ backend: install ## Start the backend server (PORT=8000, or set SLOT/PORT)
 		done; \
 		echo ""; \
 		if $$is_ours; then \
-			echo "PsyNewView backend is already running on port $(PORT)."; \
+			echo "PsyNeuView backend is already running on port $(PORT)."; \
 			echo ""; \
 			echo "  Nothing to do — open http://localhost:$(PORT)/docs"; \
 			echo "  To restart:  kill $$pid && make backend PORT=$(PORT)"; \
@@ -204,7 +204,7 @@ frontend: install-frontend ## Start the frontend dev server (FRONTEND_PORT=5173,
 			rm -f frontend/node_modules/.vite-restart-needed; \
 			sleep 1; \
 		elif $$is_ours; then \
-			echo "PsyNewView frontend is already running on port $(FRONTEND_PORT)."; \
+			echo "PsyNeuView frontend is already running on port $(FRONTEND_PORT)."; \
 			echo ""; \
 			echo "  Nothing to do — open http://localhost:$(FRONTEND_PORT)"; \
 			echo "  To restart:  kill $$pid && make frontend FRONTEND_PORT=$(FRONTEND_PORT)"; \
@@ -278,7 +278,7 @@ dev: install install-frontend ## Start both servers in background (use SLOT=N fo
 		echo "Frontend ready on port $(FRONTEND_PORT)."; \
 	fi
 	@echo ""
-	@echo "PsyNewView is running (SLOT=$(SLOT)):"
+	@echo "PsyNeuView is running (SLOT=$(SLOT)):"
 	@echo "  Frontend:  http://localhost:$(FRONTEND_PORT)"
 	@echo "  Backend:   http://localhost:$(PORT)/docs"
 	@echo ""
@@ -362,7 +362,7 @@ stop: ## Stop servers on configured ports (use SLOT=N to match)
 		echo "Nothing running on ports $(PORT) or $(FRONTEND_PORT)."; \
 	fi
 
-stop-all: ## Stop all PsyNewView instances (scans ports 8000-8009 / 5173-5182)
+stop-all: ## Stop all PsyNeuView instances (scans ports 8000-8009 / 5173-5182)
 	@stopped=false; \
 	for port in $$(seq 8000 8009); do \
 		pid=$$(lsof -tiTCP:$$port -sTCP:LISTEN 2>/dev/null | head -1); \
@@ -385,13 +385,13 @@ stop-all: ## Stop all PsyNewView instances (scans ports 8000-8009 / 5173-5182)
 		fi; \
 	done; \
 	if ! $$stopped; then \
-		echo "No PsyNewView instances found."; \
+		echo "No PsyNeuView instances found."; \
 	fi
 
 # --- Status ---
 
-status: ## Show all running PsyNewView instances, and which checkout each serves
-	@echo "PsyNewView instances:"
+status: ## Show all running PsyNeuView instances, and which checkout each serves
+	@echo "PsyNeuView instances:"
 	@echo ""
 	@served_from() { \
 		cwd=$$(lsof -a -d cwd -p $$1 -Fn 2>/dev/null | sed -n 's/^n//p' | head -1); \

@@ -1,12 +1,13 @@
 """Discover and browse model directories.
 
 Model directories are resolved in this order:
-1. PSYNEWVIEW_MODELS_DIR env var (colon-separated paths)
-2. ~/.psynewview.json config file ({"model_dirs": [...]})
+1. PSYNEUVIEW_MODELS_DIR env var (colon-separated paths)
+2. ~/.psyneuview.json config file ({"model_dirs": [...]})
 3. Default: see :func:`default_models_dir` (#1295) — on a Mac, a visible
    folder under ~/Documents; elsewhere ./models/ relative to the repo root.
 """
 
+from app.services import env_names
 import json
 import os
 import re
@@ -108,7 +109,7 @@ def _format_label(stem: str) -> str:
 
 # The one variable read for the project folder. Settings shows this name when
 # the folder is fixed by it (#1290); keep the two in step through this constant.
-MODELS_DIR_ENV = "PSYNEWVIEW_MODELS_DIR"
+MODELS_DIR_ENV = "PSYNEUVIEW_MODELS_DIR"  # PSYNEUVIEW_MODELS_DIR still read (#258)
 
 
 def get_model_dirs() -> list[Path]:
@@ -116,7 +117,7 @@ def get_model_dirs() -> list[Path]:
     dirs: list[Path] = []
 
     # 1. Environment variable
-    env = os.environ.get(MODELS_DIR_ENV)
+    env = env_names.env("MODELS_DIR")
     if env:
         for p in env.split(":"):
             p = p.strip()

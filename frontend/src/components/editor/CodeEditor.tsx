@@ -749,7 +749,7 @@ export function CodeEditor() {
           event.preventDefault();
           event.stopPropagation();
           // Dispatch a custom event so App.tsx can handle the file import
-          const customEvent = new CustomEvent("psynewview:file-drop", {
+          const customEvent = new CustomEvent("psyneuview:file-drop", {
             detail: { files: Array.from(files) },
           });
           window.dispatchEvent(customEvent);
@@ -1229,7 +1229,7 @@ const flashLineField = StateField.define<DecorationSet>({
       if (e.is(flashLineEffect) && e.value !== null) {
         const line = tr.state.doc.line(e.value);
         next = Decoration.set([
-          Decoration.line({ attributes: { class: "psynewview-yaml-flash" } }).range(line.from),
+          Decoration.line({ attributes: { class: "psyneuview-yaml-flash" } }).range(line.from),
         ]);
       } else if (e.is(clearFlashEffect)) {
         next = Decoration.none;

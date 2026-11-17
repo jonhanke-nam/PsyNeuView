@@ -15,7 +15,7 @@
  * and produces per-trial results.
  *
  * Read-only: loads + runs but never resets backend state, so it runs against
- * any backend (no PSYNEWVIEW_TEST_MODE required).
+ * any backend (no PSYNEUVIEW_TEST_MODE required).
  */
 import { readOnlyTest as test, expect } from "../test-base";
 import { fileURLToPath } from "url";

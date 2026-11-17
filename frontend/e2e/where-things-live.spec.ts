@@ -18,7 +18,7 @@ type Page = import("@playwright/test").Page;
 
 /**
  * The harness's working-copies folder (playwright.config sets
- * PSYNEWVIEW_WORKING_DIR to it); for a user it is ~/.psyneuview/working-copies
+ * PSYNEUVIEW_WORKING_DIR to it); for a user it is ~/.psyneuview/working-copies
  * (#1319). Resolved the way the backend reports it.
  */
 function sessionWorkingDir(): string {
@@ -176,7 +176,7 @@ test("Developer lists the managed copies; one not in use can be removed after co
         },
         projectFolder: { path: "/Users/someone/Documents/PsyNeuView-My-Models", exists: true, fixed: false, fixedBy: null },
         catalogs: [],
-        appData: { root: "/Users/someone/.psyneuview", sources: "/Users/someone/.psyneuview/sources", configFile: "/Users/someone/.psynewview.json" },
+        appData: { root: "/Users/someone/.psyneuview", sources: "/Users/someone/.psyneuview/sources", configFile: "/Users/someone/.psyneuview.json" },
         managedCopies: copies(),
         checkouts: [{ path: "/Users/someone/code/PsyNeuLink", label: null, exists: true, in_use: false }],
       },

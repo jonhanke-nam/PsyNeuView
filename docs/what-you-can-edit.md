@@ -332,7 +332,7 @@ downloaded is unprotected; the dialog says so. (A `.pnlproject` bundle keeps
 the model's file exactly as it is, line included.)
 
 **Where the unlock is remembered.** In PsyNeuView's preferences on this
-computer (`protected_models_unlocked` in `~/.psynewview.json`, a list of the
+computer (`protected_models_unlocked` in `~/.psyneuview.json`, a list of the
 unlocked files' paths), next to the protected checkouts — not in the model's
 layout file, which sits beside the model and may be committed with it. An
 unlock is your choice on your computer; the line is the file's statement for
@@ -456,7 +456,7 @@ against.
   `frontend/src/utils/protectionLine.ts`, which mirrors the backend's rule.
 - Reference and demo working copies are made by `/api/reference-models/load`
   and `/api/demos/reset` in `backend/app/api/routes.py`; the working folder
-  is `PSYNEWVIEW_WORKING_DIR` when set (the e2e harness sets it), else
+  is `PSYNEUVIEW_WORKING_DIR` when set (the e2e harness sets it), else
   `backend/`.
 - Autosave's rules and timer are `frontend/src/utils/autosave.ts`, wired to
   the stores in `frontend/src/hooks/useAutosave.ts`; it saves by sending the

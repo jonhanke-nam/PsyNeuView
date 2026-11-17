@@ -129,7 +129,7 @@ export function FoldersSection() {
         <LayoutsRow />
         <div style={{ ...mutedStyle, marginTop: 8 }}>
           App data stays hidden under <code>~/.psyneuview</code> (managed PsyNeuLink copies, working copies, caches) and{" "}
-          <code>~/.psynewview.json</code> (settings). Where PsyNeuView and PsyNeuLink are installed, and the
+          <code>~/.psyneuview.json</code> (settings). Where PsyNeuView and PsyNeuLink are installed, and the
           managed copies: Developer.
         </div>
       </div>
@@ -220,7 +220,7 @@ function ProjectFolderRow() {
               // Regular users never set this variable; developer setups and the test
               // suite do. Say so, and mark it as developer territory.
               <div data-testid="project-folder-fixed" style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)", marginTop: 2 }}>
-                Fixed by the <code>{projectFolder.fixedBy ?? "PSYNEWVIEW_MODELS_DIR"}</code> environment
+                Fixed by the <code>{projectFolder.fixedBy ?? "PSYNEUVIEW_MODELS_DIR"}</code> environment
                 variable, which developers and the test suite set. Regular users never need it.
                 <DeveloperBadge audience="developers" />
               </div>

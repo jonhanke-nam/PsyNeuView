@@ -51,12 +51,12 @@ except ImportError:
         pass
 
 
-RESULT_MARKER = "###PSYNEWVIEW_RESULT###"
+RESULT_MARKER = "###PSYNEUVIEW_RESULT###"
 
 # Emitted on stdout *before* RESULT_MARKER by streaming-capable tasks
 # (#535 job layer). Consumers that split on RESULT_MARKER (warm worker,
 # cold-start fallback) are unaffected by these extra lines.
-PROGRESS_MARKER = "###PSYNEWVIEW_PROGRESS###"
+PROGRESS_MARKER = "###PSYNEUVIEW_PROGRESS###"
 
 # Parameters to skip in introspection
 _SKIP_MECH_PARAMS = {
@@ -4252,7 +4252,7 @@ def _run_persistent():
     Protocol:
     1. Print "###READY###" when PsyNeuLink is imported and ready
     2. Read one JSON line from stdin per task
-    3. Print "###PSYNEWVIEW_RESULT###" marker, then JSON result on next line
+    3. Print "###PSYNEUVIEW_RESULT###" marker, then JSON result on next line
     4. Repeat until stdin closes
     """
     import time

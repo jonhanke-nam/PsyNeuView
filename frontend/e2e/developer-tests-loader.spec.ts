@@ -47,7 +47,7 @@ function mockDiscover(page: import("@playwright/test").Page) {
 
 async function enableDeveloperMode(page: import("@playwright/test").Page) {
   await page.evaluate(() => {
-    localStorage.setItem("psynewview_ui_prefs_developerMode", "true");
+    localStorage.setItem("psyneuview_ui_prefs_developerMode", "true");
   });
 }
 
@@ -150,7 +150,7 @@ test.describe("@smoke developer tests loader", { tag: "@ci" }, () => {
     await expect(page.getByTestId("app-toolbar")).toBeVisible();
     // Ensure dev mode is off (the default, but be explicit).
     await page.evaluate(() => {
-      localStorage.removeItem("psynewview_ui_prefs_developerMode");
+      localStorage.removeItem("psyneuview_ui_prefs_developerMode");
     });
     await page.reload();
 

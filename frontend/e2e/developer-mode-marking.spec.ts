@@ -12,7 +12,7 @@ import { readOnlyTest as test, expect, SHOWN_DEV_SECTIONS_KEY } from "./test-bas
 
 type Page = import("@playwright/test").Page;
 
-const DEV_MODE_KEY = "psynewview_ui_prefs_developerMode";
+const DEV_MODE_KEY = "psyneuview_ui_prefs_developerMode";
 
 async function openMenu(page: Page) {
   await page.getByRole("button", { name: /Open/ }).first().click();

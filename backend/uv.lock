@@ -2566,7 +2566,7 @@ wheels = [
 ]
 
 [[package]]
-name = "psynewview"
+name = "psyneuview"
 version = "0.6.14"
 source = { editable = "." }
 dependencies = [

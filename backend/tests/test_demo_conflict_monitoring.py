@@ -24,7 +24,7 @@ COLOR_HIDDEN, RESPONSE, ENERGY, WORD_HIDDEN, TASK_DEMAND = range(5)
 @pytest.fixture
 def loaded(tmp_path, monkeypatch):
     # /demos/reset writes a working copy; keep it out of backend/ (#1134).
-    monkeypatch.setenv("PSYNEWVIEW_WORKING_DIR", str(tmp_path))
+    monkeypatch.setenv("PSYNEUVIEW_WORKING_DIR", str(tmp_path))
     resp = client.post("/api/demos/reset", json={"demo_name": "conflict_monitoring"})
     assert resp.status_code == 200, resp.text
     return resp.json()
