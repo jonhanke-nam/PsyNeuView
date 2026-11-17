@@ -38,4 +38,5 @@ def test_stroop_with_a_shape_mismatch_reports_the_broken_connection(tmp_path):
     assert "color_input_to_hidden" in names
     b = next(b for b in broken if b["varName"] == "color_input_to_hidden")
     assert (b["senderRef"], b["receiverRef"]) == ("color_input", "color_hidden")
-    assert "(3)" in b["error"]
+    # PsyNeuLink 0.19 writes the shape "(3)", 0.21 a tuple "(3,)" (#264).
+    assert re.search(r"\(3,?\)", b["error"]), b["error"]

@@ -30,9 +30,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # The same PsyNeuLink the other jobs test (PSYNEULINK_GIT_REF in
-  # backend-tests.yml): this job varies the tools and the other packages, not
-  # PsyNeuLink.
+  # The PsyNeuLink the other jobs test (PSYNEULINK_GIT_REF in
+  # backend-tests.yml). The matrix below also runs against Princeton's devel,
+  # the PsyNeuLink people actually get (#264).
   PSYNEULINK_GIT_REF: b0a750db14f0e18f13f4af6d4228e5824a7f2797
   PYTHON_VERSION: "3.13"
 
@@ -57,8 +57,17 @@ jobs:
           [ "$none" = "Installing with pip" ] && [ "$broken" = "Installing with pip" ] && [ "$optout" = "Installing with pip" ]
 
   pip-tests:
-    name: backend pytest (pip, newest versions)
+    name: backend pytest (pip, newest versions, PsyNeuLink ${{ matrix.psyneulink }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # "pinned": the commit every other job tests. "devel": Princeton's
+        # devel as of tonight, which is what the Mac app installs by default
+        # (#264). CI pins an older commit, so a change in PsyNeuLink's own
+        # wording or behaviour broke tests here only for people on the newer
+        # one; this shows it overnight.
+        psyneulink: [pinned, devel]
     timeout-minutes: 60
     permissions:
       contents: read
@@ -91,15 +100,18 @@ jobs:
         run: |
           python -m venv backend/.venv
           backend/.venv/bin/pip install --upgrade pip wheel
-          backend/.venv/bin/pip install "git+https://github.com/PrincetonUniversity/PsyNeuLink.git@${PSYNEULINK_GIT_REF}"
+          ref="${PSYNEULINK_GIT_REF}"
+          [ "${{ matrix.psyneulink }}" = devel ] && ref=devel
+          backend/.venv/bin/pip install "git+https://github.com/PrincetonUniversity/PsyNeuLink.git@${ref}"
           backend/.venv/bin/pip install -e "backend/[dev]"
           backend/.venv/bin/pip freeze > pip-freeze.txt
+          backend/.venv/bin/python -c "import psyneulink; print('PsyNeuLink', psyneulink.__version__)"
 
       - name: Keep what was installed
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pip-freeze
+          name: pip-freeze-${{ matrix.psyneulink }}
           path: pip-freeze.txt
           if-no-files-found: ignore
 
