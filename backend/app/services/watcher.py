@@ -178,5 +178,100 @@ def _hash_file(file_path: str) -> str | None:
         return None
 
 
-# Global watcher instance
-file_watcher = ModelFileWatcher()
+class WatchRegistry:
+    """One watcher per watched file, shared by everyone who has it open (#272).
+
+    There used to be a single ModelFileWatcher for the whole server. Each
+    window's "watch this file" re-pointed it, so with two windows on different
+    models only the one asked last was watched; and any window closing stopped
+    it, so every other window silently stopped noticing outside edits. Now each
+    subscriber (a WebSocket) watches its own file: a file's watcher starts with
+    its first subscriber, keeps its baseline as others join (a second window
+    doesn't swallow a pending change), and stops only when its last one leaves.
+    """
+
+    def __init__(self, debounce_ms: int = 500):
+        self._debounce_ms = debounce_ms
+        self._lock = threading.Lock()
+        self._watchers: dict[str, ModelFileWatcher] = {}
+        self._subscribers: dict[str, set] = {}
+        self._file_of: dict[object, str] = {}
+
+    @staticmethod
+    def _key(file_path: str) -> str:
+        try:
+            return str(Path(file_path).resolve())
+        except OSError:
+            return file_path
+
+    def subscribe(self, subscriber, file_path: str, callback) -> None:
+        """``subscriber`` follows ``file_path``; ``callback(file_path)`` runs on
+        an outside change. A subscriber follows one file: subscribing again
+        moves it."""
+        key = self._key(file_path)
+        stop = None
+        with self._lock:
+            previous = self._file_of.get(subscriber)
+            if previous == key:
+                return
+            if previous is not None:
+                stop = self._leave(subscriber, previous)
+            self._file_of[subscriber] = key
+            self._subscribers.setdefault(key, set()).add(subscriber)
+            watcher = self._watchers.get(key)
+            if watcher is None:
+                watcher = ModelFileWatcher(debounce_ms=self._debounce_ms)
+                self._watchers[key] = watcher
+                watcher.watch(file_path, callback)
+        if stop is not None:
+            stop.stop()
+
+    def unsubscribe(self, subscriber) -> None:
+        """``subscriber`` follows nothing now (it paused, or it went away)."""
+        with self._lock:
+            key = self._file_of.get(subscriber)
+            stop = self._leave(subscriber, key) if key is not None else None
+        if stop is not None:
+            stop.stop()
+
+    def _leave(self, subscriber, key: str):
+        """Drop ``subscriber`` from ``key``; return the watcher to stop if it
+        was the last one (stopped outside the lock)."""
+        self._file_of.pop(subscriber, None)
+        subs = self._subscribers.get(key)
+        if subs is not None:
+            subs.discard(subscriber)
+            if not subs:
+                self._subscribers.pop(key, None)
+                return self._watchers.pop(key, None)
+        return None
+
+    def subscribers(self, file_path: str) -> set:
+        """Who follows ``file_path`` now."""
+        with self._lock:
+            return set(self._subscribers.get(self._key(file_path), ()))
+
+    def watched_paths(self) -> list[str]:
+        with self._lock:
+            return list(self._watchers)
+
+    def note_internal_write(self, file_path: str, content: str) -> None:
+        """PsyNeuView itself wrote ``file_path``: not an outside edit."""
+        with self._lock:
+            watcher = self._watchers.get(self._key(file_path))
+        if watcher is not None:
+            watcher.note_internal_write(file_path, content)
+
+    def stop(self) -> None:
+        """Stop watching everything (shutdown, tests)."""
+        with self._lock:
+            watchers = list(self._watchers.values())
+            self._watchers.clear()
+            self._subscribers.clear()
+            self._file_of.clear()
+        for watcher in watchers:
+            watcher.stop()
+
+
+# The server's watchers: one per watched file (#272).
+file_watcher = WatchRegistry()
