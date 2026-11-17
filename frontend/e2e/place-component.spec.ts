@@ -12,19 +12,19 @@ import { fixturePath } from "./fixtures";
 
 type Page = import("@playwright/test").Page;
 
-function scratchModel(): string {
+function scratchModel(fixture: "two_mech_projection" | "nested_minimal" = "two_mech_projection"): string {
   const dir = mkdtempSync(path.join(tmpdir(), "place252-"));
-  const file = path.join(dir, "two_mech_projection.py");
-  writeFileSync(file, readFileSync(fixturePath("two_mech_projection"), "utf8"));
+  const file = path.join(dir, `${fixture}.py`);
+  writeFileSync(file, readFileSync(fixturePath(fixture), "utf8"));
   return file;
 }
 
-async function open(page: Page) {
+async function open(page: Page, file: string = scratchModel()) {
   await page.goto("/");
   await page.getByTestId("open-menu").click();
   await page.getByTestId("open-menu-open-from-path").click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
-  await prompt.fill(scratchModel());
+  await prompt.fill(file);
   await prompt.press("Enter");
   await page.getByRole("button", { name: /^Skip$/ }).click({ timeout: 5000 }).catch(() => {});
   await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 60_000 });
@@ -63,6 +63,48 @@ async function emptySpot(page: Page) {
 }
 
 test.describe("pick a component, then click where it goes (#252)", { tag: "@ci" }, () => {
+  test("a click inside a composition's frame adds it to that composition, there", async ({ page }) => {
+    const added = adds(page);
+    const file = scratchModel("nested_minimal");
+    await open(page, file);
+    const frame = page.locator('.react-flow__node-compositionNode[data-id="inner_comp"], .react-flow__node-compositionNode[data-id="cluster::inner_comp"]').first();
+    await expect(frame).toBeVisible();
+    const tm = await item(page, "TransferMechanism");
+    await tm.click();
+
+    // An empty spot inside the frame: its lower-left corner, clear of its nodes.
+    const box = (await frame.boundingBox())!;
+    const at = { x: box.x + 30, y: box.y + box.height - 30 };
+    const done = page.waitForResponse((r) => r.url().endsWith("/api/model/structural-change") && r.ok());
+    await page.mouse.click(at.x, at.y);
+    await done;
+    expect((added[0] as any).changes.composition).toBe("inner_comp");
+    await expect.poll(() => readFileSync(file, "utf8")).toMatch(/^inner_comp\.add_node\(New_TransferMechanism\w*\)/m);
+
+    // It is drawn inside the frame, where the click was.
+    const fresh = page.locator('.react-flow__node[data-id^="New_TransferMechanism"]').first();
+    await expect(fresh).toBeVisible({ timeout: 30_000 });
+    await page.waitForTimeout(400);
+    const f = (await frame.boundingBox())!;
+    const n = (await fresh.boundingBox())!;
+    const cx = n.x + n.width / 2, cy = n.y + n.height / 2;
+    expect(cx > f.x && cx < f.x + f.width && cy > f.y && cy < f.y + f.height, JSON.stringify({ f, n })).toBe(true);
+  });
+
+  test("a click on empty canvas, outside every frame, adds it to the top level", async ({ page }) => {
+    const added = adds(page);
+    const file = scratchModel("nested_minimal");
+    await open(page, file);
+    const tm = await item(page, "TransferMechanism");
+    await tm.click();
+    const pane = (await page.locator(".react-flow__pane").boundingBox())!;
+    const done = page.waitForResponse((r) => r.url().endsWith("/api/model/structural-change") && r.ok());
+    await page.mouse.click(pane.x + 12, pane.y + pane.height - 12);
+    await done;
+    expect((added[0] as any).changes.composition).not.toBe("inner_comp");
+    await expect.poll(() => readFileSync(file, "utf8")).not.toMatch(/^inner_comp\.add_node\(New_/m);
+  });
+
   test("a click on a component adds nothing; a click on the graph adds it there", async ({ page }) => {
     const added = adds(page);
     await open(page);
