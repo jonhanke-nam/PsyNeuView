@@ -56,6 +56,7 @@ import {
 } from "@/stores/graphLayoutDefaultStore";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { DEFAULT_IO_ROWS, IO_ROWS, isIoRows, ioRowsNotApplying, useIoRowsStore } from "@/stores/ioRowsStore";
+import { DEFAULT_LAYOUT_SPACING, LAYOUT_SPACINGS, isLayoutSpacing, useLayoutSpacingStore } from "@/stores/layoutSpacingStore";
 import { useModelStore } from "@/stores/modelStore";
 import { applyLayout } from "@/utils/layout";
 import { applyShowGraphLayoutNow } from "@/hooks/useShowGraphLayout";
@@ -108,6 +109,9 @@ export function AppearanceSection() {
       </Group>
       <Group id="automatic-layout" title="Automatic layout">
         <AutomaticLayoutRow />
+        <div style={{ marginTop: 14 }}>
+          <LayoutSpacingRow />
+        </div>
         <div style={{ marginTop: 14 }}>
           <IoRowsRow />
         </div>
@@ -182,6 +186,41 @@ function AutomaticLayoutRow() {
         ))}
       </select>
       {hint && <div style={{ ...mutedStyle, marginTop: 4 }}>{hint}</div>}
+    </div>
+  );
+}
+
+// #278: how far apart an automatic layout puts nodes. Changing it re-arranges
+// the open model if its layout is automatic, like the settings around it.
+function LayoutSpacingRow() {
+  const spacing = useLayoutSpacingStore((s) => s.spacing);
+  const setSpacing = useLayoutSpacingStore((s) => s.setSpacing);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <SettingLabel title="Spacing between nodes" htmlFor="setting-graph-layout-spacing">
+        How far apart an automatic layout puts nodes, so how long the lines
+        between them are. By default Layered is compact, and Like show_graph
+        keeps show_graph's own spacing so its picture matches show_graph's.
+        Nodes never overlap at any spacing. Radial and Force are left alone.
+      </SettingLabel>
+      <select
+        id="setting-graph-layout-spacing"
+        data-testid="setting-graph-layout-spacing"
+        value={spacing}
+        onChange={(e) => {
+          if (!isLayoutSpacing(e.target.value)) return;
+          setSpacing(e.target.value);
+          applyToOpenModel(useGraphSettings.getState().layoutStyle);
+        }}
+        style={selectStyle}
+      >
+        {LAYOUT_SPACINGS.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+            {o.id === DEFAULT_LAYOUT_SPACING ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
