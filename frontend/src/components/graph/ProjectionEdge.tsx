@@ -116,6 +116,18 @@ function persistPortOverrides(): void {
   }).catch(() => {});
 }
 
+/** How far a press on a connection dot must move to be a drag, not a click (#250). */
+export const DOT_DRAG_THRESHOLD_PX = 4;
+
+/**
+ * A click on something drawn over a node's rim, handed to the node (#250), so
+ * it selects as a click on the node's body would.
+ */
+export function clickNode(nodeId: string): void {
+  const el = document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(nodeId)}"]`);
+  el?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+}
+
 export function ProjectionEdge({
   id,
   source,
@@ -465,15 +477,21 @@ export function ProjectionEdge({
   // just THIS edge (edgeAttachStore); Alt/Option drag moves the whole PORT
   // (portLayoutStore, #282) so every edge on it follows. The angle is the cursor
   // projected onto the node oval (flow coords), same convention as #282.
+  const dotDragged = useRef(false);
   const startDotDrag = (end: EdgeEnd) => (e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const alt = e.altKey;
     const nodeId = end === "s" ? source : target;
     const handleId = end === "s" ? sourceHandleId : targetHandleId;
+    const startX = e.clientX, startY = e.clientY;
     let moved = false;
     const move = (ev: PointerEvent) => {
       if (!moved) {
+        // #250: a click is not a drag. Any motion used to count, so a click
+        // that wobbled a pixel reshaped the arrow (and, in Auto, made the
+        // layout Custom). The same threshold as a drag on the line (#957).
+        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DOT_DRAG_THRESHOLD_PX) return;
         moved = true;
         startShapingArrow(); // #164: in Auto, the layout becomes Custom
       }
@@ -490,6 +508,8 @@ export function ProjectionEdge({
     const up = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
+      // #250: whether the press was a drag, for the click that follows it.
+      dotDragged.current = moved;
       if (!moved) return;
       if (alt) persistPortOverrides(); // per-port survives reload (#282)
       // #164: saved on its own (since #1162 the per-edge end is saved with
@@ -713,6 +733,14 @@ export function ProjectionEdge({
                   className="nodrag nopan graph-control-point"
                   title={`${d.label}\ndrag: move this edge · Option-drag: move the whole port${autoLayout ? "\n(the layout becomes Custom)" : ""}`}
                   onPointerDown={startDotDrag(d.end)}
+                  // #250: the dot sits on the node's rim, above it, so a click
+                  // on it is a click on the node: hand it on, and stop it here.
+                  // Left to bubble, it reached the canvas, whose click clears
+                  // the selection.
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    if (!dotDragged.current) clickNode(d.end === "s" ? source : target);
+                  }}
                   onMouseEnter={() => {
                     setHovered(true);
                     setHoveredEnd(d.end);
@@ -803,7 +831,12 @@ export function ProjectionEdge({
             style={{
               position: "absolute",
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              pointerEvents: "all",
+              // #250: hidden, the label is only transparent, and it sits on
+              // the layer above the nodes. Catching the pointer then, it stole
+              // clicks on the node beneath it (with ports shown, at the rim
+              // where the arrow meets the node). It shows on hovering the
+              // line, so it needs the pointer only while it's showing.
+              pointerEvents: showLabel ? "all" : "none",
               fontSize: 10,
               color: isSelected ? "var(--pnv-primary)" : isCursorHighlighted ? "var(--pnv-cursor-highlight)" : "var(--pnv-text-secondary)",
               fontFamily: "monospace",
