@@ -14,7 +14,7 @@
 import { useModelStore } from "@/stores/modelStore";
 import { useLayoutStore } from "@/stores/layoutStore";
 import { useNotificationStore } from "@/stores/notificationStore";
-import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
 import { guardOpen } from "@/utils/tutorialGuard";
 
 /** Extensions the importer understands — also the file picker's `accept`. */
@@ -108,7 +108,7 @@ async function importPython(file: File): Promise<void> {
     const loadResp = await fetch("/api/model/load", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: fullPath, ...showGraphLoadRequest() }),
+      body: JSON.stringify({ file_path: fullPath, ...modelLoadOptions() }),
     });
     if (!loadResp.ok) {
       const err = await loadResp.json().catch(() => ({ detail: "Load failed" }));

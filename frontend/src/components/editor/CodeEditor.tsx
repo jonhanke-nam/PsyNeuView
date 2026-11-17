@@ -5,6 +5,7 @@
  * Ctrl+S / Cmd+S saves the code to the file and re-introspects the model.
  */
 
+import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
 import { useEffect, useRef, useCallback, useMemo, useState, type CSSProperties } from "react";
 import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { python } from "@codemirror/lang-python";
@@ -439,7 +440,8 @@ export function CodeEditor() {
       const resp = await fetch("/api/model/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file_path: filePath, source: currentSource }),
+        // The view the user is looking at (#257), or an edit rebuilt it nested.
+        body: JSON.stringify({ file_path: filePath, source: currentSource, ...modelLoadOptions() }),
         signal,
       });
       if (!resp.ok) {

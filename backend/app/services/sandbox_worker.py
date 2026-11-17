@@ -1194,7 +1194,26 @@ def task_introspect(params):
                 broken = []
             if broken:
                 result["brokenProjections"] = broken
-        if compositions:
+            # #254: a skipped statement that *defines* the model (a scheduler
+            # condition, an add_* call, a mechanism) is a real error even
+            # though the rest built. Reported as the load's error, with its
+            # line, every time; the graph still shows what did build.
+            try:
+                from app.services.dangling_check import find_skipped_definitions
+            except ModuleNotFoundError:
+                from dangling_check import find_skipped_definitions  # script context
+            try:
+                definitions = find_skipped_definitions(
+                    _Path(file_path).read_text(), skipped_statements)
+            except OSError:
+                definitions = []
+            if definitions and compositions:
+                result["error"] = definitions[0]["error"]
+                result["errorLine"] = definitions[0]["line"]
+                result["definitionErrors"] = definitions
+        if compositions and "error" in result:
+            pass  # a definition error, set above (#254): not a driver notice
+        elif compositions:
             # #796: the model's definition loaded (compositions present). The
             # error is from a skipped module-level driver statement — e.g.
             # accessing run results / log data after the introspector's no-op'd
@@ -2841,6 +2860,61 @@ def _pick_primary_projection(chain):
     return chain[0]
 
 
+def _flat_root_cim(comp, cim_info, flat_nodes, pnl):
+    """The outer composition's CIMs for the flat view (#257).
+
+    Keeps the outer composition's interface nodes and connects them to the
+    nodes the flat graph shows, following each line on through any nested
+    composition's own CIM to the mechanism it ends at. ``None`` when there are
+    no CIMs or nothing in the flat graph connects to them.
+    """
+    if not cim_info:
+        return None
+    visible = {n.get("name") for n in flat_nodes}
+    roots = [c for c in (getattr(comp, "input_CIM", None), getattr(comp, "output_CIM", None),
+                         getattr(comp, "parameter_CIM", None)) if c is not None]
+    root_ids = {id(c) for c in roots}
+
+    def ends(mech, downstream, depth=0):
+        """The mechanisms a line reaches, passing through nested CIMs."""
+        if depth > 20 or mech is None:
+            return []
+        if not isinstance(mech, pnl.CompositionInterfaceMechanism) or id(mech) in root_ids:
+            return [mech]
+        found = []
+        ports = mech.output_ports if downstream else mech.input_ports
+        for port in ports:
+            for proj in (port.efferents if downstream else port.path_afferents):
+                nxt = (proj.receiver.owner if downstream else proj.sender.owner) if (
+                    proj.receiver if downstream else proj.sender) else None
+                found.extend(ends(nxt, downstream, depth + 1))
+        return found
+
+    projections = []
+    for cim in roots:
+        downstream = cim is not getattr(comp, "output_CIM", None)
+        ports = cim.output_ports if downstream else cim.input_ports
+        for port in ports:
+            for proj in (port.efferents if downstream else port.path_afferents):
+                other_port = proj.receiver if downstream else proj.sender
+                if other_port is None:
+                    continue
+                for mech in ends(other_port.owner, downstream):
+                    if mech.name not in visible:
+                        continue
+                    cim_end = {"mechanism": cim.name, "port": port.name}
+                    mech_end = {"mechanism": mech.name, "port": None}
+                    projections.append({
+                        "name": proj.name,
+                        "type": type(proj).__name__,
+                        "sender": cim_end if downstream else mech_end,
+                        "receiver": mech_end if downstream else cim_end,
+                    })
+    if not projections:
+        return None
+    return {"nodes": cim_info["nodes"], "projections": projections}
+
+
 def _serialize_flat_projection(sender_mech, receiver_mech, chain, proj_name_lookup, via_cim=None):
     """Serialize one CIM-stitched edge between two real mechanisms (#657).
 
@@ -3359,7 +3433,11 @@ def serialize_composition(var_name, comp, line_map, proj_name_lookup=None, name_
     if flat:
         nodes, projections = _flatten_graph(comp, line_map, proj_name_lookup, name_to_var)
         inactive_projections = []
-        cim_info = None
+        # #257: flattening removes the *inner* compositions' CIMs, but the
+        # outer one's are the model's real inputs and outputs. Dropping them
+        # too meant "Interface nodes (CIMs)" showed nothing in this view (the
+        # default), and appeared only after a load that happened to be nested.
+        cim_info = _flat_root_cim(comp, cim_info, nodes, pnl)
 
     # #230: PyTorch view — the autodiff-flattened graph PNL builds for gradient
     # computation. Specialization of the flat view; falls back to whatever was

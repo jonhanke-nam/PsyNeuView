@@ -26,6 +26,7 @@ flat-view.spec.ts
 github-file-loader.spec.ts
 graph-click-conventions.spec.ts
 graph-fills-window.spec.ts
+graph-hit-areas.spec.ts
 graph-legend.spec.ts
 graph-pointer-hand-size.spec.ts
 graph-pointer-precise.spec.ts
@@ -86,6 +87,7 @@ run-set-survives-edit.spec.ts
 scheduling-arrows-setting.spec.ts
 settings-panel.spec.ts
 shape-mismatch-explained.spec.ts
+show-cims-at-once.spec.ts
 show-graph-agreement.spec.ts
 show-graph-edge-courses.spec.ts
 show-graph-tab-fetch.spec.ts
