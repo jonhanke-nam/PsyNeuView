@@ -55,6 +55,13 @@ interface PaletteState {
   favorites: string[];
   recentlyUsed: string[];
   compactFlyoutNodeId: string | null;
+  /**
+   * #252: a component picked up, waiting for a click on the graph to say
+   * where it goes. Clicking a component used to add it at once, wherever the
+   * layout put it, sometimes off-screen.
+   */
+  armed: { type: string; defaults: Record<string, string>; label: string } | null;
+  setArmed: (armed: PaletteState["armed"]) => void;
 
   setOpen: (open: boolean) => void;
   toggleOpen: () => void;
@@ -79,6 +86,8 @@ export const usePaletteStore = create<PaletteState>((set, get) => ({
   favorites: loadJson<string[]>(LS_FAVORITES, []),
   recentlyUsed: loadJson<string[]>(LS_RECENTS, []),
   compactFlyoutNodeId: null,
+  armed: null,
+  setArmed: (armed) => set({ armed }),
 
   setOpen: (open) => {
     localStorage.setItem(LS_OPEN, String(open));

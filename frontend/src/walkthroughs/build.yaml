@@ -22,9 +22,11 @@ steps:
     # to point at.
     anchor:
       testid: palette-sidebar
-    instruct: Search the palette for TransferMechanism and click it to add one.
+    instruct: >-
+      Search the palette for TransferMechanism and click it, then click the
+      graph where the new one should go.
     say: >-
-      Find TransferMechanism in the palette, and click it to add one.
+      Find TransferMechanism in the palette, click it, then click the graph where it should go.
     done:
       # The #181 default name for a newly added component.
       nodeExists: New_TransferMechanism_1

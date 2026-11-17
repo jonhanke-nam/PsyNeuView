@@ -4,6 +4,7 @@
  * Handles: drag layout saving, new connections → projections, node deletion.
  */
 
+import { registerVisibleCentre } from "@/utils/graphViewport";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   ReactFlow,
@@ -447,8 +448,42 @@ export function GraphCanvas() {
   const pendingProjectionGesture = useModelStore((s) => s.pendingProjectionGesture);
   const setPendingProjectionGesture = useModelStore((s) => s.setPendingProjectionGesture);
 
+  // #252: a component picked up in the panel goes where the graph is clicked.
+  const armed = usePaletteStore((s) => s.armed);
+  const placeArmed = useCallback((e: React.MouseEvent | MouseEvent): boolean => {
+    const pick = usePaletteStore.getState().armed;
+    if (!pick || !filePath) return false;
+    addNodeToModel(
+      filePath, pick.type, pick.defaults, setSource, loadModelFromServer, addNotification,
+      screenToFlowPosition({ x: e.clientX, y: e.clientY }),
+    );
+    usePaletteStore.getState().addRecentlyUsed(pick.type);
+    // Option (Alt) keeps it picked up, for putting down several.
+    if (!e.altKey) usePaletteStore.getState().setArmed(null);
+    return true;
+  }, [filePath, setSource, loadModelFromServer, addNotification, screenToFlowPosition]);
+  useEffect(() => {
+    if (!armed) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") usePaletteStore.getState().setArmed(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [armed]);
+  // Anything added with no point chosen goes in the middle of what's showing.
+  useEffect(() => {
+    registerVisibleCentre(() => {
+      const pane = containerRef.current?.querySelector(".react-flow__pane")?.getBoundingClientRect();
+      if (!pane || pane.width === 0) return null;
+      return screenToFlowPosition({ x: pane.left + pane.width / 2, y: pane.top + pane.height / 2 });
+    });
+    return () => registerVisibleCentre(null);
+  }, [screenToFlowPosition]);
+
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: any) => {
+      // #252: a component picked up goes where you click, on a node too.
+      if (placeArmed(_)) return;
       // If a projection gesture is armed (#311), a projection was dropped onto
       // a receiver node and this click names the sender. Clicking the receiver
       // itself cancels (no self-projection from this gesture).
@@ -511,7 +546,7 @@ export function GraphCanvas() {
       }
       setSelectedNodeId(node.id);
     },
-    [setSelectedNodeId, setPendingConditionGesture, setPendingProjectionGesture, filePath, setSource, loadModelFromServer]
+    [setSelectedNodeId, setPendingConditionGesture, setPendingProjectionGesture, filePath, setSource, loadModelFromServer, placeArmed]
   );
 
   // Esc cancels an armed condition gesture.
@@ -550,13 +585,14 @@ export function GraphCanvas() {
     [setSelectedEdgeId]
   );
 
-  const onPaneClick = useCallback(() => {
+  const onPaneClick = useCallback((e: React.MouseEvent) => {
+    if (placeArmed(e)) return;
     setSelectedNodeId(null);
     setSelectedEdgeId(null);
     setContextMenu(null);
     setPendingConditionGesture(null);
     setPendingProjectionGesture(null);
-  }, [setSelectedNodeId, setSelectedEdgeId, setPendingConditionGesture, setPendingProjectionGesture]);
+  }, [placeArmed, setSelectedNodeId, setSelectedEdgeId, setPendingConditionGesture, setPendingProjectionGesture]);
 
   // Resize group nodes after drag completes (not during — that blocks dragging)
   const onNodeDrag: OnNodeDrag = useCallback(() => {}, []);
@@ -756,7 +792,8 @@ export function GraphCanvas() {
           // (arrow, hand, crosshair or ring, #40) at the chosen size, its
           // pressed look, the closed hand for a drag, and the pointer over a
           // control point (never the hand).
-          className={graphPointerClass(pointer)}
+          // #252: a crosshair while a component waits to be put down.
+          className={graphPointerClass(pointer) + (armed ? " graph-placing" : "")}
           style={{
             flex: 1,
             minWidth: 0,
@@ -792,6 +829,28 @@ export function GraphCanvas() {
             >
               Click the node that <b>{pendingConditionGesture.ownerLabel}</b> should
               wait for, then it runs when that node finishes. <span style={{ opacity: 0.8 }}>Esc to cancel.</span>
+            </div>
+          )}
+          {armed && (
+            <div
+              data-testid="place-component-hint"
+              style={{
+                position: "absolute",
+                top: 12,
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 20,
+                background: "var(--pnv-primary)",
+                color: "var(--pnv-on-primary)",
+                padding: "6px 14px",
+                borderRadius: 6,
+                fontSize: "var(--pnv-fs-13)",
+                boxShadow: "var(--pnv-shadow-banner)",
+                pointerEvents: "none",
+              }}
+            >
+              Click where the new <b>{armed.label}</b> should go.{" "}
+              <span style={{ opacity: 0.8 }}>Option-click to put down several. Esc to cancel.</span>
             </div>
           )}
           {pendingProjectionGesture && (
