@@ -116,6 +116,14 @@ export const CompositionNode = memo(function CompositionNode({
         position: "relative",
       }}
     >
+      {/* #250: an open frame takes clicks only on its header and border; its
+          inside belongs to what's in it, so an arrow or empty canvas there is
+          clicked, not the frame. The frame itself is click-through (index.css);
+          these bands, the header and the handles take the pointer. */}
+      <div className="pnv-frame-grab" aria-hidden style={{ position: "absolute", left: -2, right: -2, top: -2, height: 34 }} />
+      <div className="pnv-frame-grab" aria-hidden style={{ position: "absolute", left: -2, width: 10, top: -2, bottom: -2 }} />
+      <div className="pnv-frame-grab" aria-hidden style={{ position: "absolute", right: -2, width: 10, top: -2, bottom: -2 }} />
+      <div className="pnv-frame-grab" aria-hidden style={{ position: "absolute", left: -2, right: -2, bottom: -2, height: 10 }} />
       {/* Per-CIM-port handles. Edges from the parent graph attach to the
           composition's input_CIM / output_CIM ports by id, so each needs a
           matching Handle or React Flow drops the edge (#644). Fall back to a
@@ -175,6 +183,7 @@ export const CompositionNode = memo(function CompositionNode({
           after a short name, where an edge leaving the frame often runs). */}
       <div
         ref={headerRef}
+        className="pnv-frame-grab"
         style={{
           position: "absolute",
           top: 8,

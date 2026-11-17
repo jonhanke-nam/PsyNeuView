@@ -260,3 +260,16 @@ html.pnv-busy * {
 .pnv-settings-search-result:hover {
   background: var(--pnv-primary-tint) !important;
 }
+
+/* #250: an open composition frame is clicked on its header and border only;
+   clicks inside go to the arrows, nodes and canvas there (CompositionNode). */
+/* React Flow sets pointer-events: all inline on every node, so only an
+   !important rule reaches it. */
+.react-flow__node-compositionNode {
+  pointer-events: none !important;
+}
+.react-flow__node-compositionNode .pnv-frame-grab,
+.react-flow__node-compositionNode .react-flow__handle,
+.react-flow__node-compositionNode button {
+  pointer-events: all;
+}
