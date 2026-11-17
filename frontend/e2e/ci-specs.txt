@@ -44,6 +44,7 @@ layout-graph-only-default.spec.ts
 layout-mode-per-view.spec.ts
 learn-pathway.spec.ts
 learning-nodes-run-inspector.spec.ts
+live-preview-background.spec.ts
 lock-in-checkout.spec.ts
 mac-app-settings-section.spec.ts
 mdf-gap-warnings.spec.ts
@@ -66,6 +67,7 @@ open-menu-foldable.spec.ts
 open-menu-follows-source-switch.spec.ts
 open-menu-source-labels.spec.ts
 own-checkout-editable.spec.ts
+place-component.spec.ts
 pnl-record-mismatch.spec.ts
 pnl-source-list-switch.spec.ts
 pnl-source-switch-refreshes-library.spec.ts

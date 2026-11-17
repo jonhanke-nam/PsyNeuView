@@ -3,6 +3,7 @@
  * Used by both PaletteSidebar (click) and GraphCanvas (drag-drop).
  */
 
+import { visibleCentre } from "@/utils/graphViewport";
 import { useModelStore } from "@/stores/modelStore";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useStatusStore } from "@/stores/statusStore";
@@ -180,6 +181,10 @@ export async function addNodeToModel(
   // afterwards via the inspector — see issue body for the rationale.
   const existingNames = Object.keys(useModelStore.getState().lineMap);
   const varName = generateDefaultVarName(mechType, existingNames);
+  // #252: nothing the user creates appears off-screen. With no point chosen
+  // (a menu, a shortcut, the assistant), it goes in the middle of the graph
+  // as it is showing, not wherever the layout would put it.
+  dropPosition = dropPosition ?? visibleCentre() ?? undefined;
 
   const { setStatus, clearStatus } = useStatusStore.getState();
   setStatus(`Adding ${mechType}: ${varName}...`);

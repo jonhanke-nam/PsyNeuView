@@ -10,7 +10,8 @@
  *    meant an HTML5 drag-drop too brittle to script. That was wrong: click-add
  *    has always been a first-class path — `nodeActions.ts` says so in its own
  *    header ("Used by both PaletteSidebar (click) and GraphCanvas (drag-drop)")
- *    and the compact palette's tooltip reads "drag or click to add".
+ *    and the compact palette's tooltip says to drag it, or click it and then
+ *    click where it goes (#252).
  *
  * That gap mattered: building a model in the GUI is the premise of the course
  * walkthroughs (#1180), and until now the interaction it rests on had no
@@ -19,6 +20,7 @@
  *
  * Read-only w.r.t. backend reset (no PSYNEWVIEW_TEST_MODE required).
  */
+import { clickEmptyCanvas } from "../tourDriver";
 import { readOnlyTest as test, expect } from "../test-base";
 import { fileURLToPath } from "url";
 import path from "path";
@@ -59,7 +61,7 @@ test.describe("Tutorial: Building a model", () => {
     await page.getByTestId("palette-sidebar").screenshot({ path: shot("02-palette.png") });
   });
 
-  test("clicking a palette component adds it to the model", async ({ page }) => {
+  test("picking a palette component and clicking the graph adds it to the model", async ({ page }) => {
     await page.goto("/");
 
     // Its own starter model, so a palette regression reports separately from a
@@ -86,9 +88,9 @@ test.describe("Tutorial: Building a model", () => {
     // also returns.
     // `exact` matters: without it this also matches
     // "RecurrentTransferMechanism — ...", which contains the same substring.
-    await palette
-      .getByTitle("TransferMechanism \u2014 drag or click to add", { exact: true })
-      .click();
+    await palette.locator('[data-testid="palette-item"][data-type="TransferMechanism"]').first().click();
+    // #252: a click picks it up; a click on the graph puts it down.
+    await clickEmptyCanvas(page);
 
     // Guarantee: the component lands in the model under the #181 default name,
     // on the canvas and in the generated source together.

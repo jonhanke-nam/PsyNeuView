@@ -240,3 +240,10 @@ html.pnv-busy,
 html.pnv-busy * {
   cursor: progress !important;
 }
+
+/* #252: a component picked up in the panel waits for a click on the graph to
+   say where it goes; the crosshair says so, over the canvas and the nodes. */
+.graph-placing .react-flow__pane,
+.graph-placing .react-flow__node {
+  cursor: crosshair !important;
+}

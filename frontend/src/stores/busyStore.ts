@@ -210,6 +210,21 @@ const BACKGROUND = [
   /^\/rendering-defaults\.json/,
 ];
 
+/**
+ * A request marked as background by its caller (#255, #256): work nobody is
+ * waiting on, though its path also serves requests that someone is. The
+ * editor's live preview sends it; an Undo through the same endpoint doesn't.
+ */
+export const BACKGROUND_HEADER = "X-PsyNeuView-Background";
+
+export function isMarkedBackground(init?: RequestInit): boolean {
+  const headers = init?.headers;
+  if (!headers) return false;
+  if (headers instanceof Headers) return headers.has(BACKGROUND_HEADER);
+  if (Array.isArray(headers)) return headers.some(([k]) => k.toLowerCase() === BACKGROUND_HEADER.toLowerCase());
+  return Object.keys(headers).some((k) => k.toLowerCase() === BACKGROUND_HEADER.toLowerCase());
+}
+
 export function isBackgroundRequest(url: string): boolean {
   let path = url;
   try {
@@ -251,7 +266,7 @@ export function installBusyFetch(target: { fetch: typeof fetch } = globalThis): 
   const original = target.fetch.bind(target);
   target.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
     const label = requestLabel(input, init);
-    const end = isBackgroundRequest(requestPath(input))
+    const end = isBackgroundRequest(requestPath(input)) || isMarkedBackground(init)
       ? beginWait(label, { kind: "background", minMs: BACKGROUND_WAIT_MIN_MS })
       : beginBusy(label);
     return settle(original(input, init), end, judgeResponse);

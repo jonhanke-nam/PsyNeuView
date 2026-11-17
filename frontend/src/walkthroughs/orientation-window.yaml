@@ -68,8 +68,8 @@ steps:
     pointer: true
     instruct: >-
       The Components palette lists PsyNeuLink's mechanisms and functions. Click
-      one, or drag it onto the canvas, to add it to the model. Close it with its
-      × when you want the room.
+      one, then click the canvas where it should go, or drag it there. Close it
+      with its × when you want the room.
     say: >-
       The palette is where new parts come from.
     done:

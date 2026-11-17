@@ -38,8 +38,9 @@ steps:
     anchor:
       testid: palette-sidebar
     instruct: >-
-      Search the palette for DDM and click it. This is the mechanism that
-      accumulates noisy evidence until it crosses a threshold.
+      Search the palette for DDM, click it, then click the graph where it
+      should go. This is the mechanism that accumulates noisy evidence until
+      it crosses a threshold.
     say: >-
       Add a DDM: it gathers noisy evidence until it crosses a threshold.
     done:
