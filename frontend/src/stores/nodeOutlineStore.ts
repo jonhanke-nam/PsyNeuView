@@ -32,11 +32,11 @@ export const NODE_OUTLINE_WIDTHS: number[] = Array.from(
   (_, i) => NODE_OUTLINE_MIN + i,
 );
 /**
- * How much heavier an INPUT/OUTPUT/CONTROL node's outline is. 3 px: at 4 px
- * the green and red outlines read as too heavy beside the black ones (8 px
- * against 4 by default); 7 against 4 still marks them clearly.
+ * How much heavier an INPUT/OUTPUT/CONTROL node's outline is. 2 px: at 4 px
+ * (#190) the green and red outlines read as too heavy beside the black ones
+ * (8 px against 4 by default); 6 against 4 still marks them clearly.
  */
-export const NODE_OUTLINE_EMPHASIS_EXTRA = 3;
+export const NODE_OUTLINE_EMPHASIS_EXTRA = 2;
 /** How much heavier a selected or running node's outline is than its own. */
 export const NODE_OUTLINE_SELECTED_EXTRA = 2;
 
