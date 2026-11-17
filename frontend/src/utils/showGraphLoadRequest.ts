@@ -43,3 +43,16 @@ export function showGraphLoadRequest(): ShowGraphLoadRequest {
     useModelStore.getState().activeComposition,
   );
 }
+
+/**
+ * Everything a model load needs to build the graph the user is looking at
+ * (#257): the flat or PyTorch view, and show_graph's layout options. Every
+ * `/api/model/load` sends this, so no reload can quietly switch views. Some
+ * sent only the show_graph part, and the backend's default view is nested
+ * while the page's is flat: ticking Interface nodes (CIMs) reloaded the flat
+ * view, which had none, and they appeared only after a save reloaded nested.
+ */
+export function modelLoadOptions(): ShowGraphLoadRequest & { flat: boolean; pytorch: boolean } {
+  const { flat, pytorch } = useGraphSettings.getState();
+  return { flat, pytorch, ...showGraphLoadRequest() };
+}

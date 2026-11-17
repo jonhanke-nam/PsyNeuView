@@ -56,7 +56,7 @@ import { useEdgeAttach } from "@/stores/edgeAttachStore";
 import { prunePositions } from "@/utils/prunePositions";
 import { useGraphPointerStore } from "@/stores/graphPointerStore";
 import { graphCursorVars, graphPointerClass } from "@/utils/graphCursor";
-import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
 import { clampIoDrag, tidyIoRows } from "@/utils/ioRows";
 import { ioRowsNotApplying, registerCanvasTidy, useIoRowsStore } from "@/stores/ioRowsStore";
 
@@ -259,7 +259,7 @@ async function resyncFromFile(
     const resp = await fetch("/api/model/load", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
+      body: JSON.stringify({ file_path: filePath, ...modelLoadOptions() }),
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -418,7 +418,7 @@ export function GraphCanvas() {
           const resp = await fetch("/api/model/load", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
+            body: JSON.stringify({ file_path: filePath, ...modelLoadOptions() }),
           });
           const data = await resp.json();
           const compVarName = data.model?.compositions?.[0]?.varName;
@@ -461,7 +461,7 @@ export function GraphCanvas() {
           const resp = await fetch("/api/model/load", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
+            body: JSON.stringify({ file_path: filePath, ...modelLoadOptions() }),
           });
           const data = await resp.json();
           const compVarName = data.model?.compositions?.[0]?.varName;
