@@ -63,6 +63,14 @@ function conventions(platform: "mac" | "other", primary: Mod) {
         await node(page, "output").click({ modifiers: ["Control"] });
         await expect(page.getByTestId("node-context-menu")).toBeVisible();
         expect(await selected(page)).toEqual(["output"]);
+        // macOS usually makes Control-click a secondary click itself; off a
+        // real Mac (CI) it arrives as a click with Control held, and must
+        // still open the menu.
+        await clear(page);
+        await expect(page.getByTestId("node-context-menu")).toHaveCount(0);
+        await node(page, "decision").dispatchEvent("click", { ctrlKey: true, button: 0, bubbles: true });
+        await expect(page.getByTestId("node-context-menu")).toBeVisible();
+        expect(await selected(page)).toEqual(["decision"]);
       }
     });
 

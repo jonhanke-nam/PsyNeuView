@@ -63,9 +63,19 @@ import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
 import { clampIoDrag, tidyIoRows } from "@/utils/ioRows";
 import { ioRowsNotApplying, registerCanvasTidy, useIoRowsStore } from "@/stores/ioRowsStore";
 
+/** A Mac, judged as the graph library judges it (by the user agent). */
+const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
+
 /** #261: Command (Ctrl off the Mac) and Shift both add to or take from the selection. */
-const MULTI_SELECT_KEYS =
-  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? ["Meta", "Shift"] : ["Control", "Shift"];
+const MULTI_SELECT_KEYS = IS_MAC ? ["Meta", "Shift"] : ["Control", "Shift"];
+
+/**
+ * #261: on a Mac, Control-click is a secondary click. macOS usually turns it
+ * into one before the page sees it, but not always (nor in a browser told it
+ * is on a Mac), so a Control-click that arrives as a click is routed to the
+ * menu here.
+ */
+const isMacSecondaryClick = (e: React.MouseEvent | MouseEvent) => IS_MAC && e.ctrlKey && !e.metaKey;
 
 const nodeTypes = {
   mechanismNode: MechanismNode,
@@ -936,17 +946,17 @@ export function GraphCanvas() {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
-              onNodeClick={onNodeClick}
+              onNodeClick={(e, n) => (isMacSecondaryClick(e) ? onNodeContextMenu(e, n) : onNodeClick(e, n))}
               onNodeContextMenu={onNodeContextMenu}
               onEdgeContextMenu={onEdgeContextMenu}
               onPaneContextMenu={onPaneContextMenu}
               // #261: Shift-click extends the selection as Command-click does
               // (Ctrl-click off the Mac); Shift-drag still draws a box.
               multiSelectionKeyCode={MULTI_SELECT_KEYS}
-              onEdgeClick={onEdgeClick}
+              onEdgeClick={(e, ed) => (isMacSecondaryClick(e) ? onEdgeContextMenu(e, ed) : onEdgeClick(e, ed))}
               onNodeDrag={onNodeDrag}
               onNodeDragStop={onNodeDragStop}
-              onPaneClick={onPaneClick}
+              onPaneClick={(e) => (isMacSecondaryClick(e) ? onPaneContextMenu(e) : onPaneClick(e))}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               nodesDraggable={!autoLayout}
