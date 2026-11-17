@@ -161,10 +161,10 @@ What each gesture means on the graph, as in Finder and Keynote. `frontend/e2e/gr
 | Gesture | Meaning |
 |---|---|
 | Click | select the object, and only it |
-| Control-click = right-click = two-finger tap | the context menu for what's under the pointer. On an unselected node it becomes the selection; inside a selection, the selection stays. |
+| Control-click = right-click = two-finger tap | the context menu for what's under the pointer. On an unselected node it becomes the selection; inside a multi-selection, the selection stays and the menu acts on all of it ("2 nodes selected": Delete 2 nodes, Select only this one). |
 | Command-click (Ctrl-click off the Mac) | add to or take from the selection; never a menu |
 | Shift-click | add to or take from the selection |
 | Shift-drag on empty canvas | draw a selection box |
 | Drag on empty canvas | pan |
 
-Every object has a menu: nodes (Inspect, Rename…, Collapse/Expand…), arrows (Select sender, Select receiver, Reset shape) and the canvas (Select All, Fit the graph to the window, Show Components…). A menu offers only actions that exist elsewhere too, and the web view's own menu (Reload, Inspect Element) never appears on the graph. Still to come: a menu that acts on a whole multi-selection.
+Every object has a menu: nodes (Inspect, Rename…, Collapse/Expand…, Delete), a multi-selection (Delete N nodes, in one step that one Undo reverses; Select only this one), arrows (Select sender, Select receiver, Reset shape) and the canvas (Select All, Fit the graph to the window, Show Components…). A menu offers only actions that exist elsewhere too (Delete is also the Delete shortcut, Backspace, which deletes the whole selection), and the web view's own menu (Reload, Inspect Element) never appears on the graph.
