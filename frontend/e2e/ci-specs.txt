@@ -41,6 +41,7 @@ layout-default-fresh-profile.spec.ts
 layout-default-show-graph.spec.ts
 layout-graph-only-default.spec.ts
 layout-mode-per-view.spec.ts
+layout-spacing.spec.ts
 learn-pathway.spec.ts
 learning-nodes-run-inspector.spec.ts
 live-preview-background.spec.ts

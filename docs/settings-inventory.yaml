@@ -489,6 +489,22 @@ settings:
       (Graphviz in the page, so nothing to install). The layout menu on the
       graph toolbar switches the open model without changing this setting.
 
+  - id: graph-layout-spacing
+    label: Appearance ▸ Automatic layout ▸ Spacing between nodes
+    keywords: ["spacing", "distance", "compact", "closer", "projection length", "line length", "gap", "roomy"]
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.layoutSpacing); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-graph-layout-spacing
+    notes: >-
+      Default, Compact, Standard or Roomy (#278). Default is Compact for
+      Layered and show_graph's own spacing for Like show_graph, so that
+      layout keeps matching show_graph's picture. Scales Layered's gaps
+      between rows and neighbours, and Like show_graph's scale and least gaps
+      between boxes; the gaps that keep boxes apart and leave room for edge
+      labels still hold. Radial and Force are left alone. Changing it
+      re-arranges the open model if its layout is automatic.
+
   - id: graph-io-rows
     label: Appearance ▸ Automatic layout ▸ Keep inputs on the bottom and outputs on top
     home: settings
