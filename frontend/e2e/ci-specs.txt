@@ -42,6 +42,7 @@ layout-graph-only-default.spec.ts
 layout-mode-per-view.spec.ts
 learn-pathway.spec.ts
 learning-nodes-run-inspector.spec.ts
+live-preview-background.spec.ts
 lock-in-checkout.spec.ts
 mac-app-settings-section.spec.ts
 mdf-gap-warnings.spec.ts

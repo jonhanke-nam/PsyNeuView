@@ -4,6 +4,8 @@ import {
   beginBusy,
   formatBusyElapsed,
   installBusyFetch,
+  BACKGROUND_HEADER,
+  isMarkedBackground,
   isBackgroundRequest,
   loadBusyTimerPlace,
   oldestTask,
@@ -71,6 +73,28 @@ describe("busyStore (#38)", () => {
     expect(useBusyStore.getState().tasks.size).toBe(0);
     void target.fetch("/health");
     expect(useBusyStore.getState().tasks.size).toBe(0);
+  });
+
+  it("a request its caller marks as background never registers (#256)", async () => {
+    let resolve!: (r: Response) => void;
+    const target = { fetch: vi.fn(() => new Promise<Response>((r) => (resolve = r))) as unknown as typeof fetch };
+    installBusyFetch(target);
+    // The editor's live preview: same path as an Undo, but nobody is waiting.
+    const p = target.fetch("/api/model/preview", { method: "POST", headers: { [BACKGROUND_HEADER]: "1" } });
+    expect(useBusyStore.getState().tasks.size).toBe(0);
+    resolve(new Response("{}"));
+    await p;
+    // The same request unmarked (an Undo) does register.
+    void target.fetch("/api/model/preview", { method: "POST" });
+    expect(useBusyStore.getState().tasks.size).toBe(1);
+  });
+
+  it("reads the background mark from any form of headers", () => {
+    expect(isMarkedBackground({ headers: { "x-psyneuview-background": "1" } })).toBe(true);
+    expect(isMarkedBackground({ headers: new Headers({ [BACKGROUND_HEADER]: "1" }) })).toBe(true);
+    expect(isMarkedBackground({ headers: [[BACKGROUND_HEADER, "1"]] })).toBe(true);
+    expect(isMarkedBackground({ headers: { "Content-Type": "application/json" } })).toBe(false);
+    expect(isMarkedBackground(undefined)).toBe(false);
   });
 
   it("remembers the threshold under a psyneuview. key", () => {

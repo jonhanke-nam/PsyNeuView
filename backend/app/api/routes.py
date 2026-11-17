@@ -1637,6 +1637,23 @@ def preview_source_endpoint(request: PreviewSourceRequest):
 
     preview = write_preview(request.file_path, request.source)
 
+    # #256: a syntax error or an undefined name is found in milliseconds
+    # without running the model, which takes seconds. Answer at once; the
+    # page holds the last graph and shows the error on its line.
+    from app.services.quick_check import quick_check
+
+    problem = quick_check(request.source, str(preview))
+    if problem:
+        return PreviewSourceResponse(
+            model=_attach_dangling(
+                {"compositions": [], "lineMap": {}, "error": problem["error"],
+                 "errorLine": problem["line"], "quickCheck": True},
+                request.source,
+            ),
+            source=request.source,
+            preview_path=str(preview),
+        )
+
     try:
         model = load_and_introspect(
             str(preview), flat=request.flat, pytorch=request.pytorch

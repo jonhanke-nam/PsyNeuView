@@ -231,6 +231,20 @@ settings:
       Shown only while autosave is on. Whole seconds, 2 to 600, default 10;
       the backend refuses anything outside that range.
 
+  - id: live-preview
+    label: General ▸ Model files ▸ Update the graph while typing
+    home: settings
+    section: general
+    storage: browser localStorage (psyneuview.editor.livePreviewMs)
+    control: setting-live-preview
+    notes: >-
+      Off, or after 0.5, 1, 1.5 (default) or 3 s without typing (#255). The
+      graph is rebuilt from the editor's unsaved code (the live preview,
+      #1029) without writing the file; off, it updates on save. Separate from
+      autosave. The preview is background work, with no busy wheel, and a fast
+      check answers syntax errors and undefined names without running the
+      model (#256).
+
   - id: sidecar-placement-default
     label: General ▸ Model files ▸ Sidecar files (new models)
     home: settings
