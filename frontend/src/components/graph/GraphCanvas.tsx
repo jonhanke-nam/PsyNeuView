@@ -61,7 +61,7 @@ import { useEdgeAttach } from "@/stores/edgeAttachStore";
 import { prunePositions } from "@/utils/prunePositions";
 import { useGraphPointerStore } from "@/stores/graphPointerStore";
 import { graphCursorVars, graphPointerClass } from "@/utils/graphCursor";
-import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
+import { modelLoadOptions, modelViewOptions } from "@/utils/showGraphLoadRequest";
 import { clampIoDrag, tidyIoRows } from "@/utils/ioRows";
 import { ioRowsNotApplying, registerCanvasTidy, useIoRowsStore } from "@/stores/ioRowsStore";
 
@@ -168,7 +168,7 @@ async function createProjectionOnServer(
     const resp = await fetch("/api/model/structural-change", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath, changes }),
+      body: JSON.stringify({ file_path: filePath, ...modelViewOptions(), changes }),
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -201,7 +201,7 @@ async function addBasicConditionOnServer(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        file_path: filePath,
+        file_path: filePath, ...modelViewOptions(),
         changes: {
           action: "add_basic_condition",
           composition,
@@ -239,7 +239,7 @@ async function deleteNodeOnServer(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        file_path: filePath,
+        file_path: filePath, ...modelViewOptions(),
         changes:
           names.length > 1
             ? { action: "remove_nodes", var_names: names }
@@ -327,7 +327,7 @@ export function GraphCanvas() {
 
   const [nodes, setNodes, onNodesChangeRaw] = useNodesState(storeNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(storeEdges);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getInternalNode } = useReactFlow();
   const fitGraph = useFitGraph();
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
@@ -534,18 +534,30 @@ export function GraphCanvas() {
 
   // #252: a component picked up in the panel goes where the graph is clicked.
   const armed = usePaletteStore((s) => s.armed);
-  const placeArmed = useCallback((e: React.MouseEvent | MouseEvent): boolean => {
+  const placeArmed = useCallback((e: React.MouseEvent | MouseEvent, onNode?: { id: string; type?: string; parentId?: string }): boolean => {
     const pick = usePaletteStore.getState().armed;
     if (!pick || !filePath) return false;
+    const at = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    // Inside a composition, it goes into that composition: the frame clicked,
+    // or the frame of the node clicked. Its position is then kept relative to
+    // the frame, as every node inside one is.
+    const frameId =
+      onNode?.type === "compositionNode" ? onNode.id : onNode?.parentId;
+    const frame = frameId ? getInternalNode(frameId) : undefined;
+    // A frame's id can carry the view's prefix ("cluster::inner"); the file
+    // knows the composition by its own name.
+    const composition = (frame?.data as { varName?: string } | undefined)?.varName?.replace(/^cluster::/, "");
+    const origin = composition ? frame!.internals.positionAbsolute : null;
     addNodeToModel(
       filePath, pick.type, pick.defaults, setSource, loadModelFromServer, addNotification,
-      screenToFlowPosition({ x: e.clientX, y: e.clientY }),
+      origin ? { x: at.x - origin.x, y: at.y - origin.y } : at,
+      composition,
     );
     usePaletteStore.getState().addRecentlyUsed(pick.type);
     // Option (Alt) keeps it picked up, for putting down several.
     if (!e.altKey) usePaletteStore.getState().setArmed(null);
     return true;
-  }, [filePath, setSource, loadModelFromServer, addNotification, screenToFlowPosition]);
+  }, [filePath, setSource, loadModelFromServer, addNotification, screenToFlowPosition, getInternalNode]);
   useEffect(() => {
     if (!armed) return;
     const onKey = (e: KeyboardEvent) => {
@@ -566,8 +578,9 @@ export function GraphCanvas() {
 
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: any) => {
-      // #252: a component picked up goes where you click, on a node too.
-      if (placeArmed(_)) return;
+      // #252: a component picked up goes where you click, on a node too, and
+      // into the composition clicked inside.
+      if (placeArmed(_, node)) return;
       // If a projection gesture is armed (#311), a projection was dropped onto
       // a receiver node and this click names the sender. Clicking the receiver
       // itself cancels (no self-projection from this gesture).
@@ -712,10 +725,13 @@ export function GraphCanvas() {
   }, [setNodes, setEdges, setSelectedNodeId]);
 
   const onEdgeClick = useCallback(
-    (_: React.MouseEvent, edge: any) => {
+    (e: React.MouseEvent, edge: any) => {
+      // #252: while placing a component, a click on an arrow puts it down
+      // there, as on a node or the canvas; it doesn't select the arrow.
+      if (placeArmed(e)) return;
       setSelectedEdgeId(edge.id);
     },
-    [setSelectedEdgeId]
+    [setSelectedEdgeId, placeArmed]
   );
 
   const onPaneClick = useCallback((e: React.MouseEvent) => {

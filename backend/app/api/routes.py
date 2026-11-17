@@ -2691,6 +2691,10 @@ async def import_mdf(file: UploadFile = File(...)):
 class StructuralChangeRequest(BaseModel):
     file_path: str
     changes: dict  # {action, var_name, type?, params?, sender?, receiver?, composition?}
+    # The view the page shows (as LoadModelRequest): the model sent back is
+    # re-read in it, or a flattened view turns nested after every change (#252).
+    flat: bool = False
+    pytorch: bool = False
 
 
 @router.post("/model/structural-change", response_model=LoadModelResponse)
@@ -2719,7 +2723,7 @@ def structural_change(request: StructuralChangeRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
     try:
-        model = load_and_introspect(request.file_path)
+        model = load_and_introspect(request.file_path, flat=request.flat, pytorch=request.pytorch)
     except Exception as e:
         return LoadModelResponse(
             model=_attach_dangling(

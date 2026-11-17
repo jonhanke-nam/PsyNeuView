@@ -52,6 +52,17 @@ export function showGraphLoadRequest(): ShowGraphLoadRequest {
  * while the page's is flat: ticking Interface nodes (CIMs) reloaded the flat
  * view, which had none, and they appeared only after a save reloaded nested.
  */
+/**
+ * The view a model is shown in (flat or PyTorch), for requests that change the
+ * model and send it back: a structural change answers with the model re-read,
+ * and in the nested view while the page showed it flattened, a composition
+ * folded into one node until the next reload (#252, as #257 for loads).
+ */
+export function modelViewOptions(): { flat: boolean; pytorch: boolean } {
+  const { flat, pytorch } = useGraphSettings.getState();
+  return { flat, pytorch };
+}
+
 export function modelLoadOptions(): ShowGraphLoadRequest & { flat: boolean; pytorch: boolean } {
   const { flat, pytorch } = useGraphSettings.getState();
   return { flat, pytorch, ...showGraphLoadRequest() };
