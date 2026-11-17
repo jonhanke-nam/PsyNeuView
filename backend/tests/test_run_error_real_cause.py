@@ -41,7 +41,8 @@ def test_a_shape_mismatch_names_the_projection_and_the_line(tmp_path, node, proj
     error = result.get("error", "")
     assert "not found" not in error
     assert projection in error
-    assert "(3)" in error or "length (3)" in error
+    # PsyNeuLink 0.19 writes the shape "(3)", 0.21 a tuple "(3,)" (#264).
+    assert re.search(r"\(3,?\)", error), error
     assert result.get("errorLine"), "the error should give the line of the model file"
     assert f"line {result['errorLine']}" in error
 

@@ -222,20 +222,26 @@ async function addBasicConditionOnServer(
 
 async function deleteNodeOnServer(
   filePath: string,
-  varName: string,
+  varNames: string | string[],
   setSource: (s: string) => void,
   loadModel: (m: any, l?: any) => void,
   addNotification: (type: any, msg: string) => void,
 ) {
+  // #261: several at once is one change to the file, so one Undo.
+  const names = Array.isArray(varNames) ? varNames : [varNames];
+  const varName = names.join(", ");
   const { setStatus, clearStatus } = useStatusStore.getState();
-  setStatus(`Removing node: ${varName}...`);
+  setStatus(`Removing ${names.length > 1 ? "nodes" : "node"}: ${varName}...`);
   try {
     const resp = await fetch("/api/model/structural-change", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         file_path: filePath, ...modelViewOptions(),
-        changes: { action: "remove_node", var_name: varName },
+        changes:
+          names.length > 1
+            ? { action: "remove_nodes", var_names: names }
+            : { action: "remove_node", var_name: names[0] },
       }),
     });
     if (!resp.ok) {
@@ -256,7 +262,7 @@ async function deleteNodeOnServer(
     const data = await resp.json();
     setSource(data.source);
     loadModel(data.model, data.layout);
-    recordAction(`Deleted node ${varName}`);
+    recordAction(`Deleted ${names.length > 1 ? "nodes" : "node"} ${varName}`);
   } catch (e) {
     addNotification("error", `Failed to delete node: ${e}`);
     await resyncFromFile(filePath, setSource, loadModel);
@@ -313,6 +319,8 @@ export function GraphCanvas() {
     nodeType: string;
     x: number;
     y: number;
+    /** #261: the multi-selection the clicked node is part of, when there is one. */
+    selection?: { id: string; label: string; varName?: string }[];
   } | null>(null);
 
   const [nodes, setNodes, onNodesChangeRaw] = useNodesState(storeNodes);
@@ -617,7 +625,13 @@ export function GraphCanvas() {
       }
       setGraphMenu(null);
       const label = (node.data as any)?.label || node.id;
-      setContextMenu({ nodeId: node.id, nodeLabel: label, nodeType: node.type || "", x: e.clientX, y: e.clientY });
+      // Inside a multi-selection, the menu acts on all of it (#261).
+      const selected = node.selected ? nodesRef.current.filter((n) => n.selected) : [];
+      const selection =
+        selected.length > 1
+          ? selected.map((n) => ({ id: n.id, label: (n.data as any)?.label || n.id, varName: (n.data as any)?.varName }))
+          : undefined;
+      setContextMenu({ nodeId: node.id, nodeLabel: label, nodeType: node.type || "", x: e.clientX, y: e.clientY, selection });
     },
     [setNodes, setEdges, setSelectedNodeId]
   );
@@ -740,23 +754,31 @@ export function GraphCanvas() {
     [filePath],
   );
 
-  // Delete selected node with Backspace/Delete key
+  // Delete the selected nodes with the Delete shortcut (Backspace; #261: all of them)
   // Deleting the selection is registered as a command (#1112): the shortcut
   // registry owns the key, this owns what the key does. React Flow's own
   // onKeyDown is no longer used for it, so the binding is in one place and can
   // be shown — or rebound — from Settings.
+  // #261: the whole selection, when several nodes are selected.
+  const deleteNodes = useCallback(
+    (varNames: string[]) => {
+      if (!filePath || varNames.length === 0) return;
+      const question =
+        varNames.length === 1
+          ? `Delete node "${varNames[0]}"?`
+          : `Delete ${varNames.length} nodes (${varNames.join(", ")})?`;
+      if (confirm(question)) {
+        void deleteNodeOnServer(filePath, varNames, setSource, loadModelFromServer, addNotification);
+      }
+    },
+    [filePath, setSource, loadModelFromServer, addNotification],
+  );
   const deleteSelectedNode = useCallback(() => {
     const selectedNodeId = useModelStore.getState().selectedNodeId;
-    if (!selectedNodeId || !filePath) return;
-
-    const node = nodes.find((n) => n.id === selectedNodeId);
-    if (!node) return;
-
-    const varName = (node.data as unknown as MechanismData).varName;
-    if (confirm(`Delete node "${varName}"?`)) {
-      deleteNodeOnServer(filePath, varName, setSource, loadModelFromServer, addNotification);
-    }
-  }, [filePath, nodes, setSource, loadModelFromServer, addNotification]);
+    const many = nodes.filter((n) => n.selected && (n.data as unknown as MechanismData)?.varName);
+    const chosen = many.length > 1 ? many : nodes.filter((n) => n.id === selectedNodeId);
+    deleteNodes(chosen.map((n) => (n.data as unknown as MechanismData).varName).filter(Boolean));
+  }, [nodes, deleteNodes]);
 
   useEffect(
     () => registerCommand("graph.deleteSelection", deleteSelectedNode),
@@ -1031,6 +1053,12 @@ export function GraphCanvas() {
               nodeType={contextMenu.nodeType}
               x={contextMenu.x}
               y={contextMenu.y}
+              selection={contextMenu.selection}
+              onDeleteNodes={deleteNodes}
+              onSelectOnly={(id) => {
+                setNodes((ns) => ns.map((n) => (n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })));
+                setSelectedNodeId(id);
+              }}
               onClose={() => setContextMenu(null)}
             />
           )}

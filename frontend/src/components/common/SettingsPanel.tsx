@@ -13,9 +13,13 @@
  *
  * Version and install data is fetched from `/api/settings/info` on open (#120);
  * install controls are gated by `/api/settings/install/capabilities` (#130).
+ *
+ * A search field tops the sidebar (#271): typing lists the matching settings
+ * in place of the sections, and choosing one opens its section and flashes
+ * its control. ⌘F (Ctrl+F) focuses it.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { record } from "@/utils/activityLog";
 import { noteUiFact, rememberServerInfo } from "@/utils/diagnostics";
 import { hasSettingsBridge } from "@/utils/macAppSettings";
@@ -31,6 +35,13 @@ import { OpenMenuSection } from "./settings/OpenMenuSection";
 import { ReportsSection } from "./settings/ReportsSection";
 import { ShortcutsSection } from "./settings/ShortcutsSection";
 import { TutorialsVoiceSection } from "./settings/TutorialsVoiceSection";
+import {
+  SettingsSearchField,
+  SettingsSearchResults,
+  revealSettingControl,
+  useFindFocuses,
+} from "./settings/SettingsSearch";
+import type { SettingsSearchEntry } from "./settings/settingsSearchIndex";
 import {
   availableSectionOrDefault,
   availableSections,
@@ -126,6 +137,37 @@ export function SettingsPanel({ isOpen, onClose, section: requested = null }: Pr
     persistLastSection(id);
   };
 
+  // Settings search (#271).
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [target, setTarget] = useState<{ control: string; at: number; fallback?: SettingsSearchEntry["fallback"] } | null>(null);
+  const chooseResult = (e: SettingsSearchEntry) => {
+    showSection(e.section);
+    record("menu", `Settings search › ${e.id}`, { query, setting: e.id });
+    // `at` so choosing the same one again flashes it again.
+    setTarget({ control: e.control, at: Date.now(), fallback: e.fallback });
+  };
+  useEffect(() => {
+    if (!target) return;
+    const fallback = target.fallback;
+    // A simple view that isn't shown here goes to its full form instead.
+    const onMissing = fallback
+      ? () => {
+          showSection(fallback.section);
+          setTarget({ control: fallback.control, at: Date.now() });
+        }
+      : undefined;
+    return revealSettingControl(contentRef.current, target.control, onMissing);
+    // showSection is remade each render; target and section say when to look.
+  }, [target, section]);
+  useEffect(() => {
+    if (isOpen) return;
+    setQuery("");
+    setTarget(null);
+  }, [isOpen]);
+  useFindFocuses(searchRef, isOpen);
+
   // The diagnostics snapshot (#1287) says whether Settings is open and on
   // which section; the activity log gets the section each time it changes.
   useEffect(() => {
@@ -190,7 +232,16 @@ export function SettingsPanel({ isOpen, onClose, section: requested = null }: Pr
               gap: 2,
             }}
           >
-            {availableSections(inMacApp).map((s) => {
+            <SettingsSearchField
+              ref={searchRef}
+              query={query}
+              onQueryChange={setQuery}
+              inMacApp={inMacApp}
+              onChoose={chooseResult}
+            />
+            {query.trim() ? (
+              <SettingsSearchResults query={query} inMacApp={inMacApp} onChoose={chooseResult} />
+            ) : availableSections(inMacApp).map((s) => {
               const active = s.id === section;
               return (
                 <button
@@ -221,6 +272,7 @@ export function SettingsPanel({ isOpen, onClose, section: requested = null }: Pr
           </nav>
 
           <div
+            ref={contentRef}
             data-testid={`settings-content-${section}`}
             style={{ flex: 1, minWidth: 0, overflowY: "auto", padding: "16px 24px" }}
           >

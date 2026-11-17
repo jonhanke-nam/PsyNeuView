@@ -247,3 +247,16 @@ html.pnv-busy * {
 .graph-placing .react-flow__node {
   cursor: crosshair !important;
 }
+
+/* Settings search (#271): the control a search result took you to. */
+@keyframes pnv-setting-flash {
+  0%, 40% { background: var(--pnv-primary-tint); box-shadow: 0 0 0 3px var(--pnv-primary-tint); }
+  100% { background: transparent; box-shadow: 0 0 0 3px transparent; }
+}
+.pnv-setting-flash {
+  border-radius: 6px;
+  animation: pnv-setting-flash 1.6s ease-out;
+}
+.pnv-settings-search-result:hover {
+  background: var(--pnv-primary-tint) !important;
+}

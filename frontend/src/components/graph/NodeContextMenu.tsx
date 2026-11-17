@@ -18,10 +18,19 @@ interface Props {
   nodeType: string;
   x: number;
   y: number;
+  /**
+   * #261: the multi-selection the clicked node is part of. With one, the menu
+   * acts on the whole selection ("Delete 3 nodes"), as #261's table says.
+   */
+  selection?: { id: string; label: string; varName?: string }[];
+  /** Delete these nodes, after asking (GraphCanvas's deleteNodes). */
+  onDeleteNodes?: (varNames: string[]) => void;
+  /** Make this node the whole selection. */
+  onSelectOnly?: (nodeId: string) => void;
   onClose: () => void;
 }
 
-export function NodeContextMenu({ nodeId, nodeLabel, nodeType, x, y, onClose }: Props) {
+export function NodeContextMenu({ nodeId, nodeLabel, nodeType, x, y, selection, onDeleteNodes, onSelectOnly, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const expanded = useGraphSettings((s) => s.expandedNodes.has(nodeLabel));
   const isComposition = nodeType === "compositionNode";
@@ -111,7 +120,16 @@ export function NodeContextMenu({ nodeId, nodeLabel, nodeType, x, y, onClose }: 
         fontSize: "var(--pnv-fs-13)",
       }}
     >
-      {renaming ? (
+      {selection && selection.length > 1 ? (
+        <SelectionItems
+          nodeId={nodeId}
+          nodeLabel={nodeLabel}
+          selection={selection}
+          onDeleteNodes={onDeleteNodes}
+          onSelectOnly={onSelectOnly}
+          onClose={onClose}
+        />
+      ) : renaming ? (
         <div style={{ padding: "6px 10px" }}>
           <input
             autoFocus
@@ -145,22 +163,70 @@ export function NodeContextMenu({ nodeId, nodeLabel, nodeType, x, y, onClose }: 
           {!isComposition && !isCollapsedMechComp && (
             <MenuItem onClick={handleWhenFinished}>Runs when… finishes</MenuItem>
           )}
+          {canRename && varName && onDeleteNodes && (
+            <MenuItem testId="node-menu-delete" onClick={() => { onClose(); onDeleteNodes([varName]); }}>
+              Delete
+            </MenuItem>
+          )}
         </>
       )}
     </div>
   );
 }
 
+/** The menu for a node inside a multi-selection: about all of it (#261). */
+function SelectionItems({
+  nodeId,
+  nodeLabel,
+  selection,
+  onDeleteNodes,
+  onSelectOnly,
+  onClose,
+}: {
+  nodeId: string;
+  nodeLabel: string;
+  selection: { id: string; label: string; varName?: string }[];
+  onDeleteNodes?: (varNames: string[]) => void;
+  onSelectOnly?: (nodeId: string) => void;
+  onClose: () => void;
+}) {
+  // Only nodes with a declaration in the file can be deleted from it.
+  const deletable = selection.map((s) => s.varName).filter((v): v is string => !!v);
+  return (
+    <>
+      <div
+        data-testid="node-menu-selection-count"
+        style={{ padding: "4px 14px 6px", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)" }}
+      >
+        {selection.length} nodes selected
+      </div>
+      {onDeleteNodes && deletable.length > 0 && (
+        <MenuItem testId="node-menu-delete" onClick={() => { onClose(); onDeleteNodes(deletable); }}>
+          Delete {deletable.length === 1 ? "1 node" : `${deletable.length} nodes`}
+        </MenuItem>
+      )}
+      {onSelectOnly && (
+        <MenuItem testId="node-menu-select-only" onClick={() => { onSelectOnly(nodeId); onClose(); }}>
+          Select only “{nodeLabel}”
+        </MenuItem>
+      )}
+    </>
+  );
+}
+
 function MenuItem({
   onClick,
+  testId,
   children,
 }: {
   onClick: () => void;
+  testId?: string;
   children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
+      data-testid={testId}
       style={{
         display: "block",
         width: "100%",
