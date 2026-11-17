@@ -1,4 +1,4 @@
-# PsyNewView
+# PsyNeuView
 
 A web-first graphical interface for [PsyNeuLink](https://github.com/PrincetonUniversity/PsyNeuLink) — the computational neuroscience modeling framework.
 
@@ -179,7 +179,7 @@ workflows, and how to run them locally. Things CI has caught are logged in
 ## Project Structure
 
 ```
-PsyNewView/
+PsyNeuView/
 ├── frontend/               # React + TypeScript application
 │   └── src/
 │       ├── components/

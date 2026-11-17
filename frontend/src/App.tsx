@@ -114,8 +114,8 @@ export default function App() {
       } as unknown as React.DragEvent;
       handleFileDrop(fakeEvent);
     };
-    window.addEventListener("psynewview:file-drop", handler);
-    return () => window.removeEventListener("psynewview:file-drop", handler);
+    window.addEventListener("psyneuview:file-drop", handler);
+    return () => window.removeEventListener("psyneuview:file-drop", handler);
   }, [handleFileDrop]);
 
   return (

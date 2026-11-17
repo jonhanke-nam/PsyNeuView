@@ -57,7 +57,7 @@ COPY backend/pyproject.toml ./backend/
 RUN mkdir -p backend/app && touch backend/app/__init__.py \
     && pip install --no-cache-dir "git+${PSYNEULINK_REPO}@${PSYNEULINK_GIT_REF}" \
     && pip install --no-cache-dir ./backend \
-    && pip uninstall -y psynewview
+    && pip uninstall -y psyneuview
 
 COPY backend/ ./backend/
 # --no-deps: everything is already resolved above. Editable so the installed
@@ -69,7 +69,7 @@ RUN pip install --no-cache-dir --no-deps -e ./backend
 COPY --from=frontend /build/dist ./frontend/dist
 
 # A non-root user with a real home: every piece of per-user state
-# (~/.psynewview.json, ~/.psyneuview/sources, bundles) is Path.home()-relative.
+# (~/.psyneuview.json, ~/.psyneuview/sources, bundles) is Path.home()-relative.
 # Mount a volume at /home/pnv to persist a user's work. Under Apptainer this
 # path is the invoking user's actual home, which is what makes per-user
 # separation fall out of the runtime rather than needing app changes.
@@ -81,7 +81,7 @@ ENV HOME=/home/pnv
 # The default is <repo>/models — inside the image layer here, so a user's work
 # would vanish on redeploy, and under Apptainer's read-only image the mkdir
 # would fail outright. (The env var predates the PSYNEUVIEW_ spelling.)
-ENV PSYNEWVIEW_MODELS_DIR=/home/pnv/models
+ENV PSYNEUVIEW_MODELS_DIR=/home/pnv/models
 RUN mkdir -p /home/pnv/models
 
 # Declared, not inferred (#1062). Without this the backend defaults to `local`

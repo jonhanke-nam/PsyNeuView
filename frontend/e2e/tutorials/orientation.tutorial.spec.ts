@@ -89,7 +89,7 @@ async function stubLatestDevelopment(page: Page) {
   );
 }
 
-const DEV_MODE_KEY = "psynewview_ui_prefs_developerMode";
+const DEV_MODE_KEY = "psyneuview_ui_prefs_developerMode";
 
 for (const part of PARTS as Walkthrough[]) {
   test.describe(`Orientation ${part.orientation}: ${part.title}`, () => {

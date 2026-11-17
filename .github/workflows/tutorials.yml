@@ -252,7 +252,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
 
       # Production mode: the backend serves the built SPA on an allocated port and
-      # runs with PSYNEWVIEW_TEST_MODE=1 (per playwright.config.ts), so the build
+      # runs with PSYNEUVIEW_TEST_MODE=1 (per playwright.config.ts), so the build
       # tutorial's New Model writes into a fresh temp models dir — no collisions.
       - name: Build frontend
         working-directory: frontend

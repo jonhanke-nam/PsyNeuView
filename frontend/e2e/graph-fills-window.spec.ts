@@ -71,7 +71,7 @@ test.describe("graph fills the window by default (#110)", { tag: "@ci" }, () => 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.addInitScript(() => {
       if (!sessionStorage.getItem("seeded")) {
-        localStorage.setItem("psynewview_layout_outer_sizes", JSON.stringify([800, 640]));
+        localStorage.setItem("psyneuview_layout_outer_sizes", JSON.stringify([800, 640]));
         sessionStorage.setItem("seeded", "1");
       }
     });

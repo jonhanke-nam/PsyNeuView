@@ -23,11 +23,12 @@ What a move promises:
   can include it.
 - Moving back is just another move.
 
-Refused outright when ``PSYNEWVIEW_MODELS_DIR`` fixes the folder: the
+Refused outright when ``PSYNEUVIEW_MODELS_DIR`` fixes the folder: the
 environment wins, as it always has.
 """
 
 from __future__ import annotations
+from app.services import env_names
 
 import filecmp
 import logging
@@ -69,7 +70,7 @@ def _write(config: dict) -> None:
 
 
 def _fixed_by_env() -> bool:
-    return bool(os.environ.get(MODELS_DIR_ENV))
+    return bool(env_names.env("MODELS_DIR"))
 
 
 # ── The one-time offer ────────────────────────────────────────────────
@@ -188,7 +189,7 @@ def move_project_folder(destination: str) -> dict:
         raise MoveError("The project folder can't be moved on the shared hosted PsyNeuView.")
     if _fixed_by_env():
         raise MoveError(
-            f"The project folder is set by {MODELS_DIR_ENV}, so it can't be moved from here."
+            f"The project folder is set by {env_names.set_by('MODELS_DIR') or MODELS_DIR_ENV}, so it can't be moved from here."
         )
     if not (destination or "").strip():
         raise MoveError("Choose where to move the folder to.")

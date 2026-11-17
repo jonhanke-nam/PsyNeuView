@@ -33,8 +33,8 @@ describe("the default layout (#189)", () => {
   it("keeps a choice someone already made", async () => {
     // Someone who turned the code editor on before this default changed
     // still has it; only people with nothing stored get the new default.
-    localStorage.setItem("psynewview_layout_code_visible", "true");
-    localStorage.setItem("psynewview_layout_bottom_visible", "true");
+    localStorage.setItem("psyneuview_layout_code_visible", "true");
+    localStorage.setItem("psyneuview_layout_bottom_visible", "true");
     const { useLayoutStore } = await freshStore();
     expect(useLayoutStore.getState().codeVisible).toBe(true);
     expect(useLayoutStore.getState().bottomVisible).toBe(true);
@@ -44,7 +44,7 @@ describe("the default layout (#189)", () => {
     const { useLayoutStore } = await freshStore();
     expect(useLayoutStore.getState().togglePanel("code")).toBe(true);
     expect(useLayoutStore.getState().codeVisible).toBe(true);
-    expect(localStorage.getItem("psynewview_layout_code_visible")).toBe("true");
+    expect(localStorage.getItem("psyneuview_layout_code_visible")).toBe("true");
   });
 
   it("refuses to hide the last visible panel, and says so", async () => {
@@ -113,7 +113,7 @@ describe("a walkthrough's layout (#189)", () => {
     first.useLayoutStore.getState().restoreLayoutAfterWalkthrough();
     const after = first.useLayoutStore.getState();
     expect([after.codeVisible, after.graphVisible, after.bottomVisible]).toEqual([false, true, false]);
-    expect(localStorage.getItem("psynewview_layout_code_visible")).toBe("false");
+    expect(localStorage.getItem("psyneuview_layout_code_visible")).toBe("false");
   });
 
   it("puts the layout back in both windows when each runs a walkthrough", async () => {
@@ -217,7 +217,7 @@ describe("a blank screen by choice (#215)", () => {
     expect(useLayoutStore.getState().showPanelsForOpen()).toBe(true);
     const s = useLayoutStore.getState();
     expect([s.codeVisible, s.graphVisible, s.bottomVisible]).toEqual([false, true, false]);
-    expect(localStorage.getItem("psynewview_layout_graph_visible")).toBe("true");
+    expect(localStorage.getItem("psyneuview_layout_graph_visible")).toBe("true");
   });
 
   it("opens the chosen panels instead, leaving the Components panel alone unless chosen", async () => {
@@ -272,7 +272,7 @@ describe("a blank screen by choice (#215)", () => {
     useLayoutStore.getState().setAllowBlank(false);
     expect(useLayoutStore.getState().allowBlank).toBe(false);
     expect(useLayoutStore.getState().graphVisible).toBe(true);
-    expect(localStorage.getItem("psynewview_layout_graph_visible")).toBe("true");
+    expect(localStorage.getItem("psyneuview_layout_graph_visible")).toBe("true");
     // ...and the refusal is back.
     expect(useLayoutStore.getState().togglePanel("graph")).toBe(false);
   });
@@ -302,7 +302,7 @@ describe("a blank screen by choice (#215)", () => {
     expect(later.useLayoutStore.getState().graphVisible).toBe(true);
     expect(later.useLayoutStore.getState().isBlank()).toBe(false);
     // Read that way, not written: the layout keys are as they were.
-    expect(localStorage.getItem("psynewview_layout_graph_visible")).toBe("false");
+    expect(localStorage.getItem("psyneuview_layout_graph_visible")).toBe("false");
   });
 
   it("a model opened through the model store brings the panels, and a Save As doesn't", async () => {

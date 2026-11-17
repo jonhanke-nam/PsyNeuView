@@ -1,3 +1,6 @@
+// First: carry settings saved under the old name over (#258), before any
+// store reads its saved value at import.
+import "./migrateStorageNames";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";

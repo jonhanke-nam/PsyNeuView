@@ -281,9 +281,9 @@ test.describe("Busy wheel (#38)", { tag: "@ci" }, () => {
     test(`with the graph hidden, ${what}: one wheel, over the workspace, the time below it`, async ({ page }) => {
       test.setTimeout(120_000);
       await seed(page, {
-        psynewview_layout_code_visible: String(layout.code),
-        psynewview_layout_graph_visible: String(layout.graph),
-        psynewview_layout_bottom_visible: String(layout.bottom),
+        psyneuview_layout_code_visible: String(layout.code),
+        psyneuview_layout_graph_visible: String(layout.graph),
+        psyneuview_layout_bottom_visible: String(layout.bottom),
         // Harmless until #215 is in; with it, what lets a blank layout stand.
         "psyneuview.layout.allowBlank": "true",
       });
@@ -315,7 +315,7 @@ test.describe("Busy wheel (#38)", { tag: "@ci" }, () => {
 
   test("the wheel stays put when the graph is hidden while it spins, and never doubles", async ({ page }) => {
     test.setTimeout(120_000);
-    await seed(page, { psynewview_layout_code_visible: "true" });
+    await seed(page, { psyneuview_layout_code_visible: "true" });
     await page.goto("/");
     await expect(page.getByTestId("open-menu")).toBeEnabled();
     await slowDown(page, "**/api/models/dirs", 6_000);

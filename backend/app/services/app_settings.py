@@ -1,4 +1,4 @@
-"""Small app-wide user preferences persisted in ``~/.psynewview.json`` — the
+"""Small app-wide user preferences persisted in ``~/.psyneuview.json`` — the
 same config file that holds ``model_dirs`` / ``source_history`` (note the legacy
 misspelling of the filename; it is *not* ``.psyneuview.json``).
 
@@ -136,7 +136,7 @@ def _write_config_atomic(path: Path, config: dict) -> None:
     """Write ``config`` to ``path`` atomically via tempfile + os.replace, so a
     crash mid-write never leaves half-written JSON (mirrors ``source_history``)."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(prefix=".psynewview.", suffix=".tmp", dir=str(path.parent))
+    fd, tmp_name = tempfile.mkstemp(prefix=".psyneuview.", suffix=".tmp", dir=str(path.parent))
     try:
         with os.fdopen(fd, "w") as f:
             json.dump(config, f, indent=2, sort_keys=True)

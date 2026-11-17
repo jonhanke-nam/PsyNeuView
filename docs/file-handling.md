@@ -187,7 +187,7 @@ Three locations, with one rule each:
    The working copies of the models included with PsyNeuView (Reference
    Models, Demos) and of PsyNeuLink Examples from a managed PsyNeuLink all go
    in one folder outside every install, `~/.psyneuview/working-copies` (or
-   `PSYNEWVIEW_WORKING_DIR`), so an app update doesn't lose them; copies left
+   `PSYNEUVIEW_WORKING_DIR`), so an app update doesn't lose them; copies left
    in an install's `backend/` by older versions are moved there on startup
    ([where things live](where-things-live.md#working-copies-of-included-models),
    [#1319](https://github.com/jonhanke-nam/PsyNeuView/issues/1319)).

@@ -217,7 +217,7 @@ Every walkthrough shows every panel (the code editor, the graph, the bottom
 panel's tabs and the Components panel) while it runs, since the window opens
 with the graph alone (#189) and steps point at the others. The layout from
 before comes back when the walkthrough ends, finished or stopped, and is kept
-in the browser (`psynewview_layout_before_walkthrough`) meanwhile, so a reload
+in the browser (`psyneuview_layout_before_walkthrough`) meanwhile, so a reload
 mid-walkthrough puts it back too rather than leaving the tutorial's layout
 behind as a choice. The e2e fixture (`test-base.ts`) turns the code editor and
 the bottom panel on for every spec, as the suite was written; a spec about the
@@ -318,7 +318,7 @@ page and `shots/`, then `audio/`), since one publish takes at most 255.
   `backend/demos/` (the label comes from the filename), and the test pins the
   numbers or node names the walkthrough relies on, so a PsyNeuLink bump fails
   there, with the names. Seed any random weights. `/demos/reset`'s working
-  copy goes in `PSYNEWVIEW_WORKING_DIR`, which the backend tests' conftest
+  copy goes in `PSYNEUVIEW_WORKING_DIR`, which the backend tests' conftest
   points at a temp folder for every test, so it never lands in `backend/` or
   in the developer's real `~/.psyneuview/working-copies` (#1134, #1319).
 - **Mind load time.** The app gives a model load 30 seconds, and CI runners

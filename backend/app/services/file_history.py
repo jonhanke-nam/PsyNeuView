@@ -1,7 +1,7 @@
 """Persisted history of which (repo, ref, path) triples the user has opened
 from the Load Model → "From GitHub repo…" modal (#258).
 
-Sibling to ``source_history``: same config file (``~/.psynewview.json``),
+Sibling to ``source_history``: same config file (``~/.psyneuview.json``),
 different key (``file_history``), different dedupe shape (the full triple,
 not just repo+ref). The split is deliberate — install picks don't have a
 path, file opens do; mixing the two would force every consumer to filter
@@ -147,7 +147,7 @@ def _write_config_atomic(path: Path, config: dict) -> None:
     """Write ``config`` to ``path`` atomically (tempfile + os.replace)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(
-        prefix=".psynewview.", suffix=".tmp", dir=str(path.parent)
+        prefix=".psyneuview.", suffix=".tmp", dir=str(path.parent)
     )
     try:
         with os.fdopen(fd, "w") as f:

@@ -7,7 +7,7 @@
  * its historical spelling; existing browsers hold entries under it.
  */
 
-export const RECENT_PATHS_KEY = "psynewview_recent_paths";
+export const RECENT_PATHS_KEY = "psyneuview_recent_paths";
 export const MAX_RECENT = 10;
 
 export function getRecentPaths(): string[] {

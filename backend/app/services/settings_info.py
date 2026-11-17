@@ -306,7 +306,9 @@ def get_psyneuview_info() -> PsyNeuViewInfo:
     # Prefer dist metadata so the wheel/editable-install version is authoritative;
     # fall back to the package __version__ when the backend is run straight from
     # source (no `pip install -e backend/`).
-    version = _safe_version("psynewview")
+    # The package was "psyneuview" before #258; an environment not yet
+    # reinstalled still has it under that name.
+    version = _safe_version("psyneuview") or _safe_version("psynewview")
     if version is None:
         from app import __version__ as version
     try:

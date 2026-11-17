@@ -18,7 +18,7 @@
  * coverage at all. Drag-add remains unscripted; click-add drives the same
  * `addNodeToModel` path, so the model-building contract is gated either way.
  *
- * Read-only w.r.t. backend reset (no PSYNEWVIEW_TEST_MODE required).
+ * Read-only w.r.t. backend reset (no PSYNEUVIEW_TEST_MODE required).
  */
 import { clickEmptyCanvas } from "../tourDriver";
 import { readOnlyTest as test, expect } from "../test-base";

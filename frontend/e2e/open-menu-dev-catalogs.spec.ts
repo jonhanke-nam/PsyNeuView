@@ -32,7 +32,7 @@ test.describe("Open menu: catalogs under development", { tag: "@ci" }, () => {
   });
 
   test("shown in developer mode, marked under development", async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem("psynewview_ui_prefs_developerMode", "true"));
+    await page.addInitScript(() => localStorage.setItem("psyneuview_ui_prefs_developerMode", "true"));
     await page.goto("/");
     await openMenu(page);
     await expect(page.getByRole("button", { name: /Reference Models \(under development\)/ })).toBeVisible();

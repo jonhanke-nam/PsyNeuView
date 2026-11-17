@@ -790,7 +790,7 @@ export function Toolbar() {
 
   const handleSave = useCallback(() => {
     if (!filePath || source === savedSource) return;
-    window.dispatchEvent(new CustomEvent("psynewview:save"));
+    window.dispatchEvent(new CustomEvent("psyneuview:save"));
   }, [filePath, source, savedSource]);
 
   // Guard against silently discarding unsaved edits when switching models (#345).

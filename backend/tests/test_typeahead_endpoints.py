@@ -31,8 +31,8 @@ def loopback(monkeypatch):
 
 @pytest.fixture
 def isolated_history(tmp_path, monkeypatch):
-    """Each test gets its own throwaway config file — never touch ~/.psynewview.json."""
-    config_path = tmp_path / ".psynewview.json"
+    """Each test gets its own throwaway config file — never touch ~/.psyneuview.json."""
+    config_path = tmp_path / ".psyneuview.json"
     monkeypatch.setenv(CONFIG_ENV, str(config_path))
     yield config_path
 

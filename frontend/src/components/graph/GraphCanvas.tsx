@@ -700,7 +700,7 @@ export function GraphCanvas() {
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      const data = e.dataTransfer.getData("application/psynewview-node");
+      const data = e.dataTransfer.getData("application/psyneuview-node");
       if (!data || !filePath) return;
       const { type: mechType, defaults } = JSON.parse(data);
 

@@ -38,7 +38,7 @@ def _pin_clone_root(monkeypatch, tmp_path):
     # Keep the shared clone root off this test's tmp dir unless a test overrides.
     monkeypatch.setenv("PSYNEUVIEW_CLONE_ROOT", str(tmp_path / "clones"))
     monkeypatch.delenv("PSYNEUVIEW_SIDECAR_PLACEMENT", raising=False)
-    # Isolate the global-default config from the real ~/.psynewview.json so
+    # Isolate the global-default config from the real ~/.psyneuview.json so
     # resolution defaults to `auto` and set-default tests don't touch it.
     monkeypatch.setenv(CONFIG_ENV, str(tmp_path / "config.json"))
 

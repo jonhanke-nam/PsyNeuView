@@ -45,13 +45,13 @@ import { create } from "zustand";
 import { recordSettingChanged } from "@/utils/activityLog";
 import { usePaletteStore } from "./paletteStore";
 
-const LS_CODE_VISIBLE = "psynewview_layout_code_visible";
-const LS_GRAPH_VISIBLE = "psynewview_layout_graph_visible";
-const LS_BOTTOM_VISIBLE = "psynewview_layout_bottom_visible";
-const LS_OUTER_SIZES = "psynewview_layout_outer_sizes";
-const LS_INNER_SIZES = "psynewview_layout_inner_sizes";
+const LS_CODE_VISIBLE = "psyneuview_layout_code_visible";
+const LS_GRAPH_VISIBLE = "psyneuview_layout_graph_visible";
+const LS_BOTTOM_VISIBLE = "psyneuview_layout_bottom_visible";
+const LS_OUTER_SIZES = "psyneuview_layout_outer_sizes";
+const LS_INNER_SIZES = "psyneuview_layout_inner_sizes";
 /** The layout from before a walkthrough, while one runs (or was interrupted). */
-export const LS_BEFORE_WALKTHROUGH = "psynewview_layout_before_walkthrough";
+export const LS_BEFORE_WALKTHROUGH = "psyneuview_layout_before_walkthrough";
 /** Settings ▸ Appearance ▸ Allow a blank screen (#215): "true" or absent. */
 export const LS_ALLOW_BLANK = "psyneuview.layout.allowBlank";
 /** The panels a model opens onto a blank screen (#215): a JSON list of panel ids. */

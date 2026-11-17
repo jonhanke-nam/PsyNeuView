@@ -103,7 +103,7 @@ settings:
     label: General ▸ PsyNeuLink version ▸ Keep Latest development up to date automatically
     home: settings
     section: general
-    storage: backend (pnl_auto_update in ~/.psynewview.json; the last check, a ready update and the last automatic install in pnl_update_state)
+    storage: backend (pnl_auto_update in ~/.psyneuview.json; the last check, a ready update and the last automatic install in pnl_update_state)
     control: setting-pnl-auto-update
     notes: >-
       On by default (#1304). The backend checks how current the installed
@@ -124,7 +124,7 @@ settings:
     label: Developer ▸ Keep your checkouts current ▸ Check for upstream changes (per checkout)
     home: settings
     section: developer
-    storage: backend (checkout_updates in ~/.psynewview.json, keyed by the checkout's path; the last check in checkout_update_state)
+    storage: backend (checkout_updates in ~/.psyneuview.json, keyed by the checkout's path; the last check in checkout_update_state)
     control: setting-checkout-check-upstream
     developer_only: true
     notes: >-
@@ -139,7 +139,7 @@ settings:
     label: Developer ▸ Keep your checkouts current ▸ Pull on launch (per checkout)
     home: settings
     section: developer
-    storage: backend (checkout_updates in ~/.psynewview.json, keyed by the checkout's path; the last pull in checkout_update_state)
+    storage: backend (checkout_updates in ~/.psyneuview.json, keyed by the checkout's path; the last pull in checkout_update_state)
     control: setting-checkout-pull-on-launch
     developer_only: true
     notes: >-
@@ -211,7 +211,7 @@ settings:
     label: General ▸ Model files ▸ Autosave
     home: settings
     section: general
-    storage: backend (~/.psynewview.json, "autosave")
+    storage: backend (~/.psyneuview.json, "autosave")
     control: setting-autosave
     notes: >-
       Off by default (#1347): a model's .py then changes only when Save is
@@ -225,7 +225,7 @@ settings:
     label: General ▸ Model files ▸ Autosave ▸ after N seconds without activity
     home: settings
     section: general
-    storage: backend (~/.psynewview.json, "autosave")
+    storage: backend (~/.psyneuview.json, "autosave")
     control: setting-autosave-delay
     notes: >-
       Shown only while autosave is on. Whole seconds, 2 to 600, default 10;
@@ -520,7 +520,7 @@ settings:
       graph-structure-condition legend opens, on every model opened. The
       legend's own Show/Hide folds it for the open model without changing
       this setting; only the legend's position is remembered by the legend
-      (psynewview-gsc-legend).
+      (psyneuview-gsc-legend).
 
   - id: busy-timer
     label: Appearance ▸ Busy wheel ▸ Show how long it has been spinning
@@ -563,7 +563,7 @@ settings:
       Decides how the Components panel opens. The panel's own ◀/▶ button
       collapses or opens it for the current session without changing this
       setting; it is no longer remembered, and the old remembered value
-      (psynewview_palette_compact) is not read, so nobody stays stuck on the
+      (psyneuview_palette_compact) is not read, so nobody stays stuck on the
       strip. Which sections are unfolded is still remembered by the panel.
 
   - id: allow-blank-screen
@@ -660,7 +660,7 @@ elsewhere:
   - id: panel-layout
     label: Which panels show (graph, code editor, Inspector panel, Components panel)
     home: toolbar ▸ Layout menu ▸ Panels (data-testid layout-menu-panel-<graph|code|bottom|palette>), and the keyboard (Mod+1 to Mod+4, listed under Settings ▸ Keyboard shortcuts, #191)
-    storage: browser localStorage (psynewview_layout_graph_visible, psynewview_layout_code_visible, psynewview_layout_bottom_visible, psynewview_palette_open; the Mac app keeps psynewview_ keys)
+    storage: browser localStorage (psyneuview_layout_graph_visible, psyneuview_layout_code_visible, psyneuview_layout_bottom_visible, psyneuview_palette_open; the Mac app keeps psyneuview_ keys)
     notes: >-
       The graph alone by default (#189): the code editor and the Inspector
       panel start hidden, and come back from the Layout menu, its presets, or
@@ -670,7 +670,7 @@ elsewhere:
       blank screen is on (allow-blank-screen, #215). How the Components panel
       starts is its own setting (components-start, #113). A walkthrough shows
       every panel while it runs and puts the stored layout back afterwards
-      (psynewview_layout_before_walkthrough holds it meanwhile); a blank
+      (psyneuview_layout_before_walkthrough holds it meanwhile); a blank
       layout comes back as the graph if the setting went off meanwhile.
 
   - id: graph-node-elements
