@@ -665,10 +665,13 @@ export function GraphCanvas() {
   }, [setNodes, setEdges, setSelectedNodeId]);
 
   const onEdgeClick = useCallback(
-    (_: React.MouseEvent, edge: any) => {
+    (e: React.MouseEvent, edge: any) => {
+      // #252: while placing a component, a click on an arrow puts it down
+      // there, as on a node or the canvas; it doesn't select the arrow.
+      if (placeArmed(e)) return;
       setSelectedEdgeId(edge.id);
     },
-    [setSelectedEdgeId]
+    [setSelectedEdgeId, placeArmed]
   );
 
   const onPaneClick = useCallback((e: React.MouseEvent) => {

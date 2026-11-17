@@ -63,6 +63,57 @@ async function emptySpot(page: Page) {
 }
 
 test.describe("pick a component, then click where it goes (#252)", { tag: "@ci" }, () => {
+  // A user put one down left of the graph in Like show_graph, Custom, and it
+  // went to the top right: the reload used positions read before the click's
+  // was saved. In Auto, the reload laid everything out again.
+  for (const style of ["showgraph", "layered"] as const) {
+    for (const start of ["Auto", "Custom"] as const) {
+      test(`it goes where the click was: ${style === "showgraph" ? "Like show_graph" : "Layered"}, ${start}`, async ({ page }) => {
+        await page.addInitScript((s) => localStorage.setItem("psyneuview.graph.layoutDefault", s), style);
+        const dir = mkdtempSync(path.join(tmpdir(), "place252-"));
+        const file = path.join(dir, "stroop_basic.py");
+        writeFileSync(file, readFileSync(path.resolve(import.meta.dirname, "../../backend/demos/stroop_basic.py"), "utf8"));
+        await open(page, file);
+        await page.waitForTimeout(1500);
+        if (start === "Custom") {
+          await page.getByRole("button", { name: /^Layout: Auto$/ }).click();
+          await expect(page.getByRole("button", { name: /^Layout: Custom$/ })).toBeVisible();
+        }
+        const tm = await item(page, "ProcessingMechanism");
+        await tm.click();
+        // Empty canvas left of the graph, where the user clicked.
+        const pane = (await page.locator(".react-flow__pane").boundingBox())!;
+        const at = { x: pane.x + pane.width * 0.06, y: pane.y + pane.height * 0.45 };
+        const clickedAt = await toFlow(page, at.x, at.y);
+        const done = page.waitForResponse((r) => r.url().endsWith("/api/model/structural-change") && r.ok());
+        await page.mouse.click(at.x, at.y);
+        await done;
+        const fresh = page.locator('.react-flow__node[data-id^="New_ProcessingMechanism"]').first();
+        await expect(fresh).toBeVisible({ timeout: 30_000 });
+        await page.waitForTimeout(1500);
+        const box = (await fresh.boundingBox())!;
+        const centre = await toFlow(page, box.x + box.width / 2, box.y + box.height / 2);
+        const zoom = await page.evaluate(() => new DOMMatrixReadOnly(getComputedStyle(document.querySelector(".react-flow__viewport")!).transform).a);
+        expect(Math.hypot(centre.x - clickedAt.x, centre.y - clickedAt.y), JSON.stringify({ centre, clickedAt })).toBeLessThan(Math.max(box.width, box.height) / zoom);
+        // Putting it somewhere, like dragging, makes the layout Custom.
+        await expect(page.getByRole("button", { name: /^Layout: Custom$/ })).toBeVisible();
+      });
+    }
+  }
+
+  test("a click on an arrow while placing puts it down there; the arrow isn't selected", async ({ page }) => {
+    const added = adds(page);
+    await open(page);
+    const tm = await item(page, "TransferMechanism");
+    await tm.click();
+    const hit = (await page.locator(".projection-edge-hit").first().boundingBox())!;
+    const done = page.waitForResponse((r) => r.url().endsWith("/api/model/structural-change") && r.ok());
+    await page.mouse.click(hit.x + hit.width / 2, hit.y + hit.height / 2);
+    await done;
+    expect(added.length).toBe(1);
+    await expect(page.locator(".react-flow__edge.selected")).toHaveCount(0);
+  });
+
   test("a click inside a composition's frame adds it to that composition, there", async ({ page }) => {
     const added = adds(page);
     const file = scratchModel("nested_minimal");

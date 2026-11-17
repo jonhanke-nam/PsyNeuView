@@ -4,7 +4,7 @@
  */
 
 import { visibleCentre } from "@/utils/graphViewport";
-import { useModelStore } from "@/stores/modelStore";
+import { useModelStore, usesFlatPositions } from "@/stores/modelStore";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useStatusStore } from "@/stores/statusStore";
 import { recordAction } from "@/utils/history";
@@ -212,6 +212,11 @@ export async function addNodeToModel(
   // as it is showing, not wherever the layout would put it.
   dropPosition = dropPosition ?? visibleCentre() ?? undefined;
 
+  // #252: putting a node down where you chose, like dragging one, makes the
+  // layout Custom where it stands. In Auto, the reload would lay everything
+  // out again and the new node would go wherever the layout engine put it.
+  if (dropPosition && useModelStore.getState().autoLayout) useModelStore.getState().setAutoLayout(false);
+
   const { setStatus, clearStatus } = useStatusStore.getState();
   setStatus(`Adding ${mechType}: ${varName}...`);
 
@@ -254,8 +259,17 @@ export async function addNodeToModel(
       await saveDroppedPosition(filePath, varName, dropPosition);
     }
 
+    // The reply's layout was read before the drop position was saved, so it
+    // doesn't have the new node: loaded as it is, the node counted as never
+    // placed and went wherever the layout put it (in Like show_graph, a
+    // column to the right of the graph). Load it with the position (#252).
+    const key = usesFlatPositions() ? "flatPositions" : "positions";
+    const layout = dropPosition
+      ? { ...(data.layout ?? {}), [key]: { ...(data.layout?.[key] ?? {}), [varName]: dropPosition } }
+      : data.layout;
+
     setSource(data.source);
-    loadModel(data.model, data.layout);
+    loadModel(data.model, layout);
     recordAction(`Added ${mechType} "${varName}"`);
     addNotification("success", `Added ${mechType} "${varName}"`);
   } catch (e) {
@@ -281,8 +295,10 @@ async function saveDroppedPosition(
   varName: string,
   position: { x: number; y: number },
 ) {
-  const gs = useGraphSettings.getState();
-  const flat = gs.flat || gs.pytorch;
+  // The namespace the store reads (#719): the flat one only when the view is
+  // flat AND the model nests something (#48). Keyed by the view setting
+  // alone, a drop on a model with no nesting was saved where it's never read.
+  const flat = usesFlatPositions();
   const merged = {
     ...useModelStore.getState().lastLayoutPositions,
     [varName]: { x: position.x, y: position.y },
@@ -303,3 +319,4 @@ async function saveDroppedPosition(
     // arrives, just where the engine puts it.
   }
 }
+
