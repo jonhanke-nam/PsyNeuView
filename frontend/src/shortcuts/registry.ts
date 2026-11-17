@@ -89,7 +89,7 @@ export const SHORTCUTS: Shortcut[] = [
   },
   {
     id: "graph.deleteSelection",
-    label: "Delete selected node",
+    label: "Delete the selected nodes",
     group: "Model",
     defaultBinding: "Backspace",
     // Never while typing — Backspace is Backspace in a text field.

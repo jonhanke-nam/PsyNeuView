@@ -554,6 +554,7 @@ def apply_structural_change(file_path: str, changes: dict) -> str:
     changes dict can contain:
         add_node: {var_name, type, params}
         remove_node: {var_name}
+        remove_nodes: {var_names}: several at once, one write (one undo step)
         add_projection: {var_name, sender, receiver, type}
         remove_projection: {var_name}
 
@@ -568,6 +569,11 @@ def apply_structural_change(file_path: str, changes: dict) -> str:
         source = _add_node(source, changes)
     elif action == "remove_node":
         source = _remove_node(source, changes)
+    elif action == "remove_nodes":
+        # A multi-selection deleted together (#261): one write, so one Undo
+        # brings them all back.
+        for var_name in changes["var_names"]:
+            source = _remove_node(source, {"var_name": var_name})
     elif action == "add_projection":
         source = _add_projection(source, changes)
     elif action == "remove_projection":
