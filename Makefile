@@ -21,7 +21,11 @@ PIP := $(VENV_DIR)/bin/pip
 PYTHON_VENV := $(VENV_DIR)/bin/python
 # uv builds the environment from backend/uv.lock when it's installed (#247);
 # without it, the targets fall back to venv + pip as before.
-UV := $(shell command -v uv 2>/dev/null)
+# uv is used only when it actually runs (#259): something called `uv` on PATH
+# that fails `uv --version` (a broken shim, a half-removed install) means pip.
+# USE_UV=0 forces pip whatever is installed:  make install USE_UV=0
+USE_UV ?= 1
+UV := $(if $(filter 1 yes true,$(USE_UV)),$(shell p=$$(command -v uv 2>/dev/null) && "$$p" --version >/dev/null 2>&1 && echo "$$p"))
 export UV_PROJECT_ENVIRONMENT := $(abspath $(VENV_DIR))
 # `uv run --no-sync`: run in the environment `make install` built. A plain
 # `uv run` re-syncs it to the lock first, which would put back the locked
@@ -103,6 +107,7 @@ $(VENV_DIR)/bin/activate:
 # lock's.
 install: ## Install the backend and its dependencies (from backend/uv.lock with uv; pyproject.toml with pip)
 ifneq ($(UV),)
+	@echo "Installing with uv from backend/uv.lock ($(UV)). For pip instead: make install USE_UV=0"
 	@cd backend && if [ ! -x "$(UV_PROJECT_ENVIRONMENT)/bin/python" ]; then \
 		$(UV) sync --frozen --extra dev --quiet $(if $(filter command line,$(origin PYTHON)),--python $(PYTHON)); \
 	else \
@@ -111,6 +116,7 @@ ifneq ($(UV),)
 			|| $(UV) sync --frozen --extra dev --inexact --quiet; \
 	fi
 else
+	@echo "Installing with pip from backend/pyproject.toml$(if $(filter 1 yes true,$(USE_UV)), (no working uv found),)"
 	@$(MAKE) --no-print-directory venv
 	$(PIP) install --quiet -e backend/
 endif

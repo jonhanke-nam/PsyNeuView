@@ -110,6 +110,15 @@ would replace the PsyNeuLink every existing Mac app and Settings switch chose.
 `backend-tests.yml` fails if the lock is stale (`uv lock --check`). To update
 the packages, run `uv lock --upgrade` in `backend/` and let CI test the result.
 
+**The standard-tools job** (`backend-tests-pip.yml`, #259). Every other backend
+job builds from the lock with uv. This one installs the usual way (`python -m
+venv` + `pip install -e "backend/[dev]"`) at the newest versions pyproject
+allows, runs the suite, and keeps `pip freeze` as an artifact. It also checks
+that `make install` takes the pip route with no uv, a broken uv, or
+`USE_UV=0`. It runs nightly, on PRs that change how the backend is installed,
+and on demand, and isn't a required check: an upstream release can break it
+with no change here, and that is for fixing, not for blocking unrelated PRs.
+
 **Path filters** keep doc-only or unrelated PRs from spending CI minutes.
 
 **Playwright browser install** (`e2e.yml`, `tutorials.yml`; #931). The install
@@ -142,8 +151,11 @@ under 10 GB.
 cd frontend && npm run tutorials:capture
 
 # Backend environment, from backend/uv.lock (#247). A new one gets the lock's
-# PsyNeuLink; an existing one keeps whichever PsyNeuLink you chose.
+# PsyNeuLink; an existing one keeps whichever PsyNeuLink you chose. uv is used
+# only when `uv --version` works; it says which route it took (#259).
 make install
+# Without uv: venv + pip from backend/pyproject.toml, whatever is installed
+make install USE_UV=0
 
 # Backend suite (do NOT set PSYNEWVIEW_TEST_MODE globally — tests set their own
 # mode; setting it breaks the "reset endpoint hidden in production" test).
