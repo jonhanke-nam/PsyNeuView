@@ -88,6 +88,7 @@ run-record-yaml.spec.ts
 run-set-survives-edit.spec.ts
 scheduling-arrows-setting.spec.ts
 settings-panel.spec.ts
+settings-search.spec.ts
 shape-mismatch-explained.spec.ts
 show-cims-at-once.spec.ts
 show-graph-agreement.spec.ts
