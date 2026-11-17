@@ -202,3 +202,76 @@ def find_broken_projections(source: str, skipped: list[dict] | None) -> list[dic
             "error": by_line[node.lineno],
         })
     return broken
+
+
+# Composition and scheduler methods that build the model, as opposed to
+# driving it (#254).
+_DEFINITION_METHODS = {
+    "add_condition", "add_condition_set", "add_node", "add_nodes",
+    "add_projection", "add_projections", "add_linear_processing_pathway",
+    "add_pathways", "add_controller", "add_required_node_role",
+    "add_backpropagation_learning_pathway", "add_reinforcement_learning_pathway",
+    "add_td_learning_pathway", "add_linear_learning_pathway",
+}
+
+# What a module-level driver does: run the model, read what it produced, show
+# it. Errors there are expected under the introspector's no-op'd run (#796).
+_DRIVER_MARKERS = (
+    ".run(", ".learn(", ".execute(", ".results", ".log", "print(", "plt.",
+    "show_graph(", ".plot(", "nparray", "np.save", "open(",
+)
+
+
+def find_skipped_definitions(source: str, skipped: list[dict] | None) -> list[dict]:
+    """Skipped statements that define the model, so their errors are real (#254).
+
+    The resilient load (#615) skips any top-level statement that raises, and
+    when the Composition still builds, the error was reported only as a calm
+    "module-level driver" notice (#796, #848). That suits a driver reading the
+    results of a run the introspector skipped. It hid
+    ``comp.scheduler.add_condition(C, pnl.BeforeNode(UNDEFINED))``: the model
+    loaded without that condition and no error was shown.
+
+    Returns ``[{line, error}]`` for each skipped statement that builds the
+    model: a scheduler condition, a Composition ``add_*`` call, or a
+    ``pnl.<Class>(...)`` construction. Projections are left out: dangling and
+    broken projections are already shown on the graph (#615, #1235). Anything
+    that looks like a driver (runs, reads results, prints, plots) is left out.
+    """
+    if not skipped:
+        return []
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+    by_line = {s.get("line"): s.get("error", "") for s in skipped if s.get("line")}
+    found: list[dict] = []
+    for node in tree.body:
+        if node.lineno not in by_line:
+            continue
+        text = ast.get_source_segment(source, node) or ""
+        if any(marker in text for marker in _DRIVER_MARKERS):
+            continue
+        if _is_definition(node):
+            found.append({"line": node.lineno, "error": by_line[node.lineno]})
+    return found
+
+
+def _is_definition(node: ast.AST) -> bool:
+    value = None
+    if isinstance(node, ast.Expr):
+        value = node.value
+    elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+        value = node.value
+    if not isinstance(value, ast.Call):
+        return False
+    func = value.func
+    # comp.add_node(...), comp.scheduler.add_condition(...)
+    if isinstance(func, ast.Attribute) and func.attr in _DEFINITION_METHODS:
+        return True
+    # x = pnl.TransferMechanism(...), x = Composition(...): a construction.
+    # Projections are shown on the graph instead (find_broken_projections).
+    cls_name = _call_class_name(func)
+    if cls_name and cls_name[:1].isupper() and not cls_name.endswith("Projection"):
+        return isinstance(node, (ast.Assign, ast.AnnAssign))
+    return False

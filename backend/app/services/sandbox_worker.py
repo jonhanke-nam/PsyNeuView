@@ -1194,7 +1194,26 @@ def task_introspect(params):
                 broken = []
             if broken:
                 result["brokenProjections"] = broken
-        if compositions:
+            # #254: a skipped statement that *defines* the model (a scheduler
+            # condition, an add_* call, a mechanism) is a real error even
+            # though the rest built. Reported as the load's error, with its
+            # line, every time; the graph still shows what did build.
+            try:
+                from app.services.dangling_check import find_skipped_definitions
+            except ModuleNotFoundError:
+                from dangling_check import find_skipped_definitions  # script context
+            try:
+                definitions = find_skipped_definitions(
+                    _Path(file_path).read_text(), skipped_statements)
+            except OSError:
+                definitions = []
+            if definitions and compositions:
+                result["error"] = definitions[0]["error"]
+                result["errorLine"] = definitions[0]["line"]
+                result["definitionErrors"] = definitions
+        if compositions and "error" in result:
+            pass  # a definition error, set above (#254): not a driver notice
+        elif compositions:
             # #796: the model's definition loaded (compositions present). The
             # error is from a skipped module-level driver statement — e.g.
             # accessing run results / log data after the introspector's no-op'd
