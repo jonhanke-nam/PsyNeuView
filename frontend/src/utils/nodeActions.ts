@@ -4,12 +4,12 @@
  */
 
 import { visibleCentre } from "@/utils/graphViewport";
-import { useModelStore } from "@/stores/modelStore";
+import { useModelStore, usesFlatPositions } from "@/stores/modelStore";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useStatusStore } from "@/stores/statusStore";
 import { recordAction } from "@/utils/history";
 import { generateDefaultVarName } from "@/utils/defaultNaming";
-import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
+import { modelLoadOptions, modelViewOptions } from "@/utils/showGraphLoadRequest";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { withBusy } from "@/stores/busyStore";
 import {
@@ -163,6 +163,28 @@ export async function renameNode(
   }
 }
 
+/**
+ * The model's outermost composition: the one no other contains. Not simply the
+ * first listed: with the compositions shown flattened, an inner one comes
+ * first, and a node added "at the top level" went into it (#252). One is
+ * inside another when the other lists it as a node (nested view), or lists
+ * all of its nodes as its own (flattened view).
+ */
+export function outermostComposition(
+  comps: { varName?: string; name?: string; nodes?: { name?: string; varName?: string }[] }[],
+): string | undefined {
+  const names = (c: (typeof comps)[number]) => new Set((c.nodes ?? []).flatMap((n) => [n.name, n.varName]).filter(Boolean) as string[]);
+  const inside = (c: (typeof comps)[number], other: (typeof comps)[number]) => {
+    if (c === other) return false;
+    const theirs = names(other);
+    if ((c.varName && theirs.has(c.varName)) || (c.name && theirs.has(c.name))) return true;
+    const mine = [...names(c)];
+    return mine.length > 0 && mine.length < theirs.size && mine.every((n) => theirs.has(n));
+  };
+  const outer = comps.find((c) => !comps.some((o) => inside(c, o)));
+  return (outer ?? comps[0])?.varName;
+}
+
 export async function addNodeToModel(
   filePath: string,
   mechType: string,
@@ -175,6 +197,10 @@ export async function addNodeToModel(
   // this the coordinates were discarded and the node appeared wherever the
   // layout engine put it.
   dropPosition?: { x: number; y: number },
+  // #252: the composition to add it to (its variable name), when the user
+  // put it inside one; otherwise the model's top-level composition. With
+  // one, dropPosition is relative to that composition's frame.
+  composition?: string,
 ) {
   // #181: auto-generate `New_<Type>_<n>` against names already declared
   // in the active file (lineMap is the authoritative source). User renames
@@ -186,6 +212,11 @@ export async function addNodeToModel(
   // as it is showing, not wherever the layout would put it.
   dropPosition = dropPosition ?? visibleCentre() ?? undefined;
 
+  // #252: putting a node down where you chose, like dragging one, makes the
+  // layout Custom where it stands. In Auto, the reload would lay everything
+  // out again and the new node would go wherever the layout engine put it.
+  if (dropPosition && useModelStore.getState().autoLayout) useModelStore.getState().setAutoLayout(false);
+
   const { setStatus, clearStatus } = useStatusStore.getState();
   setStatus(`Adding ${mechType}: ${varName}...`);
 
@@ -196,14 +227,14 @@ export async function addNodeToModel(
     body: JSON.stringify({ file_path: filePath, ...modelLoadOptions() }),
   });
   const loadData = await resp.json();
-  const compVarName = loadData.model?.compositions?.[0]?.varName;
+  const compVarName = composition ?? outermostComposition(loadData.model?.compositions ?? []);
 
   try {
     const result = await fetch("/api/model/structural-change", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        file_path: filePath,
+        file_path: filePath, ...modelViewOptions(),
         changes: {
           action: "add_node",
           var_name: varName,
@@ -228,8 +259,17 @@ export async function addNodeToModel(
       await saveDroppedPosition(filePath, varName, dropPosition);
     }
 
+    // The reply's layout was read before the drop position was saved, so it
+    // doesn't have the new node: loaded as it is, the node counted as never
+    // placed and went wherever the layout put it (in Like show_graph, a
+    // column to the right of the graph). Load it with the position (#252).
+    const key = usesFlatPositions() ? "flatPositions" : "positions";
+    const layout = dropPosition
+      ? { ...(data.layout ?? {}), [key]: { ...(data.layout?.[key] ?? {}), [varName]: dropPosition } }
+      : data.layout;
+
     setSource(data.source);
-    loadModel(data.model, data.layout);
+    loadModel(data.model, layout);
     recordAction(`Added ${mechType} "${varName}"`);
     addNotification("success", `Added ${mechType} "${varName}"`);
   } catch (e) {
@@ -255,8 +295,10 @@ async function saveDroppedPosition(
   varName: string,
   position: { x: number; y: number },
 ) {
-  const gs = useGraphSettings.getState();
-  const flat = gs.flat || gs.pytorch;
+  // The namespace the store reads (#719): the flat one only when the view is
+  // flat AND the model nests something (#48). Keyed by the view setting
+  // alone, a drop on a model with no nesting was saved where it's never read.
+  const flat = usesFlatPositions();
   const merged = {
     ...useModelStore.getState().lastLayoutPositions,
     [varName]: { x: position.x, y: position.y },
@@ -277,3 +319,4 @@ async function saveDroppedPosition(
     // arrives, just where the engine puts it.
   }
 }
+

@@ -2691,6 +2691,10 @@ async def import_mdf(file: UploadFile = File(...)):
 class StructuralChangeRequest(BaseModel):
     file_path: str
     changes: dict  # {action, var_name, type?, params?, sender?, receiver?, composition?}
+    # The view the page shows (as LoadModelRequest): the model sent back is
+    # re-read in it, or a flattened view turns nested after every change (#252).
+    flat: bool = False
+    pytorch: bool = False
 
 
 @router.post("/model/structural-change", response_model=LoadModelResponse)
@@ -2719,7 +2723,7 @@ def structural_change(request: StructuralChangeRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
     try:
-        model = load_and_introspect(request.file_path)
+        model = load_and_introspect(request.file_path, flat=request.flat, pytorch=request.pytorch)
     except Exception as e:
         return LoadModelResponse(
             model=_attach_dangling(
@@ -3675,3 +3679,25 @@ def pnl_source_protect(request: PnlSourceProtectRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"owned": True, **owned}
+
+class ConnectionOptionsRequest(BaseModel):
+    file_path: str
+    sender: str
+    receiver: str
+
+
+@router.post("/model/connection-options")
+def connection_options_endpoint(request: ConnectionOptionsRequest):
+    """What dragging from ``sender`` to ``receiver`` would connect (#253),
+    asked of PsyNeuLink on the model's own objects. Both are variable names."""
+    path = Path(request.file_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {path}")
+    from app.services.sandbox import run_in_sandbox
+
+    result = run_in_sandbox("connection_options", {
+        "file_path": str(path), "sender": request.sender, "receiver": request.receiver,
+    })
+    if "error" in result and "options" not in result and "refused" not in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result

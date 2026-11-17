@@ -4,6 +4,7 @@
  * Edits are sent to the backend, which updates the .py file and re-introspects.
  */
 
+import { modelViewOptions } from "@/utils/showGraphLoadRequest";
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useModelStore } from "@/stores/modelStore";
 import type { MechanismData, ParamMeta } from "@/stores/modelStore";
@@ -388,7 +389,7 @@ export function SchedulerModeToggle({ mode, fontPx }: { mode: string; fontPx: nu
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          file_path: filePath,
+          file_path: filePath, ...modelViewOptions(),
           changes: { action: "set_scheduler_mode", composition: comp, mode: next },
         }),
       });
@@ -1105,7 +1106,7 @@ export function InspectorPanel() {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
-                    file_path: filePath,
+                    file_path: filePath, ...modelViewOptions(),
                     changes: {
                       action: "remove_gsc",
                       owner_var: ed.owner,
@@ -2673,7 +2674,7 @@ function SchedulingSection({
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                      file_path: filePath,
+                      file_path: filePath, ...modelViewOptions(),
                       changes: { action: "remove_basic_condition", owner_var: varName },
                     }),
                   });
@@ -2862,7 +2863,7 @@ function SchedulingSection({
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                          file_path: filePath,
+                          file_path: filePath, ...modelViewOptions(),
                           changes: {
                             action: "add_gsc",
                             composition: compVarName,
@@ -3224,7 +3225,7 @@ function ConditionBuilder({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          file_path: filePath,
+          file_path: filePath, ...modelViewOptions(),
           changes: {
             action: "add_basic_condition",
             composition: compVarName,
@@ -3346,7 +3347,7 @@ export function TerminationSection({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        file_path: filePath,
+        file_path: filePath, ...modelViewOptions(),
         changes: { action: "set_termination", composition: comp, conditions: next },
       }),
     });

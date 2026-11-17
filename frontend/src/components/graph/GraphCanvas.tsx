@@ -6,6 +6,8 @@
 
 import { CanvasContextMenu, EdgeContextMenu } from "./GraphMenus";
 import { arrowShaped, reshapeDescription, startShapingArrow } from "@/utils/arrowShapes";
+import { PortChooser, type ConnectionOption } from "./PortChooser";
+import { CONNECT_HANDLE, NODE_TARGET_HANDLE } from "./connectHandles";
 import { registerVisibleCentre } from "@/utils/graphViewport";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
@@ -59,7 +61,7 @@ import { useEdgeAttach } from "@/stores/edgeAttachStore";
 import { prunePositions } from "@/utils/prunePositions";
 import { useGraphPointerStore } from "@/stores/graphPointerStore";
 import { graphCursorVars, graphPointerClass } from "@/utils/graphCursor";
-import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
+import { modelLoadOptions, modelViewOptions } from "@/utils/showGraphLoadRequest";
 import { clampIoDrag, tidyIoRows } from "@/utils/ioRows";
 import { ioRowsNotApplying, registerCanvasTidy, useIoRowsStore } from "@/stores/ioRowsStore";
 
@@ -166,7 +168,7 @@ async function createProjectionOnServer(
     const resp = await fetch("/api/model/structural-change", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath, changes }),
+      body: JSON.stringify({ file_path: filePath, ...modelViewOptions(), changes }),
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -199,7 +201,7 @@ async function addBasicConditionOnServer(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        file_path: filePath,
+        file_path: filePath, ...modelViewOptions(),
         changes: {
           action: "add_basic_condition",
           composition,
@@ -222,20 +224,26 @@ async function addBasicConditionOnServer(
 
 async function deleteNodeOnServer(
   filePath: string,
-  varName: string,
+  varNames: string | string[],
   setSource: (s: string) => void,
   loadModel: (m: any, l?: any) => void,
   addNotification: (type: any, msg: string) => void,
 ) {
+  // #261: several at once is one change to the file, so one Undo.
+  const names = Array.isArray(varNames) ? varNames : [varNames];
+  const varName = names.join(", ");
   const { setStatus, clearStatus } = useStatusStore.getState();
-  setStatus(`Removing node: ${varName}...`);
+  setStatus(`Removing ${names.length > 1 ? "nodes" : "node"}: ${varName}...`);
   try {
     const resp = await fetch("/api/model/structural-change", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        file_path: filePath,
-        changes: { action: "remove_node", var_name: varName },
+        file_path: filePath, ...modelViewOptions(),
+        changes:
+          names.length > 1
+            ? { action: "remove_nodes", var_names: names }
+            : { action: "remove_node", var_name: names[0] },
       }),
     });
     if (!resp.ok) {
@@ -256,7 +264,7 @@ async function deleteNodeOnServer(
     const data = await resp.json();
     setSource(data.source);
     loadModel(data.model, data.layout);
-    recordAction(`Deleted node ${varName}`);
+    recordAction(`Deleted ${names.length > 1 ? "nodes" : "node"} ${varName}`);
   } catch (e) {
     addNotification("error", `Failed to delete node: ${e}`);
     await resyncFromFile(filePath, setSource, loadModel);
@@ -313,11 +321,13 @@ export function GraphCanvas() {
     nodeType: string;
     x: number;
     y: number;
+    /** #261: the multi-selection the clicked node is part of, when there is one. */
+    selection?: { id: string; label: string; varName?: string }[];
   } | null>(null);
 
   const [nodes, setNodes, onNodesChangeRaw] = useNodesState(storeNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(storeEdges);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getInternalNode } = useReactFlow();
   const fitGraph = useFitGraph();
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
@@ -421,8 +431,66 @@ export function GraphCanvas() {
   }, [storeNodes, storeEdges, setNodes, setEdges, fitGraph, showProjectionLabels, showDimensions, schedulingArrows]);
 
   // When user draws a connection between nodes → create a projection
+  // #253: a connection dragged from a node's connector to anywhere on
+  // another node. What it connects is PsyNeuLink's answer, not a guess:
+  // one option is made at once, several ask which input, a refusal says why.
+  const [portChooser, setPortChooser] = useState<{
+    x: number; y: number; sender: string; receiver: string; receiverLabel: string; options: ConnectionOption[];
+  } | null>(null);
+  const connectFromDrag = useCallback(async (sourceId: string, targetId: string) => {
+    if (!filePath) return;
+    const node = (id: string) => nodesRef.current.find((n) => n.id === id);
+    const varOf = (id: string) => ((node(id)?.data as any)?.varName as string) || id;
+    const sender = varOf(sourceId), receiver = varOf(targetId);
+    const resp = await fetch("/api/model/connection-options", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_path: filePath, sender, receiver }),
+    });
+    if (!resp.ok) {
+      addNotification("error", "Couldn't work out what to connect.");
+      return;
+    }
+    const data = await resp.json();
+    if (data.refused) {
+      addNotification("info", data.refused);
+      return;
+    }
+    const options: ConnectionOption[] = data.options || [];
+    if (options.length === 1) {
+      void makeDraggedConnection(sender, receiver, options[0]);
+      return;
+    }
+    const el = document.querySelector(`.react-flow__node[data-id="${CSS.escape(targetId)}"]`);
+    const box = el?.getBoundingClientRect();
+    setPortChooser({
+      x: box ? box.left + box.width / 2 : 200, y: box ? box.bottom + 6 : 200,
+      sender, receiver, receiverLabel: ((node(targetId)?.data as any)?.label as string) || receiver, options,
+    });
+  }, [filePath, addNotification]);
+  const makeDraggedConnection = useCallback(async (sender: string, receiver: string, o: ConnectionOption) => {
+    if (!filePath) return;
+    const resp = await fetch("/api/model/load", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_path: filePath, ...modelLoadOptions() }),
+    });
+    const data = await resp.json();
+    const compVarName = data.model?.compositions?.[0]?.varName;
+    if (!compVarName) return;
+    createProjectionOnServer(
+      filePath, sender, receiver, compVarName, setSource, loadModelFromServer,
+      o.sender_port, o.receiver_port, o.type,
+    );
+  }, [filePath, setSource, loadModelFromServer]);
+
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
+      if (connection.source && connection.target
+          && (connection.sourceHandle === CONNECT_HANDLE || connection.targetHandle === NODE_TARGET_HANDLE)) {
+        void connectFromDrag(connection.source, connection.target);
+        return;
+      }
       // Optimistic: add edge locally
       setEdges((eds) => addEdge(connection, eds));
 
@@ -455,7 +523,7 @@ export function GraphCanvas() {
         loadAndConnect();
       }
     },
-    [filePath, setEdges, setSource, loadModelFromServer]
+    [filePath, setEdges, setSource, loadModelFromServer, connectFromDrag]
   );
 
   const setSelectedEdgeId = useModelStore((s) => s.setSelectedEdgeId);
@@ -466,18 +534,30 @@ export function GraphCanvas() {
 
   // #252: a component picked up in the panel goes where the graph is clicked.
   const armed = usePaletteStore((s) => s.armed);
-  const placeArmed = useCallback((e: React.MouseEvent | MouseEvent): boolean => {
+  const placeArmed = useCallback((e: React.MouseEvent | MouseEvent, onNode?: { id: string; type?: string; parentId?: string }): boolean => {
     const pick = usePaletteStore.getState().armed;
     if (!pick || !filePath) return false;
+    const at = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    // Inside a composition, it goes into that composition: the frame clicked,
+    // or the frame of the node clicked. Its position is then kept relative to
+    // the frame, as every node inside one is.
+    const frameId =
+      onNode?.type === "compositionNode" ? onNode.id : onNode?.parentId;
+    const frame = frameId ? getInternalNode(frameId) : undefined;
+    // A frame's id can carry the view's prefix ("cluster::inner"); the file
+    // knows the composition by its own name.
+    const composition = (frame?.data as { varName?: string } | undefined)?.varName?.replace(/^cluster::/, "");
+    const origin = composition ? frame!.internals.positionAbsolute : null;
     addNodeToModel(
       filePath, pick.type, pick.defaults, setSource, loadModelFromServer, addNotification,
-      screenToFlowPosition({ x: e.clientX, y: e.clientY }),
+      origin ? { x: at.x - origin.x, y: at.y - origin.y } : at,
+      composition,
     );
     usePaletteStore.getState().addRecentlyUsed(pick.type);
     // Option (Alt) keeps it picked up, for putting down several.
     if (!e.altKey) usePaletteStore.getState().setArmed(null);
     return true;
-  }, [filePath, setSource, loadModelFromServer, addNotification, screenToFlowPosition]);
+  }, [filePath, setSource, loadModelFromServer, addNotification, screenToFlowPosition, getInternalNode]);
   useEffect(() => {
     if (!armed) return;
     const onKey = (e: KeyboardEvent) => {
@@ -498,8 +578,9 @@ export function GraphCanvas() {
 
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: any) => {
-      // #252: a component picked up goes where you click, on a node too.
-      if (placeArmed(_)) return;
+      // #252: a component picked up goes where you click, on a node too, and
+      // into the composition clicked inside.
+      if (placeArmed(_, node)) return;
       // If a projection gesture is armed (#311), a projection was dropped onto
       // a receiver node and this click names the sender. Clicking the receiver
       // itself cancels (no self-projection from this gesture).
@@ -604,7 +685,13 @@ export function GraphCanvas() {
       }
       setGraphMenu(null);
       const label = (node.data as any)?.label || node.id;
-      setContextMenu({ nodeId: node.id, nodeLabel: label, nodeType: node.type || "", x: e.clientX, y: e.clientY });
+      // Inside a multi-selection, the menu acts on all of it (#261).
+      const selected = node.selected ? nodesRef.current.filter((n) => n.selected) : [];
+      const selection =
+        selected.length > 1
+          ? selected.map((n) => ({ id: n.id, label: (n.data as any)?.label || n.id, varName: (n.data as any)?.varName }))
+          : undefined;
+      setContextMenu({ nodeId: node.id, nodeLabel: label, nodeType: node.type || "", x: e.clientX, y: e.clientY, selection });
     },
     [setNodes, setEdges, setSelectedNodeId]
   );
@@ -638,10 +725,13 @@ export function GraphCanvas() {
   }, [setNodes, setEdges, setSelectedNodeId]);
 
   const onEdgeClick = useCallback(
-    (_: React.MouseEvent, edge: any) => {
+    (e: React.MouseEvent, edge: any) => {
+      // #252: while placing a component, a click on an arrow puts it down
+      // there, as on a node or the canvas; it doesn't select the arrow.
+      if (placeArmed(e)) return;
       setSelectedEdgeId(edge.id);
     },
-    [setSelectedEdgeId]
+    [setSelectedEdgeId, placeArmed]
   );
 
   const onPaneClick = useCallback((e: React.MouseEvent) => {
@@ -727,23 +817,31 @@ export function GraphCanvas() {
     [filePath],
   );
 
-  // Delete selected node with Backspace/Delete key
+  // Delete the selected nodes with the Delete shortcut (Backspace; #261: all of them)
   // Deleting the selection is registered as a command (#1112): the shortcut
   // registry owns the key, this owns what the key does. React Flow's own
   // onKeyDown is no longer used for it, so the binding is in one place and can
   // be shown — or rebound — from Settings.
+  // #261: the whole selection, when several nodes are selected.
+  const deleteNodes = useCallback(
+    (varNames: string[]) => {
+      if (!filePath || varNames.length === 0) return;
+      const question =
+        varNames.length === 1
+          ? `Delete node "${varNames[0]}"?`
+          : `Delete ${varNames.length} nodes (${varNames.join(", ")})?`;
+      if (confirm(question)) {
+        void deleteNodeOnServer(filePath, varNames, setSource, loadModelFromServer, addNotification);
+      }
+    },
+    [filePath, setSource, loadModelFromServer, addNotification],
+  );
   const deleteSelectedNode = useCallback(() => {
     const selectedNodeId = useModelStore.getState().selectedNodeId;
-    if (!selectedNodeId || !filePath) return;
-
-    const node = nodes.find((n) => n.id === selectedNodeId);
-    if (!node) return;
-
-    const varName = (node.data as unknown as MechanismData).varName;
-    if (confirm(`Delete node "${varName}"?`)) {
-      deleteNodeOnServer(filePath, varName, setSource, loadModelFromServer, addNotification);
-    }
-  }, [filePath, nodes, setSource, loadModelFromServer, addNotification]);
+    const many = nodes.filter((n) => n.selected && (n.data as unknown as MechanismData)?.varName);
+    const chosen = many.length > 1 ? many : nodes.filter((n) => n.id === selectedNodeId);
+    deleteNodes(chosen.map((n) => (n.data as unknown as MechanismData).varName).filter(Boolean));
+  }, [nodes, deleteNodes]);
 
   useEffect(
     () => registerCommand("graph.deleteSelection", deleteSelectedNode),
@@ -912,6 +1010,16 @@ export function GraphCanvas() {
               <span style={{ opacity: 0.8 }}>Option-click to put down several. Esc to cancel.</span>
             </div>
           )}
+          {portChooser && (
+            <PortChooser
+              x={portChooser.x}
+              y={portChooser.y}
+              receiver={portChooser.receiverLabel}
+              options={portChooser.options}
+              onPick={(o) => { void makeDraggedConnection(portChooser.sender, portChooser.receiver, o); setPortChooser(null); }}
+              onClose={() => setPortChooser(null)}
+            />
+          )}
           {pendingProjectionGesture && (
             <div
               style={{
@@ -1018,6 +1126,12 @@ export function GraphCanvas() {
               nodeType={contextMenu.nodeType}
               x={contextMenu.x}
               y={contextMenu.y}
+              selection={contextMenu.selection}
+              onDeleteNodes={deleteNodes}
+              onSelectOnly={(id) => {
+                setNodes((ns) => ns.map((n) => (n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })));
+                setSelectedNodeId(id);
+              }}
               onClose={() => setContextMenu(null)}
             />
           )}
