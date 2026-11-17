@@ -8,7 +8,7 @@ import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useStatusStore } from "@/stores/statusStore";
 import { recordAction } from "@/utils/history";
 import { generateDefaultVarName } from "@/utils/defaultNaming";
-import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { withBusy } from "@/stores/busyStore";
 import {
@@ -188,7 +188,7 @@ export async function addNodeToModel(
   const resp = await fetch("/api/model/load", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
+    body: JSON.stringify({ file_path: filePath, ...modelLoadOptions() }),
   });
   const loadData = await resp.json();
   const compVarName = loadData.model?.compositions?.[0]?.varName;
