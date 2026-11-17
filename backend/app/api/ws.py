@@ -39,6 +39,17 @@ async def broadcast(message: dict) -> None:
     _connected_clients.difference_update(dead)
 
 
+async def send_to(clients, message: dict) -> None:
+    """Send a message to some of the connected clients."""
+    dead = set()
+    for ws in list(clients):
+        try:
+            await ws.send_json(message)
+        except Exception:
+            dead.add(ws)
+    _connected_clients.difference_update(dead)
+
+
 def _on_file_changed(file_path: str) -> None:
     """Called by the file watcher (from a watchdog thread) when the .py file changes externally."""
     try:
@@ -51,24 +62,25 @@ def _on_file_changed(file_path: str) -> None:
             "model": model,
         }
         # We are on a watchdog thread, so there is no running loop here to
-        # schedule on. Hand the broadcast to the loop captured when the client
-        # asked us to watch this file.
+        # schedule on. Hand the send to the loop captured when the client
+        # asked us to watch this file. Only to those following this file
+        # (#272): another window may have a different model open.
         loop = _loop
         if loop is None or loop.is_closed():
             print("File watcher: no event loop available; dropping file_changed")
             return
-        asyncio.run_coroutine_threadsafe(broadcast(message), loop)
+        asyncio.run_coroutine_threadsafe(send_to(file_watcher.subscribers(file_path), message), loop)
     except Exception as e:
         print(f"File watcher error: {e}")
 
 
 def _is_open_model(path: str) -> bool:
-    """The open model has its own watcher; don't report an edit to it twice."""
-    watched = file_watcher._watched_path
+    """An open model has its own watcher; don't report an edit to it twice."""
     try:
-        return watched is not None and Path(path).resolve() == Path(watched).resolve()
+        target = str(Path(path).resolve())
     except OSError:
         return False
+    return target in file_watcher.watched_paths()
 
 
 def _on_psyneulink_changed(changed: list[str]) -> None:
@@ -78,15 +90,21 @@ def _on_psyneulink_changed(changed: list[str]) -> None:
     on screen reflects the new code, and say which files changed.
     """
     try:
-        file_path = file_watcher._watched_path
-        message = {"type": "psyneulink_changed", "changedFiles": changed, "filePath": file_path}
-        if file_path:
-            message["source"] = Path(file_path).read_text()
-            message["model"] = load_and_introspect(file_path)
         loop = _loop
         if loop is None or loop.is_closed():
             return
-        asyncio.run_coroutine_threadsafe(broadcast(message), loop)
+        paths = file_watcher.watched_paths()
+        if not paths:
+            asyncio.run_coroutine_threadsafe(
+                broadcast({"type": "psyneulink_changed", "changedFiles": changed, "filePath": None}), loop)
+            return
+        # Each open model re-read for those who have it open (#272).
+        for file_path in paths:
+            message = {
+                "type": "psyneulink_changed", "changedFiles": changed, "filePath": file_path,
+                "source": Path(file_path).read_text(), "model": load_and_introspect(file_path),
+            }
+            asyncio.run_coroutine_threadsafe(send_to(file_watcher.subscribers(file_path), message), loop)
     except Exception as e:
         logger.warning("PsyNeuLink code watcher: couldn't reload the open model: %s", e)
 
@@ -136,14 +154,14 @@ async def handle_websocket(websocket: WebSocket):
                 file_path = message["filePath"]
                 global _loop
                 _loop = asyncio.get_running_loop()
-                file_watcher.watch(file_path, _on_file_changed)
+                file_watcher.subscribe(websocket, file_path, _on_file_changed)
                 # Also follow PsyNeuLink's own code, if it's a local checkout.
                 # Checked on each open, so a source switch re-points it.
                 pnl_code_watcher.ensure(_on_psyneulink_changed, _is_open_model)
                 await websocket.send_json({"type": "watching", "filePath": file_path})
 
             elif msg_type == "stop_watching":
-                file_watcher.stop()
+                file_watcher.unsubscribe(websocket)
                 await websocket.send_json({"type": "stopped_watching"})
 
             elif msg_type == "load_model":
@@ -183,4 +201,5 @@ async def handle_websocket(websocket: WebSocket):
         presence.registry.unregister(websocket)
         # Someone leaving is as worth knowing as someone arriving.
         await _broadcast_presence()
-        file_watcher.stop()
+        # Only this window's watch: other windows keep theirs (#272).
+        file_watcher.unsubscribe(websocket)

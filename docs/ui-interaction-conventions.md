@@ -153,3 +153,18 @@ Anywhere in or on a node is a click on that node: its fill, outline, label and t
 Two traps, both found by #250:
 - **Invisible but catching.** A label hidden with `opacity: 0` still takes the pointer. Anything hidden that way gets `pointerEvents: "none"` while hidden.
 - **A click is not a drag.** A press counts as a drag only after it moves a few pixels (4 px for a connection dot, 6 for an arrow's line). Otherwise a click with a wobble reshapes things, and in Auto makes the layout Custom.
+
+## Clicks on the graph: macOS conventions (#261)
+
+What each gesture means on the graph, as in Finder and Keynote. `frontend/e2e/graph-click-conventions.spec.ts` checks every row, as a Mac and as Windows/Linux.
+
+| Gesture | Meaning |
+|---|---|
+| Click | select the object, and only it |
+| Control-click = right-click = two-finger tap | the context menu for what's under the pointer. On an unselected node it becomes the selection; inside a selection, the selection stays. |
+| Command-click (Ctrl-click off the Mac) | add to or take from the selection; never a menu |
+| Shift-click | add to or take from the selection |
+| Shift-drag on empty canvas | draw a selection box |
+| Drag on empty canvas | pan |
+
+Every object has a menu: nodes (Inspect, Rename…, Collapse/Expand…), arrows (Select sender, Select receiver, Reset shape) and the canvas (Select All, Fit the graph to the window, Show Components…). A menu offers only actions that exist elsewhere too, and the web view's own menu (Reload, Inspect Element) never appears on the graph. Still to come: a menu that acts on a whole multi-selection.

@@ -22,6 +22,21 @@ don't use a single GitHub issue as the ledger — it gets noisy and is awkward t
 format.) Tracked as a process in #709.
 
 
+## A Mac Control-click opened no menu when it arrived as a click (2026-11-17)
+
+**Caught by:** `e2e` → `graph-click-conventions.spec.ts`, the Mac row "a
+secondary click on an unselected node selects it and shows its menu", on the
+Linux runner; it failed on retry too (#261, PR #268)
+
+The new Mac click conventions passed on a Mac and failed in CI. macOS turns
+Control-click into a secondary click before the page sees it, so on a Mac the
+menu opened by the usual route. Elsewhere, including a browser that only says
+it is on a Mac, it arrives as a plain click with Control held: the node was
+selected and no menu opened. Fixed by sending a Mac Control-click to the menu
+ourselves, on nodes, arrows and the canvas, and by judging "is it a Mac" from
+the user agent, as the graph library does. The test now also sends the click
+the way Linux delivers it, so it checks the rule on any host.
+
 ## Two changes that each passed alone broke two things together (2026-11-04)
 
 **Caught by:** `e2e` → `show-graph-agreement.spec.ts` and
