@@ -236,10 +236,10 @@ def _platform_sniff(repo: Repo, c: Check) -> Iterator[Finding]:
 def _shell_true(repo: Repo, c: Check) -> Iterator[Finding]:
     for f in _code_files(repo, (".py",), ("backend/app/", "scripts/")):
         for n, line in _lines(repo, f):
-            if re.search(r"shell\s*=\s*True", line):
+            if re.search(r"shell\s*=\s*True", line) and not _is_comment(line):
                 yield _find(c, repo, f, n, line,
                             "runs a command through the shell",
-                            "pass an argument list without shell=True, so no input can become a command")
+                            "pass the command as a list of arguments, not one string through the shell")
 
 
 @check("todo-without-issue", "low", "A TODO or FIXME with no issue number")
