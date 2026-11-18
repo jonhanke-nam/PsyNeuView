@@ -64,6 +64,12 @@ import { applyLayout } from "@/utils/layout";
 import { applyShowGraphLayoutNow } from "@/hooks/useShowGraphLayout";
 import { useGraphPointerStore } from "@/stores/graphPointerStore";
 import {
+  DEFAULT_FIT_BUTTON_STYLE,
+  FIT_BUTTON_STYLES,
+  isFitButtonStyle,
+  useFitButtonStyleStore,
+} from "@/stores/fitButtonStyleStore";
+import {
   NODE_OUTLINE_EMPHASIS_EXTRA,
   NODE_OUTLINE_SELECTED_EXTRA,
   NODE_OUTLINE_WIDTHS,
@@ -109,6 +115,9 @@ export function AppearanceSection() {
       </Group>
       <Group id="lines-between-nodes" title="Lines between nodes">
         <EdgeLineRow />
+      </Group>
+      <Group id="canvas-controls" title="Canvas controls">
+        <FitButtonStyleRow />
       </Group>
       <Group id="automatic-layout" title="Automatic layout">
         <AutomaticLayoutRow />
@@ -477,6 +486,34 @@ function ViewOnlyTagsRow() {
           <option key={o.id} value={o.id}>
             {o.label}
             {o.id === DEFAULT_VIEW_ONLY_TAGS ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function FitButtonStyleRow() {
+  const style = useFitButtonStyleStore((s) => s.style);
+  const setStyle = useFitButtonStyleStore((s) => s.setStyle);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <SettingLabel title="Fit button" htmlFor="setting-graph-fit-button-style">
+        The button under + and − that fits the whole graph into the window
+        (also ⌘9 or ⇧1). The icon needs no translation; the word is easier to
+        spot. Same size either way.
+      </SettingLabel>
+      <select
+        id="setting-graph-fit-button-style"
+        data-testid="setting-graph-fit-button-style"
+        value={style}
+        onChange={(e) => isFitButtonStyle(e.target.value) && setStyle(e.target.value)}
+        style={selectStyle}
+      >
+        {FIT_BUTTON_STYLES.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+            {o.id === DEFAULT_FIT_BUTTON_STYLE ? " (default)" : ""}
           </option>
         ))}
       </select>

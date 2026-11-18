@@ -39,6 +39,9 @@ one can be changed.
 
 Keys are shown the way the app shows them. "Area" is the heading the
 shortcut is listed under in Settings and in Help ▸ Keyboard Shortcuts.
+The graph's Fit button shows the fit keys in its tooltip; whether it is drawn
+as corner brackets or the word "Fit" is a setting (Settings ▸ Appearance ▸
+Canvas controls, #289), not a shortcut.
 
 | Action | Id | Mac | Windows and Linux | Area | Convention |
 |---|---|---|---|---|---|
@@ -50,17 +53,14 @@ shortcut is listed under in Settings and in Help ▸ Keyboard Shortcuts.
 | Show or hide the code editor | `layout.toggleCode` | ⌘2 | Ctrl+2 | View | As above |
 | Show or hide the Inspector panel | `layout.toggleBottom` | ⌘3 | Ctrl+3 | View | As above |
 | Show or hide the Components panel | `layout.togglePalette` | ⌘4 | Ctrl+4 | View | As above |
+| Fit the graph to the window | `view.fitGraph` | ⌘9 | Ctrl+9 | View | Preview: View ▸ Zoom to Fit ([#289](https://github.com/jonhanke-nam/PsyNeuView/issues/289)). A browser keeps it |
+| Fit the graph to the window (second key) | `view.fitGraphShift` | ⇧1 | Shift+1 | View | Figma, Sketch: the key that reaches the page in a browser. Matches the physical 1 key; never while typing |
+| Show the graph at actual size (100%) | `view.actualSize` | ⌘0 | Ctrl+0 | View | Preview: View ▸ Actual Size. A browser keeps it, and inside the Mac app View ▸ Actual Size (below) currently takes ⌘0 first |
 | Delete the selected nodes | `graph.deleteSelection` | Backspace | Backspace | Graph | Apple HIG: Delete. Never while typing |
 | Cancel the current gesture | `gesture.cancel` | Escape | Escape | Graph | Apple HIG: Escape cancels. Passes on to an open menu or dialog when there is nothing to cancel |
 | Show keyboard shortcuts | `help.shortcuts` | ⌘/ | Ctrl+/ | Help | Google's apps, Slack, GitHub |
 | Show keyboard shortcuts (second key) | `help.shortcutsQuestion` | ? | ? | Help | Gmail, GitHub, Figma. Never while typing |
 
-<!-- TODO(#289): when #289 (PR #293) is in devel, add its three rows above and
-check them with keyboardShortcutsDoc.test.ts:
-| Fit the graph to the window | `view.fitGraph` | ⌘9 | Ctrl+9 | View | Preview: View ▸ Zoom to Fit. A browser keeps it |
-| Fit the graph to the window (second key) | `view.fitGraphShift` | ⇧1 | Shift+1 | View | Figma, Sketch. Never while typing |
-| Show the graph at actual size (100%) | `view.actualSize` | ⌘0 | Ctrl+0 | View | Preview: View ▸ Actual Size. A browser keeps it, and so does the Mac app's View ▸ Actual Size (below) |
--->
 
 ## Keys the Mac app's menus keep
 

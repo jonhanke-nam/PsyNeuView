@@ -23,6 +23,7 @@ import { useStatusStore } from "@/stores/statusStore";
 import { useLayoutStore, type AnyPanel, type LayoutPreset } from "@/stores/layoutStore";
 import { usePaletteStore } from "@/stores/paletteStore";
 import { displayBinding } from "@/shortcuts/binding";
+import { runCommand } from "@/shortcuts/commands";
 import { setPanelVisibleOrExplain } from "@/shortcuts/lastPanel";
 import { useResolvedShortcuts } from "@/shortcuts/useAppShortcuts";
 import { focusComposition } from "@/utils/nodeActions";
@@ -3779,6 +3780,43 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
                   </span>
                 )}
                 <span style={{ opacity: panel.visible ? 1 : 0.25 }}>{panel.visible ? "✓" : "·"}</span>
+              </span>
+            </button>
+          ))}
+          <span style={{ display: "block", height: 1, background: "var(--pnv-border-faint)", margin: "4px 4px" }} />
+          {/* #289: recentring the graph, with the keys that do it. The same fit
+              as the canvas's Fit button; nothing to fit while the graph is hidden. */}
+          {[
+            { testId: "layout-menu-fit", label: "Fit the graph to the window", keys: [keyFor("view.fitGraph"), keyFor("view.fitGraphShift")], command: "graph.fit" as const },
+            { testId: "layout-menu-actual-size", label: "Actual size (100%)", keys: [keyFor("view.actualSize")], command: "graph.actualSize" as const },
+          ].map((row) => (
+            <button
+              key={row.testId}
+              data-testid={row.testId}
+              aria-disabled={!graphVisible || undefined}
+              onClick={() => {
+                if (!graphVisible) return;
+                runCommand(row.command);
+                setOpen(false);
+              }}
+              title={graphVisible ? row.label : "Show the graph canvas first"}
+              style={{
+                ...menuRowStyle(false),
+                cursor: graphVisible ? "pointer" : "not-allowed",
+                opacity: graphVisible ? 1 : 0.5,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+              onMouseEnter={(e) => {
+                if (graphVisible) e.currentTarget.style.background = MENU_ROW_HOVER;
+              }}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <span style={{ whiteSpace: "nowrap" }}>{row.label}</span>
+              <span style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", whiteSpace: "nowrap" }}>
+                {row.keys.filter(Boolean).join("  ")}
               </span>
             </button>
           ))}

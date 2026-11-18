@@ -158,6 +158,31 @@ export const SHORTCUTS: Shortcut[] = [
     defaultBinding: "Mod+4",
     scope: "codeEditorToo",
   },
+  // #289: recentring the graph, with Preview's keys. A browser keeps Cmd+9 and
+  // Cmd+0 for its tabs and page zoom, so Shift+1 (as in Figma and Sketch) also
+  // fits; inside the Mac app all three reach the page.
+  {
+    id: "view.fitGraph",
+    label: "Fit the graph to the window",
+    group: "View",
+    defaultBinding: "Mod+9",
+    scope: "codeEditorToo",
+  },
+  {
+    id: "view.fitGraphShift",
+    label: "Fit the graph to the window (second key)",
+    group: "View",
+    defaultBinding: "Shift+1",
+    // It types "!": never while typing, in the editor or anywhere else.
+    scope: "outsideText",
+  },
+  {
+    id: "view.actualSize",
+    label: "Show the graph at actual size (100%)",
+    group: "View",
+    defaultBinding: "Mod+0",
+    scope: "codeEditorToo",
+  },
   {
     id: "gesture.cancel",
     label: "Cancel the current gesture",
