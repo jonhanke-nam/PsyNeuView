@@ -24,7 +24,9 @@
  * And whether inputs are kept on the bottom and outputs on top (#219): in
  * automatic layouts by default, or also while dragging, or off
  * (stores/ioRowsStore.ts), with a word when the open model's layout is one
- * it doesn't apply to.
+ * it doesn't apply to. And what the busy wheel looks like (#169): the
+ * classic wheel by default, or a PsyNeuLink-style network and others, each
+ * shown moving beside its name (stores/busyStore.ts).
  */
 
 import { LEGEND_STARTS, isLegendStart, useGraphLegendStore } from "@/stores/graphLegendStore";
@@ -83,7 +85,8 @@ import {
   isPointerSize,
 } from "@/utils/graphCursor";
 import { TEXT_SIZES, TEXT_SIZE_LABELS, DEFAULT_TEXT_SIZE, isTextSize, useTextSizeStore } from "@/stores/textSizeStore";
-import { BUSY_TIMER_PLACES, DEFAULT_BUSY_TIMER_PLACE, useBusyStore } from "@/stores/busyStore";
+import { BUSY_STYLES, BUSY_TIMER_PLACES, DEFAULT_BUSY_STYLE, DEFAULT_BUSY_TIMER_PLACE, useBusyStore } from "@/stores/busyStore";
+import { BusyGraphic } from "@/components/common/BusyIndicator";
 import { Group, SettingLabel, mutedStyle } from "./shared";
 
 export function AppearanceSection() {
@@ -120,7 +123,10 @@ export function AppearanceSection() {
         <GraphLegendRow />
       </Group>
       <Group id="busy-wheel" title="Busy wheel">
-        <BusyTimerRow />
+        <BusyStyleRow />
+        <div style={{ marginTop: 14 }}>
+          <BusyTimerRow />
+        </div>
       </Group>
       <Group id="scheduling-arrows" title="Scheduling arrows">
         <SchedulingArrowsRow />
@@ -663,6 +669,56 @@ function TextSizeRow() {
           </option>
         ))}
       </select>
+    </div>
+  );
+}
+
+/**
+ * What the busy wheel looks like (#169). Each choice shows its picture,
+ * moving, beside its name, so it can be seen before it is chosen.
+ */
+function BusyStyleRow() {
+  const style = useBusyStore((s) => s.style);
+  const setStyle = useBusyStore((s) => s.setStyle);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <SettingLabel title="Style">
+        What shows while PsyNeuView is working. Every style takes the same
+        space; with reduced motion turned on, it stands still.
+      </SettingLabel>
+      <div
+        data-testid="setting-busy-style"
+        role="radiogroup"
+        aria-label="Busy wheel style"
+        style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 6 }}
+      >
+        {BUSY_STYLES.map((choice) => (
+          <label
+            key={choice.style}
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 0", cursor: "pointer" }}
+          >
+            <input
+              type="radio"
+              name="busy-style"
+              value={choice.style}
+              data-testid={`busy-style-${choice.style}`}
+              checked={style === choice.style}
+              onChange={() => setStyle(choice.style)}
+            />
+            <span
+              data-testid={`busy-style-preview-${choice.style}`}
+              style={{ display: "inline-flex", color: "var(--pnv-text-secondary)", flexShrink: 0 }}
+            >
+              <BusyGraphic style={choice.style} size={20} />
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ fontWeight: 500 }}>{choice.label}</span>
+              {choice.style === DEFAULT_BUSY_STYLE && <span style={mutedStyle}> (default)</span>}
+              <span style={{ ...mutedStyle, display: "block" }}>{choice.description}</span>
+            </span>
+          </label>
+        ))}
+      </div>
     </div>
   );
 }

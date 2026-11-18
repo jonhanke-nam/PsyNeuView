@@ -566,6 +566,22 @@ settings:
       this setting; only the legend's position is remembered by the legend
       (psyneuview-gsc-legend).
 
+  - id: busy-style
+    label: Appearance ▸ Busy wheel ▸ Style
+    keywords: ["spinner", "loading", "busy indicator", "network", "progress"]
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.busy.style); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-busy-style
+    notes: >-
+      Classic wheel (default), Network (PsyNeuLink-style: three nodes joined
+      by projections, turning slowly, each lighting up in turn), Ring,
+      Pulsing nodes, Orbit, Bar or Text only (#169). Every style draws in the
+      same box over the workspace, so nothing moves when it changes, and
+      stands still under reduced motion. Each choice shows its picture moving
+      beside its name. With the time in the centre (busy-timer), styles with
+      no clear centre show it below instead.
+
   - id: busy-timer
     label: Appearance ▸ Busy wheel ▸ Show how long it has been spinning
     keywords: ["spinner", "loading", "timer"]

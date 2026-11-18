@@ -6,6 +6,7 @@
  * the page register through withBusy(label, promise). BusyIndicator shows the
  * wheel once the oldest piece of work has run for the threshold (0.2 s by
  * default, Settings ▸ General ▸ Busy indicator); quick actions show nothing.
+ * Settings ▸ Appearance ▸ Busy wheel chooses what it looks like (#169).
  *
  * Background requests (the health check, polls of a running job, checks
  * for updates) are not user actions and never register.
@@ -62,6 +63,33 @@ export function loadBusyTimerPlace(): BusyTimerPlace {
   }
 }
 
+export const BUSY_STYLE_KEY = "psyneuview.busy.style";
+/** What the busy indicator looks like (#169). */
+export type BusyStyle = "wheel" | "network" | "ring" | "nodes" | "orbit" | "bar" | "text";
+export const DEFAULT_BUSY_STYLE: BusyStyle = "wheel";
+export const BUSY_STYLES: { style: BusyStyle; label: string; description: string }[] = [
+  { style: "wheel", label: "Classic wheel", description: "Twelve fading spokes that step round, like the Mac's." },
+  {
+    style: "network",
+    label: "Network",
+    description: "Three nodes joined by projections, turning slowly, each lighting up in turn.",
+  },
+  { style: "ring", label: "Ring", description: "One arc going round a faint circle." },
+  { style: "nodes", label: "Pulsing nodes", description: "Three nodes in a row that brighten one after another. Nothing turns." },
+  { style: "orbit", label: "Orbit", description: "A node with a signal circling it, like a recurrent projection." },
+  { style: "bar", label: "Bar", description: "A thin bar with a segment sliding along it. Nothing turns." },
+  { style: "text", label: "Text only", description: "Just Working…, with no picture." },
+];
+
+export function loadBusyStyle(): BusyStyle {
+  try {
+    const stored = localStorage.getItem(BUSY_STYLE_KEY);
+    return BUSY_STYLES.find((s) => s.style === stored)?.style ?? DEFAULT_BUSY_STYLE;
+  } catch {
+    return DEFAULT_BUSY_STYLE;
+  }
+}
+
 /** How long the wheel has been spinning: `12 s`, `1:05`, `1:02:09`. */
 export function formatBusyElapsed(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -90,6 +118,8 @@ interface BusyState {
   setThresholdMs: (ms: number) => void;
   timerPlace: BusyTimerPlace;
   setTimerPlace: (place: BusyTimerPlace) => void;
+  style: BusyStyle;
+  setStyle: (style: BusyStyle) => void;
 }
 
 export const useBusyStore = create<BusyState>((set) => ({
@@ -114,6 +144,16 @@ export const useBusyStore = create<BusyState>((set) => ({
     }
     recordSettingChanged("busy-timer", place);
     set({ timerPlace: place });
+  },
+  style: loadBusyStyle(),
+  setStyle: (style) => {
+    try {
+      localStorage.setItem(BUSY_STYLE_KEY, style);
+    } catch {
+      // Storage blocked: the choice holds for this page.
+    }
+    recordSettingChanged("busy-style", style);
+    set({ style });
   },
 }));
 

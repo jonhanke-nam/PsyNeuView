@@ -6,15 +6,19 @@
  * the toolbar, whichever panels are open (#222 follow-up), so it never moves
  * when a panel is shown or hidden. Settings ▸ Appearance can show how long it has been
  * spinning (#176), below the wheel or in its centre, once a second has passed.
- * With reduced motion the wheel stands still.
+ * With reduced motion it stands still.
+ *
+ * Settings ▸ Appearance also chooses what it looks like (#169): the classic
+ * wheel, a PsyNeuLink-style network of three nodes, and others. Every style
+ * draws in the same box, so changing it never moves anything.
  *
  * The wheel itself is hidden from screen readers. BusyStatus, mounted once and
  * for good, turns the pointer to "progress" and announces "Working…": a live
  * region has to be on the page before its text changes for that to be read.
  */
 
-import { useEffect, useState } from "react";
-import { formatBusyElapsed, oldestTask, useBusyStore } from "@/stores/busyStore";
+import { useEffect, useState, type ReactNode } from "react";
+import { formatBusyElapsed, oldestTask, useBusyStore, type BusyStyle } from "@/stores/busyStore";
 
 /** True once the oldest in-flight task has run for the threshold. */
 export function useBusyVisible(): boolean {
@@ -73,13 +77,26 @@ const timerText = {
   whiteSpace: "nowrap",
 } as const;
 
-/** The spokes turn on their own; the box round them does not, so it can be measured. */
-function Wheel({ rim }: { rim: boolean }) {
+/** The picture's frame: a 24-unit square drawn at `size`, in the text colour. */
+function Frame({ size, className, children }: { size: number | string; className?: string; children: ReactNode }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+      {children}
+    </svg>
+  );
+}
+
+/**
+ * The classic wheel: twelve fading spokes that step round. The spokes turn on
+ * their own; the box round them does not, so it can be measured. With `rim`
+ * the spokes are short, round the edge, leaving the centre clear for the time.
+ */
+function Wheel({ size, rim = false }: { size: number | string; rim?: boolean }) {
   const spoke = rim
     ? { x: 11.35, y: 0.8, width: 1.3, height: 3, rx: 0.65 }
     : { x: 11, y: 2, width: 2, height: 6, rx: 1 };
   return (
-    <svg className="pnv-busy-wheel" width="100%" height="100%" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+    <Frame size={size} className="pnv-busy-wheel pnv-busy-anim">
       {Array.from({ length: 12 }, (_, i) => (
         <rect
           key={i}
@@ -89,19 +106,177 @@ function Wheel({ rim }: { rim: boolean }) {
           transform={`rotate(${i * 30} 12 12)`}
         />
       ))}
-    </svg>
+    </Frame>
   );
+}
+
+/** One arc going round a faint circle. */
+function Ring({ size }: { size: number | string }) {
+  return (
+    <Frame size={size} className="pnv-busy-turn pnv-busy-anim">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2.5" opacity="0.25" />
+      <path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+    </Frame>
+  );
+}
+
+/** An oval node like the canvas's, lit up in turn by the pulse animation. */
+function Node({ cx, cy, rx, ry, delay }: { cx: number; cy: number; rx: number; ry: number; delay: number }) {
+  return (
+    <ellipse
+      className="pnv-busy-pulse pnv-busy-anim"
+      cx={cx}
+      cy={cy}
+      rx={rx}
+      ry={ry}
+      fill="currentColor"
+      fillOpacity={NODE_REST}
+      stroke="currentColor"
+      strokeWidth="1.4"
+      style={{ animationDelay: `${delay}s` }}
+    />
+  );
+}
+
+/** How bright a node is between pulses (the CSS keyframes come back to it). */
+const NODE_REST = 0.15;
+const NODE_RX = 4;
+const NODE_RY = 2.6;
+/** The network's three nodes, on a circle round the middle, clockwise. */
+const NETWORK_NODES: [number, number][] = [
+  [12, 4.5],
+  [18.5, 15.75],
+  [5.5, 15.75],
+];
+
+/** How far the oval's edge is from its centre, heading in direction (dx, dy). */
+function ovalRadius(dx: number, dy: number): number {
+  const len = Math.hypot(dx, dy);
+  const cos = dx / len;
+  const sin = dy / len;
+  return (NODE_RX * NODE_RY) / Math.hypot(NODE_RY * cos, NODE_RX * sin);
+}
+
+/** A projection from one node's edge to the next's, with its arrowhead. */
+function Projection({ from, to }: { from: [number, number]; to: [number, number] }) {
+  const dx = to[0] - from[0];
+  const dy = to[1] - from[1];
+  const len = Math.hypot(dx, dy);
+  const ux = dx / len;
+  const uy = dy / len;
+  const gap = 0.8;
+  const start = ovalRadius(dx, dy) + gap;
+  const end = len - ovalRadius(-dx, -dy) - gap;
+  const x1 = from[0] + ux * start;
+  const y1 = from[1] + uy * start;
+  const x2 = from[0] + ux * end;
+  const y2 = from[1] + uy * end;
+  const head = 2.4;
+  const half = 1.4;
+  const bx = x2 - ux * head;
+  const by = y2 - uy * head;
+  const r = (n: number) => Math.round(n * 100) / 100;
+  const points = [
+    [x2, y2],
+    [bx - uy * half, by + ux * half],
+    [bx + uy * half, by - ux * half],
+  ]
+    .map(([x, y]) => `${r(x)},${r(y)}`)
+    .join(" ");
+  return (
+    <>
+      <line x1={r(x1)} y1={r(y1)} x2={r(bx)} y2={r(by)} stroke="currentColor" strokeWidth="1.2" />
+      <polygon points={points} fill="currentColor" />
+    </>
+  );
+}
+
+/** PsyNeuLink-style: three nodes in a triangle, joined by projections, turning slowly. */
+function Network({ size }: { size: number | string }) {
+  return (
+    <Frame size={size} className="pnv-busy-turn-slow pnv-busy-anim">
+      {NETWORK_NODES.map((from, i) => (
+        <Projection key={i} from={from} to={NETWORK_NODES[(i + 1) % 3]} />
+      ))}
+      {NETWORK_NODES.map(([cx, cy], i) => (
+        <Node key={i} cx={cx} cy={cy} rx={NODE_RX} ry={NODE_RY} delay={i * 0.4} />
+      ))}
+    </Frame>
+  );
+}
+
+/** Three nodes in a row, input → hidden → output, lighting up left to right. */
+function PulsingNodes({ size }: { size: number | string }) {
+  return (
+    <Frame size={size}>
+      {[4, 12, 20].map((cx, i) => (
+        <Node key={i} cx={cx} cy={12} rx={3.4} ry={2.4} delay={i * 0.4} />
+      ))}
+    </Frame>
+  );
+}
+
+/** One node with a signal circling it, like a recurrent projection. */
+function Orbit({ size }: { size: number | string }) {
+  return (
+    <Frame size={size} className="pnv-busy-turn-orbit pnv-busy-anim">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.25" />
+      <circle cx="12" cy="12" r="4" fill="currentColor" fillOpacity={NODE_REST} stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="12" cy="3.5" r="2.2" fill="currentColor" />
+    </Frame>
+  );
+}
+
+/** A thin bar with a segment sliding along it. */
+function Bar({ size }: { size: number | string }) {
+  return (
+    <Frame size={size}>
+      <rect x="0" y="10.5" width="24" height="3" rx="1.5" fill="currentColor" opacity="0.25" />
+      <rect className="pnv-busy-slide pnv-busy-anim" x="0" y="10.5" width="8" height="3" rx="1.5" fill="currentColor" />
+    </Frame>
+  );
+}
+
+/** The styles with a clear centre, where the time can go (#220). */
+const CLEAR_CENTRE: ReadonlySet<BusyStyle> = new Set(["wheel", "ring"]);
+
+/**
+ * The picture for a style, `size` square, so every style takes the same
+ * space. Text only draws nothing but keeps the space.
+ */
+export function BusyGraphic({ style, size, rim = false }: { style: BusyStyle; size: number | string; rim?: boolean }) {
+  switch (style) {
+    case "network":
+      return <Network size={size} />;
+    case "ring":
+      return <Ring size={size} />;
+    case "nodes":
+      return <PulsingNodes size={size} />;
+    case "orbit":
+      return <Orbit size={size} />;
+    case "bar":
+      return <Bar size={size} />;
+    case "text": {
+      const px = typeof size === "number" ? `${size}px` : size;
+      return <span aria-hidden="true" style={{ display: "block", width: px, height: px }} />;
+    }
+    default:
+      return <Wheel size={size} rim={rim} />;
+  }
 }
 
 function WheelCard() {
   const timerPlace = useBusyStore((s) => s.timerPlace);
+  const style = useBusyStore((s) => s.style);
   const seconds = useBusySeconds(timerPlace !== "off");
-  const inCentre = timerPlace === "center";
+  // A style with no clear centre shows the time below it instead.
+  const inCentre = timerPlace === "center" && CLEAR_CENTRE.has(style);
   const size = inCentre ? WHEEL_SIZE_WITH_CENTRE : WHEEL_SIZE;
   const text = timerPlace === "off" ? "" : elapsedText(seconds);
   return (
     <div
       data-testid="busy-wheel"
+      data-style={style}
       aria-hidden="true"
       style={{
         position: "absolute",
@@ -122,8 +297,26 @@ function WheelCard() {
         pointerEvents: "none",
       }}
     >
-      <div data-testid="busy-wheel-box" style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-        <Wheel rim={inCentre} />
+      {/* The same box for every style. Text only keeps its height and is as
+          wide as the word needs, at least as wide as the wheel. */}
+      <div
+        data-testid="busy-wheel-box"
+        style={{
+          position: "relative",
+          width: style === "text" ? "auto" : size,
+          minWidth: size,
+          height: size,
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {style === "text" ? (
+          <div style={{ ...timerText, fontSize: "var(--pnv-fs-14)" }}>Working…</div>
+        ) : (
+          <BusyGraphic style={style} size="100%" rim={inCentre} />
+        )}
         {inCentre && text && (
           <div
             data-testid="busy-elapsed"
