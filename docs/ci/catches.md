@@ -21,6 +21,24 @@ The file is the narrative record; the label is the filter. (We deliberately
 don't use a single GitHub issue as the ledger — it gets noisy and is awkward to
 format.) Tracked as a process in #709.
 
+## An arrow into a frame lay over the nodes it passed (2026-11-18)
+
+**Caught by:** `e2e` → `graph-hit-areas.spec.ts`, "the sweep, at three zooms
+with interface nodes: Giallanza2024_ego_study2.py", on the Linux runner; it
+failed on retry too (#250, PR #284)
+
+Zoomed out with interface nodes shown, a click inside EGO's `PREDICTION` node
+landed on an arrow instead. React Flow stacks an arrow at its ends' level when
+an end sits inside a frame, so every arrow to or from a nested node was drawn
+above every top-level node, and its wide invisible grab strip covered part of
+any node it passed or ended at. It passed on a Mac only because the Mac's font
+places the nodes so the strip missed the test's sample points. Fixed by drawing
+every node (all but open frames) in a layer above all arrows, and what belongs
+above the nodes (connection dots, bend handles, a frame's buttons) above that.
+The spec now also checks, on a fine grid over each node, that no arrow's grab
+strip is stacked above it, so it fails on any machine, not only where an arrow
+happens to land on a sample point.
+
 
 ## A Mac Control-click opened no menu when it arrived as a click (2026-11-17)
 
