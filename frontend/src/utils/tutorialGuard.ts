@@ -354,7 +354,11 @@ export async function chooseTutorialStart(id: string): Promise<void> {
       else resume = saved;
     }
   }
-  const begin = () => (resume ? useTourStore.getState().resumeTour(id, resume) : useTourStore.getState().startTour(id));
+  const begin = () => {
+    if (resume) useTourStore.getState().resumeTour(id, resume);
+    else useTourStore.getState().startTour(id);
+    sayWhyItStartedOver();
+  };
 
   const running = activeTourId !== id ? getWalkthrough(activeTourId) : null;
   const inProgress =
@@ -393,8 +397,16 @@ function savedPlace(w: Walkthrough): TutorialProgress | null {
   if (!saved) return null;
   if (fitsWalkthrough(w, saved)) return saved;
   clearProgress(w.id);
-  useNotificationStore.getState().addNotification("info", STALE_MESSAGE(w.title), 8000);
+  staleNotice = STALE_MESSAGE(w.title);
   return null;
+}
+
+/** Why the tutorial about to start begins at step 1, for its bar (#173). */
+let staleNotice: string | null = null;
+
+function sayWhyItStartedOver(): void {
+  if (staleNotice) useTourStore.getState().setNotice(staleNotice);
+  staleNotice = null;
 }
 
 /**
@@ -406,6 +418,7 @@ export function startFromAddress(id: string, resume: boolean): void {
   const saved = resume && w ? savedPlace(w) : null;
   if (saved) useTourStore.getState().resumeTour(id, saved);
   else useTourStore.getState().startTour(id);
+  sayWhyItStartedOver();
 }
 
 /**

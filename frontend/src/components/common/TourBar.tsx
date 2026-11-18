@@ -52,7 +52,6 @@ import {
 } from "@/utils/tutorialGuard";
 import { clearProgress, progressFor, saveProgress, STALE_MESSAGE } from "@/utils/tutorialProgress";
 import { requestSave } from "@/utils/saveRequest";
-import { useNotificationStore } from "@/stores/notificationStore";
 import { applyTutorialView, restoreTutorialView } from "@/utils/tutorialView";
 
 /** Where a docs page is read: the repo's `docs/` folder on devel. */
@@ -74,6 +73,7 @@ function speechEngine(): SpeechEngine | null {
 export function TourBar() {
   const { walkthrough, step, stepIndex, complete, finished, offModel } = useTourProgress();
   const modelPath = useTourStore((s) => s.modelPath);
+  const notice = useTourStore((s) => s.notice);
   const stepStart = useTourStore((s) => s.stepStart);
   const filePath = useModelStore((s) => s.filePath);
   const source = useModelStore((s) => s.source);
@@ -235,8 +235,8 @@ export function TourBar() {
     const { doneResuming } = useTourStore.getState();
     const stale = () => {
       clearProgress(walkthrough.id);
-      useNotificationStore.getState().addNotification("info", STALE_MESSAGE(walkthrough.title), 8000);
       useTourStore.getState().startTour(walkthrough.id);
+      useTourStore.getState().setNotice(STALE_MESSAGE(walkthrough.title));
     };
     if (resuming.file) {
       const file = resuming.file;
@@ -440,6 +440,16 @@ export function TourBar() {
           {instruction}
           {/* #1393: a boxed, red warning with a sign, so it doesn't read as
               part of the instruction. Both messages share the one box. */}
+          {/* #173: a word from the app, such as why it started over. */}
+          {notice && !finished && (
+            <span
+              data-testid="tour-notice"
+              role="status"
+              style={{ display: "block", marginTop: 3, fontSize: "var(--pnv-fs-14)", fontWeight: 600, color: "var(--pnv-walkthrough-label)" }}
+            >
+              {notice}
+            </span>
+          )}
           {/* #172: the model changed by a route nothing asked about. */}
           {offModel && !finished && (
             <span

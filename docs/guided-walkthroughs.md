@@ -153,8 +153,8 @@ Resuming opens a fresh copy of the tutorial's model and writes the saved code
 into that copy, never into a file of the learner's. A tutorial that has the
 learner create a model keeps only that file's path, and resuming opens it as
 it is. A place that no longer fits (a step renamed, added or removed, or a
-bundled model whose code changed in an update) is forgotten, the learner is
-told why, and the tutorial starts from the beginning.
+bundled model whose code changed in an update) is forgotten, the bar says why
+(until the step moves on), and the tutorial starts from the beginning.
 
 So **renaming a step's `id`** sends anyone part-way through that tutorial back
 to the start. That is safe, but keep ids stable when only the wording changes.

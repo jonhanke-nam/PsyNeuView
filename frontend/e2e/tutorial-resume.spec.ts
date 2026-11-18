@@ -131,7 +131,7 @@ test.describe("A saved place that no longer fits", { tag: "@ci" }, () => {
     }, PROGRESS_KEY);
     await page.goto("/");
     await pickSelecting(page);
-    await expect(page.getByText(/"Selecting nodes" changed since you left it/)).toBeVisible();
+    await expect(page.getByTestId("tour-notice")).toContainText('"Selecting nodes" changed since you left it');
     await expect(page.getByTestId("tutorial-choice")).toHaveCount(0);
     await expect(page.getByTestId("tour-bar")).toContainText("step 1 of 2");
   });
@@ -148,7 +148,7 @@ test.describe("A saved place that no longer fits", { tag: "@ci" }, () => {
     }, PROGRESS_KEY);
     await pickSelecting(page);
     await page.getByTestId("tutorial-choice-resume").click();
-    await expect(page.getByText(/"Selecting nodes" changed since you left it/)).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId("tour-notice")).toContainText('"Selecting nodes" changed since you left it', { timeout: 60_000 });
     await expect(page.getByTestId("tour-bar")).toContainText("step 1 of 2");
     await modelReady(page);
     await expect.poll(async () => (await tourState(page)).source).not.toContain("# on an older model");

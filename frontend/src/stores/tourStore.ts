@@ -78,6 +78,9 @@ interface TourState {
    * the walkthrough's own copy once that has opened. Null when not resuming.
    */
   resuming: TutorialProgress | null;
+  /** A word from the app in the bar until the step moves on (#173: why it started over). */
+  notice: string | null;
+  setNotice: (notice: string | null) => void;
   startTour: (id: string) => void;
   /** Start the walkthrough at a saved place (#173). */
   resumeTour: (id: string, progress: TutorialProgress) => void;
@@ -109,6 +112,8 @@ export const useTourStore = create<TourState>((set) => ({
   stepStart: null,
   modelFresh: null,
   resuming: null,
+  notice: null,
+  setNotice: (notice) => set({ notice }),
   startTour: (id) =>
     set((s) => ({
       activeTourId: id,
@@ -122,6 +127,7 @@ export const useTourStore = create<TourState>((set) => ({
       stepStart: null,
       modelFresh: null,
       resuming: null,
+      notice: null,
     })),
   resumeTour: (id, progress) =>
     set((s) => ({
@@ -136,6 +142,7 @@ export const useTourStore = create<TourState>((set) => ({
       stepStart: null,
       modelFresh: null,
       resuming: progress,
+      notice: null,
     })),
   doneResuming: () => set({ resuming: null }),
   stopTour: () =>
@@ -150,9 +157,10 @@ export const useTourStore = create<TourState>((set) => ({
       stepStart: null,
       modelFresh: null,
       resuming: null,
+      notice: null,
     }),
   advance: () =>
-    set((s) => ({ stepIndex: s.stepIndex + 1, anchorOffScreen: false, nextPressed: false, pointerArrived: false })),
+    set((s) => ({ stepIndex: s.stepIndex + 1, anchorOffScreen: false, nextPressed: false, pointerArrived: false, notice: null })),
   setAnchorOffScreen: (off) => set({ anchorOffScreen: off }),
   setPaused: (paused) => set({ paused }),
   pressNext: () => set({ nextPressed: true }),

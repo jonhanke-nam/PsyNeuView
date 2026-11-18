@@ -414,8 +414,11 @@ describe("starting a tutorial left part-way (#173)", () => {
     await chooseTutorialStart("stroop");
     expect(useTutorialChoice.getState().pending).toBeNull();
     expect(useTourStore.getState()).toMatchObject({ activeTourId: "stroop", stepIndex: 0 });
-    expect(useNotificationStore.getState().notifications.slice(-1)[0]?.message).toMatch(/changed since you left it/);
+    expect(useTourStore.getState().notice).toMatch(/changed since you left it/);
     expect(loadProgress("stroop")).toBeNull();
+    // Gone once the step moves on.
+    useTourStore.getState().advance();
+    expect(useTourStore.getState().notice).toBeNull();
   });
 
   it("doesn't ask when picking the one already running", async () => {
