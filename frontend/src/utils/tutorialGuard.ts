@@ -337,3 +337,19 @@ export async function chooseTutorialStart(id: string): Promise<void> {
   if (choice === "newWindow") openWindowOrSay(`?tour=${encodeURIComponent(id)}`);
   else if (choice === "here" && (await offerToSave())) startTour(id);
 }
+
+/**
+ * For the e2e suite only (a browser under automation, as `__pnvUndoTest`):
+ * where the walkthrough and the window are, and a way to change the open file
+ * by a route nothing asks about, which the app itself no longer has.
+ */
+if (typeof window !== "undefined" && typeof navigator !== "undefined" && navigator.webdriver) {
+  (window as unknown as { __pnvTourTest?: unknown }).__pnvTourTest = {
+    state: () => {
+      const { activeTourId, stepIndex, modelPath, stepStart } = useTourStore.getState();
+      const { filePath, source, savedSource } = useModelStore.getState();
+      return { activeTourId, stepIndex, modelPath, stepStart, filePath, source, savedSource };
+    },
+    switchFileUnasked: (path: string) => useModelStore.getState().setFilePath(path),
+  };
+}
