@@ -30,6 +30,11 @@ A walkthrough is written for one model, so PsyNeuView keeps the two together:
   copy of the model is never touched. The graph's view (what it shows, its
   direction, collapsed compositions, the nested or PyTorch view) is as a new
   window has it while the walkthrough runs, and yours comes back when it ends.
+- **Resuming.** Leave a walkthrough part-way (End, or close the window) and
+  starting it again asks **Resume at step N** or **Start over**. Resuming puts
+  the walkthrough's model back as it was when that step began; your own files
+  aren't changed. A finished walkthrough starts from the beginning, and so does
+  one that changed in an update since you left it (it says so).
 - **A way back.** When a step's node is missing, or you've changed the code
   since the step began, the bar offers **Undo my edits since this step began**
   and **Start the tutorial over**. If the model in the window changes some

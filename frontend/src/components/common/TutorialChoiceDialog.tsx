@@ -1,7 +1,8 @@
 /**
  * The choice when a walkthrough and other work would collide (#172): opening
  * another model during one, or starting one with something in progress; and,
- * when the answer replaces unsaved work, whether to save it first.
+ * when the answer replaces unsaved work, whether to save it first; and, for a
+ * tutorial left part-way, whether to resume it (#173).
  * utils/tutorialGuard.ts decides when to ask, and waits on the answer here.
  *
  * Closing it any of the shared ways (#1289) changes nothing: it is Stay here,
@@ -19,6 +20,7 @@ export function TutorialChoiceDialog() {
   if (!pending) return null;
   if (pending.type === "leave") return <Leave choice={pending} />;
   if (pending.type === "save") return <Save choice={pending} />;
+  if (pending.type === "resume") return <Resume choice={pending} />;
   return <Start choice={pending} />;
 }
 
@@ -206,6 +208,35 @@ function Save({ choice }: { choice: Extract<PendingChoice, { type: "save" }> }) 
           </Button>
           <Button data-testid="tutorial-choice-save" onClick={() => choice.resolve("save")} kind="primary" size="compact" isDefault>
             Save and continue
+          </Button>
+        </>
+      }
+    />
+  );
+}
+
+function Resume({ choice }: { choice: Extract<PendingChoice, { type: "resume" }> }) {
+  const cancel = () => choice.resolve("cancel");
+  return (
+    <Frame
+      title={`Resume "${choice.tutorial}" at step ${choice.step} of ${choice.steps}?`}
+      onClose={cancel}
+      body={
+        <p style={{ margin: 0 }}>
+          You left this tutorial at step {choice.step}. Resuming puts the tutorial's model back as it was when that
+          step began. Your own files aren't changed either way.
+        </p>
+      }
+      buttons={
+        <>
+          <Button data-testid="tutorial-choice-cancel" onClick={cancel} kind="secondary" size="compact">
+            Cancel
+          </Button>
+          <Button data-testid="tutorial-choice-over" onClick={() => choice.resolve("over")} kind="secondary" size="compact">
+            Start over
+          </Button>
+          <Button data-testid="tutorial-choice-resume" onClick={() => choice.resolve("resume")} kind="primary" size="compact" isDefault>
+            Resume at step {choice.step}
           </Button>
         </>
       }

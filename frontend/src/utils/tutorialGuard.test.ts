@@ -18,6 +18,7 @@ import {
   noteTutorialModel,
   offerToSave,
   offTutorialModel,
+  startFromAddress,
   startTutorialOver,
   stepAsksFor,
   tutorialCopyFor,
@@ -27,6 +28,7 @@ import {
   type PendingChoice,
 } from "./tutorialGuard";
 import { WALKTHROUGHS, type TourStep } from "./tourStep";
+import { loadProgress, progressFor, saveProgress } from "./tutorialProgress";
 
 // The app's window: opening one is checked in the browser, by the e2e spec.
 const openWindow = vi.fn(() => null as unknown);
@@ -366,5 +368,78 @@ describe("replacing unsaved work (#172)", () => {
     await answer("cancel");
     await result;
     expect(useTourStore.getState().activeTourId).toBeNull();
+  });
+});
+
+describe("starting a tutorial left part-way (#173)", () => {
+  beforeEach(() => {
+    stored.clear();
+    useTutorialChoice.setState({ pending: null });
+    useTourStore.getState().stopTour();
+    openModel(null);
+  });
+  const place = (step: number) => progressFor(WALKTHROUGHS.stroop, step, "code at that step", "f", null);
+
+  it("offers to resume, and resumes at that step", async () => {
+    saveProgress("stroop", place(3));
+    const result = chooseTutorialStart("stroop");
+    await vi.waitFor(() => expect(useTutorialChoice.getState().pending?.type).toBe("resume"));
+    expect(pending()).toMatchObject({ step: 4, steps: WALKTHROUGHS.stroop.steps.length });
+    await answer("resume");
+    await result;
+    expect(useTourStore.getState()).toMatchObject({ activeTourId: "stroop", stepIndex: 3 });
+    expect(useTourStore.getState().resuming?.code).toBe("code at that step");
+  });
+
+  it("starts over, and forgets the place", async () => {
+    saveProgress("stroop", place(3));
+    const result = chooseTutorialStart("stroop");
+    await answer("over");
+    await result;
+    expect(useTourStore.getState()).toMatchObject({ activeTourId: "stroop", stepIndex: 0, resuming: null });
+    expect(loadProgress("stroop")).toBeNull();
+  });
+
+  it("changes nothing on Cancel", async () => {
+    saveProgress("stroop", place(3));
+    const result = chooseTutorialStart("stroop");
+    await answer("cancel");
+    await result;
+    expect(useTourStore.getState().activeTourId).toBeNull();
+    expect(loadProgress("stroop")).not.toBeNull();
+  });
+
+  it("says so and starts over when the saved step no longer fits", async () => {
+    saveProgress("stroop", { ...place(3), stepId: "a-step-since-removed" });
+    await chooseTutorialStart("stroop");
+    expect(useTutorialChoice.getState().pending).toBeNull();
+    expect(useTourStore.getState()).toMatchObject({ activeTourId: "stroop", stepIndex: 0 });
+    expect(useTourStore.getState().notice).toMatch(/changed since you left it/);
+    expect(loadProgress("stroop")).toBeNull();
+    // Gone once the step moves on.
+    useTourStore.getState().advance();
+    expect(useTourStore.getState().notice).toBeNull();
+  });
+
+  it("doesn't ask when picking the one already running", async () => {
+    saveProgress("stroop", place(3));
+    useTourStore.getState().startTour("stroop");
+    await chooseTutorialStart("stroop");
+    expect(useTutorialChoice.getState().pending).toBeNull();
+  });
+
+  it("resumes from a window's address only when the window that asked chose to", () => {
+    saveProgress("stroop", place(2));
+    startFromAddress("stroop", false);
+    expect(useTourStore.getState().stepIndex).toBe(0);
+    startFromAddress("stroop", true);
+    expect(useTourStore.getState().stepIndex).toBe(2);
+  });
+
+  it("Start the tutorial over forgets the place too", () => {
+    saveProgress("stroop", place(2));
+    useTourStore.getState().startTour("stroop");
+    startTutorialOver();
+    expect(loadProgress("stroop")).toBeNull();
   });
 });
