@@ -62,7 +62,7 @@ async function openModel(page: Page, model: string) {
   await page.getByRole("button", { name: /^Skip$/ }).click({ timeout: 5000 }).catch(() => {});
   await expect(page.locator(".react-flow__node")).toHaveCount(3, { timeout: 60_000 });
   // The whole graph in view, so every node can be reached.
-  await page.getByRole("button", { name: "Fit view" }).click();
+  await page.locator(".react-flow__controls-fitview").click();
 }
 
 /** Every node's place on the canvas, by name, in the graph's own coordinates. */
