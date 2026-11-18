@@ -14,6 +14,7 @@ developer-mode-marking.spec.ts
 developer-tests-loader.spec.ts
 diagnostics.spec.ts
 dialog-sweep.spec.ts
+drag-to-connect-stage2.spec.ts
 drag-to-connect.spec.ts
 drop-new-model-file.spec.ts
 edge-line-width.spec.ts

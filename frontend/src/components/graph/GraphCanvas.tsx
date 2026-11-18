@@ -8,6 +8,7 @@ import { CanvasContextMenu, EdgeContextMenu } from "./GraphMenus";
 import { arrowShaped, reshapeDescription, startShapingArrow } from "@/utils/arrowShapes";
 import { PortChooser, type ConnectionOption } from "./PortChooser";
 import { CONNECT_HANDLE, NODE_TARGET_HANDLE } from "./connectHandles";
+import { useConnectTargets } from "@/stores/connectTargetsStore";
 import { registerVisibleCentre } from "@/utils/graphViewport";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
@@ -19,6 +20,7 @@ import {
   useEdgesState,
   useReactFlow,
   type OnConnect,
+  type OnConnectStart,
   type OnNodeDrag,
   type Connection,
   type NodeChange,
@@ -460,7 +462,7 @@ export function GraphCanvas() {
     }
     const options: ConnectionOption[] = data.options || [];
     if (options.length === 1) {
-      void makeDraggedConnection(sender, receiver, options[0]);
+      void makeDraggedConnection(sender, options[0].receiver || receiver, options[0]);
       return;
     }
     const el = document.querySelector(`.react-flow__node[data-id="${CSS.escape(targetId)}"]`);
@@ -478,13 +480,33 @@ export function GraphCanvas() {
       body: JSON.stringify({ file_path: filePath, ...modelLoadOptions() }),
     });
     const data = await resp.json();
-    const compVarName = data.model?.compositions?.[0]?.varName;
+    // Into a collapsed composition, PsyNeuLink names the composition holding
+    // both ends; otherwise the model's first one, as before.
+    const compVarName = o.composition || data.model?.compositions?.[0]?.varName;
     if (!compVarName) return;
     createProjectionOnServer(
       filePath, sender, receiver, compVarName, setSource, loadModelFromServer,
       o.sender_port, o.receiver_port, o.type,
     );
   }, [filePath, setSource, loadModelFromServer]);
+
+  // #253: while a connection is dragged from a node's connector, PsyNeuLink
+  // says which nodes it could be dropped on; they light up, the rest dim.
+  const onConnectStart: OnConnectStart = useCallback((_e, { nodeId, handleId }) => {
+    if (!filePath || !nodeId || handleId !== CONNECT_HANDLE) return;
+    const n = nodesRef.current.find((x) => x.id === nodeId);
+    const sender = ((n?.data as any)?.varName as string) || nodeId;
+    useConnectTargets.getState().start(sender);
+    void fetch("/api/model/connection-targets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_path: filePath, sender }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data?.targets) useConnectTargets.getState().answer(sender, data.targets); })
+      .catch(() => {});
+  }, [filePath]);
+  const onConnectEnd = useCallback(() => useConnectTargets.getState().clear(), []);
 
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
@@ -1081,7 +1103,7 @@ export function GraphCanvas() {
               y={portChooser.y}
               receiver={portChooser.receiverLabel}
               options={portChooser.options}
-              onPick={(o) => { void makeDraggedConnection(portChooser.sender, portChooser.receiver, o); setPortChooser(null); }}
+              onPick={(o) => { void makeDraggedConnection(portChooser.sender, o.receiver || portChooser.receiver, o); setPortChooser(null); }}
               onClose={() => setPortChooser(null)}
             />
           )}
@@ -1119,6 +1141,8 @@ export function GraphCanvas() {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              onConnectStart={onConnectStart}
+              onConnectEnd={onConnectEnd}
               onNodeClick={(e, n) => (isMacSecondaryClick(e) ? onNodeContextMenu(e, n) : onNodeClick(e, n))}
               onNodeContextMenu={onNodeContextMenu}
               onEdgeContextMenu={onEdgeContextMenu}
