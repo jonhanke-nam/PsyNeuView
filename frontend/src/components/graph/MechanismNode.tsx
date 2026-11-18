@@ -452,6 +452,34 @@ export const MechanismNode = memo(function MechanismNode({
   const padding = `${padY}px ${padX + expandRoom}px`;
 
   return (
+    <>
+      {/* Outside the node's box, so it isn't dimmed with it. */}
+        {dropStatus === "invalid" && pointerOnHere && connectReason && (
+          <div
+            role="status"
+            data-testid="connect-refusal-reason"
+            style={{
+              position: "absolute",
+              bottom: "calc(100% + 8px)",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "max-content",
+              maxWidth: 260,
+              padding: "4px 8px",
+              borderRadius: 4,
+              background: "var(--pnv-surface)",
+              border: "1px solid var(--pnv-border-light)",
+              boxShadow: "var(--pnv-shadow-popover)",
+              color: "var(--pnv-text-body)",
+              fontSize: "var(--pnv-fs-12)",
+              textAlign: "left",
+              pointerEvents: "none",
+              zIndex: 10,
+            }}
+          >
+            {connectReason}
+          </div>
+        )}
     <div
       onDoubleClick={onDoubleClick}
       data-node-shape={shape}
@@ -1037,32 +1065,6 @@ export const MechanismNode = memo(function MechanismNode({
         data-testid="node-connector"
         title="Drag to another node to connect them"
       />
-      {dropStatus === "invalid" && pointerOnHere && connectReason && (
-        <div
-          role="status"
-          data-testid="connect-refusal-reason"
-          style={{
-            position: "absolute",
-            bottom: "calc(100% + 8px)",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "max-content",
-            maxWidth: 260,
-            padding: "4px 8px",
-            borderRadius: 4,
-            background: "var(--pnv-surface)",
-            border: "1px solid var(--pnv-border-light)",
-            boxShadow: "var(--pnv-shadow-popover)",
-            color: "var(--pnv-text-body)",
-            fontSize: "var(--pnv-fs-12)",
-            textAlign: "left",
-            pointerEvents: "none",
-            zIndex: 10,
-          }}
-        >
-          {connectReason}
-        </div>
-      )}
       <Handle
         type="target"
         id={NODE_TARGET_HANDLE}
@@ -1085,5 +1087,6 @@ export const MechanismNode = memo(function MechanismNode({
         }}
       />
     </div>
+    </>
   );
 });
