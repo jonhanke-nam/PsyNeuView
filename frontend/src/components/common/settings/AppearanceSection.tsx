@@ -16,7 +16,17 @@
  * And how the Components panel opens (#113): the word list by default, or
  * the icon strip; the panel's own ◀/▶ only changes it for the session.
  * And the app's text size (#111): Small, Default or Large, remembered per
- * browser (stores/textSizeStore.ts).
+ * browser (stores/textSizeStore.ts). And whether a node shows its "view
+ * only" tag (#211): hidden by default, as show_graph draws no such tag
+ * (stores/viewOnlyTagsStore.ts). And the panels (#215): whether every
+ * panel may be hidden, and which ones a model opens onto a blank screen,
+ * the second only available while the first is on (stores/layoutStore.ts).
+ * And whether inputs are kept on the bottom and outputs on top (#219): in
+ * automatic layouts by default, or also while dragging, or off
+ * (stores/ioRowsStore.ts), with a word when the open model's layout is one
+ * it doesn't apply to. And what the busy wheel looks like (#169): the
+ * classic wheel by default, or a PsyNeuLink-style network and others, each
+ * shown moving beside its name (stores/busyStore.ts).
  */
 
 import { LEGEND_STARTS, isLegendStart, useGraphLegendStore } from "@/stores/graphLegendStore";
@@ -27,6 +37,7 @@ import {
   useComponentsStartStore,
 } from "@/stores/componentsPanelStartStore";
 import { usePaletteStore } from "@/stores/paletteStore";
+import { BLANK_LOAD_PANEL_OPTIONS, isLayoutPanel, useLayoutStore } from "@/stores/layoutStore";
 import {
   DEFAULT_SCHEDULING_ARROWS,
   SCHEDULING_ARROWS,
@@ -34,12 +45,20 @@ import {
   useSchedulingArrowsStore,
 } from "@/stores/schedulingArrowsStore";
 import {
+  DEFAULT_VIEW_ONLY_TAGS,
+  VIEW_ONLY_TAGS,
+  isViewOnlyTags,
+  useViewOnlyTagsStore,
+} from "@/stores/viewOnlyTagsStore";
+import {
   DEFAULT_LAYOUT_STYLE,
   LAYOUT_STYLES,
   isLayoutStyle,
   useGraphLayoutDefaultStore,
 } from "@/stores/graphLayoutDefaultStore";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
+import { DEFAULT_IO_ROWS, IO_ROWS, isIoRows, ioRowsNotApplying, useIoRowsStore } from "@/stores/ioRowsStore";
+import { DEFAULT_LAYOUT_SPACING, LAYOUT_SPACINGS, isLayoutSpacing, useLayoutSpacingStore } from "@/stores/layoutSpacingStore";
 import { useModelStore } from "@/stores/modelStore";
 import { applyLayout } from "@/utils/layout";
 import { applyShowGraphLayoutNow } from "@/hooks/useShowGraphLayout";
@@ -66,6 +85,8 @@ import {
   isPointerSize,
 } from "@/utils/graphCursor";
 import { TEXT_SIZES, TEXT_SIZE_LABELS, DEFAULT_TEXT_SIZE, isTextSize, useTextSizeStore } from "@/stores/textSizeStore";
+import { BUSY_STYLES, BUSY_TIMER_PLACES, DEFAULT_BUSY_STYLE, DEFAULT_BUSY_TIMER_PLACE, useBusyStore } from "@/stores/busyStore";
+import { BusyGraphic } from "@/components/common/BusyIndicator";
 import { Group, SettingLabel, mutedStyle } from "./shared";
 
 export function AppearanceSection() {
@@ -83,20 +104,42 @@ export function AppearanceSection() {
       <Group id="node-outlines" title="Node outlines">
         <NodeOutlineRow />
       </Group>
+      <Group id="node-tags" title="Node tags">
+        <ViewOnlyTagsRow />
+      </Group>
       <Group id="lines-between-nodes" title="Lines between nodes">
         <EdgeLineRow />
       </Group>
       <Group id="automatic-layout" title="Automatic layout">
         <AutomaticLayoutRow />
+        <div style={{ marginTop: 14 }}>
+          <LayoutSpacingRow />
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <IoRowsRow />
+        </div>
       </Group>
       <Group id="graph-legend" title="Graph legend">
         <GraphLegendRow />
+      </Group>
+      <Group id="busy-wheel" title="Busy wheel">
+        <BusyStyleRow />
+        <div style={{ marginTop: 14 }}>
+          <BusyTimerRow />
+        </div>
       </Group>
       <Group id="scheduling-arrows" title="Scheduling arrows">
         <SchedulingArrowsRow />
       </Group>
       <Group id="components-panel" title="Components panel">
         <ComponentsStartRow />
+      </Group>
+      <Group id="panels" title="Panels">
+        <AllowBlankScreenRow />
+        {/* Indented under the setting it depends on, in line with that setting's words. */}
+        <div style={{ marginTop: 14, marginLeft: 21 }}>
+          <BlankLoadPanelsRow />
+        </div>
       </Group>
     </>
   );
@@ -127,8 +170,8 @@ function AutomaticLayoutRow() {
       <SettingLabel title="How models are arranged" htmlFor="setting-graph-layout-default">
         The arrangement a model gets when you open it without a layout of your
         own. Like show_graph places every node where PsyNeuLink's show_graph()
-        draws it, enlarged to fit PsyNeuView's boxes. The layout menu on the
-        graph toolbar switches the model you have open without changing this.
+        draws it, at the size it draws it. The layout menu on the graph
+        toolbar switches the model you have open without changing this.
       </SettingLabel>
       <select
         id="setting-graph-layout-default"
@@ -149,6 +192,88 @@ function AutomaticLayoutRow() {
         ))}
       </select>
       {hint && <div style={{ ...mutedStyle, marginTop: 4 }}>{hint}</div>}
+    </div>
+  );
+}
+
+// #278: how far apart an automatic layout puts nodes. Changing it re-arranges
+// the open model if its layout is automatic, like the settings around it.
+function LayoutSpacingRow() {
+  const spacing = useLayoutSpacingStore((s) => s.spacing);
+  const setSpacing = useLayoutSpacingStore((s) => s.setSpacing);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <SettingLabel title="Spacing between nodes" htmlFor="setting-graph-layout-spacing">
+        How far apart an automatic layout puts nodes, so how long the lines
+        between them are. By default Layered is compact, and Like show_graph
+        keeps show_graph's own spacing so its picture matches show_graph's.
+        Nodes never overlap at any spacing. Radial and Force are left alone.
+      </SettingLabel>
+      <select
+        id="setting-graph-layout-spacing"
+        data-testid="setting-graph-layout-spacing"
+        value={spacing}
+        onChange={(e) => {
+          if (!isLayoutSpacing(e.target.value)) return;
+          setSpacing(e.target.value);
+          applyToOpenModel(useGraphSettings.getState().layoutStyle);
+        }}
+        style={selectStyle}
+      >
+        {LAYOUT_SPACINGS.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+            {o.id === DEFAULT_LAYOUT_SPACING ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// #219: inputs on the bottom, outputs on top. Changing it re-arranges the
+// open model if its layout is automatic, like the layout setting above.
+function IoRowsRow() {
+  const ioRows = useIoRowsStore((s) => s.ioRows);
+  const setIoRows = useIoRowsStore((s) => s.setIoRows);
+  const style = useGraphSettings((s) => s.layoutStyle);
+  const direction = useGraphSettings((s) => s.direction);
+  const notApplying = ioRows === "off" ? null : ioRowsNotApplying(style, direction);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <SettingLabel title="Keep inputs on the bottom and outputs on top" htmlFor="setting-graph-io-rows">
+        Inside each composition, its input nodes sit on the lowest row and
+        its output nodes on the highest, as show_graph draws them; learning
+        and control nodes may sit above the outputs. While dragging, an input
+        or output slides along its row, and other nodes stay between the two
+        rows. A layout you saved never moves by itself: the Layout menu's
+        Tidy inputs and outputs does it, and can be undone. Radial and Force
+        have no direction, and a top-down Layered layout wins, so it doesn't
+        apply to them.
+      </SettingLabel>
+      <select
+        id="setting-graph-io-rows"
+        data-testid="setting-graph-io-rows"
+        value={ioRows}
+        onChange={(e) => {
+          if (!isIoRows(e.target.value)) return;
+          setIoRows(e.target.value);
+          applyToOpenModel(useGraphSettings.getState().layoutStyle);
+        }}
+        style={selectStyle}
+      >
+        {IO_ROWS.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+            {o.id === DEFAULT_IO_ROWS ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+      {notApplying && (
+        <div data-testid="io-rows-not-applying" style={{ ...mutedStyle, marginTop: 4 }}>
+          Doesn't apply to the layout in use: {notApplying}
+        </div>
+      )}
     </div>
   );
 }
@@ -216,6 +341,89 @@ function ComponentsStartRow() {
   );
 }
 
+// #215: whether every panel may be hidden. Off, one of the graph, the code
+// editor and the Inspector panel always stays (the store refuses, #213).
+function AllowBlankScreenRow() {
+  const allowBlank = useLayoutStore((s) => s.allowBlank);
+  const setAllowBlank = useLayoutStore((s) => s.setAllowBlank);
+  return (
+    <label style={{ fontSize: "var(--pnv-fs-13)", display: "flex", gap: 8, alignItems: "flex-start" }}>
+      <input
+        type="checkbox"
+        data-testid="setting-allow-blank-screen"
+        checked={allowBlank}
+        onChange={(e) => setAllowBlank(e.target.checked)}
+        style={{ marginTop: 3 }}
+      />
+      <span>
+        Allow a blank screen
+        <span style={{ ...mutedStyle, display: "block" }}>
+          Normally one of the graph, the code editor and the Inspector panel always stays on screen. With
+          this on, you can hide them all; the toolbar stays, and a short hint says how to bring a panel
+          back. Turning it off while the screen is blank brings the graph back.
+        </span>
+      </span>
+    </label>
+  );
+}
+
+// #215: the panels a model opens onto a blank screen. Only available while a
+// blank screen is allowed (greyed out otherwise: there is no blank screen to
+// load onto). One of the graph, the code editor and the Inspector panel stays
+// ticked, since a model needs one of them to show in.
+function BlankLoadPanelsRow() {
+  const allowBlank = useLayoutStore((s) => s.allowBlank);
+  const panels = useLayoutStore((s) => s.blankLoadPanels);
+  const setPanels = useLayoutStore((s) => s.setBlankLoadPanels);
+  const lastTopLevel = panels.filter((p) => isLayoutPanel(p)).length === 1;
+  return (
+    <fieldset
+      data-testid="setting-blank-load-panels"
+      disabled={!allowBlank}
+      aria-disabled={!allowBlank || undefined}
+      style={{ border: "none", margin: 0, padding: 0, fontSize: "var(--pnv-fs-13)", opacity: allowBlank ? 1 : 0.5 }}
+    >
+      <legend style={{ padding: 0 }}>
+        <SettingLabel title="Panels to open when a model loads on a blank screen">
+          Only when the screen is blank at the moment a model loads; with any panel showing, loading
+          changes nothing. One of the graph, the code editor and the Inspector panel stays ticked.
+          {!allowBlank && " Available while Allow a blank screen is on."}
+        </SettingLabel>
+      </legend>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
+        {BLANK_LOAD_PANEL_OPTIONS.map((o) => {
+          const chosen = panels.includes(o.id);
+          // The last of the three can't be unticked; the row says why.
+          const keeps = chosen && lastTopLevel && isLayoutPanel(o.id);
+          return (
+            <label
+              key={o.id}
+              title={keeps ? "One of the graph, the code editor and the Inspector panel has to stay ticked" : undefined}
+              style={{ display: "flex", gap: 8, alignItems: "center", cursor: keeps || !allowBlank ? "default" : "pointer" }}
+            >
+              <input
+                type="checkbox"
+                data-testid={`blank-load-panel-${o.id}`}
+                checked={chosen}
+                disabled={!allowBlank || keeps}
+                onChange={(e) =>
+                  setPanels(e.target.checked ? [...panels, o.id] : panels.filter((p) => p !== o.id))
+                }
+              />
+              <span>
+                {o.label}
+                {o.id === "graph" ? <span style={mutedStyle}> (default)</span> : null}
+                {/* It is drawn inside the graph, so it can't show on its own. */}
+                {o.id === "palette" ? <span style={mutedStyle}> (shows inside the graph, so tick the graph too)</span> : null}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
 function SchedulingArrowsRow() {
   const arrows = useSchedulingArrowsStore((s) => s.arrows);
   const setArrows = useSchedulingArrowsStore((s) => s.setArrows);
@@ -238,6 +446,37 @@ function SchedulingArrowsRow() {
           <option key={o.id} value={o.id}>
             {o.label}
             {o.id === DEFAULT_SCHEDULING_ARROWS ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function ViewOnlyTagsRow() {
+  const tags = useViewOnlyTagsStore((s) => s.tags);
+  const setTags = useViewOnlyTagsStore((s) => s.setTags);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <SettingLabel title="Read-only tags" htmlFor="setting-graph-view-only-tags">
+        A node whose declaration can't be edited from PsyNeuView (one built in
+        a loop, say, or made by a learning pathway) can carry a small "view
+        only" tag above its name. PsyNeuLink's show_graph doesn't draw it, so
+        it is hidden to match its picture; the node's hover text and the
+        Inspector say it either way. The type and role tags have their own
+        switch in the graph's Advanced Graph View Options.
+      </SettingLabel>
+      <select
+        id="setting-graph-view-only-tags"
+        data-testid="setting-graph-view-only-tags"
+        value={tags}
+        onChange={(e) => isViewOnlyTags(e.target.value) && setTags(e.target.value)}
+        style={selectStyle}
+      >
+        {VIEW_ONLY_TAGS.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+            {o.id === DEFAULT_VIEW_ONLY_TAGS ? " (default)" : ""}
           </option>
         ))}
       </select>
@@ -427,6 +666,87 @@ function TextSizeRow() {
         {TEXT_SIZES.map((t) => (
           <option key={t} value={t}>
             {TEXT_SIZE_LABELS[t]}{t === DEFAULT_TEXT_SIZE ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/**
+ * What the busy wheel looks like (#169). Each choice shows its picture,
+ * moving, beside its name, so it can be seen before it is chosen.
+ */
+function BusyStyleRow() {
+  const style = useBusyStore((s) => s.style);
+  const setStyle = useBusyStore((s) => s.setStyle);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <SettingLabel title="Style">
+        What shows while PsyNeuView is working. Every style takes the same
+        space; with reduced motion turned on, it stands still.
+      </SettingLabel>
+      <div
+        data-testid="setting-busy-style"
+        role="radiogroup"
+        aria-label="Busy wheel style"
+        style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 6 }}
+      >
+        {BUSY_STYLES.map((choice) => (
+          <label
+            key={choice.style}
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 0", cursor: "pointer" }}
+          >
+            <input
+              type="radio"
+              name="busy-style"
+              value={choice.style}
+              data-testid={`busy-style-${choice.style}`}
+              checked={style === choice.style}
+              onChange={() => setStyle(choice.style)}
+            />
+            <span
+              data-testid={`busy-style-preview-${choice.style}`}
+              style={{ display: "inline-flex", color: "var(--pnv-text-secondary)", flexShrink: 0 }}
+            >
+              <BusyGraphic style={choice.style} size={20} />
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ fontWeight: 500 }}>{choice.label}</span>
+              {choice.style === DEFAULT_BUSY_STYLE && <span style={mutedStyle}> (default)</span>}
+              <span style={{ ...mutedStyle, display: "block" }}>{choice.description}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Whether the busy wheel shows how long it has been spinning, and where (#176, #220). */
+function BusyTimerRow() {
+  const place = useBusyStore((s) => s.timerPlace);
+  const setPlace = useBusyStore((s) => s.setTimerPlace);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <SettingLabel title="Show how long it has been spinning" htmlFor="setting-busy-timer">
+        Shows the time so far with the busy wheel, once a second has passed.
+        Problem reports record how long each wait took either way.
+      </SettingLabel>
+      <select
+        id="setting-busy-timer"
+        data-testid="setting-busy-timer"
+        value={place}
+        onChange={(e) => {
+          const chosen = BUSY_TIMER_PLACES.find((p) => p.place === e.target.value);
+          if (chosen) setPlace(chosen.place);
+        }}
+        style={selectStyle}
+      >
+        {BUSY_TIMER_PLACES.map((p) => (
+          <option key={p.place} value={p.place}>
+            {p.label}
+            {p.place === DEFAULT_BUSY_TIMER_PLACE ? " (default)" : ""}
           </option>
         ))}
       </select>

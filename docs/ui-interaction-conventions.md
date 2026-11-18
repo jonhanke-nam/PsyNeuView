@@ -137,3 +137,34 @@ The rule was written down after #984, which started from bend handles that
 could be dragged in places where nothing was drawn and would vanish from under
 the cursor as you reached for them. Fixes: #985 (bend handles), #986 (GSC
 condition label), #987 (trace step rows, collapsed diagnostics bar).
+
+## Graph hit areas (#250)
+
+Anywhere in or on a node is a click on that node: its fill, outline, label and the whitespace inside. The rules, which `frontend/e2e/graph-hit-areas.spec.ts` checks on every reference model, with ports hidden and shown:
+
+| Thing | Active region | A click |
+|---|---|---|
+| Mechanism node (any shape) | the whole drawn shape | selects it |
+| Something drawn over a node's rim (an arrow's connection dot, with ports shown) | itself | is handed on to the node, which selects; a drag (4 px or more) is its own (moving the arrow's end) |
+| Composition, expanded | its header and border; the inside belongs to what is in it | selects it |
+| Arrow | its line, widened to a comfortable band; its label, while the label shows | selects it; a drag shapes it |
+| Canvas | everything else | clears the selection; a drag pans |
+
+Two traps, both found by #250:
+- **Invisible but catching.** A label hidden with `opacity: 0` still takes the pointer. Anything hidden that way gets `pointerEvents: "none"` while hidden.
+- **A click is not a drag.** A press counts as a drag only after it moves a few pixels (4 px for a connection dot, 6 for an arrow's line). Otherwise a click with a wobble reshapes things, and in Auto makes the layout Custom.
+
+## Clicks on the graph: macOS conventions (#261)
+
+What each gesture means on the graph, as in Finder and Keynote. `frontend/e2e/graph-click-conventions.spec.ts` checks every row, as a Mac and as Windows/Linux.
+
+| Gesture | Meaning |
+|---|---|
+| Click | select the object, and only it |
+| Control-click = right-click = two-finger tap | the context menu for what's under the pointer. On an unselected node it becomes the selection; inside a multi-selection, the selection stays and the menu acts on all of it ("2 nodes selected": Delete 2 nodes, Select only this one). |
+| Command-click (Ctrl-click off the Mac) | add to or take from the selection; never a menu |
+| Shift-click | add to or take from the selection |
+| Shift-drag on empty canvas | draw a selection box |
+| Drag on empty canvas | pan |
+
+Every object has a menu: nodes (Inspect, Rename…, Collapse/Expand…, Delete), a multi-selection (Delete N nodes, in one step that one Undo reverses; Select only this one), arrows (Select sender, Select receiver, Reset shape) and the canvas (Select All, Fit the graph to the window, Show Components…). A menu offers only actions that exist elsewhere too (Delete is also the Delete shortcut, Backspace, which deletes the whole selection), and the web view's own menu (Reload, Inspect Element) never appears on the graph.

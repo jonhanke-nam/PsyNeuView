@@ -89,6 +89,8 @@ export interface DiagnosticsState {
     openMenu: { order: string[]; shownDevSections: string[]; collapsed: string[] };
     layout: {
       visiblePanes: string[];
+      /** Settings ▸ Appearance ▸ Allow a blank screen (#215): explains an empty `visiblePanes`. */
+      allowBlankScreen: boolean;
       activeBottomTab: string | null;
       settingsOpen: boolean;
       activeSettingsSection: string | null;
@@ -338,6 +340,7 @@ export function buildDiagnosticsState(
       },
       layout: {
         visiblePanes,
+        allowBlankScreen: layout.allowBlank,
         activeBottomTab: uiFacts.activeBottomTab,
         settingsOpen: uiFacts.settingsOpen,
         activeSettingsSection: uiFacts.settingsOpen ? uiFacts.activeSettingsSection : null,

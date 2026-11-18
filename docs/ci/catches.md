@@ -22,6 +22,51 @@ don't use a single GitHub issue as the ledger — it gets noisy and is awkward t
 format.) Tracked as a process in #709.
 
 
+## A Mac Control-click opened no menu when it arrived as a click (2026-11-17)
+
+**Caught by:** `e2e` → `graph-click-conventions.spec.ts`, the Mac row "a
+secondary click on an unselected node selects it and shows its menu", on the
+Linux runner; it failed on retry too (#261, PR #268)
+
+The new Mac click conventions passed on a Mac and failed in CI. macOS turns
+Control-click into a secondary click before the page sees it, so on a Mac the
+menu opened by the usual route. Elsewhere, including a browser that only says
+it is on a Mac, it arrives as a plain click with Control held: the node was
+selected and no menu opened. Fixed by sending a Mac Control-click to the menu
+ourselves, on nodes, arrows and the canvas, and by judging "is it a Mac" from
+the user agent, as the graph library does. The test now also sends the click
+the way Linux delivers it, so it checks the rule on any host.
+
+## Two changes that each passed alone broke two things together (2026-11-04)
+
+**Caught by:** `e2e` → `show-graph-agreement.spec.ts` and
+`edge-routing-no-crossings.spec.ts`, on `devel` after #218 and #225 had each
+passed alone; both failed on retry too (#209, #210)
+
+Ending projections on members inside a frame (#218) lifted those edges above the
+frame, and in the nested demo one left through the header right across the
+frame's Enter button. A press there selected the edge and Enter did nothing.
+Fixed by drawing the frame's buttons above the canvas, in the same place. Separately, an
+edge reroutes around other nodes only when it is redrawn, and React Flow redraws
+it only when one of its own ends moves. That gap was old, but nodes now settle
+into a second layout more often (#225), so an edge could keep a route around a
+node's old place: in EGO's PyTorch view on the Linux runner's font, one ran through
+`CONTEXT [RETRIEVED]`. It passed on a Mac only because the Mac's font happens to
+place the nodes clear of it. Fixed by rerouting edges whenever any node moves or changes
+size, with `@ci` tests for both.
+
+## Hiding a node's tag put a folded composition's Expand button under the pointer (2026-11-04)
+
+**Caught by:** `tutorials` → `tour-demo.tutorial.spec.ts`, EGO walkthrough, step
+"the-memory" (#211)
+
+The walkthrough clicks the middle of the folded `EM` node to select it. Hiding
+the "view only" tag left the Expand button alone in the row above the name, so
+it sat in the node's middle and the click opened the composition instead. The
+step never completed. A person selecting a folded composition would have hit
+the same thing. Fixed by moving Expand to the node's right edge, with a `@ci`
+test in `view-only-tags-setting.spec.ts`.
+
 ## A composition frame's buttons quietly changed the graph's view (2026-11-04)
 
 **Caught by:** the browser script written for `composition-frame-buttons.spec.ts`
@@ -209,5 +254,5 @@ kept here so the cost/value of standing up CI is visible too.
 | 2026-09-29 | Tutorials | The Episodic Memory demo, the course notebook's `EMComposition(memory_capacity=1000)`, took 9.2s to load locally and **over 30s** on the CI runner, past the 30s introspection limit (`Script execution timed out after 30 seconds`), so its walkthrough never got past step 1. The cost is building the memory matrices: at capacity 100 it loads in 1.4s and draws the same 16 nodes. A learner opening the notebook's own model on a slow laptop would hit the same timeout. Found on [#1221](https://github.com/jonhanke-nam/PsyNeuView/pull/1221) from the run log, not by re-running. | The demo uses capacity 100 and says why ([#1221](https://github.com/jonhanke-nam/PsyNeuView/pull/1221)); the load limit itself is still open |
 | 2026-10-11 | Tutorials | The walkthrough driver's `openModel` returned as soon as it clicked, and the step check gave the load 10s; the EGO demo (a nested EMComposition) took longer on the CI runner's retry. `setParameter` returned once the field showed the value, before the reload, which let the next step start under it (part of the Conflict Monitoring catch above). | `openModel` waits for the status bar's "Loading…" to clear on the 30s load budget; `setParameter` waits for the update-param response and reload ([#1375](https://github.com/jonhanke-nam/PsyNeuView/pull/1375)) |
 | 2026-10-28 | E2E | With the bigger default text ([#118](https://github.com/jonhanke-nam/PsyNeuView/pull/118)) and the narrower default editor ([#117](https://github.com/jonhanke-nam/PsyNeuView/pull/117)), a 900 px window left the editor pane about 220 px wide. The **Files: .psyneuview/ (default)** picker ran past the pane's edge, where the divider clipped it, and the file name ran under **A− A+**. `sidecar-placement.spec.ts` (#1211) caught it from the hit test at the picker's right end; the local pre-push run had not included that spec. | The picker and the file name shrink with an ellipsis instead of overflowing ([#118](https://github.com/jonhanke-nam/PsyNeuView/pull/118)) |
-| 2026-10-29 | Backend pytest | The conftest isolated the preferences file but not the PsyNeuLink update checks. A test that starts the app with its lifespan (`TestClient`) started the check scheduler; its first check finished a network round trip later, inside some other test, and wrote `pnl_update_state` to whichever preferences file was current — the real `~/.psynewview.json` when that test had unset the override. The real-file guard failed `test_the_editor_save_writes_a_local_checkout_file` in one job and `test_open_extracts_to_working_dir` in the other: different victims, same writer. Surfaced on [#150](https://github.com/jonhanke-nam/PsyNeuView/pull/150), whose new demo tests lengthened the run enough to move where the write landed; diagnosed from the run log's file contents, not by re-running. | The conftest sets `PSYNEUVIEW_PNL_UPDATE_CHECKS=0` for every test ([#150](https://github.com/jonhanke-nam/PsyNeuView/pull/150)) |
+| 2026-10-29 | Backend pytest | The conftest isolated the preferences file but not the PsyNeuLink update checks. A test that starts the app with its lifespan (`TestClient`) started the check scheduler; its first check finished a network round trip later, inside some other test, and wrote `pnl_update_state` to whichever preferences file was current — the real `~/.psyneuview.json` when that test had unset the override. The real-file guard failed `test_the_editor_save_writes_a_local_checkout_file` in one job and `test_open_extracts_to_working_dir` in the other: different victims, same writer. Surfaced on [#150](https://github.com/jonhanke-nam/PsyNeuView/pull/150), whose new demo tests lengthened the run enough to move where the write landed; diagnosed from the run log's file contents, not by re-running. | The conftest sets `PSYNEUVIEW_PNL_UPDATE_CHECKS=0` for every test ([#150](https://github.com/jonhanke-nam/PsyNeuView/pull/150)) |
 | 2026-10-29 | Backend pytest | `test_an_outside_save_to_an_open_library_model_updates_the_app_once_and_quickly` budgets 10s from an outside save to `file_changed`, which includes re-reading EGO. Locally that step is about 3s once the rest of the suite has run (2.4s alone; PsyNeuLink's in-process registries grow), and a CI runner is about 3.5x slower: the test took 18-22s overall on devel's runs, the step itself at the edge. Three lesson PRs failed it at 10.3-10.7s in one job each. Running only devel's demo tests first, or all the new lessons' too, moved the local step by 0.04s, so the lessons weren't the cause: the budget had no headroom on CI. | CI gets 20s; the 10s promise still holds on a laptop ([#154](https://github.com/jonhanke-nam/PsyNeuView/pull/154)) |

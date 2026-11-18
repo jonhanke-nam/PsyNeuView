@@ -20,7 +20,7 @@ PATTERNS = [[0, 0, 1], [0, 1, 1], [1, 0, 1], [1, 1, 1]]  # A, B, constant bias i
 @pytest.fixture
 def demo_path(tmp_path, monkeypatch):
     # /demos/reset writes a working copy; keep it out of backend/ (#1134).
-    monkeypatch.setenv("PSYNEWVIEW_WORKING_DIR", str(tmp_path))
+    monkeypatch.setenv("PSYNEUVIEW_WORKING_DIR", str(tmp_path))
     resp = client.post("/api/demos/reset", json={"demo_name": "logic_gate_network"})
     assert resp.status_code == 200, resp.text
     return resp.json()["file_path"]

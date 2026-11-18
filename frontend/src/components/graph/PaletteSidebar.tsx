@@ -4,6 +4,7 @@
  * Items can be dragged onto the canvas or clicked to add.
  */
 
+import { isProjectionType } from "@/constants/pnlTypes";
 import { type DragEvent, useEffect, useMemo, useRef } from "react";
 import { useModelStore } from "@/stores/modelStore";
 import { useNotificationStore } from "@/stores/notificationStore";
@@ -98,13 +99,22 @@ export function PaletteSidebar() {
 
   const handleAdd = (item: PnlObjectDef) => {
     if (!filePath) return;
-    addNodeToModel(filePath, item.type, item.defaults, setSource, loadModelFromServer, addNotification);
-    usePaletteStore.getState().addRecentlyUsed(item.type);
+    // A projection connects two nodes, so it has no place to be put: it
+    // keeps its own route (drop it on the receiver, then click the sender).
+    if (isProjectionType(item.type)) {
+      addNodeToModel(filePath, item.type, item.defaults, setSource, loadModelFromServer, addNotification);
+      usePaletteStore.getState().addRecentlyUsed(item.type);
+      return;
+    }
+    // #252: pick it up; the next click on the graph says where it goes.
+    // Clicking it again puts it back; another component swaps.
+    const { armed, setArmed } = usePaletteStore.getState();
+    setArmed(armed?.type === item.type ? null : { type: item.type, defaults: item.defaults, label: item.label || item.type });
   };
 
   const handleDragStart = (e: DragEvent, item: PnlObjectDef) => {
     e.dataTransfer.setData(
-      "application/psynewview-node",
+      "application/psyneuview-node",
       JSON.stringify({ type: item.type, defaults: item.defaults }),
     );
     e.dataTransfer.effectAllowed = "move";
@@ -464,14 +474,22 @@ function PaletteLeaf({
   onDragStart: (e: DragEvent, item: PnlObjectDef) => void;
   onToggleFavorite: () => void;
 }) {
+  // #252: picked up and waiting to be put on the graph.
+  const armed = usePaletteStore((s) => s.armed?.type === item.type);
+  const armedStyle = armed ? { background: "var(--pnv-primary-tint)", outline: "2px solid var(--pnv-primary)", outlineOffset: -2 } : {};
   if (compact) {
     return (
       <div
         draggable
         onDragStart={(e) => onDragStart(e, item)}
         onClick={() => onAdd(item)}
-        title={`${item.type} \u2014 drag or click to add`}
+        data-testid="palette-item"
+        data-type={item.type}
+        data-armed={armed ? "true" : undefined}
+        aria-pressed={armed}
+        title={`${item.type} \u2014 drag onto the graph, or click it and then click where it goes`}
         style={{
+          ...armedStyle,
           width: 32,
           height: 32,
           margin: "2px auto",
@@ -498,7 +516,12 @@ function PaletteLeaf({
       draggable
       onDragStart={(e) => onDragStart(e, item)}
       onClick={() => onAdd(item)}
+      data-testid="palette-item"
+      data-type={item.type}
+      data-armed={armed ? "true" : undefined}
+      aria-pressed={armed}
       style={{
+        ...armedStyle,
         display: "flex",
         alignItems: "center",
         gap: 8,
@@ -513,9 +536,9 @@ function PaletteLeaf({
         (e.currentTarget as HTMLElement).style.background = "var(--pnv-primary-tint)";
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.background = "transparent";
+        (e.currentTarget as HTMLElement).style.background = armed ? "var(--pnv-primary-tint)" : "transparent";
       }}
-      title={`${item.type} \u2014 drag or click to add`}
+      title={`${item.type} \u2014 drag onto the graph, or click it and then click where it goes`}
     >
       {/* Color dot */}
       <span

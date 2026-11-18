@@ -77,6 +77,42 @@ export function useFileWatcher() {
 
   const dismissPendingChange = useCallback(() => clearPendingChange(), [clearPendingChange]);
 
+  // A fresh watch takes the file as it is now as its baseline, so an edit
+  // made while nothing was watching would otherwise never arrive: while
+  // paused (#103), or while the connection was down (#272). Treat it as the
+  // change it is: take it if nothing here is unsaved, ask if something is.
+  const catchUp = useCallback(
+    (path: string, why: string): (() => void) => {
+      let cancelled = false;
+      void readDiskVersion(path).then((disk) => {
+        if (cancelled || !disk) return;
+        const { source, savedSource, filePath: open } = useModelStore.getState();
+        if (open !== path || disk.source === savedSource) return;
+        useSyncStore.getState().noteChange(path);
+        record("file", `Model changed on disk ${why}: ${path}`, {
+          path,
+          applied: source === savedSource,
+        });
+        if (source !== savedSource) {
+          setPendingChange({ filePath: path, source: disk.source, model: disk.model });
+          return;
+        }
+        applyChange(disk.source, disk.model);
+        useSyncStore.getState().noteApplied();
+      });
+      return () => {
+        cancelled = true;
+      };
+    },
+    [applyChange, setPendingChange],
+  );
+  // Read from the socket's callbacks, which are created once.
+  const catchUpRef = useRef(catchUp);
+  catchUpRef.current = catchUp;
+  // The first connection reads the file as it opens; only a reconnection has
+  // a gap to catch up on.
+  const hasConnected = useRef(false);
+
   useEffect(() => {
     let unmounted = false;
 
@@ -110,7 +146,10 @@ export function useFileWatcher() {
         // not changed, so the effect below will not fire on its own.
         if (filePathRef.current && !useSyncStore.getState().paused) {
           ws.send(JSON.stringify({ type: "watch_file", filePath: filePathRef.current }));
+          // #272: an edit made while the connection was down arrives now.
+          if (hasConnected.current) catchUpRef.current(filePathRef.current, "while reconnecting");
         }
+        hasConnected.current = true;
       };
 
       ws.onmessage = (event) => {
@@ -244,27 +283,8 @@ export function useFileWatcher() {
     const resumed = wasPaused.current && !paused;
     wasPaused.current = paused;
     if (!resumed || !filePath) return;
-    let cancelled = false;
-    void readDiskVersion(filePath).then((disk) => {
-      if (cancelled || !disk) return;
-      const { source, savedSource, filePath: open } = useModelStore.getState();
-      if (open !== filePath || disk.source === savedSource) return;
-      useSyncStore.getState().noteChange(filePath);
-      record("file", `Model changed on disk while watching was paused: ${filePath}`, {
-        path: filePath,
-        applied: source === savedSource,
-      });
-      if (source !== savedSource) {
-        setPendingChange({ filePath, source: disk.source, model: disk.model });
-        return;
-      }
-      applyChange(disk.source, disk.model);
-      useSyncStore.getState().noteApplied();
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [paused, filePath, applyChange, setPendingChange]);
+    return catchUp(filePath, "while watching was paused");
+  }, [paused, filePath, catchUp]);
 
   return {
     /** Non-null while an external change is waiting on the user's decision. */

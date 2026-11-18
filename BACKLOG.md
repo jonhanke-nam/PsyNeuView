@@ -248,7 +248,7 @@ Two things worth doing before planning against any area:
 
 ### Testing — 22 open
 
-- **#1025** [Testing] e2e can't touch anything that writes ~/.psynewview.json — no config-path override `enhancement,testing`
+- **#1025** [Testing] e2e can't touch anything that writes ~/.psyneuview.json — no config-path override `enhancement,testing`
 - **#1017** [Process] Documentation coverage — undocumented surfaces (the omission class) `documentation`
 - **#969** Grow frontend test coverage of the graph view — invariants now, pixels later `enhancement,testing`
 - **#826** [Process] Periodic docs-freshness review (starting with docs/testing.md) `documentation,process`

@@ -21,7 +21,7 @@ A deployment therefore needs two things the image cannot provide for itself:
    reachable without an auth layer is remote code execution offered to whoever
    finds the URL.
 2. **A container per person**, with its own volume mounted at `/home/pnv` —
-   every piece of per-user state (`~/.psynewview.json`, `~/.psyneuview/sources`,
+   every piece of per-user state (`~/.psyneuview.json`, `~/.psyneuview/sources`,
    saved bundles) is relative to the home directory.
 
 This is the JupyterHub model, and it is sound for named collaborators. It is not
@@ -343,7 +343,7 @@ against a remote container and a local one — no shell access needed.
 
 ### Where uploads land
 
-Imported and saved models are written to `PSYNEWVIEW_MODELS_DIR`, which the
+Imported and saved models are written to `PSYNEUVIEW_MODELS_DIR`, which the
 image sets to `/home/pnv/models` — **on the mounted volume**. Without that the
 default would be `<repo>/models` inside the image layer, and a redeploy would
 discard a user's work silently. CI asserts the save directory resolves under

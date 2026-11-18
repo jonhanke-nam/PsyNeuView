@@ -28,7 +28,7 @@ MODEL = "import psyneulink as pnl\n"
 
 @pytest.fixture
 def home(tmp_path, monkeypatch):
-    """No PSYNEWVIEW_WORKING_DIR, a temp home, a local deployment."""
+    """No PSYNEUVIEW_WORKING_DIR, a temp home, a local deployment."""
     monkeypatch.delenv(wc.WORKING_DIR_ENV, raising=False)
     h = tmp_path / "home"
     h.mkdir()

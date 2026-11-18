@@ -40,7 +40,7 @@ RUN_TIMEOUT = 300  # 5 minutes for execution runs
 # Path to the worker script
 WORKER_PATH = str(Path(__file__).parent / "sandbox_worker.py")
 
-RESULT_MARKER = "###PSYNEWVIEW_RESULT###"
+RESULT_MARKER = "###PSYNEUVIEW_RESULT###"
 
 
 class WarmWorker:
@@ -419,7 +419,7 @@ def _run_cold(task: str, params: dict, timeout: int) -> dict:
         if not stdout:
             return {"error": "Worker produced no output"}
 
-        marker = "###PSYNEWVIEW_RESULT###"
+        marker = "###PSYNEUVIEW_RESULT###"
         if marker in stdout:
             json_str = stdout.split(marker)[-1].strip()
         else:

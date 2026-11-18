@@ -11,6 +11,7 @@ import { useState, useEffect, useRef } from "react";
 import { DialogHeader } from "./dialog/DialogHeader";
 import { useDismiss } from "./dialog/useDismiss";
 import { Button } from "./Button";
+import { DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
 
 interface Props {
   /** The dialog's title: what the value is for. */
@@ -37,7 +38,7 @@ export function PromptModal({ title, message, defaultValue = "", placeholder, on
     <div
       style={{
         position: "fixed",
-        inset: 0,
+        inset: 0, bottom: DIALOG_SCRIM_BOTTOM,
         background: "var(--pnv-scrim)",
         display: "flex",
         alignItems: "center",

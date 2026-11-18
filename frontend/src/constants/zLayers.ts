@@ -11,3 +11,11 @@ export const Z_DIALOG = 10000;
 export const Z_TOUR_BAR = 10001;
 export const Z_TOUR_OVERLAY = 10002;
 export const Z_MENU = 10003;
+
+/**
+ * Where a dialog's backdrop ends at the bottom: just above the walkthrough
+ * bar while one is running, so the bar (drawn above dialogs, for the
+ * walkthroughs about Settings) never covers a dialog's last rows. TourBar
+ * keeps the variable at its height, and clears it when it closes.
+ */
+export const DIALOG_SCRIM_BOTTOM = "var(--pnv-tour-bar-height, 0px)";

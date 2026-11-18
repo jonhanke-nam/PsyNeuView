@@ -127,7 +127,7 @@ def local_checkout(tmp_path, monkeypatch):
     # keep the temp checkout outside it so it counts as "local".
     monkeypatch.setenv("PSYNEUVIEW_CLONE_ROOT", str(tmp_path / "sources"))
     # Reference Models write a working copy; keep it out of backend/.
-    monkeypatch.setenv("PSYNEWVIEW_WORKING_DIR", str(tmp_path / "working"))
+    monkeypatch.setenv("PSYNEUVIEW_WORKING_DIR", str(tmp_path / "working"))
 
     assert pnl_source_guard.active_kind() == "local"
     assert settings_info.active_psyneulink_package_dir() == root / "psyneulink"

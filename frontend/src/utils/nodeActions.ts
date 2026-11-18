@@ -3,113 +3,43 @@
  * Used by both PaletteSidebar (click) and GraphCanvas (drag-drop).
  */
 
-import { useModelStore } from "@/stores/modelStore";
+import { visibleCentre } from "@/utils/graphViewport";
+import { useModelStore, usesFlatPositions } from "@/stores/modelStore";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useStatusStore } from "@/stores/statusStore";
 import { recordAction } from "@/utils/history";
 import { generateDefaultVarName } from "@/utils/defaultNaming";
-import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { modelLoadOptions, modelViewOptions } from "@/utils/showGraphLoadRequest";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { withBusy } from "@/stores/busyStore";
-import { errorDetail } from "@/utils/errorDetail";
-
-// Which of the three graph views is showing (#717): a frame button's reload
-// has to carry the same flags as any other reload, or the canvas silently
-// changes view (#194).
-interface ViewFlags {
-  flat: boolean;
-  pytorch: boolean;
-}
-
-// Everything a frame button changes before the graph is rebuilt, so a rebuild
-// that fails can put it all back exactly (#194).
-interface ViewSnapshot extends ViewFlags {
-  collapsed: Set<string>;
-  inset: Set<string>;
-  focused: string | null;
-  viewBeforeEntering: ViewFlags | null;
-}
-
-// The view (flattened or PyTorch) that was showing when a composition was
-// entered, so leaving it returns there. Entering shows the composition on its
-// own in the nested view (the flattened views have no such thing as a single
-// composition), and the view menu says so while it lasts.
-let viewBeforeEntering: ViewFlags | null = null;
-
-function snapshotView(): ViewSnapshot {
-  const gs = useGraphSettings.getState();
-  return {
-    flat: gs.flat,
-    pytorch: gs.pytorch,
-    collapsed: new Set(gs.collapsedCompositions),
-    inset: new Set(gs.insetCompositions),
-    focused: useModelStore.getState().focusedComposition,
-    viewBeforeEntering,
-  };
-}
-
-function restoreView(snap: ViewSnapshot) {
-  useGraphSettings.setState({
-    flat: snap.flat,
-    pytorch: snap.pytorch,
-    collapsedCompositions: snap.collapsed,
-    insetCompositions: snap.inset,
-  });
-  useModelStore.getState().setFocusedComposition(snap.focused);
-  viewBeforeEntering = snap.viewBeforeEntering;
-}
-
-// Rebuild the graph from the open file with the view settings as they now
-// stand. modelStore reads collapsedCompositions, insetCompositions and
-// focusedComposition at dispatch time, so flipping them isn't enough — the
-// graph has to be rebuilt, and refetching /api/model/load is the cheapest way
-// to do that today without caching raw modelData in the store. Returns null
-// when the graph was rebuilt, else the reason it wasn't.
-async function rebuildGraph(): Promise<string | null> {
-  const { filePath, setSource, loadModelFromServer } = useModelStore.getState();
-  if (!filePath) return null;
-  const gs = useGraphSettings.getState();
-  try {
-    const resp = await fetch("/api/model/load", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        file_path: filePath,
-        flat: gs.flat,
-        pytorch: gs.pytorch,
-        ...showGraphLoadRequest(),
-      }),
-    });
-    if (!resp.ok) return await errorDetail(resp);
-    const data = await resp.json();
-    setSource(data.source);
-    // The labels, bundle and sidecars too: leaving them out clears the
-    // sidecar's port labels on every rebuild (#611).
-    loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
-    return null;
-  } catch (e) {
-    return (e as Error).message || "the server could not be reached";
-  }
-}
+import {
+  applyView,
+  captureView,
+  getViewBeforeEntering,
+  rebuildGraph,
+  setViewBeforeEntering,
+} from "@/utils/graphView";
 
 /**
  * Change how a composition is shown and rebuild the graph (#194).
  *
  * `apply` makes the change to the stores; `what` names it for the status bar,
- * the busy wheel and the notice. A rebuild that fails shows the reason and
- * puts every setting back, so the canvas and the settings still agree: before,
- * the setting stayed changed while the graph showed nothing of it, and the
- * next unrelated rebuild applied it by surprise.
+ * the busy wheel and the notice, and `done` is what the History step is
+ * called once it has happened, in the Undo and Redo tooltips (#204). A
+ * rebuild that fails shows the reason and puts every setting back, so the
+ * canvas and the settings still agree: before, the setting stayed changed
+ * while the graph showed nothing of it, and the next unrelated rebuild
+ * applied it by surprise.
  */
-async function changeCompositionView(what: string, apply: () => void): Promise<void> {
-  const before = snapshotView();
+async function changeCompositionView(what: string, done: string, apply: () => void): Promise<void> {
+  const before = captureView();
   const { setStatus, clearStatus } = useStatusStore.getState();
   apply();
   setStatus(`${what}...`);
   try {
-    const failure = await withBusy(what, rebuildGraph());
+    const failure = await withBusy(what, rebuildGraph(done));
     if (failure !== null) {
-      restoreView(before);
+      applyView(before);
       useNotificationStore.getState().addNotification(
         "error",
         `${what} failed: ${failure}. The graph is as it was.`,
@@ -139,40 +69,56 @@ function leaveFlattenedViews() {
 export async function toggleCompositionCollapse(label: string) {
   const gs = useGraphSettings.getState();
   const folding = gs.flat || gs.pytorch || !gs.collapsedCompositions.has(label);
-  await changeCompositionView(folding ? `Collapsing ${label}` : `Expanding ${label}`, () => {
-    if (folding) leaveFlattenedViews();
-    if (folding === !useGraphSettings.getState().collapsedCompositions.has(label)) {
-      useGraphSettings.getState().toggleCollapsedComposition(label);
-    }
-  });
+  await changeCompositionView(
+    folding ? `Collapsing ${label}` : `Expanding ${label}`,
+    folding ? `Collapsed ${label}` : `Expanded ${label}`,
+    () => {
+      if (folding) leaveFlattenedViews();
+      if (folding === !useGraphSettings.getState().collapsedCompositions.has(label)) {
+        useGraphSettings.getState().toggleCollapsedComposition(label);
+      }
+    },
+  );
 }
 
 // #427 INSET mode: render a nested composition as a framed inset (internals
-// laid out independently, treated as one unit by the parent).
+// laid out independently, treated as one unit by the parent). Pressed again,
+// the composition is shown nested as before.
 export async function toggleCompositionInset(label: string) {
   const insetting = !useGraphSettings.getState().insetCompositions.has(label);
-  await changeCompositionView(insetting ? `Insetting ${label}` : `Un-insetting ${label}`, () => {
-    useGraphSettings.getState().toggleInsetComposition(label);
-  });
+  await changeCompositionView(
+    insetting ? `Insetting ${label}` : `Un-insetting ${label}`,
+    insetting ? `Inset ${label}` : `Un-inset ${label}`,
+    () => {
+      useGraphSettings.getState().toggleInsetComposition(label);
+    },
+  );
 }
 
 // #426 Focus mode, now "Enter" (#194): show a single nested composition on its
 // own as the graph root (pass its cleaned label), or leave it (pass null) and
 // return to the view that was showing before it was entered.
 export async function focusComposition(label: string | null) {
-  await changeCompositionView(label ? `Entering ${label}` : "Leaving the composition", () => {
-    const gs = useGraphSettings.getState();
-    const model = useModelStore.getState();
-    if (label) {
-      if (!model.focusedComposition) viewBeforeEntering = { flat: gs.flat, pytorch: gs.pytorch };
-      leaveFlattenedViews();
-    } else if (viewBeforeEntering) {
-      gs.setFlat(viewBeforeEntering.flat);
-      gs.setPytorch(viewBeforeEntering.pytorch);
-      viewBeforeEntering = null;
-    }
-    model.setFocusedComposition(label);
-  });
+  // The step is named for the composition entered, or the one being left.
+  const leaving = useModelStore.getState().focusedComposition;
+  await changeCompositionView(
+    label ? `Entering ${label}` : "Leaving the composition",
+    label ? `Entered ${label}` : leaving ? `Left ${leaving}` : "Left the composition",
+    () => {
+      const gs = useGraphSettings.getState();
+      const model = useModelStore.getState();
+      const from = getViewBeforeEntering();
+      if (label) {
+        if (!model.focusedComposition) setViewBeforeEntering({ flat: gs.flat, pytorch: gs.pytorch });
+        leaveFlattenedViews();
+      } else if (from) {
+        gs.setFlat(from.flat);
+        gs.setPytorch(from.pytorch);
+        setViewBeforeEntering(null);
+      }
+      model.setFocusedComposition(label);
+    },
+  );
 }
 
 // #612/#737: rename a node's display name (the PsyNeuLink `name=`) via the
@@ -217,6 +163,28 @@ export async function renameNode(
   }
 }
 
+/**
+ * The model's outermost composition: the one no other contains. Not simply the
+ * first listed: with the compositions shown flattened, an inner one comes
+ * first, and a node added "at the top level" went into it (#252). One is
+ * inside another when the other lists it as a node (nested view), or lists
+ * all of its nodes as its own (flattened view).
+ */
+export function outermostComposition(
+  comps: { varName?: string; name?: string; nodes?: { name?: string; varName?: string }[] }[],
+): string | undefined {
+  const names = (c: (typeof comps)[number]) => new Set((c.nodes ?? []).flatMap((n) => [n.name, n.varName]).filter(Boolean) as string[]);
+  const inside = (c: (typeof comps)[number], other: (typeof comps)[number]) => {
+    if (c === other) return false;
+    const theirs = names(other);
+    if ((c.varName && theirs.has(c.varName)) || (c.name && theirs.has(c.name))) return true;
+    const mine = [...names(c)];
+    return mine.length > 0 && mine.length < theirs.size && mine.every((n) => theirs.has(n));
+  };
+  const outer = comps.find((c) => !comps.some((o) => inside(c, o)));
+  return (outer ?? comps[0])?.varName;
+}
+
 export async function addNodeToModel(
   filePath: string,
   mechType: string,
@@ -229,12 +197,25 @@ export async function addNodeToModel(
   // this the coordinates were discarded and the node appeared wherever the
   // layout engine put it.
   dropPosition?: { x: number; y: number },
+  // #252: the composition to add it to (its variable name), when the user
+  // put it inside one; otherwise the model's top-level composition. With
+  // one, dropPosition is relative to that composition's frame.
+  composition?: string,
 ) {
   // #181: auto-generate `New_<Type>_<n>` against names already declared
   // in the active file (lineMap is the authoritative source). User renames
   // afterwards via the inspector — see issue body for the rationale.
   const existingNames = Object.keys(useModelStore.getState().lineMap);
   const varName = generateDefaultVarName(mechType, existingNames);
+  // #252: nothing the user creates appears off-screen. With no point chosen
+  // (a menu, a shortcut, the assistant), it goes in the middle of the graph
+  // as it is showing, not wherever the layout would put it.
+  dropPosition = dropPosition ?? visibleCentre() ?? undefined;
+
+  // #252: putting a node down where you chose, like dragging one, makes the
+  // layout Custom where it stands. In Auto, the reload would lay everything
+  // out again and the new node would go wherever the layout engine put it.
+  if (dropPosition && useModelStore.getState().autoLayout) useModelStore.getState().setAutoLayout(false);
 
   const { setStatus, clearStatus } = useStatusStore.getState();
   setStatus(`Adding ${mechType}: ${varName}...`);
@@ -243,17 +224,17 @@ export async function addNodeToModel(
   const resp = await fetch("/api/model/load", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
+    body: JSON.stringify({ file_path: filePath, ...modelLoadOptions() }),
   });
   const loadData = await resp.json();
-  const compVarName = loadData.model?.compositions?.[0]?.varName;
+  const compVarName = composition ?? outermostComposition(loadData.model?.compositions ?? []);
 
   try {
     const result = await fetch("/api/model/structural-change", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        file_path: filePath,
+        file_path: filePath, ...modelViewOptions(),
         changes: {
           action: "add_node",
           var_name: varName,
@@ -278,8 +259,17 @@ export async function addNodeToModel(
       await saveDroppedPosition(filePath, varName, dropPosition);
     }
 
+    // The reply's layout was read before the drop position was saved, so it
+    // doesn't have the new node: loaded as it is, the node counted as never
+    // placed and went wherever the layout put it (in Like show_graph, a
+    // column to the right of the graph). Load it with the position (#252).
+    const key = usesFlatPositions() ? "flatPositions" : "positions";
+    const layout = dropPosition
+      ? { ...(data.layout ?? {}), [key]: { ...(data.layout?.[key] ?? {}), [varName]: dropPosition } }
+      : data.layout;
+
     setSource(data.source);
-    loadModel(data.model, data.layout);
+    loadModel(data.model, layout);
     recordAction(`Added ${mechType} "${varName}"`);
     addNotification("success", `Added ${mechType} "${varName}"`);
   } catch (e) {
@@ -305,8 +295,10 @@ async function saveDroppedPosition(
   varName: string,
   position: { x: number; y: number },
 ) {
-  const gs = useGraphSettings.getState();
-  const flat = gs.flat || gs.pytorch;
+  // The namespace the store reads (#719): the flat one only when the view is
+  // flat AND the model nests something (#48). Keyed by the view setting
+  // alone, a drop on a model with no nesting was saved where it's never read.
+  const flat = usesFlatPositions();
   const merged = {
     ...useModelStore.getState().lastLayoutPositions,
     [varName]: { x: position.x, y: position.y },
@@ -327,3 +319,4 @@ async function saveDroppedPosition(
     // arrives, just where the engine puts it.
   }
 }
+

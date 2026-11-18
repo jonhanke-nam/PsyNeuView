@@ -41,7 +41,7 @@ import { useTourHighlightStore } from "@/stores/tourHighlightStore";
 import { tourIdFromUrl, useTourStore } from "@/stores/tourStore";
 import { useUIStore } from "@/stores/uiStore";
 import { openSettings } from "./settings/sections";
-import { loadNarrationVoice, narrationAvailable, resolveVoice, speakCaption, stopSpeaking, voiceShortName, type SpeechEngine } from "@/utils/narration";
+import { narrationAvailable, narrationVoiceName, pauseSpeaking, resumeSpeaking, speakCaption, stopSpeaking, type SpeechEngine } from "@/utils/narration";
 import { matchesNodeName, type TourStep } from "@/utils/tourStep";
 
 /** Where a docs page is read: the repo's `docs/` folder on devel. */
@@ -219,9 +219,25 @@ export function TourBar() {
   useEffect(() => {
     const engine = speechEngine();
     if (!engine) return;
-    if (paused) engine.pause();
-    else engine.resume();
+    if (paused) pauseSpeaking(engine);
+    else resumeSpeaking(engine);
   }, [paused]);
+
+  // Dialogs stop just above the bar (DIALOG_SCRIM_BOTTOM), which is drawn
+  // above them: it never covers a dialog's last rows, Settings' included.
+  const [barEl, setBarEl] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!barEl) return;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty("--pnv-tour-bar-height", `${barEl.offsetHeight}px`);
+    publish();
+    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(publish) : null;
+    ro?.observe(barEl);
+    return () => {
+      ro?.disconnect();
+      root.style.removeProperty("--pnv-tour-bar-height");
+    };
+  }, [barEl]);
 
   // Whatever happens to the walkthrough, no voice outlives it.
   useEffect(() => () => stopSpeaking(speechEngine()), []);
@@ -231,7 +247,7 @@ export function TourBar() {
   const docs = walkthrough.docs ?? [];
   // Narration on and a caption to read: the caption leads the bar (#86).
   const leads = narration && Boolean(step?.say) && !finished && !complete && !holdForPointer;
-  const voice = narration ? voiceShortName(resolveVoice(speechEngine()?.getVoices?.() ?? [], loadNarrationVoice())) : null;
+  const voice = narration ? narrationVoiceName(speechEngine()?.getVoices?.() ?? []) : null;
   const instruction = finished
     ? "✓ Walkthrough complete."
     : complete
@@ -242,6 +258,7 @@ export function TourBar() {
 
   return (
     <div
+      ref={setBarEl}
       data-testid="tour-bar"
       data-paused={paused ? "true" : "false"}
       style={{

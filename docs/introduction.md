@@ -79,8 +79,16 @@ Components panel, and ⌘1 for the canvas itself while another panel is showing
 (Ctrl in place of ⌘ outside a Mac). The keys are listed under Settings ▸
 Keyboard shortcuts, where they can be changed; a browser keeps ⌘1 to ⌘9 for
 its own tabs, so there the Layout menu is the way. Whatever you choose is
-remembered. A guided walkthrough shows every panel while it runs and puts your
-layout back afterwards.
+remembered. One of the canvas, the code editor and the Inspector always stays
+on screen: try to hide the last of them, from the menu, its key or the
+Inspector's collapse button, and it stays, with a notice naming the panels to
+show first. If you would rather be able to clear the window, turn on
+**Allow a blank screen** under Settings ▸ Appearance ▸ Panels: then the last
+panel goes too, the toolbar stays, and a short hint says how to bring a panel
+back. A model you open onto a blank screen brings the canvas with it (or the
+panels you choose under the same setting); turning the setting off while the
+screen is blank brings the canvas back. A guided walkthrough shows every panel
+while it runs and puts your layout back afterwards.
 
 ## Where to go next
 

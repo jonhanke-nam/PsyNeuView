@@ -1,0 +1,80 @@
+name: Code scan
+
+# The standing code scan (#243): scripts/code_scan.py over PsyNeuView and the
+# Mac app, for problems no single PR shows (names differing only in capitals,
+# pip where uv belongs, the old product name, platform checks, shell=True,
+# TODOs with no issue). The report goes in the run's summary and as an
+# artifact. It fails only on a NEW high-severity finding (one no open
+# `code-scan` issue tracks by its `scan:<id>`), and then comments on #243.
+#
+# Runs on every merge to devel and on demand. Not on a weekly schedule:
+# GitHub's cron fires only from the default branch (main, which is dormant),
+# not the devel trunk, as docs-drift-guard.yml found. Not a required check.
+
+on:
+  push:
+    branches: [devel]
+  pull_request:
+    branches: [devel]
+    paths:
+      - "scripts/code_scan.py"
+      - ".github/workflows/code-scan.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: code-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check out the Mac app (its trunk)
+        uses: actions/checkout@v5
+        with:
+          repository: jonhanke-nam/PsyNeuView-MacApp
+          ref: jonhanke-devel
+          path: PsyNeuView-MacApp
+
+      - name: Scan
+        id: scan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          python3 scripts/code_scan.py --macapp PsyNeuView-MacApp --macapp-ref '' \
+            --report-dir "$RUNNER_TEMP/code-scan" --fail-on high 2> new-high.txt
+          status=$?
+          set -e
+          cat "$RUNNER_TEMP"/code-scan/*.md >> "$GITHUB_STEP_SUMMARY"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-scan-report
+          path: ${{ runner.temp }}/code-scan/
+          if-no-files-found: ignore
+
+      - name: Say so on #243
+        if: steps.scan.outputs.status != '0' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          body="$(printf 'The code scan found new high-severity findings on `%s` (%s):\n\n```\n%s\n```\n\nRun: %s/%s/actions/runs/%s\n\nDraft an issue for each, labelled `code-scan`, with its `scan:<id>` in the body.' \
+            "${GITHUB_REF_NAME}" "${GITHUB_SHA::8}" "$(cat new-high.txt)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+          gh issue comment 243 --repo "$GITHUB_REPOSITORY" --body "$body"
+
+      - name: Fail on a new high finding
+        if: steps.scan.outputs.status != '0'
+        run: |
+          cat new-high.txt
+          exit 1

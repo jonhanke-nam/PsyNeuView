@@ -29,6 +29,14 @@ async function startDemo(page: import("@playwright/test").Page) {
   await expect(page.getByTestId("tour-bar")).toBeVisible();
 }
 
+// With unsaved work open, starting one asks where (#172): replace it here.
+async function startDemoHere(page: import("@playwright/test").Page) {
+  await page.getByTestId("walkthrough-menu").click();
+  await page.getByTestId("walkthrough-demo").click();
+  await page.getByTestId("tutorial-choice-here").click();
+  await expect(page.getByTestId("tour-bar")).toBeVisible();
+}
+
 test.describe("A walkthrough started with another model open", () => {
   test("opens its own model", async ({ page }) => {
     await openOther(page);
@@ -54,7 +62,7 @@ test.describe("A walkthrough started with another model open", () => {
     await page.keyboard.type("  # an edit");
 
     page.once("dialog", (d) => d.dismiss()); // keep my changes
-    await startDemo(page);
+    await startDemoHere(page);
     const missing = page.getByTestId("tour-missing-anchor");
     await expect(missing).toBeVisible();
     await expect(missing).toContainText("color_hidden");
@@ -99,7 +107,7 @@ test.describe("A walkthrough started with another model open", () => {
     await page.keyboard.type("  # an edit");
 
     page.once("dialog", (d) => d.accept()); // discard my edit, open the model
-    await startDemo(page);
+    await startDemoHere(page);
     await expect(canvasNode(page, "color_hidden")).toBeVisible({ timeout: 30000 });
     // Past the moment the stale preview would have answered.
     await page.waitForTimeout(5000);

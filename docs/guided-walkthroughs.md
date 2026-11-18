@@ -87,6 +87,16 @@ steps:
   `import …Yaml from "@/walkthroughs/<id>.yaml?raw"` and an entry in
   `WALKTHROUGHS`. A malformed file fails at app startup, on purpose.
 
+## Staying on the walkthrough's model
+
+Everything that replaces the model asks first while a walkthrough that uses one
+is running (`utils/tutorialGuard.ts`, #172): stay, leave, or open it in a new
+window with the walkthrough left on its step. The exception is what the current
+step asks for: its `act.openModel`, or New Model for its `act.newModel`. So a
+step that teaches opening a model needs that `act`, and this and the "right model
+open" check are the two places the app reads `act`. A walkthrough with no model
+of its own is never interrupted.
+
 ## `done` — when a step is finished
 
 An empty or unrecognised condition is **never** satisfied: a typo sticks rather
@@ -157,6 +167,20 @@ Automatic picks the best English voice installed (Premium/Enhanced first, then
 Karen, Daniel, …, never the novelty voices; `pickVoice` in
 `utils/narration.ts`), reading at 0.95. Never required: the caption is always on screen.
 
+**Recorded voices (#159).** By default narration plays clips recorded ahead
+of time in Heart's voice; Michael is the other recorded voice, and the
+computer's own voices are still in the list. The clips are made with Kokoro, a
+free voice model (Apache 2.0) run on your own Mac, and ship in
+`frontend/public/narration/<voice>/`, one `.m4a` per caption, named by a hash
+of the words said (the caption after `pronunciations.yaml`). A caption with no
+clip is read by the computer's voice, so nothing is silent, but
+`utils/recordedNarration.test.ts` fails on any caption without a clip, or a
+clip without a caption. **When you add or reword a `say:` caption (or a
+respelling), run `npm run narration:render` in `frontend/` and commit the
+clips.** It makes only the missing clips and removes those no longer needed.
+It needs `uv` (`brew install uv`) and, on first run, downloads the model
+(about 350 MB) to `~/.psyneuview/kokoro`. Never in CI.
+
 **What narration reads, and how the bar shows it (#86).** Narration reads only
 the caption, never the instruction. Captions run about 11 words (a few
 seconds), instructions about 33 (up to 81), too long to hear on every step.
@@ -193,7 +217,7 @@ Every walkthrough shows every panel (the code editor, the graph, the bottom
 panel's tabs and the Components panel) while it runs, since the window opens
 with the graph alone (#189) and steps point at the others. The layout from
 before comes back when the walkthrough ends, finished or stopped, and is kept
-in the browser (`psynewview_layout_before_walkthrough`) meanwhile, so a reload
+in the browser (`psyneuview_layout_before_walkthrough`) meanwhile, so a reload
 mid-walkthrough puts it back too rather than leaving the tutorial's layout
 behind as a choice. The e2e fixture (`test-base.ts`) turns the code editor and
 the bottom panel on for every spec, as the suite was written; a spec about the
@@ -262,9 +286,8 @@ python3 scripts/tutorial-review-book.py --out /tmp/review-book --voice Daniel  #
 the book renders a preview of each step with `say`, in the voice the app picks
 by default (Karen, else Daniel) at the narration rate, with the dictionary's
 respellings applied. The previews are written only to the output folder,
-never committed. If the repo ever carries recorded narration
-(`narration-manifest.json`), the book plays those recordings instead and also
-flags stale or missing ones.
+never committed. The app's default voice is now recorded (#159,
+`frontend/public/narration/`); the book still previews with `say`.
 
 It writes `index.html` with `shots/` (JPEG, shrunk with `sips` on macOS) and
 `audio/` (AAC `.mp4`, which an Artifact serves; it won't serve `.m4a`) beside
@@ -295,7 +318,7 @@ page and `shots/`, then `audio/`), since one publish takes at most 255.
   `backend/demos/` (the label comes from the filename), and the test pins the
   numbers or node names the walkthrough relies on, so a PsyNeuLink bump fails
   there, with the names. Seed any random weights. `/demos/reset`'s working
-  copy goes in `PSYNEWVIEW_WORKING_DIR`, which the backend tests' conftest
+  copy goes in `PSYNEUVIEW_WORKING_DIR`, which the backend tests' conftest
   points at a temp folder for every test, so it never lands in `backend/` or
   in the developer's real `~/.psyneuview/working-copies` (#1134, #1319).
 - **Mind load time.** The app gives a model load 30 seconds, and CI runners

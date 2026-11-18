@@ -6,17 +6,17 @@
  * Whether the panel is the word list or the icon strip is not remembered: it
  * starts as Settings ▸ Appearance ▸ Components panel says (#113), and the
  * panel's ◀/▶ button changes it for this session only, so nobody is left
- * stuck on the strip. The old remembered value (psynewview_palette_compact)
+ * stuck on the strip. The old remembered value (psyneuview_palette_compact)
  * is no longer read.
  */
 
 import { create } from "zustand";
 import { loadComponentsStart } from "./componentsPanelStartStore";
 
-const LS_FAVORITES = "psynewview_palette_favorites";
-const LS_RECENTS = "psynewview_palette_recents";
-const LS_OPEN = "psynewview_palette_open";
-const LS_EXPANDED = "psynewview_palette_expanded";
+const LS_FAVORITES = "psyneuview_palette_favorites";
+const LS_RECENTS = "psyneuview_palette_recents";
+const LS_OPEN = "psyneuview_palette_open";
+const LS_EXPANDED = "psyneuview_palette_expanded";
 const MAX_RECENTS = 8;
 
 function loadJson<T>(key: string, fallback: T): T {
@@ -55,6 +55,13 @@ interface PaletteState {
   favorites: string[];
   recentlyUsed: string[];
   compactFlyoutNodeId: string | null;
+  /**
+   * #252: a component picked up, waiting for a click on the graph to say
+   * where it goes. Clicking a component used to add it at once, wherever the
+   * layout put it, sometimes off-screen.
+   */
+  armed: { type: string; defaults: Record<string, string>; label: string } | null;
+  setArmed: (armed: PaletteState["armed"]) => void;
 
   setOpen: (open: boolean) => void;
   toggleOpen: () => void;
@@ -79,6 +86,8 @@ export const usePaletteStore = create<PaletteState>((set, get) => ({
   favorites: loadJson<string[]>(LS_FAVORITES, []),
   recentlyUsed: loadJson<string[]>(LS_RECENTS, []),
   compactFlyoutNodeId: null,
+  armed: null,
+  setArmed: (armed) => set({ armed }),
 
   setOpen: (open) => {
     localStorage.setItem(LS_OPEN, String(open));

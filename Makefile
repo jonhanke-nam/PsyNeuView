@@ -1,4 +1,4 @@
-# PsyNewView Makefile
+# PsyNeuView Makefile
 # One-command setup and launch for the PsyNeuLink visual editor.
 #
 # Multi-branch testing:
@@ -19,6 +19,18 @@ PYTHON ?= python3
 PYTHON_SUPPORTED := python3.14 python3.13 python3.12
 PIP := $(VENV_DIR)/bin/pip
 PYTHON_VENV := $(VENV_DIR)/bin/python
+# uv builds the environment from backend/uv.lock when it's installed (#247);
+# without it, the targets fall back to venv + pip as before.
+# uv is used only when it actually runs (#259): something called `uv` on PATH
+# that fails `uv --version` (a broken shim, a half-removed install) means pip.
+# USE_UV=0 forces pip whatever is installed:  make install USE_UV=0
+USE_UV ?= 1
+UV := $(if $(filter 1 yes true,$(USE_UV)),$(shell p=$$(command -v uv 2>/dev/null) && "$$p" --version >/dev/null 2>&1 && echo "$$p"))
+export UV_PROJECT_ENVIRONMENT := $(abspath $(VENV_DIR))
+# `uv run --no-sync`: run in the environment `make install` built. A plain
+# `uv run` re-syncs it to the lock first, which would put back the locked
+# PsyNeuLink over one chosen in Settings or with make install-pnl.
+UV_RUN := $(UV) run --frozen --no-sync
 PSYNEULINK_DIR ?= ../PsyNeuLink
 
 # Port configuration — SLOT provides a simple offset for parallel branches
@@ -33,7 +45,7 @@ FRONTEND_PORT ?= $(shell echo $$((5173 + $(SLOT))))
         release-pdfs
 
 help: ## Show this help message
-	@echo "PsyNewView Development Makefile"
+	@echo "PsyNeuView Development Makefile"
 	@echo ""
 	@echo "Usage: make <target>"
 	@echo ""
@@ -87,15 +99,38 @@ $(VENV_DIR)/bin/activate:
 
 # --- Installation targets ---
 
-install: venv ## Install backend (editable) + its declared deps from pyproject.toml
+# With uv (#247): every package at backend/uv.lock's version. A new
+# environment gets the lock's PsyNeuLink (the commit CI tests); an existing one
+# keeps whichever PsyNeuLink it has, so a source chosen in Settings or with
+# install-pnl survives `make backend`. --inexact leaves anything else you
+# added alone. Run `make clean-venv install` for an environment exactly the
+# lock's.
+install: ## Install the backend and its dependencies (from backend/uv.lock with uv; pyproject.toml with pip)
+ifneq ($(UV),)
+	@echo "Installing with uv from backend/uv.lock ($(UV)). For pip instead: make install USE_UV=0"
+	@cd backend && if [ ! -x "$(UV_PROJECT_ENVIRONMENT)/bin/python" ]; then \
+		$(UV) sync --frozen --extra dev --quiet $(if $(filter command line,$(origin PYTHON)),--python $(PYTHON)); \
+	else \
+		$(UV) sync --frozen --extra dev --inexact --no-install-package psyneulink --quiet; \
+		"$(UV_PROJECT_ENVIRONMENT)/bin/python" -c "import importlib.util as u, sys; sys.exit(u.find_spec('psyneulink') is None)" \
+			|| $(UV) sync --frozen --extra dev --inexact --quiet; \
+	fi
+else
+	@echo "Installing with pip from backend/pyproject.toml$(if $(filter 1 yes true,$(USE_UV)), (no working uv found),)"
+	@$(MAKE) --no-print-directory venv
 	$(PIP) install --quiet -e backend/
+endif
 
-install-pnl: venv ## Install PsyNeuLink from local repo (editable)
+# Installing a PsyNeuLink of your own over the lock's is the one deliberate
+# `uv pip` (#247): a per-developer source can't live in a shared lock.
+install-pnl: install ## Install PsyNeuLink from local repo (editable)
+ifneq ($(UV),)
+	$(UV) pip install --quiet --python $(PYTHON_VENV) --no-deps --reinstall-package psyneulink -e "$(PSYNEULINK_DIR)"
+else
 	$(PIP) install --quiet -e "$(PSYNEULINK_DIR)"
+endif
 
-install-all: venv ## Install local PsyNeuLink (editable) + backend (editable)
-	$(PIP) install --quiet -e "$(PSYNEULINK_DIR)"
-	$(PIP) install --quiet -e backend/
+install-all: install-pnl ## Install local PsyNeuLink (editable) + backend (editable)
 
 # Reinstall when the lockfile content changes (survives branch switches, where
 # mtime is unreliable) OR when the install is incomplete. Gate on the vite
@@ -134,7 +169,7 @@ backend: install ## Start the backend server (PORT=8000, or set SLOT/PORT)
 		done; \
 		echo ""; \
 		if $$is_ours; then \
-			echo "PsyNewView backend is already running on port $(PORT)."; \
+			echo "PsyNeuView backend is already running on port $(PORT)."; \
 			echo ""; \
 			echo "  Nothing to do — open http://localhost:$(PORT)/docs"; \
 			echo "  To restart:  kill $$pid && make backend PORT=$(PORT)"; \
@@ -169,7 +204,7 @@ frontend: install-frontend ## Start the frontend dev server (FRONTEND_PORT=5173,
 			rm -f frontend/node_modules/.vite-restart-needed; \
 			sleep 1; \
 		elif $$is_ours; then \
-			echo "PsyNewView frontend is already running on port $(FRONTEND_PORT)."; \
+			echo "PsyNeuView frontend is already running on port $(FRONTEND_PORT)."; \
 			echo ""; \
 			echo "  Nothing to do — open http://localhost:$(FRONTEND_PORT)"; \
 			echo "  To restart:  kill $$pid && make frontend FRONTEND_PORT=$(FRONTEND_PORT)"; \
@@ -243,7 +278,7 @@ dev: install install-frontend ## Start both servers in background (use SLOT=N fo
 		echo "Frontend ready on port $(FRONTEND_PORT)."; \
 	fi
 	@echo ""
-	@echo "PsyNewView is running (SLOT=$(SLOT)):"
+	@echo "PsyNeuView is running (SLOT=$(SLOT)):"
 	@echo "  Frontend:  http://localhost:$(FRONTEND_PORT)"
 	@echo "  Backend:   http://localhost:$(PORT)/docs"
 	@echo ""
@@ -327,7 +362,7 @@ stop: ## Stop servers on configured ports (use SLOT=N to match)
 		echo "Nothing running on ports $(PORT) or $(FRONTEND_PORT)."; \
 	fi
 
-stop-all: ## Stop all PsyNewView instances (scans ports 8000-8009 / 5173-5182)
+stop-all: ## Stop all PsyNeuView instances (scans ports 8000-8009 / 5173-5182)
 	@stopped=false; \
 	for port in $$(seq 8000 8009); do \
 		pid=$$(lsof -tiTCP:$$port -sTCP:LISTEN 2>/dev/null | head -1); \
@@ -350,13 +385,13 @@ stop-all: ## Stop all PsyNewView instances (scans ports 8000-8009 / 5173-5182)
 		fi; \
 	done; \
 	if ! $$stopped; then \
-		echo "No PsyNewView instances found."; \
+		echo "No PsyNeuView instances found."; \
 	fi
 
 # --- Status ---
 
-status: ## Show all running PsyNewView instances, and which checkout each serves
-	@echo "PsyNewView instances:"
+status: ## Show all running PsyNeuView instances, and which checkout each serves
+	@echo "PsyNeuView instances:"
 	@echo ""
 	@served_from() { \
 		cwd=$$(lsof -a -d cwd -p $$1 -Fn 2>/dev/null | sed -n 's/^n//p' | head -1); \
@@ -398,7 +433,11 @@ status: ## Show all running PsyNewView instances, and which checkout each serves
 # --- Testing ---
 
 test: install ## Run backend test suite
+ifneq ($(UV),)
+	cd backend && $(UV_RUN) pytest tests/ -v
+else
 	cd backend && $(realpath $(VENV_DIR))/bin/python -m pytest tests/ -v
+endif
 
 # --- Cleanup ---
 
@@ -415,13 +454,13 @@ clean: clean-venv clean-frontend ## Full clean (venv + node_modules + build arti
 
 # --- Info ---
 
-info: venv ## Show installed versions
+info: install ## Show installed versions
 	@echo "Python: $$($(PYTHON_VENV) --version)"
 	@echo ""
-	@$(PIP) show psyneulink 2>/dev/null || echo "PsyNeuLink: not installed (run: make install or make install-pnl)"
+	@$(if $(UV),$(UV) pip show --python $(PYTHON_VENV),$(PIP) show) psyneulink 2>/dev/null || echo "PsyNeuLink: not installed (run: make install or make install-pnl)"
 	@echo ""
 	@echo "Backend packages:"
-	@$(PIP) list --format=columns 2>/dev/null | grep -iE "fastapi|uvicorn|websocket|watchdog|psyneulink" || true
+	@$(if $(UV),$(UV) pip list --python $(PYTHON_VENV),$(PIP) list --format=columns) 2>/dev/null | grep -iE "fastapi|uvicorn|websocket|watchdog|psyneulink" || true
 	@echo ""
 	@cd frontend && node -e "var p=require('./package.json'); console.log('Frontend: ' + p.name + ' v' + p.version)" 2>/dev/null || echo "Frontend: package.json not found"
 

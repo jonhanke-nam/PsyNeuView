@@ -86,7 +86,7 @@ def test_a_model_without_sets_reports_none(tmp_path):
 
 
 def test_the_course_demos_declare_their_experiments(tmp_path, monkeypatch):
-    monkeypatch.setenv("PSYNEWVIEW_WORKING_DIR", str(tmp_path))
+    monkeypatch.setenv("PSYNEUVIEW_WORKING_DIR", str(tmp_path))
     dyn = client.post("/api/demos/reset", json={"demo_name": "bistable_attractor"}).json()["model"]
     assert [s["name"] for s in dyn["inputSets"]] == ["kick", "steady_difference"]
     gates = client.post("/api/demos/reset", json={"demo_name": "logic_gate_network"}).json()["model"]

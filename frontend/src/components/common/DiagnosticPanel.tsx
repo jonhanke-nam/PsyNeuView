@@ -12,6 +12,7 @@ import { DialogHeader } from "./dialog/DialogHeader";
 import { useDismiss } from "./dialog/useDismiss";
 import { Button } from "./Button";
 import { SyncIndicator } from "./SyncIndicator";
+import { DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
 
 /** Format a load-time total (ms) as seconds: "2.3s" (1 decimal under 10s). */
 function fmtLoadSeconds(ms: number): string {
@@ -386,7 +387,7 @@ function ConvertButton({ filePath }: { filePath: string }) {
       {confirmOpen && (
         <div
           style={{
-            position: "fixed", inset: 0, background: "var(--pnv-scrim)",
+            position: "fixed", inset: 0, bottom: DIALOG_SCRIM_BOTTOM, background: "var(--pnv-scrim)",
             display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10000,
           }}
           onClick={() => setConfirmOpen(false)}

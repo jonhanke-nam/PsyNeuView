@@ -1,0 +1,120 @@
+name: Backend tests (standard pip)
+
+# The backend suite on the standard tools, with no uv and no lock (#259).
+#
+# Every other backend job builds from backend/uv.lock with uv, which tests
+# exactly what ships but nothing else: a break for someone who installs the
+# usual way (python -m venv + pip install -e backend/), or with dependency
+# versions newer than the lock, would go unseen until they hit it. This job
+# installs with pip, at the newest versions pyproject.toml allows, and also
+# checks that `make install` takes the pip route when uv is missing or broken.
+#
+# Not a required check: a new upstream release can break it without any change
+# here, and that should be noticed and fixed, not block unrelated PRs. It runs
+# nightly, on PRs that change how the backend is installed, and on demand.
+
+on:
+  schedule:
+    - cron: "17 7 * * *"   # nightly, 07:17 UTC
+  pull_request:
+    branches: [devel]
+    paths:
+      - "backend/pyproject.toml"
+      - "backend/uv.lock"
+      - "Makefile"
+      - ".github/workflows/backend-tests-pip.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: backend-tests-pip-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The PsyNeuLink the other jobs test (PSYNEULINK_GIT_REF in
+  # backend-tests.yml). The matrix below also runs against Princeton's devel,
+  # the PsyNeuLink people actually get (#264).
+  PSYNEULINK_GIT_REF: b0a750db14f0e18f13f4af6d4228e5824a7f2797
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  make-route:
+    name: make picks pip without a working uv
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - name: No uv, a broken uv, and USE_UV=0 all take the pip route
+        run: |
+          set -euo pipefail
+          route() { make -n install "$@" 2>/dev/null | grep -m1 -oE 'Installing with (uv|pip)' || true; }
+          fake="$(mktemp -d)"; printf '#!/bin/sh\nexit 1\n' > "$fake/uv"; chmod +x "$fake/uv"
+          none="$(PATH=/usr/bin:/bin route)"
+          broken="$(PATH="$fake:/usr/bin:/bin" route)"
+          optout="$(route USE_UV=0)"
+          echo "no uv: $none | broken uv: $broken | USE_UV=0: $optout"
+          [ "$none" = "Installing with pip" ] && [ "$broken" = "Installing with pip" ] && [ "$optout" = "Installing with pip" ]
+
+  pip-tests:
+    name: backend pytest (pip, newest versions, PsyNeuLink ${{ matrix.psyneulink }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # "pinned": the commit every other job tests. "devel": Princeton's
+        # devel as of tonight, which is what the Mac app installs by default
+        # (#264). CI pins an older commit, so a change in PsyNeuLink's own
+        # wording or behaviour broke tests here only for people on the newer
+        # one; this shows it overnight.
+        psyneulink: [pinned, devel]
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # As in backend-tests.yml: torch's CUDA wheels otherwise fill the disk.
+      - name: Free up runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          sudo docker image prune --all --force || true
+          df -h /
+
+      - name: Install Graphviz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends graphviz
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        # No pip cache, for the reason in backend-tests.yml (#1368).
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # The standard way: a venv, pip, no lock. PsyNeuLink from the pinned
+      # commit first, so the backend install doesn't pull PyPI's.
+      - name: Install with venv + pip (newest allowed versions)
+        run: |
+          python -m venv backend/.venv
+          backend/.venv/bin/pip install --upgrade pip wheel
+          ref="${PSYNEULINK_GIT_REF}"
+          [ "${{ matrix.psyneulink }}" = devel ] && ref=devel
+          backend/.venv/bin/pip install "git+https://github.com/PrincetonUniversity/PsyNeuLink.git@${ref}"
+          backend/.venv/bin/pip install -e "backend/[dev]"
+          backend/.venv/bin/pip freeze > pip-freeze.txt
+          backend/.venv/bin/python -c "import psyneulink; print('PsyNeuLink', psyneulink.__version__)"
+
+      - name: Keep what was installed
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-freeze-${{ matrix.psyneulink }}
+          path: pip-freeze.txt
+          if-no-files-found: ignore
+
+      - name: Run backend tests
+        working-directory: backend
+        run: .venv/bin/python -m pytest tests -q -ra -n auto --durations=30

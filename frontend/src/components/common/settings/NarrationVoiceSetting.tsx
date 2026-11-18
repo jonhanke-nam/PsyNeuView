@@ -1,6 +1,8 @@
 /**
  * Settings ▸ Tutorials and Voice ▸ Voice: which voice reads the captions.
  *
+ * First the recorded voices (#159), which ship with the app and sound the
+ * same on every computer; Heart is the default. Then the computer's own.
  * Automatic picks the best English voice installed (Premium and Enhanced
  * first, then Karen, Daniel, …; see utils/narration.ts). The list is the
  * browser's own voices, so it differs between machines; it refreshes when
@@ -26,6 +28,7 @@ import {
   type NarrationVoiceOption,
   type SpeechEngine,
 } from "@/utils/narration";
+import { DEFAULT_NARRATION_VOICE, RECORDED_PREFIX, RECORDED_VOICES, SYSTEM_AUTOMATIC, recordedVoice } from "@/utils/recordedNarration";
 import { SettingLabel, linkStyle, mutedStyle, selectStyle } from "./shared";
 
 /** System Settings ▸ Accessibility ▸ Spoken Content, where macOS downloads voices. */
@@ -63,7 +66,7 @@ export function NarrationVoiceSetting() {
   const voices = useVoices();
   const options = useMemo(() => listNarrationVoices(voices), [voices]);
   const automatic = useMemo(() => pickVoice(voices), [voices]);
-  const [chosen, setChosen] = useState<string | null>(() => loadNarrationVoice());
+  const [chosen, setChosen] = useState<string>(() => loadNarrationVoice());
   const os = platform();
 
   // Closing Settings (or leaving this section) stops a sample still being
@@ -84,26 +87,27 @@ export function NarrationVoiceSetting() {
     );
   }
 
-  // A chosen voice that's no longer installed reads as Automatic.
-  const value = chosen && options.some((o) => o.voiceURI === chosen) ? chosen : "";
+  // A chosen system voice that's no longer installed reads as Automatic.
+  const recorded = recordedVoice(chosen);
+  const value = recorded || options.some((o) => o.voiceURI === chosen) ? chosen : SYSTEM_AUTOMATIC;
 
-  const choose = (voiceURI: string) => {
-    const next = voiceURI || null;
-    saveNarrationVoice(next);
+  const choose = (next: string) => {
+    saveNarrationVoice(next === DEFAULT_NARRATION_VOICE ? null : next);
     setChosen(next);
-    recordSettingChanged("walkthrough-narration-voice", next ?? "automatic");
+    recordSettingChanged("walkthrough-narration-voice", next);
   };
 
   const playSample = () => {
     playedSample.current = true;
-    speakCaption(SAMPLE_CAPTION, window.speechSynthesis as SpeechEngine, undefined, value || null, loadNarrationRate());
+    speakCaption(SAMPLE_CAPTION, window.speechSynthesis as SpeechEngine, undefined, value, loadNarrationRate());
   };
 
   return (
     <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="Narration voice" htmlFor="setting-narration-voice">
         The voice that reads a walkthrough's captions when narration is on (the speaker button on the walkthrough
-        bar). Automatic uses the best English voice on this computer.
+        bar). The recorded voices come with PsyNeuView and sound the same on every computer. A system voice is
+        one installed on this computer; Automatic uses the best English one.
       </SettingLabel>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
         <select
@@ -113,7 +117,17 @@ export function NarrationVoiceSetting() {
           onChange={(e) => choose(e.target.value)}
           style={{ ...selectStyle, maxWidth: 360 }}
         >
-          <option value="">Automatic — best available{automatic ? ` (now: ${automatic.name})` : ""}</option>
+          <optgroup label="Recorded (comes with PsyNeuView)">
+            {RECORDED_VOICES.map((v) => (
+              <option key={v.id} value={`${RECORDED_PREFIX}${v.id}`}>
+                {v.label}
+                {`${RECORDED_PREFIX}${v.id}` === DEFAULT_NARRATION_VOICE ? " (default)" : ""}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="System voices">
+            <option value={SYSTEM_AUTOMATIC}>Automatic — best available{automatic ? ` (now: ${automatic.name})` : ""}</option>
+          </optgroup>
           {QUALITY_GROUPS.map((g) => {
             const inGroup = options.filter((o) => g.quality.includes(o.quality));
             if (inGroup.length === 0) return null;
@@ -132,10 +146,10 @@ export function NarrationVoiceSetting() {
           ▶ Play sample
         </Button>
       </div>
-      {options.length === 0 && (
+      {!recorded && options.length === 0 && (
         <div style={{ ...mutedStyle, marginTop: 6 }}>No English voices found yet. The list fills in when the browser reports them.</div>
       )}
-      <BetterVoicesHelp os={os} hasPremium={options.some((o) => o.quality === "premium" || o.quality === "enhanced")} />
+      {!recorded && <BetterVoicesHelp os={os} hasPremium={options.some((o) => o.quality === "premium" || o.quality === "enhanced")} />}
     </div>
   );
 }

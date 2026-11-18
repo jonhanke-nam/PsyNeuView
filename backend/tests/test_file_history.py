@@ -16,8 +16,8 @@ from app.services import file_history
 
 @pytest.fixture
 def config_path(tmp_path) -> Path:
-    """Each test gets its own throwaway config file — never touch ~/.psynewview.json."""
-    return tmp_path / ".psynewview.json"
+    """Each test gets its own throwaway config file — never touch ~/.psyneuview.json."""
+    return tmp_path / ".psyneuview.json"
 
 
 def test_record_creates_file_and_first_entry(config_path):
@@ -157,6 +157,6 @@ def test_atomic_write_leaves_no_tmp_files(config_path):
     file_history.record_selection("a/a", "main", "f.py", config_file=config_path)
     leftover = [
         p for p in config_path.parent.iterdir()
-        if p.name.startswith(".psynewview.") and p.suffix == ".tmp"
+        if p.name.startswith(".psyneuview.") and p.suffix == ".tmp"
     ]
     assert leftover == []

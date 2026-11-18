@@ -378,6 +378,7 @@ export const ROLE_COLORS: Record<string, string> = {
 // tag), for the roles whose outline colour is too light to read that way
 // (#190). A role not listed here uses its ROLE_COLORS entry for text too.
 export const ROLE_TEXT_COLORS: Record<string, string> = {
+  INPUT: "var(--pnv-role-input-text)",
   OUTPUT: "var(--pnv-role-output-text)",
   LEARNING: "var(--pnv-role-learning-text)",
   PROBE: "var(--pnv-role-probe-text)",

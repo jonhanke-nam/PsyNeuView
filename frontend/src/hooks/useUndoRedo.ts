@@ -9,10 +9,13 @@
  */
 
 import { withBusy } from "@/stores/busyStore";
-import { useModelStore } from "@/stores/modelStore";
+import { useModelStore, usesFlatPositions } from "@/stores/modelStore";
+import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useHistoryStore, type Snapshot } from "@/stores/historyStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { record } from "@/utils/activityLog";
+import { applyView, captureView, rebuildGraph, sameView } from "@/utils/graphView";
+import { restoreRoutes } from "@/utils/arrowShapes";
 import {
   continuingBurst,
   historyNoticeText,
@@ -89,6 +92,10 @@ async function moveInHistoryNow(redo: boolean, steps: number, origin: HistoryMov
 
   // What a single step's notice names: the step undone, or the step redone.
   const single = redo ? history.redoDescription() : history.undoDescription();
+  // The steps this move crosses: undone, or redone.
+  const crossed = redo
+    ? history.future.slice(0, steps)
+    : history.past.slice(Math.max(1, history.past.length - steps));
   const result = history.move(redo ? steps : -steps);
   if (!result) {
     // Holding ⌘Z past the start keeps the burst's notice; otherwise say so.
@@ -129,11 +136,24 @@ async function moveInHistoryNow(redo: boolean, steps: number, origin: HistoryMov
   try {
     // Restore state
     const store = useModelStore.getState();
+    // A reshape that took the layout from Auto to Custom (#164): undoing it
+    // goes back to Auto, redoing it to Custom. The nodes stay where the step
+    // has them; Auto had laid them out so.
+    if (crossed.some((s) => s.fromAuto)) store.setAutoLayout(!redo);
     store.setSource(snapshot.source);
-    if (snapshot.compact) {
-      // A compact step (#558) kept its code and positions but not its graph:
-      // the nodes on screen move to where they were, and the graph is
-      // rebuilt from the code below.
+    // The step's view, when it is not the one showing (#194): the settings
+    // go back first, and the graph is rebuilt in that view below, as a
+    // frame button rebuilds it. The step's own nodes would do for the
+    // canvas, but the breadcrumb, the view menu and the frames' buttons
+    // are worked out when the graph is built, and would still say the
+    // view that was just undone.
+    const viewChanged = snapshot.view !== undefined && !sameView(snapshot.view, captureView());
+    if (viewChanged) applyView(snapshot.view!);
+    // A compact step (#558) kept its code and positions but not its graph.
+    // For it, as for a step from another view, the nodes on screen move to
+    // where they were, and the graph is rebuilt from the code below.
+    const rebuild = snapshot.compact || viewChanged;
+    if (rebuild) {
       if (snapshot.positions && !store.autoLayout) store.applyLayoutPositions(snapshot.positions);
     } else {
       store.setNodes(snapshot.nodes);
@@ -144,13 +164,22 @@ async function moveInHistoryNow(redo: boolean, steps: number, origin: HistoryMov
     if (filePath) {
       // The layout sidecar is written, as a node move is when it is made.
       if (snapshot.positions) {
+        // Under the key of the view the positions belong to (#226), as a node
+        // move saves them (#719): the flattened and PyTorch views have their
+        // own, so an Undo there leaves the nested view's saved layout alone.
+        // The step's view is the one set now — applyView ran above. Cluster
+        // frames are rebuilt on every load and never saved (#697).
+        const positions = Object.fromEntries(
+          Object.entries(snapshot.positions).filter(([key]) => !key.startsWith("cluster::")),
+        );
         await fetch("/api/model/save-layout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            file_path: filePath,
-            positions: snapshot.positions,
-          }),
+          body: JSON.stringify(
+            usesFlatPositions()
+              ? { file_path: filePath, flatPositions: positions }
+              : { file_path: filePath, positions },
+          ),
         }).catch(() => {});
       }
 
@@ -164,8 +193,12 @@ async function moveInHistoryNow(redo: boolean, steps: number, origin: HistoryMov
       //
       // Instead the restored text is previewed, as typing is (#1029): Run
       // and Learn use the preview copy, so they run what you see.
-      await previewRestored(filePath, snapshot.source, snapshot.compact ? snapshot.positions : undefined);
+      await previewRestored(filePath, snapshot.source, rebuild ? snapshot.positions ?? {} : undefined);
     }
+    // The arrows as the step had them (#164), saved as a reshape is. A step
+    // rebuilt in another view, or a compact one, gets them from the layout
+    // file with its graph.
+    if (!rebuild && snapshot.edgeRoutes) restoreRoutes(snapshot.edgeRoutes, filePath);
   } finally {
     // Allow recording again after a short delay
     // (the preview's model load records a step a tick later)
@@ -176,9 +209,10 @@ async function moveInHistoryNow(redo: boolean, steps: number, origin: HistoryMov
 /**
  * Build the restored text from the private preview copy, never the user's file.
  *
- * `rebuild` is given for a compact step (#558): it has no graph of its own,
- * so the graph is built from its code even when that code is what is on
- * disk, and then laid out at the step's positions.
+ * `rebuild` is given for a compact step (#558), which has no graph of its
+ * own, and for a step made in another view (#194), whose graph has to be
+ * built in that view: the graph is built from the step's code even when that
+ * code is what is on disk, and then laid out at the step's positions.
  */
 async function previewRestored(
   filePath: string,
@@ -191,12 +225,18 @@ async function previewRestored(
     // Back to what is on disk: run the file itself again.
     if (now.previewPath) useModelStore.setState({ previewPath: null });
     if (!rebuild) return;
+    // The file itself, with its layout and labels, in the view now set.
+    if ((await rebuildGraph()) !== null) return;
+    if (!useModelStore.getState().autoLayout) useModelStore.getState().applyLayoutPositions(rebuild);
+    return;
   }
   try {
+    const gs = useGraphSettings.getState();
     const resp = await fetch("/api/model/preview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath, source }),
+      // The view too (#194): a flattened step is rebuilt flattened.
+      body: JSON.stringify({ file_path: filePath, source, flat: gs.flat, pytorch: gs.pytorch }),
     });
     if (!resp.ok) return;
     const data = await resp.json();

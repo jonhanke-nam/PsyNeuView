@@ -4,6 +4,8 @@ import {
   beginBusy,
   formatBusyElapsed,
   installBusyFetch,
+  BACKGROUND_HEADER,
+  isMarkedBackground,
   isBackgroundRequest,
   loadBusyStyle,
   loadBusyTimerPlace,
@@ -72,6 +74,28 @@ describe("busyStore (#38)", () => {
     expect(useBusyStore.getState().tasks.size).toBe(0);
     void target.fetch("/health");
     expect(useBusyStore.getState().tasks.size).toBe(0);
+  });
+
+  it("a request its caller marks as background never registers (#256)", async () => {
+    let resolve!: (r: Response) => void;
+    const target = { fetch: vi.fn(() => new Promise<Response>((r) => (resolve = r))) as unknown as typeof fetch };
+    installBusyFetch(target);
+    // The editor's live preview: same path as an Undo, but nobody is waiting.
+    const p = target.fetch("/api/model/preview", { method: "POST", headers: { [BACKGROUND_HEADER]: "1" } });
+    expect(useBusyStore.getState().tasks.size).toBe(0);
+    resolve(new Response("{}"));
+    await p;
+    // The same request unmarked (an Undo) does register.
+    void target.fetch("/api/model/preview", { method: "POST" });
+    expect(useBusyStore.getState().tasks.size).toBe(1);
+  });
+
+  it("reads the background mark from any form of headers", () => {
+    expect(isMarkedBackground({ headers: { "x-psyneuview-background": "1" } })).toBe(true);
+    expect(isMarkedBackground({ headers: new Headers({ [BACKGROUND_HEADER]: "1" }) })).toBe(true);
+    expect(isMarkedBackground({ headers: [[BACKGROUND_HEADER, "1"]] })).toBe(true);
+    expect(isMarkedBackground({ headers: { "Content-Type": "application/json" } })).toBe(false);
+    expect(isMarkedBackground(undefined)).toBe(false);
   });
 
   it("remembers the threshold under a psyneuview. key", () => {
@@ -162,14 +186,29 @@ describe("busyStore timings (#176)", () => {
     expect(formatBusyElapsed(3729)).toBe("1:02:09");
   });
 
-  it("remembers where the timer shows, defaulting to the toolbar", () => {
+  it("remembers where the timer shows, below the wheel by default", () => {
     store.delete("psyneuview.busy.timerPlace");
-    expect(loadBusyTimerPlace()).toBe("toolbar");
-    useBusyStore.getState().setTimerPlace("both");
-    expect(loadBusyTimerPlace()).toBe("both");
-    store.set("psyneuview.busy.timerPlace", "nonsense");
-    expect(loadBusyTimerPlace()).toBe("toolbar");
-    useBusyStore.getState().setTimerPlace("toolbar");
+    expect(loadBusyTimerPlace()).toBe("below");
+    useBusyStore.getState().setTimerPlace("center");
+    expect(store.get("psyneuview.busy.timerPlace")).toBe("center");
+    expect(loadBusyTimerPlace()).toBe("center");
+    useBusyStore.getState().setTimerPlace("off");
+    expect(loadBusyTimerPlace()).toBe("off");
+    useBusyStore.getState().setTimerPlace("below");
+    expect(loadBusyTimerPlace()).toBe("below");
+  });
+
+  it.each([
+    ["off", "off"],
+    ["toolbar", "below"],
+    ["canvas", "below"],
+    ["both", "below"],
+    ["nonsense", "below"],
+    ["", "below"],
+    ["ON", "below"],
+  ])("reads a value stored before one wheel (#220): %j is %s", (stored, expected) => {
+    store.set("psyneuview.busy.timerPlace", stored);
+    expect(loadBusyTimerPlace()).toBe(expected);
   });
 
   it("remembers the indicator's style, defaulting to the classic wheel (#169)", () => {

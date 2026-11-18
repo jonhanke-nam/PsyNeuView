@@ -32,7 +32,7 @@ the level (``# PsyNeuView: protected, please``) does not, so a typo reads as
 no protection rather than a guess.
 
 **Where an unlock is remembered.** In PsyNeuView's preferences file
-(``~/.psynewview.json``, ``protected_models_unlocked``: a list of resolved
+(``~/.psyneuview.json``, ``protected_models_unlocked``: a list of resolved
 file paths), the same place the protected checkouts are kept
 (``pnl_source_guard``). Not in the layout file: that file sits beside the
 model and may be committed with it, and an unlock is one person's choice on

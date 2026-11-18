@@ -238,7 +238,7 @@ def test_downloading_into_an_empty_folder_installs_it_editable(monkeypatch, tmp_
     (pip,) = calls["pip"]
     assert pip[-2:] == ["-e", str(folder.resolve())]
     log = "\n".join(job.log)
-    assert "✓ download PsyNeuLink in" in log and "✓ pip install -e in" in log
+    assert "✓ download PsyNeuLink in" in log and "✓ install -e with pip in" in log
     # A known checkout from now on.
     assert [s["path"] for s in sh.list_sources() if s["kind"] == "local"] == [str(folder.resolve())]
 

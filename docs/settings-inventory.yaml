@@ -31,6 +31,10 @@
 #   developer_only true for a setting only developers change (#1291); it lives
 #                  in the Developer section and carries the Developer badge
 #   notes          optional
+#   shown_when     optional: when its control is shown, for one that isn't always;
+#                  Settings search says so, and its reachability test allows it
+#   keywords       optional: other words people use for it, so Settings search
+#                  finds it by them (#271): "preview", "auto-eval", "voice"
 
 sections:
   - about
@@ -46,6 +50,7 @@ sections:
 settings:
   - id: developer-mode
     label: Developer ▸ Under development ▸ Show what's still under development
+    keywords: ["developer", "advanced", "experimental"]
     home: settings
     section: developer
     storage: >-
@@ -60,6 +65,7 @@ settings:
 
   - id: psyneulink-source
     label: Developer ▸ Which PsyNeuLink is installed ▸ Switch to (with Manage known sources)
+    keywords: ["source", "branch", "fork", "devel", "github", "version", "checkout"]
     home: settings
     section: developer
     storage: backend — the installed PsyNeuLink, and the known-sources list (#1276/#1277)
@@ -101,9 +107,10 @@ settings:
 
   - id: pnl-auto-update
     label: General ▸ PsyNeuLink version ▸ Keep Latest development up to date automatically
+    keywords: ["update", "latest", "devel", "upgrade"]
     home: settings
     section: general
-    storage: backend (pnl_auto_update in ~/.psynewview.json; the last check, a ready update and the last automatic install in pnl_update_state)
+    storage: backend (pnl_auto_update in ~/.psyneuview.json; the last check, a ready update and the last automatic install in pnl_update_state)
     control: setting-pnl-auto-update
     notes: >-
       On by default (#1304). The backend checks how current the installed
@@ -122,9 +129,10 @@ settings:
 
   - id: checkout-check-upstream
     label: Developer ▸ Keep your checkouts current ▸ Check for upstream changes (per checkout)
+    shown_when: PsyNeuView or PsyNeuLink runs from a git checkout
     home: settings
     section: developer
-    storage: backend (checkout_updates in ~/.psynewview.json, keyed by the checkout's path; the last check in checkout_update_state)
+    storage: backend (checkout_updates in ~/.psyneuview.json, keyed by the checkout's path; the last check in checkout_update_state)
     control: setting-checkout-check-upstream
     developer_only: true
     notes: >-
@@ -137,9 +145,10 @@ settings:
 
   - id: checkout-pull-on-launch
     label: Developer ▸ Keep your checkouts current ▸ Pull on launch (per checkout)
+    shown_when: PsyNeuView or PsyNeuLink runs from a git checkout
     home: settings
     section: developer
-    storage: backend (checkout_updates in ~/.psynewview.json, keyed by the checkout's path; the last pull in checkout_update_state)
+    storage: backend (checkout_updates in ~/.psyneuview.json, keyed by the checkout's path; the last pull in checkout_update_state)
     control: setting-checkout-pull-on-launch
     developer_only: true
     notes: >-
@@ -165,6 +174,7 @@ settings:
 
   - id: mac-release-candidates
     label: Developer ▸ Release candidates ▸ Get release candidates
+    keywords: ["rc", "beta", "prerelease", "pre-release", "update"]
     home: settings:mac-app
     section: developer
     storage: Mac app UserDefaults (receiveReleaseCandidates); Sparkle reads it
@@ -179,6 +189,7 @@ settings:
 
   - id: mac-auto-restart
     label: General ▸ Mac app ▸ Restart PsyNeuView if it crashes
+    keywords: ["crash", "restart", "relaunch"]
     home: settings:mac-app
     section: general
     storage: Mac app UserDefaults (autoRestart)
@@ -187,6 +198,7 @@ settings:
 
   - id: mac-launch-at-login
     label: General ▸ Mac app ▸ Open PsyNeuView when you log in
+    keywords: ["startup", "login", "launch"]
     home: settings:mac-app
     section: general
     storage: Mac app UserDefaults (launchAtLogin) and the macOS login item
@@ -195,6 +207,8 @@ settings:
 
   - id: project-folder
     label: Folders ▸ My Project Folder
+    keywords: ["directory", "location", "workspace"]
+    shown_when: the folder can be changed here (a shared server may fix it)
     home: settings
     section: folders
     storage: backend (catalog config)
@@ -209,9 +223,10 @@ settings:
 
   - id: autosave
     label: General ▸ Model files ▸ Autosave
+    keywords: ["save", "auto save", "automatic save"]
     home: settings
     section: general
-    storage: backend (~/.psynewview.json, "autosave")
+    storage: backend (~/.psyneuview.json, "autosave")
     control: setting-autosave
     notes: >-
       Off by default (#1347): a model's .py then changes only when Save is
@@ -223,13 +238,30 @@ settings:
 
   - id: autosave-delay
     label: General ▸ Model files ▸ Autosave ▸ after N seconds without activity
+    keywords: ["save", "delay", "timer", "seconds"]
+    shown_when: Autosave is on
     home: settings
     section: general
-    storage: backend (~/.psynewview.json, "autosave")
+    storage: backend (~/.psyneuview.json, "autosave")
     control: setting-autosave-delay
     notes: >-
       Shown only while autosave is on. Whole seconds, 2 to 600, default 10;
       the backend refuses anything outside that range.
+
+  - id: live-preview
+    label: General ▸ Model files ▸ Update the graph while typing
+    keywords: ["preview", "live", "auto-eval", "automatic evaluation", "evaluate", "delay", "while typing", "redraw"]
+    home: settings
+    section: general
+    storage: browser localStorage (psyneuview.editor.livePreviewMs)
+    control: setting-live-preview
+    notes: >-
+      Off, or after 0.5, 1, 1.5 (default) or 3 s without typing (#255). The
+      graph is rebuilt from the editor's unsaved code (the live preview,
+      #1029) without writing the file; off, it updates on save. Separate from
+      autosave. The preview is background work, with no busy wheel, and a fast
+      check answers syntax errors and undefined names without running the
+      model (#256).
 
   - id: sidecar-placement-default
     label: General ▸ Model files ▸ Sidecar files (new models)
@@ -240,42 +272,20 @@ settings:
 
   - id: busy-threshold
     label: General ▸ Busy indicator ▸ Show the busy wheel
+    keywords: ["spinner", "loading", "wait"]
     home: settings
     section: general
     storage: browser localStorage (psyneuview.busy.thresholdMs); inside the Mac app, the app keeps it (PagePreferences, #218)
     control: setting-busy-threshold
     notes: >-
       At once, 0.1 s, 0.2 s (default), 0.5 s or 1 s (#38). Anything the user
-      asks for that runs longer shows the spinning wheel in the toolbar and
-      over the graph, with a "progress" pointer.
-
-  - id: busy-style
-    label: General ▸ Busy indicator ▸ Busy indicator style
-    home: settings
-    section: general
-    storage: browser localStorage (psyneuview.busy.style); inside the Mac app, the app keeps it (PagePreferences, #218)
-    control: setting-busy-style
-    notes: >-
-      Classic wheel (default), Network (PsyNeuLink-style: three nodes joined
-      by projections, turning, each lighting up in turn), Ring, Pulsing nodes,
-      Orbit, Bar or Text only (#169). Every style takes the same space in the
-      toolbar and over the graph, so nothing moves when it changes, and stands
-      still under reduced motion. Each choice shows its picture moving beside
-      its name.
-
-  - id: busy-timer
-    label: General ▸ Busy indicator ▸ Show how long it has been spinning
-    home: settings
-    section: general
-    storage: browser localStorage (psyneuview.busy.timerPlace); inside the Mac app, the app keeps it (PagePreferences, #218)
-    control: setting-busy-timer
-    notes: >-
-      Off, In the toolbar (default), Over the graph or Both (#176). Shows the
-      time so far beside the wheel once it has spun for a second. Problem
-      reports record each wait's start and stop times whatever this says.
+      asks for that runs longer shows one spinning wheel, over the graph or,
+      with the graph hidden, over the workspace (#220), with a "progress"
+      pointer.
 
   - id: activity-log-actions
     label: General ▸ Problem reports ▸ Keep a log of my actions for problem reports
+    keywords: ["diagnostics", "privacy", "logging"]
     home: settings
     section: general
     storage: browser localStorage (psyneuview.activityLog.actions); inside the Mac app, the app keeps it (PagePreferences, #218)
@@ -311,6 +321,7 @@ settings:
 
   - id: tour-ring-color
     label: Tutorials and Voice ▸ Highlight ▸ Ring colour
+    keywords: ["color", "highlight"]
     home: settings
     section: tutorials-voice
     storage: browser localStorage (psyneuview.tour.ringColor); inside the Mac app, the app keeps it (PagePreferences, #218)
@@ -329,22 +340,31 @@ settings:
 
   - id: narration-voice
     label: Tutorials and Voice ▸ Voice ▸ Narration voice
+    keywords: ["voice", "narration", "speech", "speak", "read aloud"]
     home: settings
     section: tutorials-voice
     storage: browser localStorage (psyneuview.tour.narrationVoice); inside the Mac app, the app keeps it (PagePreferences, #218)
     control: setting-narration-voice
     notes: >-
-      Automatic (nothing stored) reads in the best English voice installed:
+      Nothing stored means Heart, a recorded voice that ships with the app
+      (#159, utils/recordedNarration.ts); Michael is the other. A recorded
+      voice plays the caption's clip from public/narration/<voice>/, and a
+      caption with no clip is read by the system voice. System voices:
+      Automatic (system:automatic) reads in the best English voice installed:
       Premium and Enhanced first, then Karen, Daniel, and the other standard
       voices that read well; never the novelty voices (utils/narration.ts).
-      A chosen voice is stored by its voiceURI and falls back to Automatic
-      when it is no longer installed. The list is the browser's own voices,
+      A chosen system voice is stored by its voiceURI and falls back to
+      Automatic when it is no longer installed.
+      Once, at start-up, a system voice chosen before the recorded voices came
+      gives way to Heart (adoptRecordedDefaultOnce, psyneuview.tour.narrationVoiceRecordedDefault);
+      choices made after that are kept. The list is the browser's own voices,
       so it differs between machines. Turning narration on or off stays on
       the walkthrough bar's speaker button. Captions are read with the
       respellings in frontend/src/walkthroughs/pronunciations.yaml (#1407).
 
   - id: narration-rate
     label: Tutorials and Voice ▸ Voice ▸ Speaking rate
+    keywords: ["voice", "narration", "speed", "speech"]
     home: settings
     section: tutorials-voice
     storage: browser localStorage (psyneuview.tour.narrationRate); inside the Mac app, the app keeps it (PagePreferences, #218)
@@ -383,6 +403,7 @@ settings:
 
   - id: text-size
     label: Appearance ▸ Text size ▸ Text size
+    keywords: ["font", "zoom", "bigger", "smaller", "scale"]
     home: settings
     section: appearance
     storage: browser localStorage (psyneuview.appearance.textSize)
@@ -434,6 +455,7 @@ settings:
 
   - id: node-outline
     label: Appearance ▸ Node outlines ▸ Outline width
+    keywords: ["border", "stroke", "thickness"]
     home: settings
     section: appearance
     storage: browser localStorage (psyneuview.graph.nodeOutline)
@@ -447,8 +469,25 @@ settings:
       selected or running node + 2 px more. /rendering-defaults.json can retune the
       default; a width chosen here wins. The Style tab links here.
 
+  - id: graph-view-only-tags
+    label: Appearance ▸ Node tags ▸ Read-only tags
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.viewOnlyTags); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-graph-view-only-tags
+    notes: >-
+      Hidden, as in show_graph (default) or Shown (#211). Whether a node
+      whose declaration PsyNeuView can't edit (built in a loop, unpacked
+      from a list, made by a learning pathway) shows its small "view only"
+      tag above its name. PsyNeuLink's show_graph() draws no such tag. The
+      node's hover text and the Inspector's notice say it either way. The
+      type and role tags and the function line are the Advanced Graph View
+      Options' Type and role tags switch (#122, #123), listed under
+      `elsewhere`; this setting doesn't touch them.
+
   - id: edge-line-width
     label: Appearance ▸ Lines between nodes ▸ Line width
+    keywords: ["arrow", "projection", "edge", "thickness", "stroke"]
     home: settings
     section: appearance
     storage: browser localStorage (psyneuview.graph.edgeLineWidth)
@@ -464,6 +503,7 @@ settings:
 
   - id: graph-layout-default
     label: Appearance ▸ Automatic layout ▸ How models are arranged
+    keywords: ["layout", "arrange", "layered"]
     home: settings
     section: appearance
     storage: browser localStorage (psyneuview.graph.layoutDefault); inside the Mac app, the app keeps it (PagePreferences, #218)
@@ -476,6 +516,43 @@ settings:
       (Graphviz in the page, so nothing to install). The layout menu on the
       graph toolbar switches the open model without changing this setting.
 
+  - id: graph-layout-spacing
+    label: Appearance ▸ Automatic layout ▸ Spacing between nodes
+    keywords: ["spacing", "distance", "compact", "closer", "projection length", "line length", "gap", "roomy"]
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.layoutSpacing); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-graph-layout-spacing
+    notes: >-
+      Default, Compact, Standard or Roomy (#278). Default is Compact for
+      Layered and show_graph's own spacing for Like show_graph, so that
+      layout keeps matching show_graph's picture. Scales Layered's gaps
+      between rows and neighbours, and Like show_graph's scale and least gaps
+      between boxes; the gaps that keep boxes apart and leave room for edge
+      labels still hold. Radial and Force are left alone. Changing it
+      re-arranges the open model if its layout is automatic.
+
+  - id: graph-io-rows
+    label: Appearance ▸ Automatic layout ▸ Keep inputs on the bottom and outputs on top
+    keywords: ["input", "output", "green", "red", "top", "bottom"]
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.ioRows); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-graph-io-rows
+    notes: >-
+      Off, In automatic layouts (default) or Also while dragging (#219, the
+      convention of #212). Inside each composition, inputs on the lowest
+      row and outputs on the highest; learning and control nodes may sit
+      above the outputs, and a node that is both an input and an output
+      stays where the layout puts it. Applies to Like show_graph and to
+      Layered flowing bottom-to-top; Radial, Force and a top-down or
+      sideways Layered layout are left alone, and the setting says so.
+      While dragging, inputs and outputs slide along their row and other
+      nodes stay between the two rows; frames stay free. Saved layouts
+      never move by themselves: the Layout menu's Tidy inputs and outputs
+      does it, and can be undone. Changing it re-arranges the open model
+      if its layout is automatic.
+
   - id: graph-legend-start
     label: Appearance ▸ Graph legend ▸ How the legend opens
     home: settings
@@ -487,10 +564,43 @@ settings:
       graph-structure-condition legend opens, on every model opened. The
       legend's own Show/Hide folds it for the open model without changing
       this setting; only the legend's position is remembered by the legend
-      (psynewview-gsc-legend).
+      (psyneuview-gsc-legend).
+
+  - id: busy-style
+    label: Appearance ▸ Busy wheel ▸ Style
+    keywords: ["spinner", "loading", "busy indicator", "network", "progress"]
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.busy.style); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-busy-style
+    notes: >-
+      Classic wheel (default), Network (PsyNeuLink-style: three nodes joined
+      by projections, turning slowly, each lighting up in turn), Ring,
+      Pulsing nodes, Orbit, Bar or Text only (#169). Every style draws in the
+      same box over the workspace, so nothing moves when it changes, and
+      stands still under reduced motion. Each choice shows its picture moving
+      beside its name. With the time in the centre (busy-timer), styles with
+      no clear centre show it below instead.
+
+  - id: busy-timer
+    label: Appearance ▸ Busy wheel ▸ Show how long it has been spinning
+    keywords: ["spinner", "loading", "timer"]
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.busy.timerPlace); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-busy-timer
+    notes: >-
+      Off, Below the wheel (default) or In the centre of the wheel (#176,
+      #220). Shows the time so far once a second has passed, on the one busy
+      wheel. In the centre the wheel is larger, with its spokes round the rim
+      and the time in the clear space. Values stored before there was one
+      wheel: "off" stays Off; "toolbar", "canvas", "both" and anything else
+      not recognised read as Below the wheel. Problem reports record each
+      wait's start and stop times whatever this says.
 
   - id: graph-scheduling-arrows
     label: Appearance ▸ Scheduling arrows ▸ Scheduling-condition arrows
+    keywords: ["condition", "scheduler"]
     home: settings
     section: appearance
     storage: browser localStorage (psyneuview.graph.schedulingArrows); inside the Mac app, the app keeps it (PagePreferences, #218)
@@ -515,8 +625,41 @@ settings:
       Decides how the Components panel opens. The panel's own ◀/▶ button
       collapses or opens it for the current session without changing this
       setting; it is no longer remembered, and the old remembered value
-      (psynewview_palette_compact) is not read, so nobody stays stuck on the
+      (psyneuview_palette_compact) is not read, so nobody stays stuck on the
       strip. Which sections are unfolded is still remembered by the panel.
+
+  - id: allow-blank-screen
+    label: Appearance ▸ Panels ▸ Allow a blank screen
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.layout.allowBlank); inside the Mac app, the app keeps psyneuview. keys
+    control: setting-allow-blank-screen
+    notes: >-
+      Off by default (#215): one of the graph, the code editor and the
+      Inspector panel always stays, and hiding the last is refused with a
+      notice (#213). On, all three can be hidden; the toolbar stays and a
+      hint on the blank screen says how to bring a panel back (the Layout
+      menu and each panel's key, as bound). Turning it off while the screen
+      is blank brings the graph back, and a stored blank layout read while
+      it is off opens as the graph. Only "true" counts as on.
+
+  - id: blank-load-panels
+    label: Appearance ▸ Panels ▸ Panels to open when a model loads on a blank screen
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.layout.blankLoadPanels, a JSON list of graph | code | bottom | palette); inside the Mac app, the app keeps psyneuview. keys
+    control: setting-blank-load-panels
+    notes: >-
+      The graph by default (#215). Depends on allow-blank-screen: greyed out
+      while that is off. One tick box per panel inside the one control
+      (blank-load-panel-<graph|code|bottom|palette>); one of the graph, the
+      code editor and the Inspector panel stays ticked. Applies only when
+      the screen is blank at the moment a model is opened, by any route;
+      with panels showing, opening changes nothing. The Components panel
+      opens only when ticked, otherwise it stays as it was; it is drawn
+      inside the graph, so it shows only with the graph. A stored value
+      that is not a list, or names none of the three, falls back to the
+      graph; unknown entries are dropped.
 
   - id: catalogs
     label: Folders ▸ Your catalogs (add, rename, remove)
@@ -542,6 +685,7 @@ settings:
 
   - id: keyboard-shortcuts
     label: Keyboard shortcuts
+    keywords: ["keys", "hotkeys", "key bindings", "chord"]
     home: settings
     section: shortcuts
     storage: browser localStorage (overrides)
@@ -549,6 +693,7 @@ settings:
 
   - id: mac-report-send-with
     label: Problem reports ▸ Send reports with
+    keywords: ["email", "mail", "problem report", "bug"]
     home: settings:mac-app
     section: reports
     storage: Mac app UserDefaults (reportSendWith)
@@ -561,6 +706,7 @@ settings:
 
   - id: mac-report-send-to
     label: Problem reports ▸ Send to
+    keywords: ["email", "address", "problem report", "bug"]
     home: settings:mac-app
     section: reports
     storage: Mac app UserDefaults (reportSendTo)
@@ -579,16 +725,29 @@ elsewhere:
   - id: panel-layout
     label: Which panels show (graph, code editor, Inspector panel, Components panel)
     home: toolbar ▸ Layout menu ▸ Panels (data-testid layout-menu-panel-<graph|code|bottom|palette>), and the keyboard (Mod+1 to Mod+4, listed under Settings ▸ Keyboard shortcuts, #191)
-    storage: browser localStorage (psynewview_layout_graph_visible, psynewview_layout_code_visible, psynewview_layout_bottom_visible, psynewview_palette_open; the Mac app keeps psynewview_ keys)
+    storage: browser localStorage (psyneuview_layout_graph_visible, psyneuview_layout_code_visible, psyneuview_layout_bottom_visible, psyneuview_palette_open; the Mac app keeps psyneuview_ keys)
     notes: >-
       The graph alone by default (#189): the code editor and the Inspector
       panel start hidden, and come back from the Layout menu, its presets, or
       their keys. A choice already stored wins over the default. At least one
       of graph, code and Inspector panel always stays; hiding the last is
-      refused and the key says so. How the Components panel starts is its own
-      setting (components-start, #113). A walkthrough shows every panel while
-      it runs and puts the stored layout back afterwards
-      (psynewview_layout_before_walkthrough holds it meanwhile).
+      refused and the key says so, unless Settings ▸ Appearance ▸ Allow a
+      blank screen is on (allow-blank-screen, #215). How the Components panel
+      starts is its own setting (components-start, #113). A walkthrough shows
+      every panel while it runs and puts the stored layout back afterwards
+      (psyneuview_layout_before_walkthrough holds it meanwhile); a blank
+      layout comes back as the graph if the setting went off meanwhile.
+
+  - id: graph-node-elements
+    label: Type and role tags
+    home: graph toolbar ▸ Advanced Graph View Options ▸ Nodes ▸ Type and role tags (data-testid graph-view-option-elements, #123)
+    storage: browser localStorage (psyneuview.graph.nodeElements; the Mac app keeps psyneuview. keys)
+    notes: >-
+      Off by default (#122): a node shows just its name, as show_graph()
+      draws it. On, it brings back the type and role tags above the name and
+      the function line below it. The "view only" tag is its own setting
+      (graph-view-only-tags, #211). A value someone already chose wins over
+      the default.
 
   - id: graph-show-ports
     label: Show ports

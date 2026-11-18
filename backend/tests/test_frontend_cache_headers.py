@@ -51,3 +51,14 @@ def test_the_app_mounts_the_page_with_these_headers():
     mounts = [r for r in main.app.routes if getattr(r, "name", None) == "frontend"]
     if mounts:  # only when frontend/dist exists in this checkout
         assert isinstance(mounts[0].app, FrontendFiles)
+
+
+def test_narration_clips_are_served_as_audio_mp4(tmp_path):
+    """WebKit, the Mac app's web view, plays audio/mp4; macOS's own name for
+    .m4a, audio/mp4a-latm, it need not (#159)."""
+    client = _client(tmp_path)
+    (tmp_path / "narration" / "heart").mkdir(parents=True)
+    (tmp_path / "narration" / "heart" / "0123456789abcd.m4a").write_bytes(b"\0" * 16)
+    response = client.get("/narration/heart/0123456789abcd.m4a")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "audio/mp4"

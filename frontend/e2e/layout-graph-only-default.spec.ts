@@ -52,8 +52,10 @@ freshProfileTest.describe("the default layout (#189)", { tag: "@ci" }, () => {
     await expect(menu.getByTestId("layout-menu-panel-code")).toContainText("·");
     await expect(menu.getByTestId("layout-menu-panel-bottom")).toContainText("·");
     await expect(menu.getByTestId("layout-menu-panel-graph")).toContainText("✓");
-    // The graph is the last visible of the three, so it can't be hidden from here.
-    await expect(menu.getByTestId("layout-menu-panel-graph")).toBeDisabled();
+    // The graph is the last visible of the three, so its row looks unavailable
+    // (#213: it stays clickable, so a click can say why; see the test below).
+    await expect(menu.getByTestId("layout-menu-panel-graph")).toHaveAttribute("aria-disabled", "true");
+    await expect(menu.getByTestId("layout-menu-panel-code")).not.toHaveAttribute("aria-disabled");
     await page.keyboard.press("Escape");
 
     // Opening the app didn't store a layout choice either.
@@ -135,7 +137,7 @@ readOnlyTest.describe("one key per panel (#191)", { tag: "@ci" }, () => {
     await expectPanels(page, EVERYTHING);
   });
 
-  readOnlyTest("the last visible panel stays, and the shortcut says why", async ({ page }) => {
+  readOnlyTest("the last visible panel stays, and every way of hiding it says why", async ({ page }) => {
     // Start from the graph alone.
     await page.addInitScript(
       ([code, bottom, graph, palette]) => {
@@ -149,11 +151,53 @@ readOnlyTest.describe("one key per panel (#191)", { tag: "@ci" }, () => {
     await openApp(page);
     await expectPanels(page, GRAPH_ONLY);
 
+    // #213: the notice says which panel stays, and which to show first with
+    // its key. The keys come from the shortcut registry; the page reads
+    // Playwright's profile as Windows, so they read Ctrl+2 and Ctrl+3 here.
+    const notice = (text: string) => page.getByTestId("notification-message").filter({ hasText: text });
+    const graphStays = notice("One panel has to stay open, so PsyNeuView can't hide the graph.");
+
     await page.keyboard.press("Control+1");
     await expectPanels(page, GRAPH_ONLY);
-    await expect(
-      page.getByTestId("notification-message").filter({ hasText: "Can't hide the last visible panel" }),
-    ).toBeVisible();
+    await expect(graphStays).toBeVisible();
+    await expect(graphStays).toContainText("Show the code editor (Ctrl+2) or the Inspector panel (Ctrl+3) first");
+    await expect(graphStays).toContainText("from the Layout menu");
+
+    // Trying again doesn't stack a second notice.
+    await page.keyboard.press("Control+1");
+    await expectPanels(page, GRAPH_ONLY);
+    await expect(graphStays).toHaveCount(1);
+
+    // The Layout menu's row looks unavailable but still answers a click with
+    // the same notice. (Playwright treats aria-disabled as not clickable, so
+    // the click is forced; a person's click lands as usual.)
+    await page.getByTestId("layout-menu-button").click();
+    const menu = page.getByTestId("layout-menu-list");
+    const graphRow = menu.getByTestId("layout-menu-panel-graph");
+    await expect(graphRow).toHaveAttribute("aria-disabled", "true");
+    await graphRow.click({ force: true });
+    await expectPanels(page, GRAPH_ONLY);
+    await expect(graphStays).toBeVisible();
+    await expect(graphStays).toHaveCount(1);
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
+
+    // The bottom panel's collapse button, once it is the last one: the same
+    // notice, naming the Inspector panel and the other two.
+    await page.keyboard.press("Control+3");
+    await expectPanels(page, { ...GRAPH_ONLY, bottom: true });
+    await page.keyboard.press("Control+1");
+    await expectPanels(page, { code: false, graph: false, bottom: true, palette: false });
+    await page.getByTestId("bottom-panel-collapse").click();
+    await expectPanels(page, { code: false, graph: false, bottom: true, palette: false });
+    const inspectorStays = notice("PsyNeuView can't hide the Inspector panel.");
+    await expect(inspectorStays).toBeVisible();
+    await expect(inspectorStays).toContainText("Show the graph (Ctrl+1) or the code editor (Ctrl+2) first");
+    // ...and the collapse works again once the graph is back.
+    await page.keyboard.press("Control+1");
+    await expectPanels(page, { ...GRAPH_ONLY, bottom: true });
+    await page.getByTestId("bottom-panel-collapse").click();
+    await expectPanels(page, GRAPH_ONLY);
 
     // The Components panel is not one of the three, so it can't stand in for them.
     await page.keyboard.press("Control+4");

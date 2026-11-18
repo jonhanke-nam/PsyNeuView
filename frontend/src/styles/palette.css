@@ -134,12 +134,15 @@
   --pnv-shadow-flyout: 2px 0 8px rgba(0, 0, 0, 0.08);
 
   /* Node roles, from docs/icon-ontology.md: the colour a mechanism's role
-     has in PsyNeuLink's own show_graph, as a browser draws its picture
-     (show_graph names its colours, "green", "red", "blue", and an SVG takes
-     the CSS meaning of each name: green is #008000, not Graphviz's lime).
-     Their own set: a button is never "INPUT green", and a role is never
-     "the primary blue". (#190) */
-  --pnv-role-input: #008000;
+     has in PsyNeuLink's own show_graph, as show_graph's own PDF and PNG draw
+     it. show_graph names its colours ("green", "red", "blue", "purple"), and
+     Graphviz draws each name with its X11 value: green is #00ff00 and purple
+     #a020f0 (a browser would read the same names in an SVG as #008000 and
+     #800080, so the app's show_graph tab is made to agree with the PDF, not
+     the other way round). Red, green and purple must match show_graph exactly
+     (#190). Their own set: a button is never "INPUT green", and a role is
+     never "the primary blue". */
+  --pnv-role-input: #00ff00;
   --pnv-role-output: #ff0000;
   --pnv-role-control: #0000ff;
   /* show_graph's orange (#ffa500) and pink (#ffc0cb) are too pale on white
@@ -150,17 +153,20 @@
   --pnv-role-internal: #000;
   /* The rest of show_graph's role colours: a node that is both INPUT and
      OUTPUT (brown), the composition's controller (and its objective,
-     purple), a node that sends a feedback projection (show_graph gives it a
-     shape, not a colour; this orange is ours), and one in a cycle (black,
-     like any ordinary node: show_graph marks a cycle with a double ring). */
+     purple), a node that sends a feedback projection (black: show_graph gives
+     it a shape, not a colour), and one in a cycle (black, like any ordinary
+     node: show_graph marks a cycle with a double ring). */
   --pnv-role-singleton: #a52a2a;
-  --pnv-role-controller: #800080;
-  --pnv-role-feedback-sender: #ef6c00;
+  --pnv-role-controller: #a020f0;
+  --pnv-role-feedback-sender: #000;
   --pnv-role-cycle: #000;
   /* The same roles as text (a node's type tag) and behind white text (its
-     role tag), where the outline colour is too light to read: a darker red,
+     role tag), where the outline colour is too light to read: a darker green
+     (#00ff00 on white is 1.4:1, unreadable; this is CSS green, 5.1:1), red,
      orange and pink. The other roles' outline colours read as text as they
-     are. ROLE_TEXT_COLORS in constants/pnlTypes.ts names these. */
+     are (controller purple is 5.3:1 on white, either way round: purple text
+     on white, or a white role tag on purple). ROLE_TEXT_COLORS in constants/pnlTypes.ts names these. */
+  --pnv-role-input-text: #008000;
   --pnv-role-output-text: #dd0000;
   --pnv-role-learning-text: #e65100;
   --pnv-role-probe-text: #d81b60;
@@ -381,6 +387,13 @@
   --pnv-type-control-signal: #ad1457;
   --pnv-type-gating-signal: #4a148c;
   --pnv-type-learning-signal: #e65100;
+}
+
+/* The walkthrough bar's height while a walkthrough is running, set on the
+   page root by TourBar; 0 otherwise. Dialog backdrops stop above it
+   (DIALOG_SCRIM_BOTTOM in constants/zLayers.ts). */
+:root {
+  --pnv-tour-bar-height: 0px;
 }
 
 /* Type sizes (#111): not colours, but tokens all the same. The app's text

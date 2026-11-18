@@ -31,8 +31,8 @@ test.describe("Show ports (#112)", { tag: "@ci" }, () => {
   test("off by default; one switch shows ports on the graph and in Components; remembered", async ({ page }) => {
     // The Components panel open and full width, so its sections show by name.
     await page.addInitScript(() => {
-      localStorage.setItem("psynewview_palette_compact", "false");
-      localStorage.setItem("psynewview_palette_open", "true");
+      localStorage.setItem("psyneuview_palette_compact", "false");
+      localStorage.setItem("psyneuview_palette_open", "true");
     });
     await page.goto("/");
     await openModel(page);

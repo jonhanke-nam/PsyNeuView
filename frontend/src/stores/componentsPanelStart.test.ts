@@ -41,7 +41,7 @@ describe("Components panel opening state (#113)", () => {
 
   it("ignores anything else stored, and the old remembered strip", async () => {
     localStorage.setItem("psyneuview.components.start", "sideways");
-    localStorage.setItem("psynewview_palette_compact", "true");
+    localStorage.setItem("psyneuview_palette_compact", "true");
     const { loadComponentsStart, usePaletteStore } = await load();
     expect(loadComponentsStart()).toBe("open");
     expect(usePaletteStore.getState().isCompact).toBe(false);
@@ -53,7 +53,7 @@ describe("Components panel opening state (#113)", () => {
     expect(usePaletteStore.getState().isCompact).toBe(true);
     usePaletteStore.getState().setCompact(true);
     expect(localStorage.getItem(COMPONENTS_START_KEY)).toBeNull();
-    expect(localStorage.getItem("psynewview_palette_compact")).toBeNull();
+    expect(localStorage.getItem("psyneuview_palette_compact")).toBeNull();
     // A fresh start comes back open.
     const again = await load();
     expect(again.usePaletteStore.getState().isCompact).toBe(false);

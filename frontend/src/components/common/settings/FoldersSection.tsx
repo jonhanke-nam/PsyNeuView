@@ -41,6 +41,7 @@ import { openSettings } from "./sections";
 import { Group, PathBox, abbreviateHome, errorStyle, linkStyle, mutedStyle } from "./shared";
 import { LocationRow, useLocations } from "./WhereThingsLive";
 import { Button } from "../Button";
+import { DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
 
 /** `/api/catalog-sources`: where each built-in section reads its models from. */
 interface CatalogSources {
@@ -128,7 +129,7 @@ export function FoldersSection() {
         <LayoutsRow />
         <div style={{ ...mutedStyle, marginTop: 8 }}>
           App data stays hidden under <code>~/.psyneuview</code> (managed PsyNeuLink copies, working copies, caches) and{" "}
-          <code>~/.psynewview.json</code> (settings). Where PsyNeuView and PsyNeuLink are installed, and the
+          <code>~/.psyneuview.json</code> (settings). Where PsyNeuView and PsyNeuLink are installed, and the
           managed copies: Developer.
         </div>
       </div>
@@ -219,7 +220,7 @@ function ProjectFolderRow() {
               // Regular users never set this variable; developer setups and the test
               // suite do. Say so, and mark it as developer territory.
               <div data-testid="project-folder-fixed" style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)", marginTop: 2 }}>
-                Fixed by the <code>{projectFolder.fixedBy ?? "PSYNEWVIEW_MODELS_DIR"}</code> environment
+                Fixed by the <code>{projectFolder.fixedBy ?? "PSYNEUVIEW_MODELS_DIR"}</code> environment
                 variable, which developers and the test suite set. Regular users never need it.
                 <DeveloperBadge audience="developers" />
               </div>
@@ -518,7 +519,7 @@ function MoveProjectFolderDialog({
   const field: React.CSSProperties = { ...fieldStyle, flex: 1, padding: "4px 6px", border: "1px solid var(--pnv-border)", borderRadius: 4, fontFamily: "monospace" };
   return (
     <div
-      style={{ position: "fixed", inset: 0, background: "var(--pnv-scrim)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10001 }}
+      style={{ position: "fixed", inset: 0, bottom: DIALOG_SCRIM_BOTTOM, background: "var(--pnv-scrim)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10001 }}
       onClick={onClose}
     >
       <div

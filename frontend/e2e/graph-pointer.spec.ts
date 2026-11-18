@@ -185,13 +185,14 @@ test.describe("the pointer in the graph view (#1301)", { tag: "@ci" }, () => {
 
     // Hand: our own open hand on the pane, sized like the arrow (#40, the
     // sizes are in graph-pointer-hand-size.spec.ts). The model is in Auto,
-    // where an edge can be selected but not shaped (#41): a pointer, not a hand.
+    // where a drag on an edge shapes it too, making the layout Custom (#164):
+    // the hand, as on the pane.
     const HAND = /^url\("data:image\/svg\+xml,[^"]+"\) 48 48, grab$/;
     await openAppearance(page);
     await page.getByTestId("setting-graph-pointer").selectOption("hand");
     await page.keyboard.press("Escape");
     expect(await computedCursor(page, ".react-flow__pane")).toMatch(HAND);
-    expect(await computedCursor(page, ".projection-edge-hit")).toBe("pointer");
+    expect(await computedCursor(page, ".projection-edge-hit")).toMatch(HAND);
     await loadModel(page);
     expect(await computedCursor(page, ".react-flow__pane")).toMatch(HAND);
   });

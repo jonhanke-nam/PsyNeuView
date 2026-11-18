@@ -85,6 +85,8 @@ How the app looks and feels, remembered per browser:
   - a bend handle or attachment dot shows the arrow (or the crosshair or circle) rather than the hand, so the exact point is clear
 - **Pointer size** — Small, Medium (default), Large, Extra large, covering the arrow, the hand, the crosshair, the circle and the grabbing hand while dragging (#40), with a preview. Window zoom doesn't scale cursors
   - this is the one control for the size
+- **Node tags** — whether a node whose declaration can't be edited shows its small "view only" tag: Hidden, as in show_graph (default) or Shown (#211)
+  - the node's hover text and the Inspector's notice say it either way; the type and role tags are the Advanced Graph View Options' own switch (#122)
 - **Automatic layout** — how models are arranged when they have no layout of your own: Like show_graph (default: where PsyNeuLink's show_graph() puts each node, with its edges, #24), Layered, Radial or Force (#19)
   - choosing Like show_graph also switches edges to Smooth, the default edge style (#41)
   - the toolbar's layout menu switches the open model
@@ -92,6 +94,8 @@ How the app looks and feels, remembered per browser:
   - the legend's own Show/Hide folds it for the open model
 - **Components panel** — how the panel opens: Starts open (the word list, default) or Starts as the icon strip (#113)
   - the panel's own ◀/▶ switches it for the session only.
+- **Panels** (#215) — **Allow a blank screen**, off by default: on, the graph, the code editor and the Inspector panel can all be hidden, with a hint on the blank screen saying how to bring one back; off, the last of them stays, with the notice (#213), and turning it off while blank brings the graph back
+  - **Panels to open when a model loads on a blank screen** — the graph (default), the code editor, the Inspector panel, the Components panel; greyed out while the first is off; one of the first three stays ticked
 - *Not here:* **Show ports** (#112) is the one switch in the graph toolbar's **Advanced Graph View Options** (#123) — off by default, it shows the port dots on the graph and the Ports section in Components, and is remembered per browser
   - Settings has no second control for it (listed under `elsewhere` in the inventory)
 

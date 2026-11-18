@@ -1,6 +1,7 @@
 /**
  * Status bar — shows a thin animated bar when async operations are in progress.
- * Appears below the notification bar with a pulsing message.
+ * Appears below the notification bar with a pulsing message. It has no spinner
+ * of its own: the busy wheel is the one spinner (#222 follow-up).
  */
 
 import { useEffect, useState } from "react";
@@ -41,9 +42,6 @@ export function StatusBar() {
         animation: "statusPulse 1.5s ease-in-out infinite",
       }}
     >
-      <span style={{ display: "inline-block", animation: "statusSpin 1s linear infinite" }}>
-        &#9696;
-      </span>
       <span>{message}</span>
       {elapsedS >= 0.8 && (
         <span style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums", opacity: 0.8 }}>
@@ -54,10 +52,6 @@ export function StatusBar() {
         @keyframes statusPulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.7; }
-        }
-        @keyframes statusSpin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>

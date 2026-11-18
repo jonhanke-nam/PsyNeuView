@@ -9,25 +9,19 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { applyHistoryStep } from "@/hooks/useUndoRedo";
-import { useLayoutStore, type AnyPanel } from "@/stores/layoutStore";
+import type { AnyPanel } from "@/stores/layoutStore";
 import { useModelStore } from "@/stores/modelStore";
-import { useNotificationStore } from "@/stores/notificationStore";
 import { runCommand } from "./commands";
+import { togglePanelOrExplain } from "./lastPanel";
 import { OVERRIDES_CHANGED, loadOverrides } from "./storage";
 import { resolveShortcuts, type ResolvedShortcut } from "./registry";
 import { useShortcuts } from "./useShortcuts";
 
-/** Shown when a shortcut would hide the last visible panel (#191). */
-export const LAST_PANEL_MESSAGE = "Can't hide the last visible panel";
-
-// Shows or hides one panel. The store refuses to hide the last visible one and
-// says so by returning false; the key is still consumed (the browser would
-// otherwise take it), and a short notice says why nothing moved.
+// Shows or hides one panel. The store refuses to hide the last visible one;
+// the key is still consumed (the browser would otherwise take it), and the
+// shared notice says why nothing moved (#213).
 function togglePanel(panel: AnyPanel) {
-  if (useLayoutStore.getState().togglePanel(panel)) return;
-  useNotificationStore
-    .getState()
-    .addNotification("info", LAST_PANEL_MESSAGE, { durationMs: 2500, key: "layout.lastPanel" });
+  togglePanelOrExplain(panel);
 }
 
 /** Actions by shortcut id. Anything not listed simply does nothing. */

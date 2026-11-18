@@ -63,11 +63,11 @@ test.describe("Course walkthroughs open their model", () => {
       }, { timeout: 5_000 })
       .toBe(true);
 
-    // The Library's EGO has the demo's nodes, but it is not the demo.
-    await openFromMenu(page, "Giallanza2024 EGO Study2");
-    await expect(page.locator('.react-flow__node[data-id="PREDICTION"]')).toBeVisible({ timeout: 60_000 });
-    // A finished step moves on 1.2 s later; give it twice that to (wrongly) do so.
-    await page.waitForTimeout(2_500);
+    // The Library's EGO has the demo's nodes, but it is not the demo: opening
+    // it would leave the walkthrough, so the app asks (#172).
+    await page.getByRole("button", { name: "Giallanza2024 EGO Study2", exact: true }).click();
+    await expect(page.getByTestId("tutorial-choice")).toBeVisible();
+    await page.getByTestId("tutorial-choice-stay").click();
     await expect(page.getByTestId("tour-bar")).toContainText("step 1 of");
 
     // The demo itself passes it.

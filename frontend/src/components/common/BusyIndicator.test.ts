@@ -29,12 +29,12 @@ const render = (style: (typeof BUSY_STYLES)[number]["style"], size: number) =>
   renderToStaticMarkup(createElement(BusyGraphic, { style, size }));
 
 describe("busy indicator styles (#169)", () => {
-  it("every style draws at the size it is given, in the toolbar and over the graph", () => {
+  it("every style draws at the size it is given, in Settings and over the workspace", () => {
     for (const { style } of BUSY_STYLES) {
       for (const size of [20, 44]) {
         const markup = render(style, size);
         if (style === "text") {
-          // Nothing to see, but the space is kept so the toolbar never moves.
+          // Nothing to see, but the space is kept so nothing moves.
           expect(markup, style).toMatch(new RegExp(`width:${size}px;height:${size}px`));
         } else {
           expect(markup, style).toMatch(new RegExp(`^<svg [^>]*width="${size}" height="${size}" viewBox="0 0 24 24"`));

@@ -59,7 +59,7 @@ def _read_config(path: Path) -> dict:
 
 def _write_config_atomic(path: Path, config: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(prefix=".psynewview.", suffix=".tmp", dir=str(path.parent))
+    fd, tmp_name = tempfile.mkstemp(prefix=".psyneuview.", suffix=".tmp", dir=str(path.parent))
     try:
         with os.fdopen(fd, "w") as f:
             json.dump(config, f, indent=2, sort_keys=True)

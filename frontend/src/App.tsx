@@ -18,7 +18,8 @@ import { RunStatePanel } from "./components/inspector/RunStatePanel";
 import { GraphStylePanel } from "./components/graph/GraphStylePanel";
 import { SchedulerPanel } from "./components/scheduler/SchedulerPanel";
 import { Toolbar } from "./components/layout/Toolbar";
-import { BusyIndicator } from "./components/common/BusyIndicator";
+import { BlankScreen } from "./components/layout/BlankScreen";
+import { BusyIndicator, BusyStatus } from "./components/common/BusyIndicator";
 import { NotificationBar } from "./components/common/NotificationBar";
 import { StatusBar } from "./components/common/StatusBar";
 import { TourBar } from "./components/common/TourBar";
@@ -27,10 +28,13 @@ import { DiagnosticPanel } from "./components/common/DiagnosticPanel";
 import { useFileWatcher } from "./hooks/useFileWatcher";
 import { useShowGraphLayout } from "./hooks/useShowGraphLayout";
 import { useLayeredLayoutFit } from "./hooks/useLayeredLayoutFit";
+import { useFrameFit } from "./hooks/useFrameFit";
 import { ExternalChangeModal } from "./components/common/ExternalChangeModal";
 import { ChangesSinceSaveDialog } from "./components/common/ChangesSinceSaveDialog";
 import { RevertToSaveDialog } from "./components/common/RevertToSaveDialog";
+import { TutorialChoiceDialog } from "./components/common/TutorialChoiceDialog";
 import { registerCommand } from "./shortcuts/commands";
+import { setPanelVisibleOrExplain } from "./shortcuts/lastPanel";
 import { useAppShortcuts } from "./shortcuts/useAppShortcuts";
 import { useModelStore } from "./stores/modelStore";
 import { useNotificationStore } from "./stores/notificationStore";
@@ -52,10 +56,10 @@ export default function App() {
   const innerSizes = useLayoutStore((s) => s.innerSizes);
   const setOuterSizes = useLayoutStore((s) => s.setOuterSizes);
   const setInnerSizes = useLayoutStore((s) => s.setInnerSizes);
-  const toggleBottom = useLayoutStore((s) => s.toggleBottom);
   const { pendingChange, acceptPendingChange, dismissPendingChange } = useFileWatcher();
   useShowGraphLayout();
   useLayeredLayoutFit();
+  useFrameFit();
   useAppShortcuts();
 
   // #1112: Cmd+I shows the Inspector, the Mac convention for Show Inspector.
@@ -110,8 +114,8 @@ export default function App() {
       } as unknown as React.DragEvent;
       handleFileDrop(fakeEvent);
     };
-    window.addEventListener("psynewview:file-drop", handler);
-    return () => window.removeEventListener("psynewview:file-drop", handler);
+    window.addEventListener("psyneuview:file-drop", handler);
+    return () => window.removeEventListener("psyneuview:file-drop", handler);
   }, [handleFileDrop]);
 
   return (
@@ -149,11 +153,15 @@ export default function App() {
             </div>
           </div>
         )}
+        <BusyStatus />
         <Toolbar />
         <DiagnosticPanel />
         <NotificationBar />
         <StatusBar />
-        <div style={{ flex: 1, overflow: "hidden" }}>
+        <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+          {/* #215: with every panel hidden (a choice in Settings), the hint
+              covers the pane area; the panels below stay mounted. */}
+          <BlankScreen />
           <Allotment
             defaultSizes={outerSizes}
             onChange={(sizes) => {
@@ -179,7 +187,6 @@ export default function App() {
                 <Allotment.Pane minSize={200} visible={graphVisible}>
                   <GraphCanvas />
                   {/* #38: the wheel where the result will appear. */}
-                  <BusyIndicator placement="canvas" />
                 </Allotment.Pane>
                 <Allotment.Pane minSize={100} preferredSize={250} visible={bottomVisible}>
                   <div
@@ -247,9 +254,11 @@ export default function App() {
                         onClick={() => setBottomTab("style")}
                       />
                       {/* Collapse the bottom panel (#226). Blocked by the store
-                          when it's the last visible pane. */}
+                          when it's the last visible pane, and the shared notice
+                          says why (#213). */}
                       <button
-                        onClick={toggleBottom}
+                        onClick={() => setPanelVisibleOrExplain("bottom", false)}
+                        data-testid="bottom-panel-collapse"
                         title="Collapse this panel"
                         style={{
                           marginLeft: "auto",
@@ -295,11 +304,14 @@ export default function App() {
               </Allotment>
             </Allotment.Pane>
           </Allotment>
+          {/* #220: the one wheel, centred over the whole workspace. */}
+          <BusyIndicator />
         </div>
 
         {/* What the unsaved changes are, against the file on disk (#1348). */}
         <ChangesSinceSaveDialog />
         <RevertToSaveDialog />
+        <TutorialChoiceDialog />
         {/* The file changed underneath unsaved edits — ask, never guess (#926). */}
         {pendingChange && (
           <ExternalChangeModal

@@ -60,11 +60,15 @@ Escape, which every row has.
 | Developer-mode menu | menu | `layout/DeveloperModeIndicator.tsx` | `developer-mode-menu` | the Developer badge (developer mode) | the badge, click outside, a pick |
 | History | dialog | `common/HistoryPanel.tsx` | `history-panel` | the History button | ×, click outside, the History button |
 | Advanced Graph View Options | dialog | `graph/GraphViewOptionsMenu.tsx` | `graph-view-options-menu` | Advanced Graph View Options ▾ in the graph toolbar (it took in the More menu, #123) | ×, its button, click outside; stays open while you change options |
-| Node context menu | menu | `graph/NodeContextMenu.tsx` | `node-context-menu` | right-click on a node | click outside, a pick |
+| Node context menu | menu | `graph/NodeContextMenu.tsx` | `node-context-menu` | a secondary click (Control-click, right-click) on a node | click outside, a pick |
+| Port chooser | menu | `graph/PortChooser.tsx` | `port-chooser` | dragging a connection onto a node with several input ports (#253) | click outside, a pick |
+| Arrow context menu | menu | `graph/GraphMenus.tsx` | `edge-context-menu` | a secondary click on an arrow (#261) | click outside, a pick |
+| Canvas context menu | menu | `graph/GraphMenus.tsx` | `canvas-context-menu` | a secondary click on empty canvas (#261) | click outside, a pick |
 | Palette's compact flyout | menu | `graph/PaletteSidebar.tsx` | `palette-compact-flyout` | a category in the compact palette | click outside, the category again, its ‹ |
 | Watching for changes (the file-watch status) | dialog | `common/SyncIndicator.tsx` | `sync-popover` | the ● status at the right end of the diagnostics bar (#103) | ×, click outside, the status again |
 | Changes since the last version that built | dialog | `graph/LastGoodDiff.tsx` | `last-good-diff` | Compare with that version, on the stale-graph banner | ×, click outside |
 | Changes since save | dialog | `common/ChangesSinceSaveDialog.tsx` | `changes-since-save` | the orange unsaved dot beside the model name; History ▸ Changes since save… | ×, click outside, Close |
+| Leave the tutorial? / Start in a new window? | dialog | `common/TutorialChoiceDialog.tsx` | `tutorial-choice` | opening another model during a walkthrough; starting one with something in progress | ×, click outside, Stay here or Cancel, its other answers |
 | Revert the file to this save | dialog | `common/RevertToSaveDialog.tsx` | `revert-to-save` | History ▸ a save marker ▸ Revert the file to this save…; History's "You've undone to" line | ×, click outside, Cancel, Revert the file (not while reverting) |
 | Convert to Standard Format? | dialog | `common/DiagnosticPanel.tsx` | `convert-confirm-dialog` | Convert to Standard Format, in the diagnostics panel | ×, click outside, Cancel, Convert |
 | Snippet menu | menu | `editor/CodeEditor.tsx` | `snippet-menu` | + Snippet in the editor header | the Snippet button, click outside, a pick |
@@ -87,8 +91,10 @@ needs a ×.
 | The GSC legend | `graph/GSCLegend.tsx` | canvas furniture with its own hide button and a remembered position |
 | The trace step strip | `graph/TraceControls.tsx` | a control strip; Escape inside its step field cancels the edit |
 | The dangling-projection notice | `graph/ValidationPanel.tsx` | folds, never closes: the problems are still there |
-| The busy wheel over the graph | `common/BusyIndicator.tsx` | status (#38); pointer-events none, and it goes when the work is done |
+| The busy wheel, over the graph or the workspace | `common/BusyIndicator.tsx` | status (#38, #220); one at a time, pointer-events none, and it goes when the work is done |
 | The focus breadcrumb and the off-screen nodes button | `graph/FocusBreadcrumb.tsx`, `graph/OffscreenNodesIndicator.tsx` | canvas furniture |
 | Port and value tooltips on a node | `graph/MechanismNode.tsx` | hover tooltips, pointer-events none |
 | Edge bend handles | `graph/ProjectionEdge.tsx` | parts of the edge |
+| Composition frame buttons | `graph/CompositionNode.tsx` | parts of the frame, drawn above the canvas so an edge can't lie over them |
 | The palette sidebar itself | `graph/PaletteSidebar.tsx` | a layout panel (Layout ▸ Object palette); its compact flyout is the menu above |
+| The hint on a blank screen | `layout/BlankScreen.tsx` | status (#215): covers the pane area while every panel is hidden, and goes when a panel comes back from the Layout menu or its key |

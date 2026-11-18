@@ -8,7 +8,7 @@ added or changed (call it out in the PR, like the [catches ledger](ci/catches.md
 
 | Suite | Location | What it validates | How |
 | --- | --- | --- | --- |
-| **Backend pytest** | `backend/tests/` (~57 files, ~695 tests) | Backend behavior end-to-end: introspector, executor, MDF round-trips, file/sidecar handling, debugger snapshots, and **reference-model equivalence** | In-process Python assertions against PsyNeuLink |
+| **Backend pytest** | `backend/tests/` (~57 files, ~695 tests) | Backend behavior end-to-end: introspector, executor, MDF round-trips, file/sidecar handling, debugger snapshots, and **reference-model equivalence**; one source guard reaches into the frontend (`test_show_graph_palette.py`: the INPUT and OUTPUT role colours in `palette.css` are show_graph's, read from PsyNeuLink and resolved as Graphviz draws them, #190) | In-process Python assertions against PsyNeuLink |
 | **Tutorials (e2e)** | `frontend/e2e/tutorials/*.tutorial.spec.ts` | The user-facing workflows in the [tutorials](tutorials/README.md) | Drives the real app in headless Chromium, asserts the workflow, and regenerates the doc screenshots |
 | **Broader e2e** | `frontend/e2e/*.spec.ts` | App smoke + feature surfaces, incl. the **reference-model runnability gate** (`reference-models-runnable.spec.ts`): loads + runs *every* bundled reference model and fails on a white screen / uncaught error | Same Playwright engine as tutorials |
 | **Typecheck** | `frontend` (`tsc -b`) | TypeScript type correctness | Compile-time; no runtime |
@@ -99,6 +99,38 @@ lockstep — including the `ARG PSYNEULINK_GIT_REF` in the `Dockerfile`, which
 drift. An image built from a ref CI never tested makes "the tests passed"
 meaningless for the thing that actually ships.
 
+**The lock** (#247). `backend/uv.lock` holds every Python package at an exact
+version. CI builds from it with `uv sync --frozen --no-install-package
+psyneulink`, then installs PsyNeuLink from `PSYNEULINK_GIT_REF` on top, the
+same way the Mac app installs a user's chosen PsyNeuLink over the lock. The
+lock's own PsyNeuLink is the PyPI release, used by a fresh `make install`.
+PsyNeuLink's source is deliberately *not* pinned in `pyproject.toml`
+(`[tool.uv.sources]`): `uv pip install -e backend/` obeys such a pin, and
+would replace the PsyNeuLink every existing Mac app and Settings switch chose.
+`backend-tests.yml` fails if the lock is stale (`uv lock --check`). To update
+the packages, run `uv lock --upgrade` in `backend/` and let CI test the result.
+
+**The standard-tools job** (`backend-tests-pip.yml`, #259). Every other backend
+job builds from the lock with uv. This one installs the usual way (`python -m
+venv` + `pip install -e "backend/[dev]"`) at the newest versions pyproject
+allows, runs the suite, and keeps `pip freeze` as an artifact. It also checks
+that `make install` takes the pip route with no uv, a broken uv, or
+`USE_UV=0`. It runs nightly, on PRs that change how the backend is installed,
+and on demand, and isn't a required check: an upstream release can break it
+with no change here, and that is for fixing, not for blocking unrelated PRs.
+
+**The code scan** (`code-scan.yml`, script `scripts/code_scan.py`, #243). Checks
+across PsyNeuView and the Mac app for patterns no single PR shows: two files
+whose names differ only in capitals, pip where uv belongs, a `[tool.uv.sources]`
+pin of PsyNeuLink, the product's old name, platform checks on
+`navigator.platform`, `shell=True`, and TODOs with no issue. The report goes in
+the run's summary (and locally to `.planning/code-scan/`). It runs on every
+`devel` merge, on demand, and on PRs that change the scanner; it fails, and
+comments on #243, only on a new high-severity finding, one no open `code-scan`
+issue names by its `scan:<id>`. Not a required check. Its own tests are
+`backend/tests/test_code_scan.py`. New checks come from bugs that turn out to
+be patterns; add them there and on #243.
+
 **Path filters** keep doc-only or unrelated PRs from spending CI minutes.
 
 **Playwright browser install** (`e2e.yml`, `tutorials.yml`; #931). The install
@@ -130,9 +162,18 @@ under 10 GB.
 # Tutorials — also regenerates docs/tutorials/assets/ screenshots
 cd frontend && npm run tutorials:capture
 
-# Backend suite (do NOT set PSYNEWVIEW_TEST_MODE globally — tests set their own
-# mode; setting it breaks the "reset endpoint hidden in production" test)
-cd backend && .venv/bin/python -m pytest tests -q
+# Backend environment, from backend/uv.lock (#247). A new one gets the lock's
+# PsyNeuLink; an existing one keeps whichever PsyNeuLink you chose. uv is used
+# only when `uv --version` works; it says which route it took (#259).
+make install
+# Without uv: venv + pip from backend/pyproject.toml, whatever is installed
+make install USE_UV=0
+
+# Backend suite (do NOT set PSYNEUVIEW_TEST_MODE globally — tests set their own
+# mode; setting it breaks the "reset endpoint hidden in production" test).
+# --no-sync: a plain `uv run` first re-syncs to the lock, which would put the
+# locked PsyNeuLink back over one you chose.
+cd backend && uv run --no-sync pytest tests -q
 
 # Typecheck
 cd frontend && npx tsc -b

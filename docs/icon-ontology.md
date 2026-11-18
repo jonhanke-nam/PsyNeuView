@@ -167,31 +167,38 @@ always shows the full type name.
 
 ## show_graph Visual Conventions (for reference)
 
-PsyNeuLink's `show_graph()` uses these shapes and colors in GraphViz:
+PsyNeuLink's `show_graph()` uses these shapes and colors in GraphViz. The
+canvas draws the same shapes (#192, #193: `utils/nodeShape.ts`), each with
+a tooltip saying what it means, and the graph legend lists the ones the
+open model uses:
 
-| Node Type | Shape | Color |
-|-----------|-------|-------|
-| Regular mechanism | oval | role-based |
-| FEEDBACK_SENDER | septagon | orange |
-| CYCLE | doublecircle | brown |
-| Controller | doubleoctagon | purple |
-| CIM | rectangle | green/red/blue |
-| Nested composition | rectangle | pink |
-| agent_rep (OCM) | egg | purple |
+| Node Type | Shape | Color | On the canvas |
+|-----------|-------|-------|---------------|
+| Regular mechanism | oval | role-based | oval |
+| FEEDBACK_SENDER | octagon | role-based | octagon |
+| CYCLE | doublecircle | role-based | double outline |
+| Controller | doubleoctagon | purple | double octagon |
+| CIM | rectangle | green/red/blue | square (CIMNode) |
+| Nested composition | rectangle | pink | rectangle when collapsed; a frame when expanded |
+| agent_rep (OCM) | egg | purple | not drawn: the canvas has no agent_rep node yet |
 
 show_graph names its colours (`green`, `red`, `blue`, `purple`, `orange`,
-`pink`, `brown`, `black`), and a browser draws its SVG with the CSS meaning of
-each name. PsyNeuView's role tokens (`--pnv-role-*` in
-`frontend/src/styles/palette.css`, #190) take the same values, except that
-orange and pink are too pale on white for an outline and use the nearest named
-orange and pink that still read:
+`pink`, `brown`, `black`), and Graphviz draws each name with its X11 value in
+show_graph's own PDF and PNG. (A browser reads the same names in an SVG with
+their CSS values, which differ for green, #008000, and purple, #800080; the
+app's show_graph tab redraws both as the PDF does, so the two agree.)
+PsyNeuView's role tokens (`--pnv-role-*` in `frontend/src/styles/palette.css`,
+#190) take the X11 values for red, green and purple, which must match
+show_graph exactly; the other roles read the same both ways, except that orange
+and pink are too pale on white for an outline and use the nearest named orange
+and pink that still read:
 
 | Role | show_graph | PsyNeuView outline | As text |
 |------|-----------|--------------------|---------|
-| INPUT | green (#008000) | #008000 | same |
+| INPUT | green (#00ff00) | #00ff00 | #008000 |
 | OUTPUT | red (#ff0000) | #ff0000 | #dd0000 |
 | CONTROL | blue (#0000ff) | #0000ff | same |
-| Controller | purple (#800080) | #800080 | same |
+| Controller and its objective | purple (#a020f0) | #a020f0 | same (5.3:1 on white) |
 | LEARNING | orange (#ffa500) | darkorange (#ff8c00) | #e65100 |
 | PROBE | pink (#ffc0cb) | hotpink (#ff69b4) | #d81b60 |
 | INPUT and OUTPUT | brown (#a52a2a) | #a52a2a | same |

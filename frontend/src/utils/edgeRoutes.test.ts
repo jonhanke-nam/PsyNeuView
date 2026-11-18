@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ambiguousKeys, hydrateRoutes, routeKey, serializeRoutes } from "./edgeRoutes";
+import { ambiguousKeys, hydrateRoutes, routeKey, sameRoutes, serializeRoutes } from "./edgeRoutes";
 
 const edge = (id: string, s: string, t: string, sh = "out", th = "in") => ({
   id, source: s, target: t, sourceHandle: sh, targetHandle: th,
@@ -107,5 +107,29 @@ describe("hydrate", () => {
   it("survives an absent or empty sidecar", () => {
     expect(hydrateRoutes([A_TO_B], null).waypoints).toEqual({});
     expect(hydrateRoutes([A_TO_B], {}).waypoints).toEqual({});
+  });
+});
+
+describe("sameRoutes (#164)", () => {
+  const r = (x: number, s?: number) => ({ k: { waypoints: [{ x, y: 1 }], ...(s === undefined ? {} : { ends: { s } }) } });
+
+  it("treats nothing saved and an empty map alike", () => {
+    expect(sameRoutes(undefined, {})).toBe(true);
+  });
+
+  it("tells a moved bend apart, but not a sub-pixel wobble", () => {
+    expect(sameRoutes(r(10), r(10.2))).toBe(true);
+    expect(sameRoutes(r(10), r(20))).toBe(false);
+  });
+
+  it("tells a moved end apart", () => {
+    expect(sameRoutes(r(10, 0.5), r(10, 0.5))).toBe(true);
+    expect(sameRoutes(r(10, 0.5), r(10, 1.5))).toBe(false);
+    expect(sameRoutes(r(10), r(10, 1.5))).toBe(false);
+  });
+
+  it("tells an arrow shaped or no longer shaped apart", () => {
+    expect(sameRoutes({}, r(10))).toBe(false);
+    expect(sameRoutes(r(10), {})).toBe(false);
   });
 });

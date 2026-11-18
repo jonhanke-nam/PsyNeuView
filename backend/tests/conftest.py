@@ -34,12 +34,20 @@ def _clear_pnl_registries():
 
 
 @pytest.fixture(autouse=True)
+def _installs_use_pip_unless_a_test_says(monkeypatch):
+    """Install tests fake pip's subprocess. A developer's or a runner's own
+    uv must not take the uv route under them (#244); tests of that route set
+    ``PSYNEUVIEW_UV`` themselves."""
+    monkeypatch.setenv("PSYNEUVIEW_UV", "off")
+
+
+@pytest.fixture(autouse=True)
 def _isolate_user_preferences(tmp_path, monkeypatch):
     """Point every test at a throwaway preferences file (#1025).
 
     Without this, any test that sets a persisted preference — the global
     sidecar-placement default, install or file history — writes to the
-    developer's real ``~/.psynewview.json``. Isolation used to be opt-in, per
+    developer's real ``~/.psyneuview.json``. Isolation used to be opt-in, per
     test, by patching one module's constant; a test that forgot, or patched the
     wrong one of the four modules sharing the file, wrote to the real one.
     A test that needs the real default path can still ``delenv`` it.
@@ -70,7 +78,7 @@ def _real_preferences_snapshot() -> bytes | None:
 
 @pytest.fixture(autouse=True)
 def _guard_real_preferences_file(request):
-    """Fail any test that changes the developer's real ``~/.psynewview.json`` (#1292).
+    """Fail any test that changes the developer's real ``~/.psyneuview.json`` (#1292).
 
     The isolation above keeps the app's own writers away from it, but a test
     that unsets the override, or code that finds the file some other way,
