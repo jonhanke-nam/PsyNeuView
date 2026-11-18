@@ -78,7 +78,18 @@ import { record as recordActivity } from "@/utils/activityLog";
 import { causedBy } from "@/utils/waitLog";
 import { noteModelOrigin } from "@/utils/diagnostics";
 import { windowRequest } from "@/utils/appWindow";
-import { chooseTutorialStart, guardOpen, useTutorialChoice } from "@/utils/tutorialGuard";
+import {
+  chooseTutorialStart,
+  discardIsApproved,
+  followSavedCopy,
+  guardOpen,
+  isTutorialCopy,
+  noteNewModel,
+  noteTutorialModel,
+  tutorialCopyFor,
+  useTutorialChoice,
+} from "@/utils/tutorialGuard";
+import { applyTutorialViewModes } from "@/utils/tutorialView";
 import { SAVE_COPY_EVENT, requestSaveCopy } from "@/utils/saveRequest";
 import { stripProtectionLine } from "@/utils/protectionLine";
 import { AutosaveStatus } from "./AutosaveStatus";
@@ -797,6 +808,8 @@ export function Toolbar() {
   const confirmDiscard = useCallback(() => {
     const s = useModelStore.getState();
     if (!s.filePath || s.source === s.savedSource) return true;
+    // Already answered: the learner chose not to save these (#172).
+    if (discardIsApproved()) return true;
     return window.confirm(
       "You have unsaved changes that will be lost. Load anyway?"
     );
@@ -966,7 +979,11 @@ export function Toolbar() {
 
   const loadDemo = async (demo: DemoModel, { byTutorial = false }: { byTutorial?: boolean } = {}) => {
     if (!byTutorial && !(await guardOpen({ kind: "catalog", label: demo.label, file: demo.pristine_path }))) return;
-    if (!confirmDiscard()) return;
+    // #172: a walkthrough opens its own fresh copy. Starting over discards the
+    // last one's edits without asking: that is what starting over is.
+    const tutorial = tutorialCopyFor(demo.label);
+    if (!(byTutorial && isTutorialCopy(useModelStore.getState().filePath)) && !confirmDiscard()) return;
+    if (tutorial) applyTutorialViewModes();
     setDropdownOpen(false);
     clearNotifications();
     setStatus(`Loading demo: ${demo.label}...`);
@@ -975,7 +992,7 @@ export function Toolbar() {
       const resp = await fetch("/api/demos/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ demo_name: demo.name }),
+        body: JSON.stringify(tutorial ? { demo_name: demo.name, tutorial } : { demo_name: demo.name }),
       });
       const apiDoneAt = performance.now();
       if (!resp.ok) {
@@ -991,6 +1008,7 @@ export function Toolbar() {
         data.file_path ?? demo.pristine_path.replace("/demos/", "/");
       noteModelOrigin(workingPath, { kind: "demo", section: "demos" });
       setFilePath(workingPath);
+      if (tutorial) noteTutorialModel(workingPath, { copy: true });
       useLayoutStore.getState().showPanelsForOpen(); // #215: also when re-opening the same demo
       setSource(data.source);
       loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
@@ -1041,6 +1059,13 @@ export function Toolbar() {
         else return false;
         return useCatalogOpener.getState().isOpen?.(label) ?? false;
       },
+      // #172: back to a walkthrough's model, through the same Open.
+      openPath: (path) => loadFromPath(path),
+      // #172: the view modes changed back after a walkthrough; same file, same layout.
+      reloadView: async () => {
+        const path = useModelStore.getState().filePath;
+        if (path) await loadFromPath(path, { fresh: false });
+      },
       // #172: a bundled model as it shipped, so replacing it loses nothing.
       isUntouched: () => {
         const { source } = useModelStore.getState();
@@ -1087,6 +1112,8 @@ export function Toolbar() {
                   }
                   const data = await resp.json();
                   setFilePath(data.file_path);
+                  // #172: the model a walkthrough step had the learner create is its model.
+                  noteNewModel(data.file_path);
                   setSource(data.source);
                   loadModelFromServer(data.model);
                   setCurrentDemo(null);
@@ -1130,9 +1157,12 @@ export function Toolbar() {
     { restore = false, byTutorial = false }: { restore?: boolean; byTutorial?: boolean } = {},
   ) => {
     if (!restore && !byTutorial && !(await guardOpen({ kind: "catalog", label: rm.label, file: rm.pristine_path }))) return;
+    // #172: a walkthrough opens its own fresh copy (see loadDemo).
+    const tutorial = restore ? null : tutorialCopyFor(rm.label);
     if (restore) {
       if (!window.confirm(`Put ${rm.label} back to the bundled version? Your edits to it will be lost.`)) return;
-    } else if (!confirmDiscard()) return;
+    } else if (!(byTutorial && isTutorialCopy(useModelStore.getState().filePath)) && !confirmDiscard()) return;
+    if (tutorial) applyTutorialViewModes();
     setDropdownOpen(false);
     clearNotifications();
     setStatus(`Loading reference model: ${rm.label}...`);
@@ -1141,7 +1171,7 @@ export function Toolbar() {
       const resp = await fetch("/api/reference-models/load", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: rm.name, restore_pristine: restore }),
+        body: JSON.stringify(tutorial ? { name: rm.name, tutorial } : { name: rm.name, restore_pristine: restore }),
       });
       const apiDoneAt = performance.now();
       if (!resp.ok) {
@@ -1158,6 +1188,7 @@ export function Toolbar() {
         data.file_path ?? rm.pristine_path.replace("/reference_models/", "/");
       noteModelOrigin(workingPath, { kind: "reference", section: "references" });
       setFilePath(workingPath);
+      if (tutorial) noteTutorialModel(workingPath, { copy: true });
       // setFilePath cleared currentReference; re-arm it so the Open dropdown
       // marks this reference as loaded (#830). Must come after setFilePath.
       setCurrentReference(rm.name);
@@ -1508,6 +1539,8 @@ export function Toolbar() {
       const data = await resp.json();
       const newPath = data.file_path;
       recordActivity("model", `Saved as ${newPath}`, { path: newPath, saveAs: true });
+      // A walkthrough using the file follows it to the copy (#172).
+      followSavedCopy(useModelStore.getState().filePath, newPath);
       // Saving is not opening: a blank screen stays blank (#215).
       setFilePath(newPath, { keepPanels: true });
       setSource(data.source);

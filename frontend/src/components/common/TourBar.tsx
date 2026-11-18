@@ -43,6 +43,8 @@ import { useUIStore } from "@/stores/uiStore";
 import { openSettings } from "./settings/sections";
 import { narrationAvailable, narrationVoiceName, pauseSpeaking, resumeSpeaking, speakCaption, stopSpeaking, type SpeechEngine } from "@/utils/narration";
 import { matchesNodeName, type TourStep } from "@/utils/tourStep";
+import { returnToTutorialModel, startTutorialOver, undoStepEdits } from "@/utils/tutorialGuard";
+import { applyTutorialView, restoreTutorialView } from "@/utils/tutorialView";
 
 /** Where a docs page is read: the repo's `docs/` folder on devel. */
 export const DOCS_URL_BASE = "https://github.com/jonhanke-nam/PsyNeuView/blob/devel/docs/";
@@ -61,7 +63,11 @@ function speechEngine(): SpeechEngine | null {
 }
 
 export function TourBar() {
-  const { walkthrough, step, stepIndex, complete, finished } = useTourProgress();
+  const { walkthrough, step, stepIndex, complete, finished, offModel } = useTourProgress();
+  const modelPath = useTourStore((s) => s.modelPath);
+  const stepStart = useTourStore((s) => s.stepStart);
+  const filePath = useModelStore((s) => s.filePath);
+  const source = useModelStore((s) => s.source);
   const anchorOffScreen = useTourStore((s) => s.anchorOffScreen);
   const advance = useTourStore((s) => s.advance);
   const stopTour = useTourStore((s) => s.stopTour);
@@ -105,8 +111,11 @@ export function TourBar() {
   // so they don't open it on start. But a learner who skipped that step was
   // stranded on the next one, ringing a node that wasn't there. So once past
   // the teaching step, open it for them if it still isn't open.
+  //
+  // #172: every start opens a fresh copy of its own, even when the model is
+  // open already, so earlier edits can't break the steps.
   const teachesOpening = walkthrough?.model
-    ? walkthrough.steps.findIndex((s) => s.act?.openModel === walkthrough.model)
+    ? walkthrough.steps.findIndex((s) => s.opens === walkthrough.model)
     : -1;
   const pastTeaching = teachesOpening < 0 || stepIndex > teachesOpening;
   useEffect(() => {
@@ -114,8 +123,9 @@ export function TourBar() {
     const key = `${walkthrough.id}#${startCount}`;
     if (!catalogReady || triedFor.current === key) return;
     triedFor.current = key;
-    const { open, isOpen } = useCatalogOpener.getState();
-    if (!open || isOpen?.(walkthrough.model)) return;
+    const { open } = useCatalogOpener.getState();
+    // Already has its model: the teaching step opened it.
+    if (!open || useTourStore.getState().modelPath) return;
     tryOpen(open, walkthrough.model);
     // Keyed on the start, and waits for the catalog lists and the teaching step.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -144,6 +154,14 @@ export function TourBar() {
     layout.showEverythingForWalkthrough();
     return () => useLayoutStore.getState().restoreLayoutAfterWalkthrough();
   }, [tourKey]);
+  // #172: and the graph's view as a fresh window has it, with the learner's
+  // choices back afterwards (utils/tutorialView.ts). Restarting, or starting
+  // another, goes through the cleanup too: the view is put back, then set again.
+  useEffect(() => {
+    if (!tourKey) return;
+    applyTutorialView();
+    return () => restoreTutorialView({ anotherStarting: !!useTourStore.getState().activeTourId });
+  }, [tourKey]);
   // A reload mid-walkthrough never ran that cleanup. Unless the page is about
   // to start one again from its `?tour=` link, put the layout back now.
   useEffect(() => {
@@ -160,6 +178,22 @@ export function TourBar() {
     step && !complete && anchorNode && !nodes.some((n) => matchesNodeName(n.id, anchorNode))
       ? anchorNode
       : null;
+
+  // #172: the code as this step began, so the learner can undo their edits
+  // since. Taken when the step starts on the walkthrough's model, or when that
+  // model opens during the step (the step that teaches opening it).
+  const stepKey0 = step ? `${tourKey}/${step.id}` : null;
+  useEffect(() => {
+    if (!stepKey0 || !filePath || filePath !== modelPath) return;
+    const taken = useTourStore.getState().stepStart;
+    if (taken && taken.key === stepKey0 && taken.filePath === filePath) return;
+    useTourStore.getState().setStepStart({ key: stepKey0, filePath, source: useModelStore.getState().source });
+  }, [stepKey0, filePath, modelPath]);
+  const onStepCode = !!stepStart && !!stepKey0 && stepStart.key === stepKey0 && stepStart.filePath === filePath;
+  const codeChanged = onStepCode && source !== stepStart!.source;
+  // The ways back, when a step's node is missing or its code was changed.
+  const offerWayBack = !!step && !complete && !offModel && onStepCode && (codeChanged || !!missingNode);
+  const [undoing, setUndoing] = useState(false);
 
   // Once the node turns up, a past failure no longer applies.
   useEffect(() => {
@@ -319,7 +353,33 @@ export function TourBar() {
           {instruction}
           {/* #1393: a boxed, red warning with a sign, so it doesn't read as
               part of the instruction. Both messages share the one box. */}
-          {missingNode && !opening && (
+          {/* #172: the model changed by a route nothing asked about. */}
+          {offModel && !finished && (
+            <span
+              data-testid="tour-off-model"
+              role="alert"
+              style={{
+                display: "flex",
+                gap: 6,
+                alignItems: "flex-start",
+                marginTop: 3,
+                padding: "2px 8px",
+                fontSize: "var(--pnv-fs-14)",
+                color: "var(--pnv-danger)",
+                background: "var(--pnv-danger-tint)",
+                border: "1px solid var(--pnv-danger)",
+                borderRadius: 5,
+              }}
+            >
+              <span aria-hidden="true" style={{ fontWeight: 700 }}>
+                ⚠
+              </span>
+              <span>
+                The model open here isn't this tutorial's. The steps wait until you go back to it, or end the tutorial.
+              </span>
+            </span>
+          )}
+          {missingNode && !opening && !offModel && (
             <span
               data-testid="tour-warning"
               role="alert"
@@ -342,7 +402,7 @@ export function TourBar() {
               <span>
                 <span data-testid="tour-missing-anchor" style={{ display: "block" }}>
                   This step looks for <code>{missingNode}</code>, which isn't in the model you have open.
-                  {walkthrough.model ? ` Open ${walkthrough.model} to continue.` : ""}
+                  {walkthrough.model && !modelPath ? ` Open ${walkthrough.model} to continue.` : ""}
                 </span>
                 {openFailed && (
                   <span data-testid="tour-open-failed" style={{ display: "block", fontWeight: 600 }}>
@@ -422,7 +482,53 @@ export function TourBar() {
         )}
       </span>
 
-      {missingNode && !opening && walkthrough.model && openCatalogModel && (
+      {offModel && !finished && (
+        <>
+          <button
+            type="button"
+            data-testid="tour-back-to-model"
+            onClick={() => void returnToTutorialModel()}
+            title="Open the tutorial's model here again, as you left it"
+            style={{ ...barButton, fontWeight: 600 }}
+          >
+            Go back to the tutorial's model
+          </button>
+          <button type="button" data-testid="tour-end-off-model" onClick={stopTour} title="End this tutorial" style={barButton}>
+            End tutorial
+          </button>
+        </>
+      )}
+
+      {offerWayBack && (
+        <>
+          {codeChanged && (
+            <button
+              type="button"
+              data-testid="tour-undo-step"
+              disabled={undoing}
+              onClick={() => {
+                setUndoing(true);
+                void undoStepEdits().finally(() => setUndoing(false));
+              }}
+              title="Put the code back as it was when this step began. Your edits stay one Undo away."
+              style={barButton}
+            >
+              Undo my edits since this step began
+            </button>
+          )}
+          <button
+            type="button"
+            data-testid="tour-start-over"
+            onClick={startTutorialOver}
+            title="Go back to step 1, with a fresh copy of the tutorial's model"
+            style={barButton}
+          >
+            Start the tutorial over
+          </button>
+        </>
+      )}
+
+      {missingNode && !opening && !offModel && !modelPath && walkthrough.model && openCatalogModel && (
         <button
           type="button"
           data-testid="tour-open-model"

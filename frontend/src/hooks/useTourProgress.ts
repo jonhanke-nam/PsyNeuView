@@ -15,6 +15,7 @@ import { useRunRecords } from "@/stores/runRecordsStore";
 import { useRunResults } from "@/stores/runResultsStore";
 import { useTourStore } from "@/stores/tourStore";
 import { getWalkthrough, isDone, watchesDom, type TourStep, type Walkthrough } from "@/utils/tourStep";
+import { offTutorialModel, stepOpensCatalog } from "@/utils/tutorialGuard";
 
 /**
  * Whether an element with this test id is on screen: present, and laid out
@@ -38,11 +39,17 @@ export interface TourProgress {
   complete: boolean;
   /** True when the walkthrough has run past its last step. */
   finished: boolean;
+  /**
+   * The window has moved off the walkthrough's model by a route nothing asked
+   * about (#172). Steps don't complete until the learner goes back.
+   */
+  offModel: boolean;
 }
 
 export function useTourProgress(): TourProgress {
   const activeTourId = useTourStore((s) => s.activeTourId);
   const stepIndex = useTourStore((s) => s.stepIndex);
+  const modelPath = useTourStore((s) => s.modelPath);
   const nextPressed = useTourStore((s) => s.nextPressed);
   const traceStep = useModelStore((s) => s.traceStep);
   const filePath = useModelStore((s) => s.filePath);
@@ -139,12 +146,13 @@ export function useTourProgress(): TourProgress {
   // model is open (#1392). Its own check (a node it has) can be met by
   // another model: the PsyNeuLink Library's EGO has the Coffee Shop demo's
   // nodes. A label the catalog doesn't know keeps the step's own check.
-  const wantsModel = step?.act?.openModel;
+  const wantsModel = stepOpensCatalog(step);
   const rightModelOpen =
     !wantsModel || !catalogIsOpen || !catalogSectionOf?.(wantsModel) || catalogIsOpen(wantsModel);
 
+  const offModel = offTutorialModel(walkthrough, modelPath, filePath);
   const complete = step
-    ? rightModelOpen && isDone(step.done, {
+    ? !offModel && rightModelOpen && isDone(step.done, {
         selectedNodeId,
         nodeIds: nodes.map((n) => n.id),
         trialCount,
@@ -168,5 +176,6 @@ export function useTourProgress(): TourProgress {
     stepIndex,
     complete,
     finished: Boolean(walkthrough) && !step,
+    offModel,
   };
 }
