@@ -154,7 +154,7 @@ function Reference({ onClose }: { onClose: () => void }) {
                     <span style={{ color: "var(--pnv-text-body)" }}>
                       {row.label}
                       {unreachable.has(row.id) && (
-                        <span style={noteStyle}> · the browser keeps this key; change it, or use the Mac app</span>
+                        <span style={noteStyle}> · a browser keeps this key</span>
                       )}
                     </span>
                     <span style={{ display: "inline-flex", alignItems: "baseline", gap: 6, whiteSpace: "nowrap" }}>
@@ -197,7 +197,7 @@ function Reference({ onClose }: { onClose: () => void }) {
 
           <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", marginTop: 8, lineHeight: 1.5 }}>
             Keys are shown for {mac ? "macOS" : "Windows and Linux"}. A shortcut with no ⌘ or Ctrl never fires
-            while you are typing in a field.
+            while you are typing in a field.{unreachable.size > 0 && " A key a browser keeps works in the Mac app, or can be changed."}
           </div>
         </div>
 
