@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { applyHistoryStep } from "@/hooks/useUndoRedo";
 import type { AnyPanel } from "@/stores/layoutStore";
 import { useModelStore } from "@/stores/modelStore";
+import { displayBinding } from "./binding";
 import { runCommand } from "./commands";
 import { togglePanelOrExplain } from "./lastPanel";
 import { OVERRIDES_CHANGED, loadOverrides } from "./storage";
@@ -48,6 +49,13 @@ function buildActions(): Record<string, () => boolean | void> {
       if ((!selectedNodeId && !selectedEdgeId) || !filePath) return;
       runCommand("graph.deleteSelection");
     },
+
+    // #289: one fit, shared with the Fit button, the canvas menu and the
+    // off-screen badge. The canvas registers it; with the graph hidden there
+    // is nothing to fit, so the key is declined and goes on to the browser.
+    "view.fitGraph": () => runCommand("graph.fit"),
+    "view.fitGraphShift": () => runCommand("graph.fit"),
+    "view.actualSize": () => runCommand("graph.actualSize"),
 
     // The bottom panel is App's own state, so App registers this one.
     "inspector.focus": () => void runCommand("inspector.focus"),
@@ -91,6 +99,20 @@ export function useResolvedShortcuts(): ResolvedShortcut[] {
     }
     return resolved;
   }, [overrides]);
+}
+
+/**
+ * The keys for one or more shortcuts as they read on this platform ("⌘9 or
+ * ⇧1"), current with any rebinding. For tooltips and menu rows, so what they
+ * name is always what fires (#289).
+ */
+export function useShortcutKeys(...ids: string[]): string {
+  const resolved = useResolvedShortcuts();
+  return ids
+    .map((id) => resolved.find((s) => s.id === id))
+    .filter((s): s is ResolvedShortcut => !!s)
+    .map((s) => displayBinding(s.binding))
+    .join(" or ");
 }
 
 /** Install the app's shortcuts. Call once, high in the tree. */

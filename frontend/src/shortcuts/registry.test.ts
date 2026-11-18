@@ -52,6 +52,22 @@ describe("the declared set", () => {
   });
 });
 
+describe("recentring the graph (#289)", () => {
+  it("uses Preview's keys, plus ⇧1 for browsers", () => {
+    const want = [
+      ["view.fitGraph", "Mod+9", "codeEditorToo"],
+      ["view.fitGraphShift", "Shift+1", "outsideText"],
+      ["view.actualSize", "Mod+0", "codeEditorToo"],
+    ];
+    for (const [id, binding, scope] of want) {
+      const s = SHORTCUTS.find((x) => x.id === id);
+      expect(s?.defaultBinding, id).toBe(binding);
+      expect(s?.group, id).toBe("View");
+      expect(s?.scope, id).toBe(scope);
+    }
+  });
+});
+
 describe("overrides", () => {
   it("replaces the binding", () => {
     const { resolved } = resolveShortcuts({ "history.undo": "Mod+Shift+u" });

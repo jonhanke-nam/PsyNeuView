@@ -213,6 +213,15 @@ button:hover {
    the lock); keep it where React Flow's own sat, between zoom-out and lock. */
 .react-flow__controls .pnv-controls-fit { order: 1; }
 .react-flow__controls .react-flow__controls-interactive { order: 2; }
+/* #289: the Fit button says "Fit". Small and bold enough to read in the
+   26px square the other controls use, so the column keeps its shape. */
+.react-flow__controls .pnv-controls-fit-label {
+  font-size: var(--pnv-fs-10);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.2px;
+  color: var(--xy-controls-button-color, currentColor);
+}
 
 /* The walkthrough ring's pulse (#100): a halo in the ring's own colour
    (currentColor) that spreads and fades. Strong spreads further and faster.
