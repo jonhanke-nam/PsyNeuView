@@ -313,8 +313,19 @@ export interface TourStep {
    */
   within?: string;
   done: TourCondition;
+  /**
+   * The model this step teaches opening (#172): a catalog label as the Open
+   * menu shows it, or `new model` for Open ▸ New Model…. Opening it is then
+   * part of the tutorial, not leaving it, and the step is done only once that
+   * model is open. The app reads this, never `act`, which is the test
+   * driver's; a unit test keeps the two in step.
+   */
+  opens?: string;
   act?: TourAction;
 }
+
+/** `opens: new model`: the step teaches Open ▸ New Model…. */
+export const OPENS_NEW_MODEL = "new model";
 
 export interface Walkthrough {
   id: string;
@@ -533,6 +544,9 @@ export function parseWalkthrough(text: string): Walkthrough {
     }
     if (step.pointer !== undefined && typeof step.pointer !== "boolean") {
       throw new Error(`walkthrough: step "${step.id}" pointer must be true or false`);
+    }
+    if (step.opens !== undefined && (typeof step.opens !== "string" || !step.opens.trim())) {
+      throw new Error(`walkthrough: step "${step.id}" opens must be a model's label, or "${OPENS_NEW_MODEL}"`);
     }
     if (step.within !== undefined && (typeof step.within !== "string" || !step.anchor.testid)) {
       throw new Error(`walkthrough: step "${step.id}" within must be a testid, and needs a testid anchor`);

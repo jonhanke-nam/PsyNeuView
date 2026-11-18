@@ -23,6 +23,7 @@ steps:
       Open the Logic Gate Network: three inputs feeding one output.
     done:
       nodeExists: out_layer
+    opens: Logic Gate Network
     act:
       openModel: Logic Gate Network
 

@@ -50,6 +50,7 @@ steps:
       Open the Stroop With Control demo: a model that controls itself.
     done:
       nodeExists: Conflict Monitor
+    opens: Stroop With Control
     act:
       openModel: Stroop With Control
 

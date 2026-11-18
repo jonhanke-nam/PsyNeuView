@@ -38,6 +38,7 @@ steps:
       Open the ISC-CI Model demo.
     done:
       nodeExists: context_label
+    opens: ISC-CI Model
     act:
       openModel: ISC-CI Model
 

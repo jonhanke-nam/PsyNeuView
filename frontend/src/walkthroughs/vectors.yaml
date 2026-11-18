@@ -37,6 +37,7 @@ steps:
       Open the Vectors and Matrices demo.
     done:
       nodeExists: vector_c
+    opens: Vectors and Matrices
     act:
       openModel: Vectors and Matrices
 

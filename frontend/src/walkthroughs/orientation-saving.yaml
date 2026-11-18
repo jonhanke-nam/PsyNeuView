@@ -29,6 +29,7 @@ steps:
       A new model is a file in My Project Folder from the start.
     done:
       nodeExists: input_node
+    opens: new model
     act:
       newModel: orientation_save
 

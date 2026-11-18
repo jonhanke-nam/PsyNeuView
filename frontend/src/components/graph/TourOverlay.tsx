@@ -36,7 +36,7 @@ import { isOnScreen, toScreenRect, type NodeBox } from "@/utils/offscreenNodes";
 import { cssEscape, nodeSelector } from "@/utils/nodeSelector";
 import { matchesNodeName } from "@/utils/tourStep";
 import { Z_TOUR_OVERLAY } from "@/constants/zLayers";
-import { useTutorialChoice } from "@/utils/tutorialGuard";
+import { stepOpensCatalog, useTutorialChoice } from "@/utils/tutorialGuard";
 
 interface Rect {
   left: number;
@@ -198,7 +198,8 @@ export function TourOverlay() {
     }
 
     if (step.anchor.testid) {
-      const inMenu = step.act?.openModel ? openModelAnchor(step.act.openModel, useCatalogOpener.getState().sectionOf) : null;
+      const opens = stepOpensCatalog(step);
+      const inMenu = opens ? openModelAnchor(opens, useCatalogOpener.getState().sectionOf) : null;
       const el = inMenu ?? document.querySelector(`[data-testid="${cssEscape(step.anchor.testid)}"]`);
       // An anchor inside a scrolled panel (the Learn tab's chart, below its
       // form) can be out of sight; bring it into view once per step (#52).

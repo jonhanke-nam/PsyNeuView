@@ -23,6 +23,18 @@ A walkthrough is written for one model, so PsyNeuView keeps the two together:
 - **Opening another model during one** asks first: open it in a new window with
   the walkthrough left on its step, leave the walkthrough and open it here, or
   stay. A file you dropped or chose can only open in the current window.
+- **Replacing unsaved work** offers to save it first: save and continue, don't
+  save, or cancel.
+- **Every start is clean.** A walkthrough opens a fresh copy of its model, of
+  its own, every time it starts, even if that model is already open. Your own
+  copy of the model is never touched. The graph's view (what it shows, its
+  direction, collapsed compositions, the nested or PyTorch view) is as a new
+  window has it while the walkthrough runs, and yours comes back when it ends.
+- **A way back.** When a step's node is missing, or you've changed the code
+  since the step began, the bar offers **Undo my edits since this step began**
+  and **Start the tutorial over**. If the model in the window changes some
+  other way, the bar says so and offers **Go back to the tutorial's model** or
+  **End tutorial**; the steps wait until then.
 
 ## Starting a walkthrough
 

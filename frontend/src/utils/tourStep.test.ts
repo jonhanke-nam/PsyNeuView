@@ -7,6 +7,7 @@ import {
   matchesNodeName,
   menuGroups,
   orientationWalkthroughs,
+  OPENS_NEW_MODEL,
   parseWalkthrough,
   watchesDom,
 } from "./tourStep";
@@ -528,7 +529,7 @@ describe("the shipped walkthroughs", () => {
    */
   it("either name a model to open, get one in a step, or never point at the canvas", () => {
     for (const [id, w] of Object.entries(WALKTHROUGHS)) {
-      const getsItsOwn = w.steps.some((s) => s.act?.newModel || s.act?.openModel);
+      const getsItsOwn = w.steps.some((s) => s.opens);
       // The orientation's Settings parts (#1310) teach the window, not a
       // model: no step rings a canvas node, so no model is needed.
       const needsNone = w.steps.every((s) => !s.anchor.node);
@@ -537,6 +538,25 @@ describe("the shipped walkthroughs", () => {
         `"${id}" rings a canvas node but neither opens a model nor creates one`,
       ).toBe(true);
     }
+  });
+
+  /**
+   * A step that teaches opening a model says so with `opens:` (#172), which
+   * the app reads; `act` is the test driver's. The two must agree, or a step
+   * the driver passes would be one the app calls leaving the tutorial.
+   */
+  it("say in opens: what a step's act opens, and only then", () => {
+    for (const [id, w] of Object.entries(WALKTHROUGHS)) {
+      for (const step of w.steps) {
+        const acted = step.act?.openModel ?? (step.act?.newModel ? OPENS_NEW_MODEL : undefined);
+        expect(step.opens, `${id}/"${step.id}" opens: should be ${JSON.stringify(acted)}`).toBe(acted);
+      }
+    }
+  });
+
+  it("refuses an opens: that isn't text", () => {
+    const bad = "id: t\ntitle: T\nsteps:\n  - id: s1\n    anchor:\n      testid: x\n    instruct: do it\n    opens: 3\n    done:\n      next: true\n";
+    expect(() => parseWalkthrough(bad)).toThrow(/opens must be/);
   });
 
   /** The driver plays the learner; a step it can't act on would hang CI. */

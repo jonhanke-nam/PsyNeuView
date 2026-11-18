@@ -46,6 +46,7 @@ steps:
       Open the Constructing Compositions demo: a line of two layers, to start.
     done:
       nodeExists: output_layer
+    opens: Constructing Compositions
     act:
       openModel: Constructing Compositions
 

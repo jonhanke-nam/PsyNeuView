@@ -31,6 +31,7 @@ steps:
     done:
       # The starter model's input node — proof the scaffold landed.
       nodeExists: input_node
+    opens: new model
     act:
       newModel: ddm_demo
 

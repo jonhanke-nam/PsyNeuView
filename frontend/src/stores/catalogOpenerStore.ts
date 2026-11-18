@@ -22,6 +22,10 @@ interface CatalogOpenerState {
   sectionOf: ((label: string) => string | null) | null;
   /** Whether the open model is a bundled one, as it shipped (#172). */
   isUntouched: (() => boolean) | null;
+  /** Opens a model file by its path, as Open from path does (#172: back to a tutorial's model). */
+  openPath: ((path: string) => Promise<void>) | null;
+  /** Reloads the open file in the current view mode, keeping its layout (#172). */
+  reloadView: (() => Promise<void>) | null;
   /**
    * The catalog lists have loaded. A walkthrough started from `?tour=` begins
    * before they have, and asking earlier would find nothing to open.
@@ -32,6 +36,8 @@ interface CatalogOpenerState {
     isOpen: (label: string) => boolean;
     sectionOf: (label: string) => string | null;
     isUntouched: () => boolean;
+    openPath: (path: string) => Promise<void>;
+    reloadView: () => Promise<void>;
     ready: boolean;
   }) => void;
 }
@@ -41,6 +47,9 @@ export const useCatalogOpener = create<CatalogOpenerState>((set) => ({
   isOpen: null,
   sectionOf: null,
   isUntouched: null,
+  openPath: null,
+  reloadView: null,
   ready: false,
-  register: ({ open, isOpen, sectionOf, isUntouched, ready }) => set({ open, isOpen, sectionOf, isUntouched, ready }),
+  register: ({ open, isOpen, sectionOf, isUntouched, openPath, reloadView, ready }) =>
+    set({ open, isOpen, sectionOf, isUntouched, openPath, reloadView, ready }),
 }));

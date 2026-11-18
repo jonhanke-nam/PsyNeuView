@@ -2,7 +2,7 @@
  * A walkthrough and other work don't collide without asking (#172): opening
  * another model during one, and starting one with something in progress.
  */
-import { mutatingTest as test, expect, LAYOUT_BOTTOM_VISIBLE_KEY, LAYOUT_CODE_VISIBLE_KEY, showCourse } from "./test-base";
+import { mutatingTest as test, expect, canvasNode, LAYOUT_BOTTOM_VISIBLE_KEY, LAYOUT_CODE_VISIBLE_KEY, showCourse } from "./test-base";
 import { BEFORE_WALKTHROUGH_KEY, GRAPH_ONLY, EVERYTHING, PALETTE_OPEN_KEY, expectPanels } from "./panels";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -244,5 +244,184 @@ test.describe("A file path in the address", { tag: "@ci" }, () => {
     await expect.poll(() => new URL(second.url()).search).toBe("");
     await expect(page.getByTestId("tour-bar")).toContainText("step 1 of");
     rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+// ── Every start is clean, and there is a way back (#172, second part) ──
+
+type TourTestState = {
+  activeTourId: string | null;
+  stepIndex: number;
+  modelPath: string | null;
+  stepStart: { key: string; filePath: string; source: string } | null;
+  filePath: string | null;
+  source: string;
+  savedSource: string;
+};
+
+/** The walkthrough and the window, through the automation-only hook. */
+const tourState = (page: Page) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  page.evaluate(() => (window as any).__pnvTourTest.state() as TourTestState);
+
+/** "Selecting nodes": two steps on Stroop — Basic, which it opens on start. */
+async function startSelecting(page: Page) {
+  await page.getByTestId("walkthrough-menu").click();
+  await page.getByTestId("walkthrough-demo").click();
+  await expect(page.getByTestId("tour-bar")).toContainText("step 1 of 2");
+  await expect.poll(async () => (await tourState(page)).modelPath, { timeout: 60_000 }).toContain("/tutorials/demo/");
+  await expect(page.getByTestId("status-bar")).toHaveCount(0, { timeout: 60_000 });
+}
+
+async function selectColorHidden(page: Page) {
+  const fit = page.getByTestId("tour-fit");
+  if (await fit.isVisible()) await fit.click();
+  await canvasNode(page, "color_hidden").click();
+}
+
+async function typeInCode(page: Page, text: string) {
+  await page.locator(".cm-content").first().click();
+  await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.type(`\n${text}`);
+}
+
+async function save(page: Page) {
+  await page.getByTestId("toolbar-save").click();
+  await expect.poll(async () => {
+    const s = await tourState(page);
+    return s.source === s.savedSource;
+  }).toBe(true);
+}
+
+test.describe("Every tutorial starts clean", { tag: "@ci" }, () => {
+  test("each start opens a fresh copy of its own, and your own copy is left alone", async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.goto("/");
+    await openFromMenu(page, "Stroop — Basic");
+    await expect(page.getByText("Loaded reference model: Stroop — Basic")).toBeVisible({ timeout: 60_000 });
+    await typeInCode(page, "# my own edit");
+    await save(page);
+    const own = (await tourState(page)).filePath!;
+
+    await startSelecting(page);
+    let s = await tourState(page);
+    expect(s.filePath).toBe(s.modelPath);
+    expect(s.filePath).not.toBe(own);
+    expect(s.source).not.toContain("# my own edit");
+
+    // Edited and saved, then started again: fresh, without asking.
+    await typeInCode(page, "# a tutorial edit");
+    await save(page);
+    await startSelecting(page);
+    await expect(page.getByTestId("tutorial-choice")).toHaveCount(0);
+    await expect.poll(async () => (await tourState(page)).source).not.toContain("# a tutorial edit");
+
+    // Your own copy still has your edit.
+    await page.getByTestId("tour-dismiss").click();
+    await openFromMenu(page, "Stroop — Basic");
+    await expect.poll(async () => (await tourState(page)).filePath, { timeout: 60_000 }).toBe(own);
+    s = await tourState(page);
+    expect(s.source).toContain("# my own edit");
+  });
+
+  test("the graph's view is known while it runs, and yours comes back", async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto("/");
+    await openFromMenu(page, OTHER);
+    await expect(page.getByText("Loaded demo: Hopfield Network")).toBeVisible({ timeout: 60_000 });
+    await page.getByTestId("graph-view-options-button").click();
+    await page.getByTestId("graph-view-option-names").uncheck();
+    await page.keyboard.press("Escape");
+
+    await startSelecting(page);
+    await page.getByTestId("graph-view-options-button").click();
+    await expect(page.getByTestId("graph-view-option-names")).toBeChecked();
+    await page.keyboard.press("Escape");
+
+    await page.getByTestId("tour-dismiss").click();
+    await page.getByTestId("graph-view-options-button").click();
+    await expect(page.getByTestId("graph-view-option-names")).not.toBeChecked();
+  });
+});
+
+test.describe("A leftover selection", { tag: "@ci" }, () => {
+  test("doesn't finish step 1 of a fresh start on its own", async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto("/");
+    await startSelecting(page);
+    await selectColorHidden(page);
+    await expect(page.getByTestId("tour-bar")).toContainText("step 2 of 2", { timeout: 10_000 });
+    // Started again with color_hidden still selected: step 1 waits for the learner.
+    await startSelecting(page);
+    await page.waitForTimeout(2_000);
+    await expect(page.getByTestId("tour-bar")).toContainText("step 1 of 2");
+  });
+});
+
+test.describe("A way back when a step goes wrong", { tag: "@ci" }, () => {
+  test("Undo my edits since this step began puts the step's code back", async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto("/");
+    await startSelecting(page);
+    const began = (await tourState(page)).stepStart!;
+    expect(began.filePath).toBe((await tourState(page)).modelPath);
+    await expect(page.getByTestId("tour-undo-step")).toHaveCount(0);
+
+    await typeInCode(page, "# an edit that breaks nothing");
+    await expect(page.getByTestId("tour-undo-step")).toBeVisible();
+    await expect(page.getByTestId("tour-start-over")).toBeVisible();
+    await page.getByTestId("tour-undo-step").click();
+    await expect.poll(async () => (await tourState(page)).savedSource).toBe(began.source);
+    expect((await tourState(page)).source).toBe(began.source);
+    await expect(page.getByTestId("tour-undo-step")).toHaveCount(0);
+    await expect(page.getByTestId("tour-bar")).toContainText("step 1 of 2");
+  });
+
+  test("Start the tutorial over goes back to step 1 with a fresh model", async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto("/");
+    await startSelecting(page);
+    await page.getByTestId("tour-skip").click();
+    await expect(page.getByTestId("tour-bar")).toContainText("step 2 of 2");
+    await typeInCode(page, "# an edit");
+    await save(page);
+    await page.getByTestId("tour-start-over").click();
+    await expect(page.getByTestId("tour-bar")).toContainText("step 1 of 2");
+    await expect.poll(async () => (await tourState(page)).source, { timeout: 60_000 }).not.toContain("# an edit");
+    await expect(page.getByTestId("tour-start-over")).toHaveCount(0);
+  });
+
+  test("a model changed some other way pauses the steps until you go back", async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto("/");
+    await startSelecting(page);
+    const { modelPath } = await tourState(page);
+    // No route in the app does this unasked now; the hook stands in for one.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await page.evaluate(() => (window as any).__pnvTourTest.switchFileUnasked("/elsewhere/another.py"));
+    await expect(page.getByTestId("tour-off-model")).toBeVisible();
+    await expect(page.getByTestId("tour-back-to-model")).toBeVisible();
+    await expect(page.getByTestId("tour-end-off-model")).toBeVisible();
+
+    // The step's own action doesn't count meanwhile.
+    await selectColorHidden(page);
+    await page.waitForTimeout(2_000);
+    await expect(page.getByTestId("tour-bar")).toContainText("step 1 of 2");
+
+    await page.getByTestId("tour-back-to-model").click();
+    await expect.poll(async () => (await tourState(page)).filePath, { timeout: 60_000 }).toBe(modelPath);
+    await expect(page.getByTestId("tour-off-model")).toHaveCount(0);
+    await selectColorHidden(page);
+    await expect(page.getByTestId("tour-bar")).toContainText("step 2 of 2", { timeout: 10_000 });
+  });
+
+  test("End tutorial, from the warning, ends it", async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto("/");
+    await startSelecting(page);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await page.evaluate(() => (window as any).__pnvTourTest.switchFileUnasked("/elsewhere/another.py"));
+    await page.getByTestId("tour-end-off-model").click();
+    await expect(page.getByTestId("tour-bar")).toHaveCount(0);
   });
 });

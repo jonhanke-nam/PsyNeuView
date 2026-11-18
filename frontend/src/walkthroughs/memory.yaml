@@ -24,6 +24,7 @@ steps:
       Open the Episodic Memory demo: a memory of episodes with three fields.
     done:
       nodeExists: "1 [QUERY]"
+    opens: Episodic Memory
     act:
       openModel: Episodic Memory
 

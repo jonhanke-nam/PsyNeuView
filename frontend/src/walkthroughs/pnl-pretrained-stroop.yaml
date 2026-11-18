@@ -39,6 +39,7 @@ steps:
       Open the Pretrained Stroop demo.
     done:
       nodeExists: Hidden
+    opens: Pretrained Stroop
     act:
       openModel: Pretrained Stroop
 

@@ -34,6 +34,7 @@ steps:
       Open the Rumelhart Semantic Network demo.
     done:
       nodeExists: hidden_mixed
+    opens: Rumelhart Semantic Network
     act:
       openModel: Rumelhart Semantic Network
 

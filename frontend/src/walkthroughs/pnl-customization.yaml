@@ -43,6 +43,7 @@ steps:
       Open the Customization demo: a mechanism with a function of its own.
     done:
       nodeExists: my_wave_mech
+    opens: Customization
     act:
       openModel: Customization
 
