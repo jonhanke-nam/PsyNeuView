@@ -36,6 +36,7 @@ steps:
       Open the Conflict Monitoring demo.
     done:
       nodeExists: RESPONSE
+    opens: Conflict Monitoring
     act:
       openModel: Conflict Monitoring
 

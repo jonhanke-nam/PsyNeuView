@@ -43,6 +43,7 @@ steps:
       Open the EGO Coffee Shop demo.
     done:
       nodeExists: PREDICTION
+    opens: EGO Coffee Shop
     act:
       openModel: EGO Coffee Shop
 

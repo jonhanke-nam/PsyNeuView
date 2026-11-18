@@ -54,6 +54,7 @@ steps:
       Start a new model. Colours and words will both feed one response.
     done:
       nodeExists: output_node
+    opens: new model
     act:
       newModel: mini_stroop
 

@@ -19,6 +19,7 @@ steps:
       Open the Bistable Attractor: two nodes, each holding the other down.
     done:
       nodeExists: node_attract1
+    opens: Bistable Attractor
     act:
       openModel: Bistable Attractor
 

@@ -52,6 +52,7 @@ steps:
       decision.
     done:
       nodeExists: DECISION
+    opens: Dynamics of Execution
     act:
       openModel: Dynamics of Execution
 

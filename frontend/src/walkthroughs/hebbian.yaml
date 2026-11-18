@@ -41,6 +41,7 @@ steps:
       Open the Hebbian Learning demo.
     done:
       nodeExists: feature_layer
+    opens: Hebbian Learning
     act:
       openModel: Hebbian Learning
 

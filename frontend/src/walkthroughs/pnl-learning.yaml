@@ -43,6 +43,7 @@ steps:
       Open the XOR Learning demo: a network that will learn XOR.
     done:
       nodeExists: Comparator
+    opens: XOR Learning
     act:
       openModel: XOR Learning
 

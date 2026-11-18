@@ -47,6 +47,7 @@ steps:
       Start a new model. The output node will be the notebook's mechanism.
     done:
       nodeExists: output_node
+    opens: new model
     act:
       newModel: first_mechanism
 

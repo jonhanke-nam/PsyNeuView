@@ -122,5 +122,6 @@ steps:
       Open the Stroop model. The next parts use it.
     done:
       nodeExists: color_hidden
+    opens: Stroop — Basic
     act:
       openModel: Stroop — Basic

@@ -39,6 +39,7 @@ steps:
       Open the TD Learning demo.
     done:
       nodeExists: PredictionError
+    opens: TD Learning
     act:
       openModel: TD Learning
 
