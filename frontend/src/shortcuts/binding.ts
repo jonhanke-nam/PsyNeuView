@@ -62,6 +62,25 @@ export const BARE_ALLOWED = new Set([
 ]);
 
 /**
+ * Punctuation that may be bound with no modifier: "?" opens Help ▸ Keyboard
+ * Shortcuts, the convention in Gmail, GitHub and Figma (#292). It types a
+ * character, so its shortcut must be scoped `outsideText` — it never fires
+ * while you are typing. Not offered when rebinding (capture.ts keeps to
+ * BARE_ALLOWED); only a default can be one of these.
+ */
+export const BARE_SYMBOLS = new Set(["?"]);
+
+/**
+ * Whether Shift is part of the character rather than a modifier. Which
+ * punctuation needs Shift depends on the keyboard layout — "?" is Shift+/ on
+ * a US keyboard, a key of its own elsewhere, and "/" is Shift+7 on a German
+ * one — so a punctuation binding matches the character, Shift or not (#292).
+ */
+function shiftIsInTheCharacter(key: string): boolean {
+  return key.length === 1 && !/[a-z0-9]/i.test(key);
+}
+
+/**
  * Shift plus a digit, with no Cmd or Ctrl: ⇧1 fits the graph, as in Figma and
  * Sketch (#289). It types "!" in a text field, so a binding like this only
  * ever fires away from typing (see `typesACharacter` and target.ts), whatever
@@ -138,7 +157,12 @@ export function parseBinding(spec: string): ParseResult {
   if (!binding.key) return { ok: false, reason: "No key." };
 
   const nonShift = [binding.mod, binding.alt, binding.option].filter(Boolean).length;
-  if (nonShift === 0 && !BARE_ALLOWED.has(binding.key) && !isShiftDigit(binding)) {
+  if (
+    nonShift === 0 &&
+    !BARE_ALLOWED.has(binding.key) &&
+    !BARE_SYMBOLS.has(binding.key) &&
+    !isShiftDigit(binding)
+  ) {
     return {
       ok: false,
       reason: `"${binding.key}" needs Cmd or Ctrl — a bare key would fire while typing.`,
@@ -215,7 +239,7 @@ export function matchesEvent(
   const secondary = mac ? e.ctrlKey : e.metaKey;
   if (primary !== b.mod) return false;
   if (secondary !== b.alt) return false;
-  if (e.shiftKey !== b.shift) return false;
+  if (e.shiftKey !== b.shift && !(shiftIsInTheCharacter(b.key) && !b.option)) return false;
   if (e.altKey !== b.option) return false;
 
   // Shift+1 arrives as "!" on a US keyboard and as something else on others,

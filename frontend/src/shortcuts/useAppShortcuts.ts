@@ -13,6 +13,7 @@ import type { AnyPanel } from "@/stores/layoutStore";
 import { useModelStore } from "@/stores/modelStore";
 import { displayBinding } from "./binding";
 import { runCommand } from "./commands";
+import { openShortcutsReference } from "./reference";
 import { togglePanelOrExplain } from "./lastPanel";
 import { OVERRIDES_CHANGED, loadOverrides } from "./storage";
 import { resolveShortcuts, type ResolvedShortcut } from "./registry";
@@ -56,6 +57,10 @@ function buildActions(): Record<string, () => boolean | void> {
     "view.fitGraph": () => runCommand("graph.fit"),
     "view.fitGraphShift": () => runCommand("graph.fit"),
     "view.actualSize": () => runCommand("graph.actualSize"),
+
+    // #292: Help ▸ Keyboard Shortcuts.
+    "help.shortcuts": () => openShortcutsReference(),
+    "help.shortcutsQuestion": () => openShortcutsReference(),
 
     // The bottom panel is App's own state, so App registers this one.
     "inspector.focus": () => void runCommand("inspector.focus"),

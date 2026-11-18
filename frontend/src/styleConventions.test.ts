@@ -59,6 +59,7 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
       "the Layout and Tutorials menus' rows (8, with Tidy inputs and outputs, #219, and Fit / Actual size, #289) and a Tutorials section's fold heading (1); the tags beside the model name (the unsaved dot, view only, the checkout tag, the managed PsyNeuLink's read-only tag (#50), Reset to Original for a demo and for a reference model: 6); " +
       "the reminder's quiet Don't remind me (1)",
   },
+  "components/layout/HelpMenu.tsx": { count: 2, what: "Help ▾, a toolbar menu trigger, and the Help menu's rows (#292)" },
   "components/layout/DeveloperModeIndicator.tsx": { count: 3, what: "the Developer badge that opens its menu, and that menu's two rows" },
   "components/graph/GraphToolbar.tsx": {
     count: 3,

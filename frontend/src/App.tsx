@@ -32,6 +32,7 @@ import { useFrameFit } from "./hooks/useFrameFit";
 import { ExternalChangeModal } from "./components/common/ExternalChangeModal";
 import { ChangesSinceSaveDialog } from "./components/common/ChangesSinceSaveDialog";
 import { RevertToSaveDialog } from "./components/common/RevertToSaveDialog";
+import { KeyboardShortcutsReference } from "./components/common/KeyboardShortcutsReference";
 import { TutorialChoiceDialog } from "./components/common/TutorialChoiceDialog";
 import { registerCommand } from "./shortcuts/commands";
 import { setPanelVisibleOrExplain } from "./shortcuts/lastPanel";
@@ -312,6 +313,9 @@ export default function App() {
         <ChangesSinceSaveDialog />
         <RevertToSaveDialog />
         <TutorialChoiceDialog />
+        {/* Help ▸ Keyboard Shortcuts, ⌘/ and "?" (#292). After Settings in the
+            page, so opened from Settings it draws on top. */}
+        <KeyboardShortcutsReference />
         {/* The file changed underneath unsaved edits — ask, never guess (#926). */}
         {pendingChange && (
           <ExternalChangeModal

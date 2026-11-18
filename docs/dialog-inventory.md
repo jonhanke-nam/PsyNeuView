@@ -56,7 +56,9 @@ Escape, which every row has.
 | Save a copy as… | dialog | `layout/Toolbar.tsx` | `save-copy-dialog` | the toolbar's Save a copy as… | ×, click outside, Cancel, Save (not while saving) |
 | Why this file is read only | dialog | `layout/Toolbar.tsx` | `pnl-read-only-note` | the "PsyNeuLink from … · read only" tag beside the model name (a managed PsyNeuLink) | ×, click outside, the tag again, Save a copy as… |
 | Layout menu | menu | `layout/Toolbar.tsx` | `layout-menu-list` | Layout ▾ | the Layout button, click outside, a pick |
-| Tutorials menu | menu | `layout/Toolbar.tsx` | `walkthrough-menu-list` | Tutorials ▾ | the Tutorials button, click outside, a pick |
+| Tutorials menu | menu | `layout/Toolbar.tsx` | `walkthrough-menu-list` | Tutorials ▾; Help ▸ Tutorials and walkthroughs | the Tutorials button, click outside, a pick |
+| Help menu | menu | `layout/HelpMenu.tsx` | `help-menu-list` | Help ▾ | the Help button, click outside, a pick |
+| Keyboard Shortcuts | dialog | `common/KeyboardShortcutsReference.tsx` | `shortcuts-reference` | Help ▸ Keyboard Shortcuts; ⌘/ (Ctrl+/); ? away from typing; Settings ▸ Keyboard shortcuts; the Mac app's Help ▸ Keyboard Shortcuts | ×, click outside, Close, Change shortcuts… |
 | Developer-mode menu | menu | `layout/DeveloperModeIndicator.tsx` | `developer-mode-menu` | the Developer badge (developer mode) | the badge, click outside, a pick |
 | History | dialog | `common/HistoryPanel.tsx` | `history-panel` | the History button | ×, click outside, the History button |
 | Advanced Graph View Options | dialog | `graph/GraphViewOptionsMenu.tsx` | `graph-view-options-menu` | Advanced Graph View Options ▾ in the graph toolbar (it took in the More menu, #123) | ×, its button, click outside; stays open while you change options |
