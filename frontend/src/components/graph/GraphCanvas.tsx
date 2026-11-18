@@ -52,6 +52,7 @@ import { OffscreenNodesIndicator } from "./OffscreenNodesIndicator";
 import { TourOverlay } from "./TourOverlay";
 import { addNodeToModel, deleteProjection, deleteSchedulingCondition, renameProjection } from "@/utils/nodeActions";
 import { isProjectionType, findDefByType } from "@/constants/pnlTypes";
+import { inNodeLayer } from "./canvasLayers";
 import { registerCommand } from "@/shortcuts/commands";
 import { LastGoodDiff } from "./LastGoodDiff";
 import { serializeRoutes, type RoutableEdge } from "@/utils/edgeRoutes";
@@ -364,7 +365,8 @@ export function GraphCanvas() {
   // is what React Flow draws; the local `nodes` array stays canonical.
   const displayNodes = useMemo(
     () =>
-      nodes.map((n) => ({
+      // #250: every node above every arrow (canvasLayers explains why).
+      nodes.map((n) => inNodeLayer({
         ...n,
         position: shiftPosition(n.id, n.position, shiftTable),
       })),
@@ -538,11 +540,26 @@ export function GraphCanvas() {
     const pick = usePaletteStore.getState().armed;
     if (!pick || !filePath) return false;
     const at = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    // Inside a composition, it goes into that composition: the frame clicked,
-    // or the frame of the node clicked. Its position is then kept relative to
-    // the frame, as every node inside one is.
+    // Inside a composition, it goes into that composition: the frame of the
+    // node clicked, or else the innermost open frame around the point. (Open
+    // frames are click-through, #250, so a click inside one reaches the canvas
+    // or an arrow, not the frame.) Its position is then kept relative to the
+    // frame, as every node inside one is.
+    const frameAt = (): string | undefined => {
+      let best: { id: string; area: number } | undefined;
+      for (const n of nodesRef.current) {
+        if (n.type !== "compositionNode") continue;
+        const inode = getInternalNode(n.id);
+        const w = inode?.measured?.width, h = inode?.measured?.height;
+        if (!inode || !w || !h) continue;
+        const { x, y } = inode.internals.positionAbsolute;
+        if (at.x < x || at.x > x + w || at.y < y || at.y > y + h) continue;
+        if (!best || w * h < best.area) best = { id: n.id, area: w * h };
+      }
+      return best?.id;
+    };
     const frameId =
-      onNode?.type === "compositionNode" ? onNode.id : onNode?.parentId;
+      onNode?.type === "compositionNode" ? onNode.id : onNode?.parentId ?? frameAt();
     const frame = frameId ? getInternalNode(frameId) : undefined;
     // A frame's id can carry the view's prefix ("cluster::inner"); the file
     // knows the composition by its own name.

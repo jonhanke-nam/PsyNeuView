@@ -59,6 +59,12 @@ button:hover {
 .react-flow__node {
   transition: box-shadow 0.15s ease;
 }
+/* #250: what is drawn above the nodes on purpose (connection dots, bend
+   handles, a frame's buttons) stays above them now that nodes sit in a high
+   layer (canvasLayers.ts, NODE_LAYER_Z = 4000). */
+.react-flow__viewport-portal {
+  z-index: 4100;
+}
 .react-flow__node.selected {
   box-shadow: 0 0 0 2px var(--pnv-primary), 0 2px 8px var(--pnv-primary-ring);
 }
@@ -277,4 +283,17 @@ html.pnv-busy * {
 }
 .pnv-settings-search-result:hover {
   background: var(--pnv-primary-tint) !important;
+}
+
+/* #250: an open composition frame is clicked on its header and border only;
+   clicks inside go to the arrows, nodes and canvas there (CompositionNode). */
+/* React Flow sets pointer-events: all inline on every node, so only an
+   !important rule reaches it. */
+.react-flow__node-compositionNode {
+  pointer-events: none !important;
+}
+.react-flow__node-compositionNode .pnv-frame-grab,
+.react-flow__node-compositionNode .react-flow__handle,
+.react-flow__node-compositionNode button {
+  pointer-events: all;
 }
