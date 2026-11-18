@@ -83,3 +83,21 @@ describe("capturing a binding", () => {
     if (onPc.ok) expect(onPc.spec).toBe("Mod+k");
   });
 });
+
+describe("capturing Shift+digit (#289)", () => {
+  it("stores ⇧1 as the digit, not the character it types", () => {
+    const r = press({ key: "!", code: "Digit1", shiftKey: true }, { selfId: "view.fitGraphShift" });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.spec).toBe("Shift+1");
+  });
+
+  it("still refuses Shift with a letter", () => {
+    const r = press({ key: "K", code: "KeyK", shiftKey: true });
+    expect(r.ok).toBe(false);
+  });
+
+  it("refuses Cmd+0 in a browser, which keeps it for page zoom", () => {
+    const r = press({ key: "0", code: "Digit0", metaKey: true }, { deployment: "browser", selfId: "view.actualSize" });
+    expect(r.ok).toBe(false);
+  });
+});

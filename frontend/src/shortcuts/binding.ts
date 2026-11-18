@@ -62,6 +62,26 @@ export const BARE_ALLOWED = new Set([
 ]);
 
 /**
+ * Shift plus a digit, with no Cmd or Ctrl: ⇧1 fits the graph, as in Figma and
+ * Sketch (#289). It types "!" in a text field, so a binding like this only
+ * ever fires away from typing (see `typesACharacter` and target.ts), whatever
+ * scope the shortcut declares.
+ */
+export function isShiftDigit(b: Pick<Binding, "mod" | "alt" | "option" | "shift" | "key">): boolean {
+  return b.shift && !b.mod && !b.alt && !b.option && /^[0-9]$/.test(b.key);
+}
+
+/**
+ * Whether pressing this binding would also type a character in a field: no
+ * Cmd, Ctrl or Option, and a single-character key. Such a binding must never
+ * fire while the user is typing, even if its shortcut is otherwise allowed in
+ * the code editor.
+ */
+export function typesACharacter(b: Binding): boolean {
+  return !b.mod && !b.alt && !b.option && b.key.length === 1;
+}
+
+/**
  * Chords that never reach us, per deployment.
  *
  * The OS ones are taken before any app sees them. The browser ones belong to
@@ -75,6 +95,8 @@ const OS_RESERVED = new Set(["Mod+q", "Mod+Tab", "Mod+ "]);
 const BROWSER_RESERVED = new Set([
   "Mod+w", "Mod+t", "Mod+n", "Mod+l",
   ...Array.from({ length: 9 }, (_, i) => `Mod+${i + 1}`),
+  // Cmd+0 (Ctrl+0) is the browser's own "actual size" for the page (#289).
+  "Mod+0",
 ]);
 
 export function isMac(): boolean {
@@ -116,7 +138,7 @@ export function parseBinding(spec: string): ParseResult {
   if (!binding.key) return { ok: false, reason: "No key." };
 
   const nonShift = [binding.mod, binding.alt, binding.option].filter(Boolean).length;
-  if (nonShift === 0 && !BARE_ALLOWED.has(binding.key)) {
+  if (nonShift === 0 && !BARE_ALLOWED.has(binding.key) && !isShiftDigit(binding)) {
     return {
       ok: false,
       reason: `"${binding.key}" needs Cmd or Ctrl — a bare key would fire while typing.`,
@@ -195,6 +217,10 @@ export function matchesEvent(
   if (secondary !== b.alt) return false;
   if (e.shiftKey !== b.shift) return false;
   if (e.altKey !== b.option) return false;
+
+  // Shift+1 arrives as "!" on a US keyboard and as something else on others,
+  // so a Shift+digit binding matches the physical digit key (#289).
+  if (isShiftDigit(b)) return e.code === `Digit${b.key}`;
 
   if (b.option) {
     // "i" -> "KeyI", "1" -> "Digit1", named keys are already code-shaped.

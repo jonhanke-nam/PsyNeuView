@@ -7,7 +7,7 @@
  * pressed, and may this user have it?".
  */
 
-import { BARE_ALLOWED, formatBinding, deliverability, type Binding } from "./binding";
+import { BARE_ALLOWED, formatBinding, deliverability, isShiftDigit, type Binding } from "./binding";
 import type { ResolvedShortcut } from "./registry";
 
 export type CaptureResult =
@@ -47,13 +47,19 @@ export function captureBinding(
     // identity — the same reason matching uses `code` for those bindings.
     key: e.altKey ? codeToKey(e.code) : normalize(e.key),
   };
+  // Shift+digit is stored as the digit, not the character it types ("!" on a
+  // US keyboard), matching how it is matched (#289).
+  if (e.shiftKey && !e.altKey && e.code.startsWith("Digit")) {
+    const digit = codeToKey(e.code);
+    if (isShiftDigit({ ...binding, key: digit })) binding.key = digit;
+  }
 
   if (!binding.key) {
     return { ok: false, pending: true, reason: "Press a key." };
   }
 
   const bare = !binding.mod && !binding.alt && !binding.option;
-  if (bare && !isSafeBare(binding.key)) {
+  if (bare && !isSafeBare(binding.key) && !isShiftDigit(binding)) {
     return {
       ok: false,
       reason: `${binding.key.toUpperCase()} on its own would fire while you type. Add Cmd or Ctrl.`,

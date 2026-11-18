@@ -6,6 +6,7 @@ import {
   looksLikeMac,
   matchesEvent,
   parseBinding,
+  typesACharacter,
 } from "./binding";
 
 const ok = (spec: string) => {
@@ -227,5 +228,42 @@ describe("looksLikeMac", () => {
 
   it("is case-insensitive, which is the bug it was written for", () => {
     expect(looksLikeMac("macOS")).toBe(looksLikeMac("MacIntel"));
+  });
+});
+
+describe("Shift+digit, for ⇧1 fit (#289)", () => {
+  it("parses with no Cmd or Ctrl, since the key is a digit", () => {
+    expect(ok("Shift+1")).toMatchObject({ mod: false, shift: true, key: "1" });
+  });
+
+  it("still refuses Shift with a letter, or a bare digit", () => {
+    expect(parseBinding("Shift+k").ok).toBe(false);
+    expect(parseBinding("1").ok).toBe(false);
+  });
+
+  it("matches the physical digit key, whatever character it types", () => {
+    const b = ok("Shift+1");
+    // "!" on a US keyboard; other layouts type something else.
+    expect(matchesEvent(b, ev({ key: "!", code: "Digit1", shiftKey: true }), true)).toBe(true);
+    expect(matchesEvent(b, ev({ key: "1", code: "Digit1", shiftKey: true }), false)).toBe(true);
+    expect(matchesEvent(b, ev({ key: "@", code: "Digit2", shiftKey: true }), true)).toBe(false);
+    expect(matchesEvent(b, ev({ key: "1", code: "Digit1" }), true)).toBe(false);
+  });
+
+  it("counts as typing a character, so it never fires in a field", () => {
+    expect(typesACharacter(ok("Shift+1"))).toBe(true);
+    expect(typesACharacter(ok("Mod+9"))).toBe(false);
+    expect(typesACharacter(ok("Escape"))).toBe(false);
+  });
+
+  it("shows as ⇧1 on the Mac and Shift+1 elsewhere", () => {
+    expect(displayBinding(ok("Shift+1"), true)).toBe("⇧1");
+    expect(displayBinding(ok("Shift+1"), false)).toBe("Shift+1");
+  });
+
+  it("knows the browser keeps Cmd+0 for page zoom, and the Mac app does not", () => {
+    expect(deliverability("Mod+0", "browser").deliverable).toBe(false);
+    expect(deliverability("Mod+0", "macApp").deliverable).toBe(true);
+    expect(deliverability("Shift+1", "browser").deliverable).toBe(true);
   });
 });
