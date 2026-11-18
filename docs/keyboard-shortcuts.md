@@ -55,7 +55,7 @@ Canvas controls, #289), not a shortcut.
 | Show or hide the Components panel | `layout.togglePalette` | ⌘4 | Ctrl+4 | View | As above |
 | Fit the graph to the window | `view.fitGraph` | ⌘9 | Ctrl+9 | View | Preview: View ▸ Zoom to Fit ([#289](https://github.com/jonhanke-nam/PsyNeuView/issues/289)). A browser keeps it |
 | Fit the graph to the window (second key) | `view.fitGraphShift` | ⇧1 | Shift+1 | View | Figma, Sketch: the key that reaches the page in a browser. Matches the physical 1 key; never while typing |
-| Show the graph at actual size (100%) | `view.actualSize` | ⌘0 | Ctrl+0 | View | Preview: View ▸ Actual Size. A browser keeps it, and inside the Mac app View ▸ Actual Size (below) currently takes ⌘0 first |
+| Show the graph at actual size (100%) | `view.actualSize` | ⌘0 | Ctrl+0 | View | Preview: View ▸ Actual Size. A browser keeps it; inside the Mac app it reaches the graph, since the window's own Actual Size is ⌥⌘0 (below) |
 | Delete the selected nodes | `graph.deleteSelection` | Backspace | Backspace | Graph | Apple HIG: Delete. Never while typing |
 | Cancel the current gesture | `gesture.cancel` | Escape | Escape | Graph | Apple HIG: Escape cancels. Passes on to an open menu or dialog when there is nothing to cancel |
 | Show keyboard shortcuts | `help.shortcuts` | ⌘/ | Ctrl+/ | Help | Google's apps, Slack, GitHub |
@@ -77,16 +77,17 @@ and `MAC_APP_MENU_KEYS` in `frontend/src/shortcuts/reference.ts` follow it.
 | File ▸ New Window | ⌘N |
 | File ▸ Close Window | ⌘W |
 | Edit ▸ Cut, Copy, Paste, Select All | ⌘X, ⌘C, ⌘V, ⌘A |
-| View ▸ Actual Size (the whole window) | ⌘0 |
+| View ▸ Actual Size (the whole window) | ⌥⌘0 |
 | View ▸ Zoom In, Zoom Out (the whole window) | ⌘+ (and ⌘=), ⌘- |
 | Services ▸ Start Services, Restart Services | ⌃⌘S, ⌃⌘R |
 | Development ▸ Switch Branch…, View Logs | ⌘B, ⌘L |
 | Window ▸ Minimize | ⌘M |
 | Help ▸ Keyboard Shortcuts, Report a Problem… | none |
 
-**Open question:** View ▸ Actual Size takes ⌘0 for the whole window, so inside
-the Mac app the graph's own ⌘0 ("actual size", #289) never reaches the page.
-Which one keeps ⌘0 is still to be decided.
+**⌘0 is the graph's.** The window's View ▸ Actual Size is ⌥⌘0, so inside the
+Mac app ⌘0 shows the graph at 100% (#289). (A browser keeps ⌘0 for its own
+page zoom.) The Mac app reserves ⌘9 and ⌘0 for the page, and its test keeps
+the menu off them.
 
 Rebinding the native keys is not offered: they are shown read-only, the
 simpler default the issue suggested. Making the native menu follow a key

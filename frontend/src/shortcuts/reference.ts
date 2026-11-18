@@ -95,9 +95,8 @@ export function rowMatches(row: { label: string; keys: string; group: string }, 
  * cannot be rebound here. Kept in step with PsyNeuView-MacApp's
  * MenuShortcuts.swift; docs/keyboard-shortcuts.md lists them too.
  *
- * View ▸ Actual Size takes ⌘0 for the whole window's zoom, so inside the Mac
- * app the graph's own ⌘0 (#289) does not reach the page. Whether to move one
- * of them is an open decision; until then the reference says which one wins.
+ * The window's View ▸ Actual Size is ⌥⌘0, so ⌘0 stays the graph's 100%
+ * (#289) inside the Mac app too (PsyNeuView-MacApp#67).
  */
 export const MAC_APP_MENU_KEYS: { menu: string; label: string; keys: string; note?: string }[] = [
   { menu: "PsyNeuView", label: "Settings…", keys: "⌘,", note: "opens this app's Settings" },
@@ -108,7 +107,7 @@ export const MAC_APP_MENU_KEYS: { menu: string; label: string; keys: string; not
   { menu: "Edit", label: "Copy", keys: "⌘C" },
   { menu: "Edit", label: "Paste", keys: "⌘V" },
   { menu: "Edit", label: "Select All", keys: "⌘A" },
-  { menu: "View", label: "Actual Size (the whole window)", keys: "⌘0", note: "takes ⌘0 before the graph sees it" },
+  { menu: "View", label: "Actual Size (the whole window)", keys: "⌥⌘0", note: "⌘0 is the graph's 100%" },
   { menu: "View", label: "Zoom In (the whole window)", keys: "⌘+" },
   { menu: "View", label: "Zoom Out (the whole window)", keys: "⌘-" },
   { menu: "Services", label: "Start Services", keys: "⌃⌘S" },
