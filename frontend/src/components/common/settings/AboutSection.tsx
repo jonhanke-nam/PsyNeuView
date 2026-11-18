@@ -102,6 +102,15 @@ export const CREDITS: { name: string; note: string; url: string }[] = [
   { name: "React Flow", note: "xyflow, MIT licence", url: "https://reactflow.dev" },
 ];
 
+/**
+ * Artwork we use and credit (#283): the Components panel's icons are partly
+ * adapted from MetaCell's PsyNeuLinkView, used with permission (NOTICE says
+ * the same; assets/component-icons/icons.yaml marks which ones).
+ */
+export const ASSET_CREDITS: { what: string; name: string; note: string; url: string }[] = [
+  { what: "Icons adapted from", name: "MetaCell's PsyNeuLinkView", note: "used with permission", url: "https://github.com/MetaCell/PsyNeuLinkView" },
+];
+
 function BuiltWith() {
   return (
     <div data-testid="about-built-with" style={{ ...mutedStyle, marginTop: 8 }}>
@@ -116,6 +125,16 @@ function BuiltWith() {
         </span>
       ))}
       .
+      {ASSET_CREDITS.map((c) => (
+        <span key={c.name} data-testid="about-asset-credit">
+          {" "}
+          {c.what}{" "}
+          <a href={c.url} target="_blank" rel="noreferrer" style={linkStyle} data-testid="about-credit">
+            {c.name}
+          </a>
+          , {c.note}.
+        </span>
+      ))}
     </div>
   );
 }

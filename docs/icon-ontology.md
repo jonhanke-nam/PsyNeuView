@@ -141,7 +141,8 @@ icon it is used, keeping only its path data (colour comes from the panel);
 the rest were drawn new for PsyNeuView in the same style (MetaCell's rounded
 outlines, about the same stroke weight). An `original` icon with a `based_on`
 reuses part of a MetaCell drawing, such as the dashed boundary every
-composition icon is drawn in. Credited in the repository's `NOTICE`.
+composition icon is drawn in. Credited in the repository's `NOTICE` and in
+Settings ▸ About.
 
 To add or change an icon: draw it on a `0 0 20 20` grid in `currentColor`
 (no fixed colours, scripts, links or styles; `componentIcons.test.ts`
