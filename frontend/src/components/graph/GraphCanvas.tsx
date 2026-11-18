@@ -52,6 +52,7 @@ import { OffscreenNodesIndicator } from "./OffscreenNodesIndicator";
 import { TourOverlay } from "./TourOverlay";
 import { addNodeToModel } from "@/utils/nodeActions";
 import { isProjectionType, findDefByType } from "@/constants/pnlTypes";
+import { inNodeLayer } from "./canvasLayers";
 import { registerCommand } from "@/shortcuts/commands";
 import { LastGoodDiff } from "./LastGoodDiff";
 import { serializeRoutes, type RoutableEdge } from "@/utils/edgeRoutes";
@@ -364,7 +365,8 @@ export function GraphCanvas() {
   // is what React Flow draws; the local `nodes` array stays canonical.
   const displayNodes = useMemo(
     () =>
-      nodes.map((n) => ({
+      // #250: every node above every arrow (canvasLayers explains why).
+      nodes.map((n) => inNodeLayer({
         ...n,
         position: shiftPosition(n.id, n.position, shiftTable),
       })),
