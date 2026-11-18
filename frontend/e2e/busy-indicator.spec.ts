@@ -12,6 +12,9 @@
  *
  * It also says how long it has been spinning: below the wheel, in its centre
  * or not at all, as Settings chooses; and a problem report records each wait with its start and stop times (#176).
+ *
+ * Its style is chosen under Appearance too, with a moving preview of each;
+ * every style takes the same box and stands still under reduced motion (#169).
  */
 import { mutatingTest as test, expect } from "./test-base";
 import { readFileSync, writeFileSync, mkdtempSync } from "fs";
@@ -374,6 +377,74 @@ test.describe("Busy wheel (#38)", { tag: "@ci" }, () => {
     await expect(page.getByTestId("busy-wheel")).toBeVisible();
     expect(await page.locator(".pnv-busy-wheel").evaluate((e) => getComputedStyle(e).animationName)).toBe("none");
     await held;
+  });
+
+  test("its style (#169): chosen in Settings with a moving preview of each, and the wheel's box stays the same", async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto("/");
+    await expect(page.getByTestId("open-menu")).toBeEnabled();
+
+    // The classic wheel's box, to measure every other style against.
+    await slowDown(page, "**/api/models/dirs", 1_500);
+    let held = page.evaluate(() => fetch("/api/models/dirs").then((r) => r.text()));
+    await expect(page.getByTestId("busy-wheel")).toHaveAttribute("data-style", "wheel");
+    const classic = await box(page, "busy-wheel-box");
+    await held;
+    await idle(page);
+
+    await page.getByTestId("settings-button").click();
+    await page.getByTestId("settings-section-appearance").click();
+    const group = page.getByTestId("setting-busy-style");
+    await expect(group.getByRole("radio")).toHaveCount(7);
+    await expect(page.getByTestId("busy-style-wheel")).toBeChecked();
+    // Every style but Text only shows a picture that is moving.
+    for (const style of ["wheel", "network", "ring", "nodes", "orbit", "bar"]) {
+      const names = await page
+        .getByTestId(`busy-style-preview-${style}`)
+        .locator(".pnv-busy-anim")
+        .evaluateAll((els) => els.map((e) => getComputedStyle(e).animationName));
+      expect(names.length, style).toBeGreaterThan(0);
+      expect(names.every((n) => n !== "none"), style).toBe(true);
+    }
+    await shot(page, "08-style-setting");
+    await page.getByTestId("busy-style-network").check();
+    await page.keyboard.press("Escape");
+    expect(await page.evaluate(() => localStorage.getItem("psyneuview.busy.style"))).toBe("network");
+
+    // The PsyNeuLink-style network, in the same box as the wheel was.
+    held = page.evaluate(() => fetch("/api/models/dirs").then((r) => r.text()));
+    await expect(page.getByTestId("busy-wheel")).toHaveAttribute("data-style", "network");
+    await expect(page.getByTestId("busy-wheel").locator("ellipse")).toHaveCount(3);
+    await expect(page.locator(".pnv-busy-wheel")).toHaveCount(0);
+    expect(await box(page, "busy-wheel-box")).toEqual(classic);
+    await shot(page, "09-style-network");
+    await held;
+  });
+
+  test("a style with no clear centre puts the time below it, even when the centre is chosen", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seed(page, { "psyneuview.busy.timerPlace": "center", "psyneuview.busy.style": "network" });
+    await page.goto("/");
+    await expect(page.getByTestId("open-menu")).toBeEnabled();
+    await slowDown(page, "**/api/models/dirs", 2_500);
+    const held = page.evaluate(() => fetch("/api/models/dirs").then((r) => r.text()));
+    await expect(page.getByTestId("busy-wheel")).toHaveAttribute("data-style", "network");
+    await expect(page.getByTestId("busy-elapsed")).toHaveText(/^[1-9] s$/, { timeout: 3_000 });
+    await expectTimerBelow(page);
+    await held;
+  });
+
+  test("with reduced motion every style stands still (#169)", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/");
+    await page.getByTestId("settings-button").click();
+    await page.getByTestId("settings-section-appearance").click();
+    const names = await page
+      .getByTestId("setting-busy-style")
+      .locator(".pnv-busy-anim")
+      .evaluateAll((els) => els.map((e) => getComputedStyle(e).animationName));
+    expect(names.length).toBeGreaterThan(6);
+    expect(new Set(names)).toEqual(new Set(["none"]));
   });
 
   test("a problem report has each wait's start and stop, and the action it came from", async ({ page }) => {
