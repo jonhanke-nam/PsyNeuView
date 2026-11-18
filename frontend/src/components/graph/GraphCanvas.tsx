@@ -1161,6 +1161,9 @@ export function GraphCanvas() {
               // a large model (EGO) didn't fit a normal-size canvas.
               minZoom={0.02}
               fitView
+              // #290: no library credit in the canvas corner; React Flow is
+              // credited in Settings ▸ About instead, as its licence allows.
+              proOptions={{ hideAttribution: true }}
             >
               <Background />
               {/* #52: our own Fit, framing edges too. The built-in one queues a
