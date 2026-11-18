@@ -192,6 +192,20 @@ test.describe("graph hit areas (#250)", { tag: "@ci" }, () => {
               if (hit?.closest(".react-flow__node") === node || hit?.closest('[data-testid="edge-port-dot"]')) continue;
               out.push(`${zoom} node ${node.dataset.id} ${a}@${Math.round((t * 180) / Math.PI)}°: ${describe(hit)}`);
             }
+            // And, on a fine grid over the whole oval, no arrow's grab strip is
+            // stacked above the node — whether or not it is the top element at
+            // a sample point on this machine (CI's fonts lay the graph out a
+            // little differently; an arrow into a nested node once sat above
+            // every top-level node).
+            grid: for (let gx = -0.9; gx <= 0.91; gx += 0.15) for (let gy = -0.9; gy <= 0.91; gy += 0.15) {
+              if (gx * gx + gy * gy > 0.81) continue;
+              const x = b.left + (b.width / 2) * (1 + gx), y = b.top + (b.height / 2) * (1 + gy);
+              if (!inPane(x, y)) continue;
+              const stack = document.elementsFromPoint(x, y);
+              const at = stack.findIndex((e) => e.closest(".react-flow__node") === node);
+              const over = stack.slice(0, Math.max(0, at)).find((e) => e.classList.contains("projection-edge-hit"));
+              if (over) { out.push(`${zoom} node ${node.dataset.id}: under arrow ${over.closest(".react-flow__edge")?.getAttribute("data-id")}`); break grid; }
+            }
           }
           // Arrows: a point on the line is an arrow (where two cross, the top one), never canvas or a frame.
           for (const edge of Array.from(document.querySelectorAll(".react-flow__edge-projectionEdge")) as HTMLElement[]) {
