@@ -1158,7 +1158,9 @@ export function Toolbar() {
   ) => {
     if (!restore && !byTutorial && !(await guardOpen({ kind: "catalog", label: rm.label, file: rm.pristine_path }))) return;
     // #172: a walkthrough opens its own fresh copy (see loadDemo).
-    const tutorial = restore ? null : tutorialCopyFor(rm.label);
+    // Reset on the tutorial's own copy resets that copy, not the shared one.
+    const tutorial =
+      restore && !isTutorialCopy(useModelStore.getState().filePath) ? null : tutorialCopyFor(rm.label);
     if (restore) {
       if (!window.confirm(`Put ${rm.label} back to the bundled version? Your edits to it will be lost.`)) return;
     } else if (!(byTutorial && isTutorialCopy(useModelStore.getState().filePath)) && !confirmDiscard()) return;
