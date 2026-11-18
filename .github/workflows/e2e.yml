@@ -9,6 +9,12 @@ name: E2E
 # set by carrying the Playwright tag `@ci` (and its file is listed in
 # frontend/e2e/ci-specs.txt, which a vitest checks). The full / smoke sets remain
 # available via manual "Run workflow".
+#
+# #295: the suite runs as 3 parallel shards (Playwright `--shard=N/3`), each on
+# its own runner with its own build and servers. The final job, named `e2e`,
+# passes only if every shard passed; it is the check devel's branch protection
+# requires, so adding or removing shards needs no protection change. It also
+# merges the shards' blob reports into one HTML report + results.json.
 
 on:
   # No path filter on triggers (so the `e2e` check is always reported for
@@ -36,6 +42,9 @@ on:
         options:
           - smoke
           - full
+          # The PR gate's @ci suite, on any branch (#295: e.g. to try a
+          # deliberately failing spec without opening a PR).
+          - ci
 
 concurrency:
   group: e2e-${{ github.ref }}
@@ -96,8 +105,9 @@ jobs:
             echo "run=false" >> "$GITHUB_OUTPUT"
           fi
 
-  e2e:
-    name: e2e
+  shard:
+    # Not `e2e`: that name belongs to the summary job below, the required check.
+    name: e2e shard ${{ matrix.shard }}/3
     needs: changes
     # #991: `!= 'false'` rather than `== 'true'`, so this gate only skips when
     # `changes` actually decided the paths were irrelevant. If `changes` dies
@@ -109,11 +119,18 @@ jobs:
     # The @ci suite alone had grown to about 29 minutes of a 30-minute job
     # (devel, 2026-10-24), so the next spec added tipped it over (#34). 45 then
     # ran out too: 9 minutes of setup plus 39 of tests (devel, 2026-11-04). 60
-    # ran out the same day: about 10 of setup plus 50 of tests. 75 leaves room;
-    # splitting the suite across runners is the longer answer.
+    # ran out the same day: about 10 of setup plus 50 of tests. 75 then
+    # ran out with no test failing (#295), so the suite is now split across
+    # runners; 75 stays per shard as a safety net, against ~25 minutes each.
     timeout-minutes: 75
     permissions:
       contents: read
+    strategy:
+      # Let every shard finish: one failing shard must not cancel the others,
+      # or the merged report would hide whatever else broke.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
 
     steps:
       - name: Checkout
@@ -249,28 +266,124 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
 
-      - name: Run E2E tests
+      # Playwright splits the selected tests into 3 contiguous runs of whole
+      # spec files, by test count (workers: 1, fullyParallel: false). Measured
+      # against a full @ci run (2026-11-18) that comes to ~23 / 21 / 22 minutes
+      # of tests; see docs/testing.md before reaching for hand-balancing.
+      # Each shard builds the frontend itself (~30 s): cheaper and simpler
+      # than handing dist/ between jobs, which the stale-dist check would
+      # also have to trust.
+      - name: Run E2E tests (shard ${{ matrix.shard }}/3)
         working-directory: frontend
+        env:
+          SHARD_ARGS: --shard=${{ matrix.shard }}/3 --reporter=github,blob
         run: |
+          mode="ci"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ "${{ inputs.mode }}" = "full" ]; then
-              npm run test:e2e
-            else
-              npm run test:e2e:smoke
-            fi
+            mode="${{ inputs.mode }}"
+          fi
+          case "$mode" in
+            full)  npm run test:e2e -- $SHARD_ARGS ;;
+            # A small set can leave a shard empty; that is not a failure.
+            smoke) npm run test:e2e:smoke -- $SHARD_ARGS --pass-with-no-tests ;;
+            # The curated green non-tutorial specs, tagged @ci (#168 increment).
+            *)     npm run test:e2e:ci -- $SHARD_ARGS ;;
+          esac
+
+      # The blob report carries results, traces, videos and screenshots; the
+      # `e2e` job merges the three. Kept briefly: the merged report is the one
+      # to download.
+      - name: Upload blob report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.shard }}
+          path: frontend/blob-report/
+          retention-days: 1
+          if-no-files-found: ignore
+
+  # The required check. Passes only when every shard passed, or when `changes`
+  # decided the suite needn't run (shards skipped, as the single job used to be).
+  e2e:
+    name: e2e
+    needs: [changes, shard]
+    # Runs even when a shard failed or timed out, so the check reports red
+    # rather than skipped (a skipped required check counts as passing).
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Did every shard pass?
+        id: verdict
+        env:
+          SHARDS: ${{ needs.shard.result }}
+          RUN: ${{ needs.changes.outputs.run }}
+        run: |
+          echo "shards: $SHARDS (changes said run=$RUN)"
+          if [ "$SHARDS" = "success" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          elif [ "$SHARDS" = "skipped" ] && [ "$RUN" = "false" ]; then
+            echo "Nothing e2e covers changed; the suite was skipped."
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
           else
-            # Auto-trigger: the curated green non-tutorial specs, tagged @ci (#168 increment).
-            npm run test:e2e:ci
+            echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # Traces, videos, screenshots from on-first-retry. 14d retention.
-      - name: Upload Playwright artifacts
-        if: failure()
+      - name: Checkout
+        if: steps.verdict.outputs.skipped != 'true'
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        if: steps.verdict.outputs.skipped != 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        if: steps.verdict.outputs.skipped != 'true'
+        working-directory: frontend
+        run: npm ci
+
+      - name: Download the shards' blob reports
+        if: steps.verdict.outputs.skipped != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: blob-report-*
+          path: frontend/all-blob-reports
+          merge-multiple: true
+
+      # One HTML report and one results.json for the whole run, so a failure
+      # is investigated in one place, and per-spec timings are on hand when
+      # the shards need rebalancing. No --config: merge-reports then loads
+      # none, so the stale-dist check in playwright.config.ts doesn't apply.
+      - name: Merge reports
+        id: merge
+        if: steps.verdict.outputs.skipped != 'true' && hashFiles('frontend/all-blob-reports/*.zip') != ''
+        working-directory: frontend
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: results.json
+        run: |
+          ls -l all-blob-reports
+          npx playwright merge-reports --reporter=html,json ./all-blob-reports
+          mv results.json playwright-report/results.json
+
+      - name: Upload merged Playwright report
+        if: steps.merge.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: playwright-results-${{ github.run_id }}
-          path: |
-            frontend/test-results/
-            frontend/playwright-report/
-          retention-days: 14
+          path: frontend/playwright-report/
+          retention-days: ${{ steps.verdict.outputs.ok == 'true' && 3 || 14 }}
           if-no-files-found: ignore
+
+      - name: Verdict
+        run: |
+          if [ "${{ steps.verdict.outputs.ok }}" != "true" ]; then
+            echo "::error::At least one e2e shard did not pass (${{ needs.shard.result }}). The merged report is the playwright-results-${{ github.run_id }} artifact."
+            exit 1
+          fi
