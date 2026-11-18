@@ -10,7 +10,7 @@
 import { useEffect } from "react";
 
 import { record } from "@/utils/activityLog";
-import { isMac, matchesEvent } from "./binding";
+import { isMac, matchesEvent, typesACharacter } from "./binding";
 import type { ResolvedShortcut } from "./registry";
 import { allowedInTarget, classifyTarget } from "./target";
 
@@ -27,6 +27,10 @@ export function useShortcuts(shortcuts: ResolvedShortcut[]) {
       for (const shortcut of shortcuts) {
         if (!matchesEvent(shortcut.binding, e, mac)) continue;
         if (!allowedInTarget(shortcut.scope, target)) continue;
+        // A key that types a character (⇧1 types "!") never fires while the
+        // user is typing, whatever scope its shortcut has — a rebinding must
+        // not be able to steal a character from the code editor (#289).
+        if (typesACharacter(shortcut.binding) && target !== "other") continue;
         if (!shortcut.run) continue;
         // Run before consuming. A shortcut that matched may still decline the
         // key (returning false) when it has nothing to do, and the event then

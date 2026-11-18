@@ -501,6 +501,21 @@ settings:
       /rendering-defaults.json (arrowLineThickness) can retune the default;
       a width chosen here wins. Scheduling arrows are drawn separately.
 
+  - id: graph-fit-button-style
+    label: Appearance ▸ Canvas controls ▸ Fit button
+    keywords: ["fit", "recentre", "recenter", "center", "reset view", "icon", "zoom to fit"]
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.graph.fitButtonStyle); inside the Mac app, the app keeps psyneuview. keys
+    control: setting-graph-fit-button-style
+    notes: >-
+      Icon (default) or the word "Fit" (#289). The canvas control under +
+      and − that fits the whole graph into the window, the same fit as the
+      canvas menu, the off-screen badge and the keys (⌘9 or ⇧1; ⌘0 is
+      100%). The corner-brackets icon is the default because it needs no
+      translation; the word is easier to spot. Either way it is the same
+      26px square as the zoom buttons, and its tooltip names the keys.
+
   - id: graph-layout-default
     label: Appearance ▸ Automatic layout ▸ How models are arranged
     keywords: ["layout", "arrange", "layered"]

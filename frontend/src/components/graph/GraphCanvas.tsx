@@ -56,6 +56,8 @@ import { addNodeToModel, deleteProjection, deleteSchedulingCondition, renameProj
 import { isProjectionType, findDefByType } from "@/constants/pnlTypes";
 import { inNodeLayer } from "./canvasLayers";
 import { registerCommand } from "@/shortcuts/commands";
+import { useShortcutKeys } from "@/shortcuts/useAppShortcuts";
+import { useFitButtonStyleStore } from "@/stores/fitButtonStyleStore";
 import { LastGoodDiff } from "./LastGoodDiff";
 import { serializeRoutes, type RoutableEdge } from "@/utils/edgeRoutes";
 import { positionsOnScreen } from "@/utils/positionsOnScreen";
@@ -330,8 +332,18 @@ export function GraphCanvas() {
 
   const [nodes, setNodes, onNodesChangeRaw] = useNodesState(storeNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(storeEdges);
-  const { screenToFlowPosition, getInternalNode } = useReactFlow();
+  const { screenToFlowPosition, getInternalNode, zoomTo } = useReactFlow();
   const fitGraph = useFitGraph();
+  // #289: the keys fire the same fit as the button, the canvas menu and the
+  // off-screen badge; ⌘0 is actual size, about the canvas's centre, as in
+  // Preview.
+  const fitKeys = useShortcutKeys("view.fitGraph", "view.fitGraphShift");
+  const fitButtonStyle = useFitButtonStyleStore((s) => s.style);
+  useEffect(() => registerCommand("graph.fit", fitGraph), [fitGraph]);
+  useEffect(
+    () => registerCommand("graph.actualSize", () => void zoomTo(1)),
+    [zoomTo]
+  );
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
 
@@ -1167,15 +1179,23 @@ export function GraphCanvas() {
                   node-only fit that would land after ours, so it is hidden;
                   CSS keeps this button in its place above the lock. */}
               <Controls showFitView={false}>
+                {/* #289: the corner-brackets icon by default (it needs no
+                    translation), or the word "Fit" (Settings ▸ Appearance ▸
+                    Canvas controls). The same 26px square as the buttons
+                    above and below it either way. */}
                 <ControlButton
                   className="react-flow__controls-fitview pnv-controls-fit"
                   onClick={fitGraph}
-                  title="Fit view"
-                  aria-label="Fit view"
+                  title={`Fit the graph to the window${fitKeys ? ` (${fitKeys})` : ""}`}
+                  aria-label="Fit the graph to the window"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 30">
-                    <path d="M3.692 4.63c0-.53.4-.938.939-.938h5.215V0H4.708C2.13 0 0 2.054 0 4.63v5.216h3.692V4.631zM27.354 0h-5.2v3.692h5.17c.53 0 .984.4.984.939v5.215H32V4.631A4.624 4.624 0 0027.354 0zm.954 24.83c0 .532-.4.94-.939.94h-5.215v3.768h5.215c2.577 0 4.631-2.13 4.631-4.707v-5.139h-3.692v5.139zm-23.677.94c-.531 0-.939-.4-.939-.94v-5.138H0v5.139c0 2.577 2.13 4.707 4.708 4.707h5.138V25.77H4.631z" />
-                  </svg>
+                  {fitButtonStyle === "word" ? (
+                    <span className="pnv-controls-fit-label">Fit</span>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 30">
+                      <path d="M3.692 4.63c0-.53.4-.938.939-.938h5.215V0H4.708C2.13 0 0 2.054 0 4.63v5.216h3.692V4.631zM27.354 0h-5.2v3.692h5.17c.53 0 .984.4.984.939v5.215H32V4.631A4.624 4.624 0 0027.354 0zm.954 24.83c0 .532-.4.94-.939.94h-5.215v3.768h5.215c2.577 0 4.631-2.13 4.631-4.707v-5.139h-3.692v5.139zm-23.677.94c-.531 0-.939-.4-.939-.94v-5.138H0v5.139c0 2.577 2.13 4.707 4.708 4.707h5.138V25.77H4.631z" />
+                    </svg>
+                  )}
                 </ControlButton>
               </Controls>
               {/* TODO: Re-add MiniMap as a toggleable overlay with repositioning support */}

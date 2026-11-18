@@ -15,7 +15,10 @@
 export type CommandId =
   | "model.save"
   | "graph.deleteSelection"
-  | "inspector.focus";
+  | "inspector.focus"
+  // #289: the canvas owns its viewport, so it registers these while mounted.
+  | "graph.fit"
+  | "graph.actualSize";
 
 const handlers = new Map<CommandId, () => void>();
 
