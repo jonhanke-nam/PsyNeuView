@@ -6,6 +6,7 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Handle, Position, useConnection, type NodeProps } from "@xyflow/react";
 import { CONNECT_HANDLE, NODE_TARGET_HANDLE } from "./connectHandles";
+import { targetStatus, useConnectTargets } from "@/stores/connectTargetsStore";
 import { useSafeUpdateNodeInternals } from "@/hooks/useSafeUpdateNodeInternals";
 import { usePortLayout } from "@/stores/portLayoutStore";
 import type { MechanismData } from "@/stores/modelStore";
@@ -173,6 +174,14 @@ export const MechanismNode = memo(function MechanismNode({
   const nodeBorderWidth = useNodeOutlineWidth();
   // #253: a connection is being dragged, so this node accepts the drop.
   const connecting = useConnection((c) => c.inProgress);
+  // #253: PsyNeuLink's answer for this node while a connection is dragged
+  // from another node: a valid target lights up, an invalid one dims and,
+  // under the pointer, says why. The node being dragged from stays as it is.
+  const dragFromHere = useConnection((c) => c.inProgress && c.fromNode?.id === id);
+  const pointerOnHere = useConnection((c) => c.inProgress && c.toNode?.id === id);
+  const connectReason = useConnectTargets((s) => (s.targets ? s.targets[d.varName || ""] : undefined));
+  const connectStatus = useConnectTargets((s) => targetStatus(s.targets, d.varName));
+  const dropStatus = connecting && !dragFromHere ? connectStatus : null;
   const nodeBorderWidthEmphasis = nodeBorderWidth + NODE_OUTLINE_EMPHASIS_EXTRA;
   const expanded = useGraphSettings((s) => s.expandedNodes.has(d.label || ""));
 
@@ -446,8 +455,14 @@ export const MechanismNode = memo(function MechanismNode({
     <div
       onDoubleClick={onDoubleClick}
       data-node-shape={shape}
+      data-connect-target={dropStatus ?? undefined}
       title={nodeTooltip}
       style={{
+        // #253: drop targets while a connection is dragged. An outline, so
+        // the node's size and place don't change.
+        outline: dropStatus === "valid" ? "2px solid var(--pnv-primary)" : undefined,
+        outlineOffset: dropStatus === "valid" ? 4 : undefined,
+        opacity: dropStatus === "invalid" ? 0.4 : undefined,
         padding,
         borderRadius: shape === "rectangle" ? 0 : "50%",
         border: drawnOutline ? "none" : `${ovalBorderWidth}px ${ovalBorderStyle} ${ovalBorderColor}`,
@@ -1022,6 +1037,32 @@ export const MechanismNode = memo(function MechanismNode({
         data-testid="node-connector"
         title="Drag to another node to connect them"
       />
+      {dropStatus === "invalid" && pointerOnHere && connectReason && (
+        <div
+          role="status"
+          data-testid="connect-refusal-reason"
+          style={{
+            position: "absolute",
+            bottom: "calc(100% + 8px)",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "max-content",
+            maxWidth: 260,
+            padding: "4px 8px",
+            borderRadius: 4,
+            background: "var(--pnv-surface)",
+            border: "1px solid var(--pnv-border-light)",
+            boxShadow: "var(--pnv-shadow-popover)",
+            color: "var(--pnv-text-body)",
+            fontSize: "var(--pnv-fs-12)",
+            textAlign: "left",
+            pointerEvents: "none",
+            zIndex: 10,
+          }}
+        >
+          {connectReason}
+        </div>
+      )}
       <Handle
         type="target"
         id={NODE_TARGET_HANDLE}
