@@ -54,6 +54,15 @@ steps:
       lastTraining: { targets: { out_layer: [0, 0, 0, 1] }, epochsAtLeast: 50 }
     act:                        # what the test driver does (the app ignores it)
       train: { inputs: { … }, targets: { … }, epochs: 50 }
+
+  - id: open-it                 # a step that teaches opening a model
+    anchor: { testid: open-menu }
+    instruct: Open ▸ Logic Gate Network.
+    say: Open the logic gate network.
+    done: { nodeExists: out_layer }
+    opens: Logic Gate Network   # the app reads this: `new model` for New Model…
+    act:
+      openModel: Logic Gate Network
 ```
 
 - `course:` must look like `"0.3"`, and quoting it keeps YAML from reading it as
@@ -87,15 +96,47 @@ steps:
   `import …Yaml from "@/walkthroughs/<id>.yaml?raw"` and an entry in
   `WALKTHROUGHS`. A malformed file fails at app startup, on purpose.
 
-## Staying on the walkthrough's model
+## Staying on the walkthrough's model (#172)
 
 Everything that replaces the model asks first while a walkthrough that uses one
-is running (`utils/tutorialGuard.ts`, #172): stay, leave, or open it in a new
-window with the walkthrough left on its step. The exception is what the current
-step asks for: its `act.openModel`, or New Model for its `act.newModel`. So a
-step that teaches opening a model needs that `act`, and this and the "right model
-open" check are the two places the app reads `act`. A walkthrough with no model
-of its own is never interrupted.
+is running (`utils/tutorialGuard.ts`): stay, leave, or open it in a new window
+with the walkthrough left on its step. The exception is what the current step
+asks for, which it names with **`opens:`**: a catalog label as the Open menu
+shows it, or `new model` for Open ▸ New Model…. That step is also done only
+once that model is open. The app reads `opens:`, never `act`; a unit test in
+`tourStep.test.ts` fails unless `opens:` matches the step's `act.openModel` or
+`act.newModel`, so give a step both. A walkthrough with no model of its own is
+never interrupted. Replacing unsaved work offers to save it first, rather than
+warning that it will be lost.
+
+**The walkthrough's own model.** The tour store keeps the file the walkthrough
+is using (`modelPath`). A catalog model opened for it (on start, by the step
+that teaches opening it, or by the bar's Open button) is a fresh copy of its
+own, in `<working copies>/tutorials/<id>/`, emptied on every open
+(`tutorial` on `/api/demos/reset` and `/api/reference-models/load`). So every
+start is clean, even with the model already open, and the learner's own copy
+of a bundled model is never touched; a second window on that model no longer
+writes over the walkthrough's. A walkthrough that has the learner start a New
+Model uses that file once it's created. Save a copy as takes the walkthrough
+along to the copy.
+
+**Known view settings.** While a walkthrough runs, the graph's view is as a
+fresh window has it, and the learner's choices come back when it ends
+(`utils/tutorialView.ts`): what the graph shows (controller, learning,
+interface mechanisms, inactive nodes), names, types, direction, collapsed and
+inset compositions, and the nested and PyTorch views. The ones the server draws
+for change only as the walkthrough opens its model, and changing them back
+reloads the model, unless it has unsaved changes. Settings' own preferences
+(the automatic layout, port dots) are left as they are.
+
+**Ways back.** The code as each step began is kept (`stepStart`), taken when the
+step starts on the walkthrough's model or when that model opens during it, so
+a walkthrough file needs no per-step code. When the step's node is missing or
+the code has changed since, the bar offers **Undo my edits since this step
+began** (through Save, so the edits are one Undo away in History) and **Start
+the tutorial over** (step 1, and a fresh copy). If the open file changes by a
+route nothing asked about, the bar says so and offers **Go back to the
+tutorial's model** or **End tutorial**, and steps don't complete until then.
 
 ## `done` — when a step is finished
 
