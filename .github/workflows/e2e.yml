@@ -268,7 +268,7 @@ jobs:
 
       # Playwright splits the selected tests into 3 contiguous runs of whole
       # spec files, by test count (workers: 1, fullyParallel: false). Measured
-      # against a full @ci run (2026-11-18) that comes to ~23 / 21 / 22 minutes
+      # against a full @ci run (2026-11-18) that comes to ~21 / 21 / 24 minutes
       # of tests; see docs/testing.md before reaching for hand-balancing.
       # Each shard builds the frontend itself (~30 s): cheaper and simpler
       # than handing dist/ between jobs, which the stale-dist check would

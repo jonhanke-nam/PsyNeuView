@@ -60,7 +60,7 @@ PRs into it get a **deliberately reduced** set of checks:
 | Runs on a tutorial slice | Cost | Runs once, at the PR into `devel` | Cost |
 | --- | --- | --- | --- |
 | `typecheck (tsc)` | ~30s | `tutorials` | ~14 min |
-| `unit tests (vitest)` | ~25s | `e2e` | ~17 min |
+| `unit tests (vitest)` | ~25s | `e2e` | ~30 min (3 shards in parallel) |
 | `mkdocs build (strict)` (path-triggered) | ~20s | `backend pytest` ×2 | ~26–29 min each |
 | `Docs drift guard` (on push) | ~7s | | |
 | `tutorials`, **only when** walkthrough YAML, tour-named source, `frontend/e2e/`, or `tutorials.yml` changed | ~14 min | | |
@@ -86,7 +86,7 @@ cd frontend && npx playwright test e2e/tutorials
 | `tutorials.yml` | Tutorial e2e suite | `frontend/**` or `backend/**` | 0.19 sync `b0a750db14` |
 | `backend-tests.yml` | `backend/tests` | `backend/**` | 0.19 sync `b0a750db14` |
 | `typecheck.yml` | `tsc -b`, vitest, the style check (`style-report.mjs --check`) | `frontend/**` | — (no PsyNeuLink) |
-| `e2e.yml` | Broader e2e (CI subset, `test:e2e:ci` = specs tagged `@ci`) | `frontend/**` | 0.19 sync `b0a750db14` |
+| `e2e.yml` | Broader e2e (CI subset, `test:e2e:ci` = specs tagged `@ci`), in 3 parallel shards plus the `e2e` check ([below](#e2e-shards)) | `frontend/**` | 0.19 sync `b0a750db14` |
 | `container-image.yml` | Builds the deployment image, runs it, converts it to Apptainer | `backend/**`, `frontend/**`, `Dockerfile` | 0.19 sync `b0a750db14` (as `ARG` in the Dockerfile) |
 
 **The pinned ref** (`b0a750db14`, `PSYNEULINK_GIT_REF` in each workflow) is the
@@ -145,6 +145,41 @@ version>`; a hit skips only the download, never the apt deps. The cache is saved
 right after the download rather than at job end, so a job that later fails or is
 cancelled still fills it.
 
+### The e2e shards {#e2e-shards}
+
+`e2e.yml` (#295) runs the `@ci` specs as **3 shards on 3 runners at once**,
+because one runner had grown to about an hour of tests and was hitting its
+75-minute limit. Each shard (`e2e shard 1/3`, `2/3`, `3/3`) installs everything,
+builds the frontend and starts its own servers, exactly as the single job did,
+then runs `playwright test --grep "@ci\b" --shard=N/3`. Playwright hands each
+shard a run of whole spec files in name order, a third of the tests each
+(`workers: 1`, `fullyParallel: false`, so files never split). One failing
+shard doesn't stop the others.
+
+- **One check.** A last job named **`e2e`** passes only if all three shards
+  passed (or if the `changes` job skipped them all). It is the check `devel`'s
+  branch protection requires, so the shard jobs need no protection entry, and
+  adding a shard needs no admin change. It runs even when a shard fails or
+  times out, so the check goes red instead of skipped.
+- **One report.** Each shard uploads a Playwright *blob* report (results,
+  traces, screenshots, videos; kept 1 day). The `e2e` job merges them with
+  `npx playwright merge-reports` into the **`playwright-results-<run id>`**
+  artifact: the HTML report plus `results.json`, kept 14 days after a failure
+  and 3 after a pass. Open it with `npx playwright show-report <folder>`.
+- **Balance.** Playwright splits by test count, not time. Measured against a
+  full `@ci` run (2026-11-18: about 65 minutes of tests in all) and today's
+  127 files, that gives about 21, 21 and 24 minutes of tests per shard, plus
+  about 4 minutes of setup each. If one shard drifts well ahead, read per-file times out of the
+  merged `results.json` (sum each file's test durations) before moving
+  anything; a test-heavy file of short tests and a one-test file of long ones
+  are what tip it.
+- **Timeout.** 75 minutes per shard stays as a safety net.
+- **Manual runs.** "Run workflow" (`gh workflow run e2e.yml --ref <branch> -f
+  mode=ci`) runs the gate's `@ci` suite on any branch; `smoke` and `full` are
+  sharded the same way.
+- **Tutorials** (`tutorials.yml`) is still one job, about 31 to 39 minutes
+  end to end; give it the same treatment if it nears its own limit.
+
 **What CI caches** (#1368). The repo's Actions cache holds 10 GB, and GitHub
 evicts the least recently used entries past that. Kept: the Playwright browsers
 (~250 MB), npm (~70 MB), and pip for the docs build (small). Not kept: pip for
@@ -177,6 +212,15 @@ cd backend && uv run --no-sync pytest tests -q
 
 # Typecheck
 cd frontend && npx tsc -b
+
+# The CI e2e suite, as CI runs it, or just one of its three shards (#295):
+cd frontend && npm run test:e2e:ci
+cd frontend && npm run test:e2e:ci -- --shard=2/3
+# See which spec files a shard would run, without running them:
+cd frontend && npx playwright test --grep "@ci\b" --shard=2/3 --list
+# Open a CI run's merged report (the playwright-results-<run id> artifact):
+gh run download <run id> -n playwright-results-<run id> -D /tmp/pw-report
+npx playwright show-report /tmp/pw-report
 ```
 
 ## Conventions & maintenance
