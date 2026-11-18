@@ -96,3 +96,37 @@ def test_targets_light_up_mechanisms_and_compositions_and_say_why_not():
 def test_a_control_sender_has_no_valid_target():
     targets = _run("connection_targets", sender="ctrl")["targets"]
     assert all(reason for reason in targets.values())
+
+
+BUILT_IN_A_FUNCTION = """import psyneulink as pnl
+
+STATE = 'STATE'
+
+def build():
+    s = pnl.ProcessingMechanism(name=STATE)
+    p = pnl.ProcessingMechanism(name='PREDICTION')
+    return pnl.Composition(name='model', pathways=[[s, p]])
+
+model = build()
+"""
+
+
+def _run_on(source, task, **params):
+    with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as f:
+        f.write(source)
+        path = f.name
+    try:
+        return run_in_sandbox(task, {"file_path": path, **params})
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_a_node_built_inside_a_function_is_refused_with_why():
+    # As in the EGO model: the nodes have names but no variable in the file.
+    result = _run_on(BUILT_IN_A_FUNCTION, "connection_options", sender="STATE", receiver="PREDICTION")
+    assert "inside a function" in result["refused"]
+
+
+def test_nodes_built_inside_a_function_show_why_while_dragging():
+    targets = _run_on(BUILT_IN_A_FUNCTION, "connection_targets", sender="STATE")["targets"]
+    assert "inside a function" in targets["PREDICTION"]

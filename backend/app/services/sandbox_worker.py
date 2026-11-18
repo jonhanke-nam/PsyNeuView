@@ -2112,6 +2112,47 @@ def _composition_holding(pnl, module, *nodes):
     return None
 
 
+def _model_nodes(pnl, module):
+    """Every node of every composition the module names, nested ones too."""
+    seen, out = set(), []
+    stack = [v for k, v in vars(module).items() if not k.startswith("_") and isinstance(v, pnl.Composition)]
+    while stack:
+        comp = stack.pop()
+        if id(comp) in seen:
+            continue
+        seen.add(id(comp))
+        try:
+            nodes = list(comp.nodes)
+        except Exception:
+            continue
+        for node in nodes:
+            if id(node) not in seen:
+                out.append(node)
+                if isinstance(node, pnl.Composition):
+                    stack.append(node)
+                else:
+                    seen.add(id(node))
+    return out
+
+
+def _unnamed_reason(node):
+    return (f"{node.name} is made inside a function, so the file has no name to "
+            "connect it by; add the connection in the code.")
+
+
+def _resolve_end(pnl, module, key):
+    """The node a dragged end names: ``(node, None)``, or ``(None, reason)``
+    for a node the model builds inside a function (EGO's), which has no
+    variable in the file to write a projection with, or ``(None, None)``."""
+    obj = getattr(module, key, None) if key else None
+    if isinstance(obj, (pnl.Mechanism, pnl.Composition)):
+        return obj, None
+    for node in _model_nodes(pnl, module):
+        if key and (node.name == key or re.sub(r"-\d+$", "", node.name) == key):
+            return None, _unnamed_reason(node)
+    return None, None
+
+
 def _connection_options(pnl, module, sender, receiver):
     """What dragging ``sender`` onto ``receiver`` connects (#253): the
     shared rule behind ``connection_options`` and ``connection_targets``.
@@ -2234,8 +2275,12 @@ def task_connection_options(params):
     import psyneulink as pnl
 
     module = load_module(params["file_path"], reset_registry=True, tolerate_exec_error=True)
-    sender = getattr(module, params.get("sender") or "", None)
-    receiver = getattr(module, params.get("receiver") or "", None)
+    sender, why = _resolve_end(pnl, module, params.get("sender"))
+    if why:
+        return {"refused": why}
+    receiver, why = _resolve_end(pnl, module, params.get("receiver"))
+    if why:
+        return {"refused": why}
     if not isinstance(sender, pnl.Mechanism) or not isinstance(receiver, (pnl.Mechanism, pnl.Composition)):
         return {"refused": "Drag from one mechanism to another to connect them."}
     return _connection_options(pnl, module, sender, receiver)
@@ -2251,19 +2296,27 @@ def task_connection_targets(params):
     import psyneulink as pnl
 
     module = load_module(params["file_path"], reset_registry=True, tolerate_exec_error=True)
-    sender = getattr(module, params.get("sender") or "", None)
+    sender, sender_why = _resolve_end(pnl, module, params.get("sender"))
     targets = {}
+    named = set()
     for name, obj in list(vars(module).items()):
         if name.startswith("_") or not isinstance(obj, (pnl.Mechanism, pnl.Composition)):
             continue
+        named.add(id(obj))
         if not isinstance(sender, pnl.Mechanism):
-            targets[name] = "Drag from a mechanism to connect it."
+            targets[name] = sender_why or "Drag from a mechanism to connect it."
             continue
         try:
             result = _connection_options(pnl, module, sender, obj)
         except Exception as e:  # one odd node never hides the others
             result = {"refused": f"Can't tell: {e}"}
         targets[name] = result.get("refused")
+    # Nodes built inside a function have no variable; keyed by their name,
+    # as the canvas keys them, they say why they can't be connected.
+    for node in _model_nodes(pnl, module):
+        key = re.sub(r"-\d+$", "", node.name)
+        if id(node) not in named and key not in targets:
+            targets[key] = sender_why or _unnamed_reason(node)
     return {"targets": targets}
 
 
