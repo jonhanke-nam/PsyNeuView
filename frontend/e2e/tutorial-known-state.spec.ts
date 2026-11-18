@@ -344,6 +344,20 @@ test.describe("Every tutorial starts clean", { tag: "@ci" }, () => {
   });
 });
 
+test.describe("A leftover selection", { tag: "@ci" }, () => {
+  test("doesn't finish step 1 of a fresh start on its own", async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto("/");
+    await startSelecting(page);
+    await selectColorHidden(page);
+    await expect(page.getByTestId("tour-bar")).toContainText("step 2 of 2", { timeout: 10_000 });
+    // Started again with color_hidden still selected: step 1 waits for the learner.
+    await startSelecting(page);
+    await page.waitForTimeout(2_000);
+    await expect(page.getByTestId("tour-bar")).toContainText("step 1 of 2");
+  });
+});
+
 test.describe("A way back when a step goes wrong", { tag: "@ci" }, () => {
   test("Undo my edits since this step began puts the step's code back", async ({ page }) => {
     test.setTimeout(120_000);
