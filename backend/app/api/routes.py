@@ -3701,3 +3701,24 @@ def connection_options_endpoint(request: ConnectionOptionsRequest):
     if "error" in result and "options" not in result and "refused" not in result:
         raise HTTPException(status_code=400, detail=result["error"])
     return result
+
+
+class ConnectionTargetsRequest(BaseModel):
+    file_path: str
+    sender: str
+
+
+@router.post("/model/connection-targets")
+def connection_targets_endpoint(request: ConnectionTargetsRequest):
+    """Which nodes a drag from ``sender`` could be dropped on (#253):
+    ``{"targets": {var_name: null | reason}}``, asked of PsyNeuLink. Lights up
+    valid targets while a connection is being dragged."""
+    path = Path(request.file_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {path}")
+    from app.services.sandbox import run_in_sandbox
+
+    result = run_in_sandbox("connection_targets", {"file_path": str(path), "sender": request.sender})
+    if "targets" not in result:
+        raise HTTPException(status_code=400, detail=result.get("error", "No targets"))
+    return result

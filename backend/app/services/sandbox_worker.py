@@ -2091,28 +2091,37 @@ def _output_labels(comp):
     return labels
 
 
-def task_connection_options(params):
-    """What a drag from one node to another would connect (#253).
+def _var_name_of(module, obj):
+    """The model's variable name for ``obj``, or None."""
+    for name, value in vars(module).items():
+        if value is obj and not name.startswith("_"):
+            return name
+    return None
 
-    Asks PsyNeuLink, on the model's own objects, rather than a table kept by
-    hand: both ends must be mechanisms, and different ones; a sender that is a
-    control, gating or learning mechanism is not connected by dragging yet
-    (its projection targets a parameter, a port or an arrow, which needs a
-    choice the gesture can't make on its own: #253's second stage); an
-    existing connection between the two is not made twice. Otherwise it is a
-    MappingProjection from the sender's primary output port, with one option
-    per input port of the receiver.
 
-    Returns ``{"options": [{type, sender_port, receiver_port}]}`` or
-    ``{"refused": "<plain reason>"}``.
+def _composition_holding(pnl, module, *nodes):
+    """Variable name of the composition that has all of ``nodes`` as its own
+    nodes (the one a projection between them is added to), or None."""
+    for name, value in vars(module).items():
+        if isinstance(value, pnl.Composition) and not name.startswith("_"):
+            try:
+                if all(n in value.nodes for n in nodes):
+                    return name
+            except Exception:
+                continue
+    return None
+
+
+def _connection_options(pnl, module, sender, receiver):
+    """What dragging ``sender`` onto ``receiver`` connects (#253): the
+    shared rule behind ``connection_options`` and ``connection_targets``.
+
+    Returns ``{"options": [...]}`` or ``{"refused": "<plain reason>"}``.
     """
-    import psyneulink as pnl
-
-    module = load_module(params["file_path"], reset_registry=True, tolerate_exec_error=True)
-    sender = getattr(module, params.get("sender") or "", None)
-    receiver = getattr(module, params.get("receiver") or "", None)
-    if not isinstance(sender, pnl.Mechanism) or not isinstance(receiver, pnl.Mechanism):
-        return {"refused": "Drag from one mechanism to another to connect them."}
+    if not isinstance(sender, pnl.Mechanism):
+        return {"refused": "Drag from a mechanism to connect it."}
+    if not isinstance(receiver, (pnl.Mechanism, pnl.Composition)):
+        return {"refused": "Drop on a mechanism or a collapsed composition to connect."}
     if sender is receiver:
         return {"refused": "A mechanism can't be connected to itself by dragging."}
     kinds = [
@@ -2127,17 +2136,135 @@ def task_connection_options(params):
                 f"{sender.name} is {what}. Its projections go to a parameter, a port "
                 "or an arrow, which dragging can't choose yet; add it in the code for now."
             )}
+    if not sender.output_ports:
+        return {"refused": f"{sender.name} has no output to connect."}
+    out = sender.output_ports[0].name
+    if isinstance(receiver, pnl.Composition):
+        return _options_into_composition(pnl, module, sender, receiver, out)
     for proj in getattr(receiver, "path_afferents", []):
         owner = getattr(getattr(proj, "sender", None), "owner", None)
         if owner is sender:
             return {"refused": f"{sender.name} is already connected to {receiver.name}."}
-    if not sender.output_ports or not receiver.input_ports:
-        return {"refused": f"{sender.name} has no output, or {receiver.name} no input, to connect."}
-    out = sender.output_ports[0].name
+    if not receiver.input_ports:
+        return {"refused": f"{receiver.name} has no input to connect."}
+    # The composition holding both ends, so the projection is added there;
+    # left out when none does (ends in different compositions).
+    holder = _composition_holding(pnl, module, sender, receiver)
+    extra = {"composition": holder} if holder else {}
     return {"options": [
-        {"type": "MappingProjection", "sender_port": out, "receiver_port": port.name}
+        {"type": "MappingProjection", "sender_port": out, "receiver_port": port.name, **extra}
         for port in receiver.input_ports
     ]}
+
+
+def _options_into_composition(pnl, module, sender, comp, out):
+    """A mechanism dropped on a (collapsed) composition: a MappingProjection
+    into one of the composition's INPUT nodes, as PsyNeuLink routes it through
+    the composition's input interface. One option per input port of each
+    input mechanism; nodes already fed by ``sender`` are left out."""
+    try:
+        if sender in comp.nodes:
+            return {"refused": f"{sender.name} is inside {comp.name}; connect it to a node there."}
+    except Exception:
+        pass
+    holder = _composition_holding(pnl, module, sender, comp)
+    if holder is None:
+        return {"refused": f"{sender.name} and {comp.name} aren't in the same composition."}
+    try:
+        comp._analyze_graph()
+    except Exception:
+        pass
+    from app.services.pathway_learning import is_generated_learning_node
+
+    already = set()
+    try:
+        for cim_port in comp.input_CIM.input_ports:
+            if any(getattr(getattr(p, "sender", None), "owner", None) is sender
+                   for p in cim_port.path_afferents):
+                _port, node, _c = comp.input_CIM._get_destination_info_from_input_CIM(cim_port)
+                already.add(id(node))
+    except Exception:
+        pass
+
+    options = []
+    for node in comp.get_nodes_by_role(pnl.NodeRole.INPUT):
+        # Mechanisms only: a composition nested deeper is connected inside it.
+        if not isinstance(node, pnl.Mechanism) or is_generated_learning_node(comp, node):
+            continue
+        if id(node) in already:
+            continue
+        var = _var_name_of(module, node)
+        if var is None:
+            continue
+        several = len(node.input_ports) > 1
+        for port in node.input_ports:
+            options.append({
+                "type": "MappingProjection",
+                "sender_port": out,
+                "receiver": var,
+                "receiver_port": port.name,
+                "label": f"{node.name}: {port.name}" if several else node.name,
+                "composition": holder,
+            })
+    if not options:
+        if already:
+            return {"refused": f"{sender.name} is already connected to {comp.name}."}
+        return {"refused": f"{comp.name} has no input mechanism to connect into."}
+    return {"options": options}
+
+
+def task_connection_options(params):
+    """What a drag from one node to another would connect (#253).
+
+    Asks PsyNeuLink, on the model's own objects, rather than a table kept by
+    hand: the sender must be a mechanism; the receiver a different mechanism,
+    or a collapsed composition (then into one of its input nodes); a sender
+    that is a control, gating or learning mechanism is not connected by
+    dragging yet (its projection targets a parameter, a port or an arrow,
+    which needs design input: #253's later stage); an existing connection
+    between the two is not made twice. Otherwise it is a MappingProjection
+    from the sender's primary output port, with one option per input port of
+    the receiver (or of each of the composition's input nodes).
+
+    Returns ``{"options": [{type, sender_port, receiver_port, ...}]}`` or
+    ``{"refused": "<plain reason>"}``. An option into a composition also
+    names its ``receiver`` node, a ``label`` and the ``composition`` to add
+    the projection to.
+    """
+    import psyneulink as pnl
+
+    module = load_module(params["file_path"], reset_registry=True, tolerate_exec_error=True)
+    sender = getattr(module, params.get("sender") or "", None)
+    receiver = getattr(module, params.get("receiver") or "", None)
+    if not isinstance(sender, pnl.Mechanism) or not isinstance(receiver, (pnl.Mechanism, pnl.Composition)):
+        return {"refused": "Drag from one mechanism to another to connect them."}
+    return _connection_options(pnl, module, sender, receiver)
+
+
+def task_connection_targets(params):
+    """Every node a drag from ``sender`` could be dropped on, and why not for
+    the rest (#253): lights up valid targets while the drag is in progress.
+
+    Returns ``{"targets": {var_name: null | "<reason>"}}`` over the model's
+    mechanisms and compositions; ``null`` means the drop connects.
+    """
+    import psyneulink as pnl
+
+    module = load_module(params["file_path"], reset_registry=True, tolerate_exec_error=True)
+    sender = getattr(module, params.get("sender") or "", None)
+    targets = {}
+    for name, obj in list(vars(module).items()):
+        if name.startswith("_") or not isinstance(obj, (pnl.Mechanism, pnl.Composition)):
+            continue
+        if not isinstance(sender, pnl.Mechanism):
+            targets[name] = "Drag from a mechanism to connect it."
+            continue
+        try:
+            result = _connection_options(pnl, module, sender, obj)
+        except Exception as e:  # one odd node never hides the others
+            result = {"refused": f"Can't tell: {e}"}
+        targets[name] = result.get("refused")
+    return {"targets": targets}
 
 
 def task_get_input_nodes(params):
@@ -4131,6 +4258,7 @@ def _handle_one_task(payload_str: str) -> str:
         "export_mdf": task_export_mdf,
         "mdf_gaps": task_mdf_gaps,
         "connection_options": task_connection_options,
+        "connection_targets": task_connection_targets,
     }
 
     try:
