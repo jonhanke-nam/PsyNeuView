@@ -41,6 +41,7 @@ import {
 import { SettingsPanel } from "@/components/common/SettingsPanel";
 import { DeveloperBadge } from "@/components/common/DeveloperBadge";
 import { DeveloperModeIndicator } from "./DeveloperModeIndicator";
+import { HelpMenu, OPEN_TUTORIALS_MENU } from "./HelpMenu";
 import { onOpenSettings, type SettingsSectionId } from "@/components/common/settings/sections";
 import { onOpenSettingsRequest } from "@/utils/macAppSettings";
 import {
@@ -2476,6 +2477,9 @@ export function Toolbar() {
           when presence can't be determined, which is every local run. */}
       <PresenceIndicator />
 
+      {/* Help ▾ (#292): last, at the right-hand end, so it moves nothing else. */}
+      <HelpMenu />
+
       <SettingsPanel
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -3404,6 +3408,15 @@ function WalkthroughMenu() {
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [open]);
   useDismiss(open, () => setOpen(false));
+  // Help ▸ Tutorials and walkthroughs opens this menu (#292).
+  useEffect(() => {
+    const show = () => {
+      recordActivity("menu", "Tutorials menu opened");
+      setOpen(true);
+    };
+    window.addEventListener(OPEN_TUTORIALS_MENU, show);
+    return () => window.removeEventListener(OPEN_TUTORIALS_MENU, show);
+  }, []);
 
   // #136: the course's section can be hidden from Settings; hidden means
   // left out of the menu, nothing more (a course walkthrough still opens
