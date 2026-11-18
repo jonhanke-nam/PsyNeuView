@@ -61,6 +61,7 @@ Escape, which every row has.
 | History | dialog | `common/HistoryPanel.tsx` | `history-panel` | the History button | ×, click outside, the History button |
 | Advanced Graph View Options | dialog | `graph/GraphViewOptionsMenu.tsx` | `graph-view-options-menu` | Advanced Graph View Options ▾ in the graph toolbar (it took in the More menu, #123) | ×, its button, click outside; stays open while you change options |
 | Node context menu | menu | `graph/NodeContextMenu.tsx` | `node-context-menu` | a secondary click (Control-click, right-click) on a node | click outside, a pick |
+| Port chooser | menu | `graph/PortChooser.tsx` | `port-chooser` | dragging a connection onto a node with several input ports (#253) | click outside, a pick |
 | Arrow context menu | menu | `graph/GraphMenus.tsx` | `edge-context-menu` | a secondary click on an arrow (#261) | click outside, a pick |
 | Canvas context menu | menu | `graph/GraphMenus.tsx` | `canvas-context-menu` | a secondary click on empty canvas (#261) | click outside, a pick |
 | Palette's compact flyout | menu | `graph/PaletteSidebar.tsx` | `palette-compact-flyout` | a category in the compact palette | click outside, the category again, its ‹ |

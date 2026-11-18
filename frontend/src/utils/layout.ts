@@ -17,6 +17,7 @@ import { placeCims } from "./cimPlacement";
 import { ovalBoxFor } from "./nodeBox";
 import { tidyIoRows } from "./ioRows";
 import { ioRowsNotApplying, useIoRowsStore, type IoRows } from "@/stores/ioRowsStore";
+import { currentSpacingFactor } from "@/stores/layoutSpacingStore";
 
 interface LayoutOptions {
   direction?: "TB" | "BT" | "LR" | "RL";
@@ -31,6 +32,9 @@ interface LayoutOptions {
   // Settings ▸ Appearance ▸ Keep inputs on the bottom and outputs on top
   // (#219); read from the setting when not given.
   ioRows?: IoRows;
+  // Settings ▸ Appearance ▸ Spacing between nodes (#278): the factor the gaps
+  // are scaled by. applyDagreLayout alone takes 1; applyLayout reads the setting.
+  spacingFactor?: number;
 }
 
 /** Height of one edge label including padding and buffer. */
@@ -120,11 +124,14 @@ export function applyDagreLayout(
     direction = "TB",
     nodeWidth = LAYERED_NODE_WIDTH,
     nodeHeight = 60,
-    nodeSep = 60,
   } = options;
+  // #278: Spacing between nodes scales the gaps; edge labels still get room
+  // (computeMinRankSep), so a compact layout never stacks them.
+  const spacing = options.spacingFactor ?? 1;
+  const nodeSep = (options.nodeSep ?? 60) * spacing;
 
   // Compute dynamic rankSep based on edge density
-  const baseRankSep = options.rankSep ?? 120;
+  const baseRankSep = (options.rankSep ?? 120) * spacing;
   const rankSep = computeMinRankSep(nodes, edges, baseRankSep);
 
   const g = new Dagre.graphlib.Graph({ compound: true });
@@ -796,10 +803,19 @@ function layOut(
         return placed.nodes;
       }
       useShowGraphCurves.getState().clear();
-      return applyDagreLayout(nodes, edges, { ...options, direction: "BT", insetSizes });
+      return applyDagreLayout(nodes, edges, {
+        ...options,
+        direction: "BT",
+        insetSizes,
+        spacingFactor: options.spacingFactor ?? currentSpacingFactor("showgraph"),
+      });
     }
     case "layered":
     default:
-      return applyDagreLayout(nodes, edges, { ...options, insetSizes });
+      return applyDagreLayout(nodes, edges, {
+        ...options,
+        insetSizes,
+        spacingFactor: options.spacingFactor ?? currentSpacingFactor("layered"),
+      });
   }
 }

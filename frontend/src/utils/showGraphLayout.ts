@@ -23,6 +23,7 @@
  * placement for the current graph exists, the Layered layout stands in.
  */
 
+import { currentSpacingFactor } from "@/stores/layoutSpacingStore";
 import { withBusy } from "@/stores/busyStore";
 import type { Edge, Node } from "@xyflow/react";
 import type { Point, ShowGraphCurve } from "@/stores/showGraphCurvesStore";
@@ -341,7 +342,12 @@ const GAP_Y = 36;
 export function scaleFor(
   nodes: Node[],
   placement: ShowGraphPlacement,
+  // #278: Spacing between nodes. 1 is show_graph's own; the least gaps
+  // between boxes scale with it, so boxes still never touch.
+  spacing = 1,
 ): { sx: number; sy: number } {
+  const gapX = GAP_X * spacing;
+  const gapY = GAP_Y * spacing;
   const placed: { x: number; y: number; w: number; h: number }[] = [];
   for (const n of nodes) {
     if (n.type !== "mechanismNode") continue;
@@ -355,20 +361,20 @@ export function scaleFor(
     const key = Math.round(p.y);
     (rows.get(key) ?? rows.set(key, []).get(key)!).push(p);
   }
-  let scale = MIN_SCALE;
+  let scale = MIN_SCALE * spacing;
   for (const row of rows.values()) {
     row.sort((a, b) => a.x - b.x);
     for (let i = 1; i < row.length; i++) {
       const [a, b] = [row[i - 1], row[i]];
       const dx = b.x - a.x;
-      if (dx > 0) scale = Math.max(scale, ((a.w + b.w) / 2 + GAP_X) / dx);
+      if (dx > 0) scale = Math.max(scale, ((a.w + b.w) / 2 + gapX) / dx);
     }
   }
   const ys = [...rows.keys()].sort((a, b) => a - b);
   for (let i = 1; i < ys.length; i++) {
     const tallest = (y: number) => Math.max(...rows.get(y)!.map((p) => p.h));
     const dy = ys[i] - ys[i - 1];
-    if (dy > 0) scale = Math.max(scale, ((tallest(ys[i]) + tallest(ys[i - 1])) / 2 + GAP_Y) / dy);
+    if (dy > 0) scale = Math.max(scale, ((tallest(ys[i]) + tallest(ys[i - 1])) / 2 + gapY) / dy);
   }
   scale = Math.min(scale, MAX_SCALE);
   return { sx: scale, sy: scale };
@@ -427,7 +433,7 @@ export function placementFits(nodes: Node[], placement: ShowGraphPlacement | nul
 function place(nodes: Node[], placement: ShowGraphPlacement | null): Placed | null {
   if (!placement || !placementFits(nodes, placement)) return null;
 
-  const { sx, sy } = scaleFor(nodes, placement);
+  const { sx, sy } = scaleFor(nodes, placement, currentSpacingFactor("showgraph"));
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const absTopLeft = new Map<string, { x: number; y: number }>();
   const frameSize = new Map<string, { w: number; h: number }>();

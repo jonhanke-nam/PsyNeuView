@@ -14,6 +14,7 @@ developer-mode-marking.spec.ts
 developer-tests-loader.spec.ts
 diagnostics.spec.ts
 dialog-sweep.spec.ts
+drag-to-connect.spec.ts
 drop-new-model-file.spec.ts
 edge-line-width.spec.ts
 edge-routing-no-crossings.spec.ts
@@ -32,6 +33,7 @@ graph-legend.spec.ts
 graph-pointer-hand-size.spec.ts
 graph-pointer-precise.spec.ts
 graph-pointer.spec.ts
+graph-selection-menu.spec.ts
 graph-view-options.spec.ts
 gsc-edge-ids.spec.ts
 gsc-row-selects-edge.spec.ts
@@ -43,6 +45,7 @@ layout-default-fresh-profile.spec.ts
 layout-default-show-graph.spec.ts
 layout-graph-only-default.spec.ts
 layout-mode-per-view.spec.ts
+layout-spacing.spec.ts
 learn-pathway.spec.ts
 learning-nodes-run-inspector.spec.ts
 live-preview-background.spec.ts

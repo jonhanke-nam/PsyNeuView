@@ -54,6 +54,24 @@ def test_remove_node(tmp_model):
     assert "stroop_model.add_node(words_input)" not in result
 
 
+def test_remove_nodes_removes_a_selection_in_one_write(tmp_model, monkeypatch):
+    """#261: deleting a multi-selection is one change to the file, so one Undo."""
+    import app.services.file_writer as fw
+
+    writes = []
+    real = fw.write_generated_source
+    monkeypatch.setattr(fw, "write_generated_source", lambda *a, **k: (writes.append(a), real(*a, **k))[1])
+    result = apply_structural_change(tmp_model, {
+        "action": "remove_nodes",
+        "var_names": ["colors_input", "words_input"],
+    })
+    for name in ("colors_input", "words_input"):
+        assert f"{name} = pnl.TransferMechanism(" not in result
+        assert f"stroop_model.add_node({name})" not in result
+    assert "response = pnl.TransferMechanism(" in result
+    assert len(writes) == 1
+
+
 def test_remove_node_valid_model(tmp_model):
     # First remove the projection that depends on words_input
     apply_structural_change(tmp_model, {

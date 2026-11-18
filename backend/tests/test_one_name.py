@@ -22,6 +22,9 @@ ALLOWED = {
     "backend/tests/test_one_name.py",
     "frontend/src/migrateStorageNames.ts",
     "frontend/src/migrateStorageNames.test.ts",
+    # The code scan's old-name check looks for it, and its tests write it (#243).
+    "scripts/code_scan.py",
+    "backend/tests/test_code_scan.py",
 }
 
 

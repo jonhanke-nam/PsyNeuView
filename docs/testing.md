@@ -119,6 +119,18 @@ that `make install` takes the pip route with no uv, a broken uv, or
 and on demand, and isn't a required check: an upstream release can break it
 with no change here, and that is for fixing, not for blocking unrelated PRs.
 
+**The code scan** (`code-scan.yml`, script `scripts/code_scan.py`, #243). Checks
+across PsyNeuView and the Mac app for patterns no single PR shows: two files
+whose names differ only in capitals, pip where uv belongs, a `[tool.uv.sources]`
+pin of PsyNeuLink, the product's old name, platform checks on
+`navigator.platform`, `shell=True`, and TODOs with no issue. The report goes in
+the run's summary (and locally to `.planning/code-scan/`). It runs on every
+`devel` merge, on demand, and on PRs that change the scanner; it fails, and
+comments on #243, only on a new high-severity finding, one no open `code-scan`
+issue names by its `scan:<id>`. Not a required check. Its own tests are
+`backend/tests/test_code_scan.py`. New checks come from bugs that turn out to
+be patterns; add them there and on #243.
+
 **Path filters** keep doc-only or unrelated PRs from spending CI minutes.
 
 **Playwright browser install** (`e2e.yml`, `tutorials.yml`; #931). The install
