@@ -1,0 +1,1120 @@
+[
+ {
+  "model": "deep_nested.py",
+  "import_s": 1.86,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.34,
+  "compositions": 3,
+  "run_s": 0.06,
+  "runs": [
+   {
+    "name": "inner",
+    "ok": false,
+    "error": "RunError: \"The following items specified in the 'inputs' arg of the run() method for 'inner' are not INPUT Nodes of that Composition (nor InputPorts of them): 'inner_a'.\""
+   },
+   {
+    "name": "mid",
+    "ok": false,
+    "error": "RunError: \"The following items specified in the 'inputs' arg of the run() method for 'mid' are not INPUT Nodes of that Composition (nor InputPorts of them): 'mid_a'.\""
+   },
+   {
+    "name": "outer",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "list_marker_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "read_hidden_marker": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_outside_out_dir": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_into_model_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEV"
+   },
+   "tcp_connect_localhost": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "dns_lookup": {
+    "blocked": true,
+    "error": "gaierror: [Errno 8] nodename nor servname provided, or not known"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "7"
+   },
+   "subprocess_ls": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "subprocess_python": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "fork": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   }
+  },
+  "total_s": 2.27,
+  "sandboxed": true,
+  "wall_s": 2.66,
+  "escaped_write_exists": false
+ },
+ {
+  "model": "deep_nested.py",
+  "import_s": 1.78,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.34,
+  "compositions": 3,
+  "run_s": 0.06,
+  "runs": [
+   {
+    "name": "inner",
+    "ok": false,
+    "error": "RunError: \"The following items specified in the 'inputs' arg of the run() method for 'inner' are not INPUT Nodes of that Composition (nor InputPorts of them): 'inner_a'.\""
+   },
+   {
+    "name": "mid",
+    "ok": false,
+    "error": "RunError: \"The following items specified in the 'inputs' arg of the run() method for 'mid' are not INPUT Nodes of that Composition (nor InputPorts of them): 'mid_a'.\""
+   },
+   {
+    "name": "outer",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": false,
+    "got": "MARKER: this must not be readable from inside\n"
+   },
+   "list_marker_folder": {
+    "blocked": false,
+    "got": "['.marker-dotfile', 'secret-marker.txt']"
+   },
+   "read_hidden_marker": {
+    "blocked": false,
+    "got": "MARKER dotfile\n"
+   },
+   "write_outside_out_dir": {
+    "blocked": false,
+    "got": "/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositories-psyneulink-r"
+   },
+   "write_into_model_folder": {
+    "blocked": false,
+    "got": "/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEVELOPMENT_FOLDERS"
+   },
+   "tcp_connect_localhost": {
+    "blocked": false,
+    "got": "connected"
+   },
+   "dns_lookup": {
+    "blocked": false,
+    "got": "('172.66.147.243', 80)"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "8"
+   },
+   "subprocess_ls": {
+    "blocked": false,
+    "got": "0"
+   },
+   "subprocess_python": {
+    "blocked": false,
+    "got": "0"
+   },
+   "fork": {
+    "blocked": false,
+    "got": "42537"
+   }
+  },
+  "total_s": 2.24,
+  "sandboxed": false,
+  "wall_s": 2.62,
+  "escaped_write_exists": true
+ },
+ {
+  "model": "gsc_afternodes.py",
+  "import_s": 1.78,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.29,
+  "compositions": 1,
+  "run_s": 0.02,
+  "runs": [
+   {
+    "name": "gsc_afternodes",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "list_marker_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "read_hidden_marker": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_outside_out_dir": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_into_model_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEV"
+   },
+   "tcp_connect_localhost": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "dns_lookup": {
+    "blocked": true,
+    "error": "gaierror: [Errno 8] nodename nor servname provided, or not known"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "7"
+   },
+   "subprocess_ls": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "subprocess_python": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "fork": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   }
+  },
+  "total_s": 2.09,
+  "sandboxed": true,
+  "wall_s": 2.47,
+  "escaped_write_exists": false
+ },
+ {
+  "model": "gsc_afternodes.py",
+  "import_s": 1.81,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.28,
+  "compositions": 1,
+  "run_s": 0.02,
+  "runs": [
+   {
+    "name": "gsc_afternodes",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": false,
+    "got": "MARKER: this must not be readable from inside\n"
+   },
+   "list_marker_folder": {
+    "blocked": false,
+    "got": "['.marker-dotfile', 'secret-marker.txt']"
+   },
+   "read_hidden_marker": {
+    "blocked": false,
+    "got": "MARKER dotfile\n"
+   },
+   "write_outside_out_dir": {
+    "blocked": false,
+    "got": "/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositories-psyneulink-r"
+   },
+   "write_into_model_folder": {
+    "blocked": false,
+    "got": "/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEVELOPMENT_FOLDERS"
+   },
+   "tcp_connect_localhost": {
+    "blocked": false,
+    "got": "connected"
+   },
+   "dns_lookup": {
+    "blocked": false,
+    "got": "('172.66.147.243', 80)"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "8"
+   },
+   "subprocess_ls": {
+    "blocked": false,
+    "got": "0"
+   },
+   "subprocess_python": {
+    "blocked": false,
+    "got": "0"
+   },
+   "fork": {
+    "blocked": false,
+    "got": "42545"
+   }
+  },
+  "total_s": 2.15,
+  "sandboxed": false,
+  "wall_s": 2.53,
+  "escaped_write_exists": true
+ },
+ {
+  "model": "nested_minimal.py",
+  "import_s": 1.8,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.26,
+  "compositions": 2,
+  "run_s": 0.05,
+  "runs": [
+   {
+    "name": "inner_comp",
+    "ok": false,
+    "error": "RunError: \"The following items specified in the 'inputs' arg of the run() method for 'inner_comp' are not INPUT Nodes of that Composition (nor InputPorts of them): 'inner"
+   },
+   {
+    "name": "nested_minimal",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "list_marker_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "read_hidden_marker": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_outside_out_dir": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_into_model_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEV"
+   },
+   "tcp_connect_localhost": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "dns_lookup": {
+    "blocked": true,
+    "error": "gaierror: [Errno 8] nodename nor servname provided, or not known"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "7"
+   },
+   "subprocess_ls": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "subprocess_python": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "fork": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   }
+  },
+  "total_s": 2.12,
+  "sandboxed": true,
+  "wall_s": 2.49,
+  "escaped_write_exists": false
+ },
+ {
+  "model": "nested_minimal.py",
+  "import_s": 1.8,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.24,
+  "compositions": 2,
+  "run_s": 0.05,
+  "runs": [
+   {
+    "name": "inner_comp",
+    "ok": false,
+    "error": "RunError: \"The following items specified in the 'inputs' arg of the run() method for 'inner_comp' are not INPUT Nodes of that Composition (nor InputPorts of them): 'inner"
+   },
+   {
+    "name": "nested_minimal",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": false,
+    "got": "MARKER: this must not be readable from inside\n"
+   },
+   "list_marker_folder": {
+    "blocked": false,
+    "got": "['.marker-dotfile', 'secret-marker.txt']"
+   },
+   "read_hidden_marker": {
+    "blocked": false,
+    "got": "MARKER dotfile\n"
+   },
+   "write_outside_out_dir": {
+    "blocked": false,
+    "got": "/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositories-psyneulink-r"
+   },
+   "write_into_model_folder": {
+    "blocked": false,
+    "got": "/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEVELOPMENT_FOLDERS"
+   },
+   "tcp_connect_localhost": {
+    "blocked": false,
+    "got": "connected"
+   },
+   "dns_lookup": {
+    "blocked": false,
+    "got": "('172.66.147.243', 80)"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "8"
+   },
+   "subprocess_ls": {
+    "blocked": false,
+    "got": "0"
+   },
+   "subprocess_python": {
+    "blocked": false,
+    "got": "0"
+   },
+   "fork": {
+    "blocked": false,
+    "got": "42598"
+   }
+  },
+  "total_s": 2.15,
+  "sandboxed": false,
+  "wall_s": 2.53,
+  "escaped_write_exists": true
+ },
+ {
+  "model": "recurrent_self.py",
+  "import_s": 1.85,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.09,
+  "compositions": 1,
+  "run_s": 0.03,
+  "runs": [
+   {
+    "name": "recurrent_self",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "list_marker_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "read_hidden_marker": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_outside_out_dir": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_into_model_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEV"
+   },
+   "tcp_connect_localhost": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "dns_lookup": {
+    "blocked": true,
+    "error": "gaierror: [Errno 8] nodename nor servname provided, or not known"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "7"
+   },
+   "subprocess_ls": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "subprocess_python": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "fork": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   }
+  },
+  "total_s": 1.98,
+  "sandboxed": true,
+  "wall_s": 2.32,
+  "escaped_write_exists": false
+ },
+ {
+  "model": "recurrent_self.py",
+  "import_s": 1.81,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.1,
+  "compositions": 1,
+  "run_s": 0.04,
+  "runs": [
+   {
+    "name": "recurrent_self",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": false,
+    "got": "MARKER: this must not be readable from inside\n"
+   },
+   "list_marker_folder": {
+    "blocked": false,
+    "got": "['.marker-dotfile', 'secret-marker.txt']"
+   },
+   "read_hidden_marker": {
+    "blocked": false,
+    "got": "MARKER dotfile\n"
+   },
+   "write_outside_out_dir": {
+    "blocked": false,
+    "got": "/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositories-psyneulink-r"
+   },
+   "write_into_model_folder": {
+    "blocked": false,
+    "got": "/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEVELOPMENT_FOLDERS"
+   },
+   "tcp_connect_localhost": {
+    "blocked": false,
+    "got": "connected"
+   },
+   "dns_lookup": {
+    "blocked": false,
+    "got": "('172.66.147.243', 80)"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "8"
+   },
+   "subprocess_ls": {
+    "blocked": false,
+    "got": "0"
+   },
+   "subprocess_python": {
+    "blocked": false,
+    "got": "0"
+   },
+   "fork": {
+    "blocked": false,
+    "got": "42611"
+   }
+  },
+  "total_s": 1.99,
+  "sandboxed": false,
+  "wall_s": 2.36,
+  "escaped_write_exists": true
+ },
+ {
+  "model": "single_transfer.py",
+  "import_s": 1.81,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.07,
+  "compositions": 1,
+  "run_s": 0.04,
+  "runs": [
+   {
+    "name": "single_transfer",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "list_marker_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "read_hidden_marker": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_outside_out_dir": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_into_model_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEV"
+   },
+   "tcp_connect_localhost": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "dns_lookup": {
+    "blocked": true,
+    "error": "gaierror: [Errno 8] nodename nor servname provided, or not known"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "7"
+   },
+   "subprocess_ls": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "subprocess_python": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "fork": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   }
+  },
+  "total_s": 1.91,
+  "sandboxed": true,
+  "wall_s": 2.24,
+  "escaped_write_exists": false
+ },
+ {
+  "model": "single_transfer.py",
+  "import_s": 1.81,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.06,
+  "compositions": 1,
+  "run_s": 0.03,
+  "runs": [
+   {
+    "name": "single_transfer",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": false,
+    "got": "MARKER: this must not be readable from inside\n"
+   },
+   "list_marker_folder": {
+    "blocked": false,
+    "got": "['.marker-dotfile', 'secret-marker.txt']"
+   },
+   "read_hidden_marker": {
+    "blocked": false,
+    "got": "MARKER dotfile\n"
+   },
+   "write_outside_out_dir": {
+    "blocked": false,
+    "got": "/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositories-psyneulink-r"
+   },
+   "write_into_model_folder": {
+    "blocked": false,
+    "got": "/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEVELOPMENT_FOLDERS"
+   },
+   "tcp_connect_localhost": {
+    "blocked": false,
+    "got": "connected"
+   },
+   "dns_lookup": {
+    "blocked": false,
+    "got": "('172.66.147.243', 80)"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "8"
+   },
+   "subprocess_ls": {
+    "blocked": false,
+    "got": "0"
+   },
+   "subprocess_python": {
+    "blocked": false,
+    "got": "0"
+   },
+   "fork": {
+    "blocked": false,
+    "got": "42635"
+   }
+  },
+  "total_s": 1.96,
+  "sandboxed": false,
+  "wall_s": 2.31,
+  "escaped_write_exists": true
+ },
+ {
+  "model": "two_input_nodes.py",
+  "import_s": 1.84,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.1,
+  "compositions": 1,
+  "run_s": 0.07,
+  "runs": [
+   {
+    "name": "two_input_nodes",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "list_marker_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "read_hidden_marker": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_outside_out_dir": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_into_model_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEV"
+   },
+   "tcp_connect_localhost": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "dns_lookup": {
+    "blocked": true,
+    "error": "gaierror: [Errno 8] nodename nor servname provided, or not known"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "7"
+   },
+   "subprocess_ls": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "subprocess_python": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "fork": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   }
+  },
+  "total_s": 2.0,
+  "sandboxed": true,
+  "wall_s": 2.36,
+  "escaped_write_exists": false
+ },
+ {
+  "model": "two_input_nodes.py",
+  "import_s": 1.82,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.09,
+  "compositions": 1,
+  "run_s": 0.07,
+  "runs": [
+   {
+    "name": "two_input_nodes",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": false,
+    "got": "MARKER: this must not be readable from inside\n"
+   },
+   "list_marker_folder": {
+    "blocked": false,
+    "got": "['.marker-dotfile', 'secret-marker.txt']"
+   },
+   "read_hidden_marker": {
+    "blocked": false,
+    "got": "MARKER dotfile\n"
+   },
+   "write_outside_out_dir": {
+    "blocked": false,
+    "got": "/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositories-psyneulink-r"
+   },
+   "write_into_model_folder": {
+    "blocked": false,
+    "got": "/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEVELOPMENT_FOLDERS"
+   },
+   "tcp_connect_localhost": {
+    "blocked": false,
+    "got": "connected"
+   },
+   "dns_lookup": {
+    "blocked": false,
+    "got": "('172.66.147.243', 80)"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "8"
+   },
+   "subprocess_ls": {
+    "blocked": false,
+    "got": "0"
+   },
+   "subprocess_python": {
+    "blocked": false,
+    "got": "0"
+   },
+   "fork": {
+    "blocked": false,
+    "got": "42675"
+   }
+  },
+  "total_s": 2.04,
+  "sandboxed": false,
+  "wall_s": 2.42,
+  "escaped_write_exists": true
+ },
+ {
+  "model": "two_mech_projection.py",
+  "import_s": 1.89,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.11,
+  "compositions": 1,
+  "run_s": 0.04,
+  "runs": [
+   {
+    "name": "two_mech_projection",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "list_marker_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "read_hidden_marker": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_outside_out_dir": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_into_model_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEV"
+   },
+   "tcp_connect_localhost": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "dns_lookup": {
+    "blocked": true,
+    "error": "gaierror: [Errno 8] nodename nor servname provided, or not known"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "7"
+   },
+   "subprocess_ls": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "subprocess_python": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "fork": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   }
+  },
+  "total_s": 2.05,
+  "sandboxed": true,
+  "wall_s": 2.44,
+  "escaped_write_exists": false
+ },
+ {
+  "model": "two_mech_projection.py",
+  "import_s": 1.94,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.11,
+  "compositions": 1,
+  "run_s": 0.04,
+  "runs": [
+   {
+    "name": "two_mech_projection",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": false,
+    "got": "MARKER: this must not be readable from inside\n"
+   },
+   "list_marker_folder": {
+    "blocked": false,
+    "got": "['.marker-dotfile', 'secret-marker.txt']"
+   },
+   "read_hidden_marker": {
+    "blocked": false,
+    "got": "MARKER dotfile\n"
+   },
+   "write_outside_out_dir": {
+    "blocked": false,
+    "got": "/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositories-psyneulink-r"
+   },
+   "write_into_model_folder": {
+    "blocked": false,
+    "got": "/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEVELOPMENT_FOLDERS"
+   },
+   "tcp_connect_localhost": {
+    "blocked": false,
+    "got": "connected"
+   },
+   "dns_lookup": {
+    "blocked": false,
+    "got": "('172.66.147.243', 80)"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "8"
+   },
+   "subprocess_ls": {
+    "blocked": false,
+    "got": "0"
+   },
+   "subprocess_python": {
+    "blocked": false,
+    "got": "0"
+   },
+   "fork": {
+    "blocked": false,
+    "got": "42690"
+   }
+  },
+  "total_s": 2.13,
+  "sandboxed": false,
+  "wall_s": 2.5,
+  "escaped_write_exists": true
+ },
+ {
+  "model": "with_controller.py",
+  "import_s": 1.91,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.15,
+  "compositions": 1,
+  "run_s": 0.01,
+  "runs": [
+   {
+    "name": "with_controller",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "list_marker_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "read_hidden_marker": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_outside_out_dir": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositor"
+   },
+   "write_into_model_folder": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted: '/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEV"
+   },
+   "tcp_connect_localhost": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "dns_lookup": {
+    "blocked": true,
+    "error": "gaierror: [Errno 8] nodename nor servname provided, or not known"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "7"
+   },
+   "subprocess_ls": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "subprocess_python": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   },
+   "fork": {
+    "blocked": true,
+    "error": "PermissionError: [Errno 1] Operation not permitted"
+   }
+  },
+  "total_s": 2.07,
+  "sandboxed": true,
+  "wall_s": 2.46,
+  "escaped_write_exists": false
+ },
+ {
+  "model": "with_controller.py",
+  "import_s": 1.96,
+  "pnl_version": "0.20.2.0",
+  "load_s": 0.14,
+  "compositions": 1,
+  "run_s": 0.01,
+  "runs": [
+   {
+    "name": "with_controller",
+    "ok": true
+   }
+  ],
+  "escapes": {
+   "read_marker_file": {
+    "blocked": false,
+    "got": "MARKER: this must not be readable from inside\n"
+   },
+   "list_marker_folder": {
+    "blocked": false,
+    "got": "['.marker-dotfile', 'secret-marker.txt']"
+   },
+   "read_hidden_marker": {
+    "blocked": false,
+    "got": "MARKER dotfile\n"
+   },
+   "write_outside_out_dir": {
+    "blocked": false,
+    "got": "/private/tmp/claude-503/-Users-jonhanke-Documents-Code-Repositories-psyneulink-r"
+   },
+   "write_into_model_folder": {
+    "blocked": false,
+    "got": "/Users/jonhanke/Documents/Code_Repositories/psyneulink_repos/DEVELOPMENT_FOLDERS"
+   },
+   "tcp_connect_localhost": {
+    "blocked": false,
+    "got": "connected"
+   },
+   "dns_lookup": {
+    "blocked": false,
+    "got": "('172.66.147.243', 80)"
+   },
+   "read_env_secret": {
+    "blocked": true,
+    "error": "KeyError: 'AI_THREAT_SECRET not in environment'"
+   },
+   "env_var_count": {
+    "blocked": false,
+    "got": "8"
+   },
+   "subprocess_ls": {
+    "blocked": false,
+    "got": "0"
+   },
+   "subprocess_python": {
+    "blocked": false,
+    "got": "0"
+   },
+   "fork": {
+    "blocked": false,
+    "got": "42726"
+   }
+  },
+  "total_s": 2.16,
+  "sandboxed": false,
+  "wall_s": 2.54,
+  "escaped_write_exists": true
+ }
+]
