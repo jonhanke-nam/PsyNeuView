@@ -2,13 +2,18 @@
  * An obvious way to recentre the graph (#289).
  *
  * After panning the graph right out of sight, each of the ways back brings
- * every node into view: the labelled Fit button, ⌘9 (Ctrl+9 off the Mac), and
+ * every node into view: the Fit button, ⌘9 (Ctrl+9 off the Mac), and
  * ⇧1 for browsers that keep ⌘9 for their tabs. ⌘0 shows the graph at 100%.
  * While the whole graph is out of sight, the "N nodes off-screen · Fit" badge
  * says so.
  *
- * PW_FIT_CONTROLS_SCREENSHOT, if set, saves a picture of the canvas controls
- * to that path, for comparing the controls column before and after a restyle.
+ * The button shows the corner-brackets icon by default (no translation
+ * needed); Settings ▸ Appearance ▸ Canvas controls can make it the word "Fit".
+ * Either way it is the 26px square the zoom buttons are.
+ *
+ * PW_FIT_CONTROLS_SCREENSHOT_DIR, if set, saves a picture of the canvas
+ * controls under each setting there (fit-controls-icon.png,
+ * fit-controls-word.png), for comparing the controls column.
  */
 import { mutatingTest as test, expect } from "./test-base";
 import { mkdtempSync, writeFileSync } from "fs";
@@ -91,6 +96,25 @@ async function panAway(page: Page) {
   await expect(page.getByTestId("offscreen-nodes-indicator")).toContainText("3 nodes off-screen");
 }
 
+/** The Fit button is the same size as the zoom-in button above it. */
+async function expectSquare(page: Page) {
+  const zoomIn = (await page.locator(".react-flow__controls-zoomin").boundingBox())!;
+  const fit = (await page.locator(".react-flow__controls-fitview").boundingBox())!;
+  expect(Math.round(fit.width)).toBe(Math.round(zoomIn.width));
+  expect(Math.round(fit.height)).toBe(Math.round(zoomIn.height));
+  expect(Math.round(fit.x)).toBe(Math.round(zoomIn.x));
+}
+
+async function shootControls(page: Page, name: string) {
+  const dir = process.env.PW_FIT_CONTROLS_SCREENSHOT_DIR;
+  if (!dir) return;
+  const box = (await page.locator(".react-flow__controls").boundingBox())!;
+  await page.screenshot({
+    path: path.join(dir, name),
+    clip: { x: Math.max(0, box.x - 16), y: Math.max(0, box.y - 16), width: box.width + 120, height: box.height + 32 },
+  });
+}
+
 async function expectAllInView(page: Page) {
   await expect.poll(async () => nodesInView(page)).toEqual({ inside: 3, total: 3 });
 }
@@ -102,17 +126,14 @@ test("Fit: the labelled button, ⌘9 and ⇧1 bring the graph back; ⌘0 gives 1
 
   const fit = page.locator(".react-flow__controls-fitview");
   await expect(fit).toBeVisible();
-  if (process.env.PW_FIT_CONTROLS_SCREENSHOT) {
-    const box = (await page.locator(".react-flow__controls").boundingBox())!;
-    await page.screenshot({
-      path: process.env.PW_FIT_CONTROLS_SCREENSHOT,
-      clip: { x: Math.max(0, box.x - 16), y: Math.max(0, box.y - 16), width: box.width + 120, height: box.height + 32 },
-    });
-  }
-
-  // A word, not just an icon, and a tooltip that names the keys.
-  await expect(fit).toHaveText("Fit");
+  // The icon by default, in the zoom buttons' 26px square, with a tooltip
+  // that names the keys.
+  await expect(fit.locator("svg")).toHaveCount(1);
+  await expect(fit).toHaveText("");
+  await expectSquare(page);
+  await expect(fit).toHaveAttribute("aria-label", "Fit the graph to the window");
   await expect(fit).toHaveAttribute("title", /^Fit the graph to the window \((⌘9|Ctrl\+9) or (⇧1|Shift\+1)\)$/);
+  await shootControls(page, "fit-controls-icon.png");
 
   // The button.
   await panAway(page);
@@ -156,4 +177,32 @@ test("⇧1 does not fire while typing in a text field (#289)", { tag: "@ci" }, a
   await prompt.press("Shift+Digit1");
   await expect(prompt).toHaveValue("!");
   expect((await nodesInView(page)).inside).toBe(0);
+});
+
+test("Settings can make the Fit button the word \u201cFit\u201d, and it still fits (#289)", { tag: "@ci" }, async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await openModel(page);
+
+  await page.getByTestId("settings-button").click();
+  await page.getByTestId("settings-section-appearance").click();
+  const control = page.getByTestId("setting-graph-fit-button-style");
+  await expect(control).toHaveValue("icon");
+  await control.selectOption("word");
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("settings-panel")).toBeHidden();
+
+  const fit = page.locator(".react-flow__controls-fitview");
+  await expect(fit).toHaveText("Fit");
+  await expect(fit.locator("svg")).toHaveCount(0);
+  await expectSquare(page);
+  await shootControls(page, "fit-controls-word.png");
+
+  await panAway(page);
+  await fit.click();
+  await expectAllInView(page);
+
+  // Remembered across a reload.
+  await openModel(page);
+  await expect(page.locator(".react-flow__controls-fitview")).toHaveText("Fit");
 });
