@@ -1008,7 +1008,7 @@ export function Toolbar() {
         data.file_path ?? demo.pristine_path.replace("/demos/", "/");
       noteModelOrigin(workingPath, { kind: "demo", section: "demos" });
       setFilePath(workingPath);
-      if (tutorial) noteTutorialModel(workingPath, { copy: true });
+      if (tutorial) noteTutorialModel(workingPath, { copy: true, source: data.source });
       useLayoutStore.getState().showPanelsForOpen(); // #215: also when re-opening the same demo
       setSource(data.source);
       loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
@@ -1190,7 +1190,7 @@ export function Toolbar() {
         data.file_path ?? rm.pristine_path.replace("/reference_models/", "/");
       noteModelOrigin(workingPath, { kind: "reference", section: "references" });
       setFilePath(workingPath);
-      if (tutorial) noteTutorialModel(workingPath, { copy: true });
+      if (tutorial) noteTutorialModel(workingPath, { copy: true, source: data.source });
       // setFilePath cleared currentReference; re-arm it so the Open dropdown
       // marks this reference as loaded (#830). Must come after setFilePath.
       setCurrentReference(rm.name);

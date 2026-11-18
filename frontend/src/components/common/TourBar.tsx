@@ -43,7 +43,16 @@ import { useUIStore } from "@/stores/uiStore";
 import { openSettings } from "./settings/sections";
 import { narrationAvailable, narrationVoiceName, pauseSpeaking, resumeSpeaking, speakCaption, stopSpeaking, type SpeechEngine } from "@/utils/narration";
 import { matchesNodeName, type TourStep } from "@/utils/tourStep";
-import { returnToTutorialModel, startTutorialOver, undoStepEdits } from "@/utils/tutorialGuard";
+import {
+  isTutorialCopy,
+  noteTutorialModel,
+  returnToTutorialModel,
+  startTutorialOver,
+  undoStepEdits,
+} from "@/utils/tutorialGuard";
+import { clearProgress, progressFor, saveProgress, STALE_MESSAGE } from "@/utils/tutorialProgress";
+import { requestSave } from "@/utils/saveRequest";
+import { useNotificationStore } from "@/stores/notificationStore";
 import { applyTutorialView, restoreTutorialView } from "@/utils/tutorialView";
 
 /** Where a docs page is read: the repo's `docs/` folder on devel. */
@@ -194,6 +203,84 @@ export function TourBar() {
   // The ways back, when a step's node is missing or its code was changed.
   const offerWayBack = !!step && !complete && !offModel && onStepCode && (codeChanged || !!missingNode);
   const [undoing, setUndoing] = useState(false);
+
+  // #173: remember where the learner is, per tutorial, so starting it again
+  // can offer to resume here: the step, and the code as it began. Only the
+  // walkthrough's own copy's code is kept; a model the learner created is
+  // kept by its path. Finishing forgets it. Step 1 needs nothing remembered,
+  // and a fresh start there leaves an earlier place alone until it moves on.
+  const resuming = useTourStore((s) => s.resuming);
+  const modelFresh = useTourStore((s) => s.modelFresh);
+  useEffect(() => {
+    if (!walkthrough || !tourKey) return;
+    if (finished) {
+      clearProgress(walkthrough.id);
+      return;
+    }
+    if (resuming || stepIndex === 0) return;
+    const code = stepStart && stepStart.key === stepKey0 && isTutorialCopy(stepStart.filePath) ? stepStart.source : null;
+    const file = modelPath && !isTutorialCopy(modelPath) ? modelPath : null;
+    saveProgress(walkthrough.id, progressFor(walkthrough, stepIndex, code, modelFresh, file));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walkthrough?.id, tourKey, stepIndex, stepStart, modelPath, modelFresh, finished, resuming]);
+
+  // #173: resuming a saved place. The step is already set; its code goes into
+  // the walkthrough's own fresh copy once that has opened, unless the bundled
+  // model changed since (then it starts over, and says why). A model the
+  // learner created opens as it is: resuming never writes to their files.
+  const resumeTried = useRef<string | null>(null);
+  const resumeOpened = useRef<string | null>(null);
+  useEffect(() => {
+    if (!resuming || !walkthrough || !tourKey) return;
+    const { doneResuming } = useTourStore.getState();
+    const stale = () => {
+      clearProgress(walkthrough.id);
+      useNotificationStore.getState().addNotification("info", STALE_MESSAGE(walkthrough.title), 8000);
+      useTourStore.getState().startTour(walkthrough.id);
+    };
+    if (resuming.file) {
+      const file = resuming.file;
+      if (resumeTried.current === tourKey) return;
+      const openPath = useCatalogOpener.getState().openPath;
+      if (!openPath) return;
+      resumeTried.current = tourKey;
+      // Its model first, so opening it is staying, not leaving.
+      noteTutorialModel(file);
+      void openPath(file).then(() => {
+        if (useModelStore.getState().filePath === file) doneResuming();
+        else stale();
+      });
+      return;
+    }
+    if (resuming.code === null) {
+      doneResuming();
+      return;
+    }
+    // Left before the step that teaches opening the model, with it open
+    // already: nothing else opens it on a resume, so open it here.
+    if (!modelPath && walkthrough.model && !pastTeaching && catalogReady && resumeOpened.current !== tourKey) {
+      const { open } = useCatalogOpener.getState();
+      resumeOpened.current = tourKey;
+      if (open) tryOpen(open, walkthrough.model);
+      return;
+    }
+    if (!modelPath || filePath !== modelPath || !modelFresh || !stepKey0) return;
+    if (resumeTried.current === tourKey) return;
+    resumeTried.current = tourKey;
+    if ((resuming.fresh && resuming.fresh !== modelFresh) || !isTutorialCopy(modelPath)) {
+      stale();
+      return;
+    }
+    const code = resuming.code;
+    const key = stepKey0;
+    const path = modelPath;
+    useModelStore.getState().setSource(code);
+    void requestSave({ source: code }).finally(() => {
+      useTourStore.getState().setStepStart({ key, filePath: path, source: code });
+      doneResuming();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resuming, modelPath, filePath, modelFresh, tourKey, stepKey0, catalogReady, pastTeaching]);
 
   // Once the node turns up, a past failure no longer applies.
   useEffect(() => {
