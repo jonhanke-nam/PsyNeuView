@@ -97,10 +97,12 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
   },
   "components/common/DiagnosticPanel.tsx": { count: 2, what: "the quiet collapse; the auto-conversion's Undo chip, 10px in a line of 11px text" },
   "components/common/TourBar.tsx": {
-    count: 9,
+    count: 13,
     what:
       "the walkthrough bar's buttons at the bar's size and in its blue (Open the model, fit the graph, Next, " +
-      "Pause, Replay, Skip, Narration, End, and the caption's Narration heading that opens the voice setting); kept as they were while the walkthroughs are being written",
+      "Pause, Replay, Skip, Narration, End, and the caption's Narration heading that opens the voice setting; " +
+      "#172's ways back, matching them: Go back to the tutorial's model, End tutorial, Undo my edits since this " +
+      "step began, Start the tutorial over); kept as they were while the walkthroughs are being written",
   },
   "components/inspector/ShowGraphPanel.tsx": { count: 5, what: "Refresh among the option checkboxes; the zoom bar's −, +, Fit and 100% (22px)" },
   "components/graph/GraphStylePanel.tsx": { count: 2, what: "Apply and Reset, 12px text on 4×14, a size no kind has" },
