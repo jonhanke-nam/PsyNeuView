@@ -38,7 +38,7 @@ import { MechanismNode } from "./MechanismNode";
 import { CompositionNode } from "./CompositionNode";
 import { CIMNode } from "./CIMNode";
 import { DanglingNode } from "./DanglingNode";
-import { GSCEdge } from "./GSCEdge";
+import { EDGE_MENU_EVENT, GSCEdge } from "./GSCEdge";
 import { ProjectionEdge } from "./ProjectionEdge";
 import { GSCLegend } from "./GSCLegend";
 import { useSchedulingArrowsStore } from "@/stores/schedulingArrowsStore";
@@ -50,7 +50,7 @@ import { PaletteSidebar } from "./PaletteSidebar";
 import { NodeContextMenu } from "./NodeContextMenu";
 import { OffscreenNodesIndicator } from "./OffscreenNodesIndicator";
 import { TourOverlay } from "./TourOverlay";
-import { addNodeToModel } from "@/utils/nodeActions";
+import { addNodeToModel, deleteProjection, deleteSchedulingCondition, renameProjection } from "@/utils/nodeActions";
 import { isProjectionType, findDefByType } from "@/constants/pnlTypes";
 import { registerCommand } from "@/shortcuts/commands";
 import { LastGoodDiff } from "./LastGoodDiff";
@@ -698,7 +698,13 @@ export function GraphCanvas() {
 
   // #261: an arrow's menu and the canvas's, so everything on the graph has one.
   const [graphMenu, setGraphMenu] = useState<
-    | { kind: "edge"; edgeId: string; source: string; target: string; name: string; x: number; y: number }
+    | {
+        kind: "edge"; edgeId: string; source: string; target: string; name: string; x: number; y: number;
+        /** A projection's variable, when the file declares it (#261: Rename, Delete). */
+        varName?: string;
+        /** A scheduling arrow's condition (#261: Edit condition, Delete). */
+        gsc?: { owner: string; gscType: string; target: string };
+      }
     | { kind: "pane"; x: number; y: number }
     | null
   >(null);
@@ -708,10 +714,25 @@ export function GraphCanvas() {
       setContextMenu(null);
       setSelectedEdgeId(edge.id);
       const name = typeof edge.data?.label === "string" ? edge.data.label : (typeof edge.label === "string" ? edge.label : edge.id);
-      setGraphMenu({ kind: "edge", edgeId: edge.id, source: edge.source, target: edge.target, name, x: e.clientX, y: e.clientY });
+      const d = edge.data ?? {};
+      const gsc = edge.type === "gscEdge" && d.owner && d.gscType && d.targetNode
+        ? { owner: d.owner, gscType: d.gscType, target: d.targetNode }
+        : undefined;
+      const varName = edge.type === "projectionEdge" && d.varName && d.varName in useModelStore.getState().lineMap ? d.varName : undefined;
+      setGraphMenu({ kind: "edge", edgeId: edge.id, source: edge.source, target: edge.target, name, x: e.clientX, y: e.clientY, varName, gsc });
     },
     [],
   );
+  // #261: a scheduling arrow's label asks for the arrow's menu (GSCEdge).
+  useEffect(() => {
+    const open = (ev: Event) => {
+      const { edgeId, x, y } = (ev as CustomEvent<{ edgeId: string; x: number; y: number }>).detail;
+      const edge = useModelStore.getState().edges.find((ed) => ed.id === edgeId);
+      if (edge) onEdgeContextMenu({ preventDefault() {}, clientX: x, clientY: y } as React.MouseEvent, edge);
+    };
+    window.addEventListener(EDGE_MENU_EVENT, open);
+    return () => window.removeEventListener(EDGE_MENU_EVENT, open);
+  }, [onEdgeContextMenu]);
   const onPaneContextMenu = useCallback((e: React.MouseEvent | MouseEvent) => {
     // Never the web view's own menu (Reload, Inspect Element) on the graph.
     e.preventDefault();
@@ -822,6 +843,21 @@ export function GraphCanvas() {
   // registry owns the key, this owns what the key does. React Flow's own
   // onKeyDown is no longer used for it, so the binding is in one place and can
   // be shown — or rebound — from Settings.
+  // #261: delete an arrow, from its menu or the Delete shortcut.
+  const deleteEdge = useCallback(
+    async (m: { name: string; varName?: string; gsc?: { owner: string; gscType: string; target: string } }) => {
+      const what = m.gsc ? `the ${m.gsc.gscType} condition on ${m.gsc.owner}` : `projection "${m.name}"`;
+      if (!confirm(`Delete ${what}?`)) return;
+      const err = m.gsc
+        ? await deleteSchedulingCondition(m.gsc.owner, m.gsc.gscType, m.gsc.target)
+        : m.varName
+          ? await deleteProjection(m.varName, m.name)
+          : null;
+      if (err) addNotification("error", `Couldn't delete ${what}: ${err}`);
+    },
+    [addNotification],
+  );
+
   // #261: the whole selection, when several nodes are selected.
   const deleteNodes = useCallback(
     (varNames: string[]) => {
@@ -837,11 +873,23 @@ export function GraphCanvas() {
     [filePath, setSource, loadModelFromServer, addNotification],
   );
   const deleteSelectedNode = useCallback(() => {
-    const selectedNodeId = useModelStore.getState().selectedNodeId;
+    const { selectedNodeId, selectedEdgeId } = useModelStore.getState();
+    // #261: with an arrow selected and no node, the shortcut deletes the arrow.
+    if (!selectedNodeId && selectedEdgeId) {
+      const edge = edges.find((ed) => ed.id === selectedEdgeId);
+      const d = (edge?.data ?? {}) as { label?: string; varName?: string; owner?: string; gscType?: string; targetNode?: string };
+      if (!edge) return;
+      const gsc = edge.type === "gscEdge" && d.owner && d.gscType && d.targetNode
+        ? { owner: d.owner, gscType: d.gscType, target: d.targetNode }
+        : undefined;
+      const varName = edge.type === "projectionEdge" && d.varName && d.varName in useModelStore.getState().lineMap ? d.varName : undefined;
+      if (gsc || varName) void deleteEdge({ name: d.label ?? edge.id, varName, gsc });
+      return;
+    }
     const many = nodes.filter((n) => n.selected && (n.data as unknown as MechanismData)?.varName);
     const chosen = many.length > 1 ? many : nodes.filter((n) => n.id === selectedNodeId);
     deleteNodes(chosen.map((n) => (n.data as unknown as MechanismData).varName).filter(Boolean));
-  }, [nodes, deleteNodes]);
+  }, [nodes, edges, deleteEdge, deleteNodes]);
 
   useEffect(
     () => registerCommand("graph.deleteSelection", deleteSelectedNode),
@@ -1106,6 +1154,10 @@ export function GraphCanvas() {
                 arrowShaped(reshapeDescription(graphMenu.name, "reset"));
                 setGraphMenu(null);
               }}
+              name={graphMenu.name}
+              onRename={graphMenu.varName ? (nn) => renameProjection(graphMenu.varName!, graphMenu.name, nn) : undefined}
+              onEditCondition={graphMenu.gsc ? () => { setSelectedEdgeId(graphMenu.edgeId); setGraphMenu(null); } : undefined}
+              onDelete={graphMenu.varName || graphMenu.gsc ? () => { const m = graphMenu; setGraphMenu(null); deleteEdge(m); } : undefined}
               onClose={() => setGraphMenu(null)}
             />
           )}

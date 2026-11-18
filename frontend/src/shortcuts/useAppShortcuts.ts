@@ -44,8 +44,8 @@ function buildActions(): Record<string, () => boolean | void> {
     "graph.deleteSelection": () => {
       // The precondition lives with the action, not the registry: the registry
       // should not have to know what a selected node is.
-      const { selectedNodeId, filePath } = useModelStore.getState();
-      if (!selectedNodeId || !filePath) return;
+      const { selectedNodeId, selectedEdgeId, filePath } = useModelStore.getState();
+      if ((!selectedNodeId && !selectedEdgeId) || !filePath) return;
       runCommand("graph.deleteSelection");
     },
 

@@ -7,7 +7,7 @@
  * only way to do something. They close like every other menu (#1289): Escape,
  * a click anywhere else, or a pick.
  */
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useDismiss } from "@/components/common/dialog/useDismiss";
 import { Z_MENU } from "@/constants/zLayers";
 
@@ -76,22 +76,65 @@ export function GraphMenuItem({ onClick, testId, children }: { onClick: () => vo
   );
 }
 
-/** An arrow's menu (#261). */
-export function EdgeContextMenu({ x, y, shaped, onSelectSender, onSelectReceiver, onResetShape, onClose }: {
+/**
+ * An arrow's menu (#261). A projection's: select either end, reset its shape,
+ * Rename… (as double-clicking its name in the Inspector) and Delete (as the
+ * Delete shortcut). A scheduling arrow's: Edit condition (its condition in
+ * the Inspector) and Delete.
+ */
+export function EdgeContextMenu({
+  x, y, shaped, name, onSelectSender, onSelectReceiver, onResetShape, onRename, onEditCondition, onDelete, onClose,
+}: {
   x: number;
   y: number;
   /** Whether the arrow has a shape of its own to reset. */
   shaped: boolean;
+  /** Its name, for Rename… to start from. */
+  name?: string;
   onSelectSender: () => void;
   onSelectReceiver: () => void;
   onResetShape: () => void;
+  /** A projection declared in the file: rename it; null, or what went wrong. */
+  onRename?: (newName: string) => Promise<string | null>;
+  /** A scheduling arrow: show its condition in the Inspector. */
+  onEditCondition?: () => void;
+  onDelete?: () => void;
   onClose: () => void;
 }) {
+  const [renaming, setRenaming] = useState(false);
+  const [value, setValue] = useState(name ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const submit = async () => {
+    if (!onRename) return;
+    const err = await onRename(value);
+    if (err) setError(err);
+    else onClose();
+  };
   return (
     <GraphMenu data-testid="edge-context-menu" x={x} y={y} onClose={onClose}>
-      <GraphMenuItem testId="edge-menu-select-sender" onClick={onSelectSender}>Select sender</GraphMenuItem>
-      <GraphMenuItem testId="edge-menu-select-receiver" onClick={onSelectReceiver}>Select receiver</GraphMenuItem>
-      {shaped && <GraphMenuItem testId="edge-menu-reset-shape" onClick={onResetShape}>Reset shape</GraphMenuItem>}
+      {renaming ? (
+        <div style={{ padding: "6px 10px" }}>
+          <input
+            autoFocus
+            data-testid="edge-menu-rename-input"
+            value={value}
+            onChange={(e) => { setValue(e.target.value); setError(null); }}
+            onKeyDown={(e) => { if (e.key === "Enter") void submit(); }}
+            placeholder="New name"
+            style={{ width: 180, fontSize: "var(--pnv-fs-13)", padding: "3px 6px", border: "1px solid var(--pnv-primary)", borderRadius: 4 }}
+          />
+          {error && <div style={{ color: "var(--pnv-danger)", fontSize: "var(--pnv-fs-12)", marginTop: 4 }}>{error}</div>}
+        </div>
+      ) : (
+        <>
+          {onEditCondition && <GraphMenuItem testId="edge-menu-edit-condition" onClick={onEditCondition}>Edit condition</GraphMenuItem>}
+          <GraphMenuItem testId="edge-menu-select-sender" onClick={onSelectSender}>Select sender</GraphMenuItem>
+          <GraphMenuItem testId="edge-menu-select-receiver" onClick={onSelectReceiver}>Select receiver</GraphMenuItem>
+          {shaped && <GraphMenuItem testId="edge-menu-reset-shape" onClick={onResetShape}>Reset shape</GraphMenuItem>}
+          {onRename && <GraphMenuItem testId="edge-menu-rename" onClick={() => setRenaming(true)}>Rename…</GraphMenuItem>}
+          {onDelete && <GraphMenuItem testId="edge-menu-delete" onClick={onDelete}>Delete</GraphMenuItem>}
+        </>
+      )}
     </GraphMenu>
   );
 }
