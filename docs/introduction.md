@@ -90,6 +90,13 @@ panels you choose under the same setting); turning the setting off while the
 screen is blank brings the canvas back. A guided walkthrough shows every panel
 while it runs and puts your layout back afterwards.
 
+Lost the graph after panning or zooming? The **Fit** button among the canvas
+controls (bottom left) brings all of it back into view, and so do ⌘9 and ⇧1;
+⌘0 shows it at actual size (100%). These keys follow Preview; ⇧1, as in Figma
+and Sketch, is there because a browser keeps ⌘9 and ⌘0 for its own tabs and
+page zoom. Both are also in the Layout menu, and on the canvas's right-click
+menu as **Fit the graph to the window**.
+
 ## Where to go next
 
 - **Want to try it?** [Loading a model](tutorials/01-loading-a-model.md) starts
