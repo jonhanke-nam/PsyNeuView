@@ -136,10 +136,12 @@ async function drag(
     dx = other.x + to.dx * other.width - box.x;
     dy = other.y + to.dy * other.height - box.y;
   }
-  // Grab the frame by its header (its middle is over a member, which would
-  // take the drag), and a mechanism by its middle.
+  // Grab the frame by its header band, its grip (#250: an open frame takes
+  // the pointer only on its header and border), and a mechanism by its middle.
   const isFrame = (await node.getAttribute("class"))?.includes("compositionNode");
-  const [gx, gy] = isFrame ? [box.x + box.width * 0.4, box.y + 12] : [box.x + box.width / 2, box.y + box.height / 2];
+  const band = isFrame ? (await node.locator(".pnv-frame-grab").first().boundingBox())! : null;
+  // Its left end, by the name: arrows leaving the frame cross the header further along.
+  const [gx, gy] = band ? [band.x + Math.min(24, band.width * 0.12), band.y + band.height / 2] : [box.x + box.width / 2, box.y + box.height / 2];
   await page.mouse.move(gx, gy);
   await page.mouse.down();
   await page.mouse.move(gx + dx / 2, gy + dy / 2, { steps: 4 });

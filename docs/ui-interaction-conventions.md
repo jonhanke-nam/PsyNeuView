@@ -140,18 +140,19 @@ condition label), #987 (trace step rows, collapsed diagnostics bar).
 
 ## Graph hit areas (#250)
 
-Anywhere in or on a node is a click on that node: its fill, outline, label and the whitespace inside. The rules, which `frontend/e2e/graph-hit-areas.spec.ts` checks on every reference model, with ports hidden and shown:
+Anywhere in or on a node is a click on that node: its fill, outline, label and the whitespace inside. The rules, which `frontend/e2e/graph-hit-areas.spec.ts` checks on every reference model, with ports hidden and shown, and with interface nodes shown at the fitted zoom, zoomed out and zoomed in:
 
 | Thing | Active region | A click |
 |---|---|---|
 | Mechanism node (any shape) | the whole drawn shape | selects it |
 | Something drawn over a node's rim (an arrow's connection dot, with ports shown) | itself | is handed on to the node, which selects; a drag (4 px or more) is its own (moving the arrow's end) |
-| Composition, expanded | its header and border; the inside belongs to what is in it | selects it |
+| Composition, expanded | its header (the grip: drag it there) and border; the inside belongs to what is in it, so an arrow or empty canvas inside is clicked, not the frame | selects it |
 | Arrow | its line, widened to a comfortable band; its label, while the label shows | selects it; a drag shapes it |
 | Canvas | everything else | clears the selection; a drag pans |
 
 Two traps, both found by #250:
 - **Invisible but catching.** A label hidden with `opacity: 0` still takes the pointer. Anything hidden that way gets `pointerEvents: "none"` while hidden.
+- **A frame's box is not a frame.** React Flow makes a whole node take the pointer, inline; an open frame overrides that (`index.css`, `!important`) and takes it on its header and border bands only (`.pnv-frame-grab` in `CompositionNode.tsx`). Clicking to place a component finds the frame around the point by position (`GraphCanvas`).
 - **A click is not a drag.** A press counts as a drag only after it moves a few pixels (4 px for a connection dot, 6 for an arrow's line). Otherwise a click with a wobble reshapes things, and in Auto makes the layout Custom.
 
 ## Clicks on the graph: macOS conventions (#261)
