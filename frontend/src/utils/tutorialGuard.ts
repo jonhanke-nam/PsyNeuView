@@ -17,7 +17,8 @@
  * The rest of #172 lives here too: which file the walkthrough is using (its
  * own fresh copy of a bundled model), the offer to save before replacing
  * unsaved work, and the bar's ways back: undo this step's edits, start over,
- * go back to the tutorial's model.
+ * go back to the tutorial's model. And #173's question on starting one that
+ * was left part-way: resume at step N, or start over.
  */
 
 import { create } from "zustand";
@@ -30,6 +31,14 @@ import { canOpenAppWindow, openAppWindow, openPathAddress } from "./appWindow";
 import { recordAction } from "./history";
 import { requestSave } from "./saveRequest";
 import { getWalkthrough, OPENS_NEW_MODEL, type TourStep, type Walkthrough } from "./tourStep";
+import {
+  clearProgress,
+  codeFingerprint,
+  fitsWalkthrough,
+  loadProgress,
+  STALE_MESSAGE,
+  type TutorialProgress,
+} from "./tutorialProgress";
 
 /** What the learner is about to open. */
 export type OpenTarget =
@@ -44,6 +53,7 @@ export type OpenTarget =
 export type LeaveChoice = "newWindow" | "here" | "stay";
 export type StartChoice = "newWindow" | "here" | "cancel";
 export type SaveChoice = "save" | "discard" | "cancel";
+export type ResumeChoice = "resume" | "over" | "cancel";
 
 export type PendingChoice =
   | {
@@ -61,6 +71,14 @@ export type PendingChoice =
       /** Why it can't have a window of its own, when it can't. */
       noWindowReason: string | null;
       resolve: (choice: StartChoice) => void;
+    }
+  | {
+      /** A tutorial left part-way (#173): resume at its step, or start over? */
+      type: "resume";
+      tutorial: string;
+      step: number;
+      steps: number;
+      resolve: (choice: ResumeChoice) => void;
     }
   | {
       /** Replacing unsaved work (#172): save it first? */
@@ -118,10 +136,14 @@ export function isTutorialCopy(path: string | null | undefined): boolean {
 }
 
 /** The walkthrough's model is now this file: its own copy opened, or the model a step had the learner create. */
-export function noteTutorialModel(path: string, { copy = false }: { copy?: boolean } = {}): void {
+export function noteTutorialModel(
+  path: string,
+  { copy = false, source }: { copy?: boolean; source?: string } = {},
+): void {
   if (!useTourStore.getState().activeTourId) return;
   if (copy) tutorialCopies.add(path);
-  useTourStore.getState().setModelPath(path);
+  // A fresh copy's fingerprint lets a resume notice the bundled model changed (#173).
+  useTourStore.getState().setModelPath(path, copy && source !== undefined ? codeFingerprint(source) : undefined);
 }
 
 /**
@@ -286,7 +308,9 @@ export async function undoStepEdits(): Promise<boolean> {
 /** Start the tutorial over (#172): step 1, and a fresh copy of its model. */
 export function startTutorialOver(): void {
   const { activeTourId, startTour } = useTourStore.getState();
-  if (activeTourId) startTour(activeTourId);
+  if (!activeTourId) return;
+  clearProgress(activeTourId); // #173: no place to resume at either
+  startTour(activeTourId);
 }
 
 /** Go back to the tutorial's model (#172), after something else replaced it. */
@@ -309,13 +333,34 @@ export function hasWorkInProgress(): boolean {
  * the learner chooses.
  */
 export async function chooseTutorialStart(id: string): Promise<void> {
-  const { activeTourId, startTour } = useTourStore.getState();
+  const { activeTourId } = useTourStore.getState();
   const walkthrough = getWalkthrough(id);
+
+  // #173: left part-way before? Resume at that step (the default), or start over.
+  // Not when picking the one already running: that is starting it over.
+  let resume: TutorialProgress | null = null;
+  if (walkthrough && activeTourId !== id) {
+    const saved = savedPlace(walkthrough);
+    if (saved) {
+      const choice = await ask<ResumeChoice>((resolve) => ({
+        type: "resume",
+        tutorial: walkthrough.title,
+        step: saved.step + 1,
+        steps: walkthrough.steps.length,
+        resolve,
+      }));
+      if (choice === "cancel") return;
+      if (choice === "over") clearProgress(id);
+      else resume = saved;
+    }
+  }
+  const begin = () => (resume ? useTourStore.getState().resumeTour(id, resume) : useTourStore.getState().startTour(id));
+
   const running = activeTourId !== id ? getWalkthrough(activeTourId) : null;
   const inProgress =
     (running !== null && needsModel(running)) || (!!walkthrough && needsModel(walkthrough) && hasWorkInProgress());
   if (!walkthrough || !inProgress) {
-    startTour(id);
+    begin();
     return;
   }
 
@@ -334,8 +379,33 @@ export async function chooseTutorialStart(id: string): Promise<void> {
     noWindowReason,
     resolve,
   }));
-  if (choice === "newWindow") openWindowOrSay(`?tour=${encodeURIComponent(id)}`);
-  else if (choice === "here" && (await offerToSave())) startTour(id);
+  if (choice === "newWindow") openWindowOrSay(`?tour=${encodeURIComponent(id)}${resume ? "&resume=1" : ""}`);
+  else if (choice === "here" && (await offerToSave())) begin();
+}
+
+/**
+ * The place this tutorial was left at, if it still fits (#173). One that no
+ * longer does (the tutorial changed in an update) is forgotten, and the
+ * learner told why it starts from the beginning.
+ */
+function savedPlace(w: Walkthrough): TutorialProgress | null {
+  const saved = loadProgress(w.id);
+  if (!saved) return null;
+  if (fitsWalkthrough(w, saved)) return saved;
+  clearProgress(w.id);
+  useNotificationStore.getState().addNotification("info", STALE_MESSAGE(w.title), 8000);
+  return null;
+}
+
+/**
+ * `?tour=<id>` (a link, or a window opened to run a tutorial). With
+ * `&resume=1`, the window that asked already chose to resume (#173).
+ */
+export function startFromAddress(id: string, resume: boolean): void {
+  const w = getWalkthrough(id);
+  const saved = resume && w ? savedPlace(w) : null;
+  if (saved) useTourStore.getState().resumeTour(id, saved);
+  else useTourStore.getState().startTour(id);
 }
 
 /**

@@ -36,7 +36,7 @@ import { isOnScreen, toScreenRect, type NodeBox } from "@/utils/offscreenNodes";
 import { cssEscape, nodeSelector } from "@/utils/nodeSelector";
 import { matchesNodeName } from "@/utils/tourStep";
 import { Z_TOUR_OVERLAY } from "@/constants/zLayers";
-import { stepOpensCatalog, useTutorialChoice } from "@/utils/tutorialGuard";
+import { startFromAddress, stepOpensCatalog, useTutorialChoice } from "@/utils/tutorialGuard";
 
 interface Rect {
   left: number;
@@ -145,7 +145,7 @@ export function TourOverlay() {
   // or an issue. The menu is the discoverable route; this is the shareable one.
   useEffect(() => {
     const fromUrl = tourIdFromUrl(window.location.search);
-    if (fromUrl) useTourStore.getState().startTour(fromUrl);
+    if (fromUrl) startFromAddress(fromUrl, new URLSearchParams(window.location.search).get("resume") === "1");
   }, []);
 
   // Node anchors too: a dialog opening over the canvas changes nothing the
