@@ -2140,7 +2140,28 @@ def _unnamed_reason(node):
             "connect it by; add the connection in the code.")
 
 
-def _resolve_end(pnl, module, key):
+def _canvas_keys(node, name_to_var):
+    """The keys the canvas may know ``node`` by: its cleaned name and, for a
+    node built inside a function, the local variable it was assigned to (the
+    handle #422 gives it)."""
+    clean = re.sub(r"-\d+$", "", node.name)
+    keys = {node.name, clean}
+    for k in (node.name, clean):
+        if name_to_var.get(k):
+            keys.add(name_to_var[k])
+    return keys
+
+
+def _function_handles(params, module):
+    """PNL name -> local variable, for nodes declared inside functions."""
+    try:
+        with open(params["file_path"]) as f:
+            return _build_name_index(f.read(), vars(module))
+    except Exception:
+        return {}
+
+
+def _resolve_end(pnl, module, key, name_to_var):
     """The node a dragged end names: ``(node, None)``, or ``(None, reason)``
     for a node the model builds inside a function (EGO's), which has no
     variable in the file to write a projection with, or ``(None, None)``."""
@@ -2148,7 +2169,7 @@ def _resolve_end(pnl, module, key):
     if isinstance(obj, (pnl.Mechanism, pnl.Composition)):
         return obj, None
     for node in _model_nodes(pnl, module):
-        if key and (node.name == key or re.sub(r"-\d+$", "", node.name) == key):
+        if key and key in _canvas_keys(node, name_to_var):
             return None, _unnamed_reason(node)
     return None, None
 
@@ -2275,10 +2296,11 @@ def task_connection_options(params):
     import psyneulink as pnl
 
     module = load_module(params["file_path"], reset_registry=True, tolerate_exec_error=True)
-    sender, why = _resolve_end(pnl, module, params.get("sender"))
+    handles = _function_handles(params, module)
+    sender, why = _resolve_end(pnl, module, params.get("sender"), handles)
     if why:
         return {"refused": why}
-    receiver, why = _resolve_end(pnl, module, params.get("receiver"))
+    receiver, why = _resolve_end(pnl, module, params.get("receiver"), handles)
     if why:
         return {"refused": why}
     if not isinstance(sender, pnl.Mechanism) or not isinstance(receiver, (pnl.Mechanism, pnl.Composition)):
@@ -2296,7 +2318,8 @@ def task_connection_targets(params):
     import psyneulink as pnl
 
     module = load_module(params["file_path"], reset_registry=True, tolerate_exec_error=True)
-    sender, sender_why = _resolve_end(pnl, module, params.get("sender"))
+    handles = _function_handles(params, module)
+    sender, sender_why = _resolve_end(pnl, module, params.get("sender"), handles)
     targets = {}
     named = set()
     for name, obj in list(vars(module).items()):
@@ -2314,9 +2337,11 @@ def task_connection_targets(params):
     # Nodes built inside a function have no variable; keyed by their name,
     # as the canvas keys them, they say why they can't be connected.
     for node in _model_nodes(pnl, module):
-        key = re.sub(r"-\d+$", "", node.name)
-        if id(node) not in named and key not in targets:
-            targets[key] = sender_why or _unnamed_reason(node)
+        if id(node) in named:
+            continue
+        for key in _canvas_keys(node, handles):
+            if key not in targets:
+                targets[key] = sender_why or _unnamed_reason(node)
     return {"targets": targets}
 
 

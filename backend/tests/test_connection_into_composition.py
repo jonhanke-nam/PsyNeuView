@@ -127,6 +127,13 @@ def test_a_node_built_inside_a_function_is_refused_with_why():
     assert "inside a function" in result["refused"]
 
 
+def test_a_node_built_inside_a_function_is_found_by_its_local_name_too():
+    # The canvas knows such a node by the local variable it was assigned to (#422).
+    result = _run_on(BUILT_IN_A_FUNCTION, "connection_options", sender="s", receiver="p")
+    assert "inside a function" in result["refused"]
+
+
 def test_nodes_built_inside_a_function_show_why_while_dragging():
-    targets = _run_on(BUILT_IN_A_FUNCTION, "connection_targets", sender="STATE")["targets"]
+    targets = _run_on(BUILT_IN_A_FUNCTION, "connection_targets", sender="s")["targets"]
     assert "inside a function" in targets["PREDICTION"]
+    assert "inside a function" in targets["p"]
