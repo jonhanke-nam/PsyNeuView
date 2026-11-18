@@ -1,6 +1,7 @@
 /**
  * The choice when a walkthrough and other work would collide (#172): opening
- * another model during one, or starting one with something in progress.
+ * another model during one, or starting one with something in progress; and,
+ * when the answer replaces unsaved work, whether to save it first.
  * utils/tutorialGuard.ts decides when to ask, and waits on the answer here.
  *
  * Closing it any of the shared ways (#1289) changes nothing: it is Stay here,
@@ -16,7 +17,9 @@ import { DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
 export function TutorialChoiceDialog() {
   const pending = useTutorialChoice((s) => s.pending);
   if (!pending) return null;
-  return pending.type === "leave" ? <Leave choice={pending} /> : <Start choice={pending} />;
+  if (pending.type === "leave") return <Leave choice={pending} />;
+  if (pending.type === "save") return <Save choice={pending} />;
+  return <Start choice={pending} />;
 }
 
 function Frame({
@@ -176,6 +179,34 @@ function Start({ choice }: { choice: Extract<PendingChoice, { type: "start" }> }
               Start in a new window
             </Button>
           )}
+        </>
+      }
+    />
+  );
+}
+
+function Save({ choice }: { choice: Extract<PendingChoice, { type: "save" }> }) {
+  const cancel = () => choice.resolve("cancel");
+  return (
+    <Frame
+      title="Save your changes first?"
+      onClose={cancel}
+      body={
+        <p style={{ margin: 0 }}>
+          <strong>{choice.what}</strong> has changes you haven't saved. Save them before it's replaced here?
+        </p>
+      }
+      buttons={
+        <>
+          <Button data-testid="tutorial-choice-cancel" onClick={cancel} kind="secondary" size="compact">
+            Cancel
+          </Button>
+          <Button data-testid="tutorial-choice-discard" onClick={() => choice.resolve("discard")} kind="secondary" size="compact">
+            Don't save
+          </Button>
+          <Button data-testid="tutorial-choice-save" onClick={() => choice.resolve("save")} kind="primary" size="compact" isDefault>
+            Save and continue
+          </Button>
         </>
       }
     />

@@ -8,10 +8,20 @@ import { shouldOfferOrientation } from "./orientationOffer";
 import { windowRequest } from "./appWindow";
 import {
   chooseTutorialStart,
+  discardIsApproved,
+  followSavedCopy,
   guardOpen,
   isSameFile,
+  isTutorialCopy,
   needsModel,
+  noteNewModel,
+  noteTutorialModel,
+  offerToSave,
+  offTutorialModel,
+  startTutorialOver,
   stepAsksFor,
+  tutorialCopyFor,
+  undoStepEdits,
   useTutorialChoice,
   windowUrlFor,
   type PendingChoice,
@@ -20,7 +30,23 @@ import { WALKTHROUGHS, type TourStep } from "./tourStep";
 
 // The app's window: opening one is checked in the browser, by the e2e spec.
 const openWindow = vi.fn(() => null as unknown);
-vi.stubGlobal("window", { location: { origin: "", pathname: "/" }, open: openWindow });
+// Save, as the code editor answers it: writes the text it is given, or the editor's.
+const saveListener = vi.fn((e: { detail?: { accepted?: boolean; done?: () => void; source?: string } }) => {
+  const d = e.detail;
+  if (!d) return;
+  d.accepted = true;
+  const text = d.source ?? useModelStore.getState().source;
+  useModelStore.setState({ source: text, savedSource: text });
+  d.done?.();
+});
+vi.stubGlobal("window", {
+  location: { origin: "", pathname: "/" },
+  open: openWindow,
+  dispatchEvent: (e: unknown) => {
+    saveListener(e as never);
+    return true;
+  },
+});
 const stored = new Map<string, string>();
 vi.stubGlobal("localStorage", {
   getItem: (k: string) => stored.get(k) ?? null,
@@ -28,7 +54,7 @@ vi.stubGlobal("localStorage", {
   removeItem: (k: string) => void stored.delete(k),
 });
 
-const step = (act: TourStep["act"]) => ({ act }) as TourStep;
+const step = (opens: string) => ({ opens }) as TourStep;
 const pending = () => useTutorialChoice.getState().pending as PendingChoice;
 // The choice appears after guardOpen's first await has run.
 const answer = async (choice: string) => {
@@ -49,11 +75,11 @@ describe("what the guard looks at", () => {
   });
 
   it("lets a step open only what it asks for", () => {
-    const open = step({ openModel: "Stroop — Basic" });
+    const open = step("Stroop — Basic");
     expect(stepAsksFor(open, { kind: "catalog", label: "Stroop — Basic" })).toBe(true);
     expect(stepAsksFor(open, { kind: "catalog", label: "EGO" })).toBe(false);
     expect(stepAsksFor(open, { kind: "newModel" })).toBe(false);
-    expect(stepAsksFor(step({ newModel: "x" }), { kind: "newModel" })).toBe(true);
+    expect(stepAsksFor(step("new model"), { kind: "newModel" })).toBe(true);
     expect(stepAsksFor(null, { kind: "newModel" })).toBe(false);
   });
 
@@ -169,6 +195,9 @@ describe("starting a walkthrough", () => {
     openModel("/work/stroop_basic.py", { untouched: true, edited: true });
     result = chooseTutorialStart("stroop");
     await answer("here");
+    // Replacing unsaved work offers to save it first (#172).
+    await vi.waitFor(() => expect(useTutorialChoice.getState().pending?.type).toBe("save"));
+    await answer("discard");
     await result;
     expect(started()).toBe("stroop");
   });
@@ -191,13 +220,151 @@ describe("starting a walkthrough", () => {
     expect(started()).toBe("orientation-settings");
   });
 
-  it("offers no second window on the file that's open here", async () => {
-    openModel("/mine/stroop_basic.py");
+  it("offers a second window over your own copy of its model, which it doesn't touch", async () => {
+    openModel("/work/stroop_basic.py");
     useCatalogOpener.setState({ isOpen: () => true });
+    const result = chooseTutorialStart("stroop");
+    await vi.waitFor(() => expect(useTutorialChoice.getState().pending).not.toBeNull());
+    expect((pending() as Extract<PendingChoice, { type: "start" }>).noWindowReason).toBeNull();
+    await answer("cancel");
+    await result;
+  });
+
+  it("offers no second window when its own copy is the file open here", async () => {
+    openModel("/work/tutorials/stroop/stroop_basic.py");
     const result = chooseTutorialStart("stroop");
     await vi.waitFor(() => expect(useTutorialChoice.getState().pending).not.toBeNull());
     expect((pending() as Extract<PendingChoice, { type: "start" }>).noWindowReason).toMatch(/can't run in a second window/);
     await answer("cancel");
     await result;
+  });
+});
+
+describe("the walkthrough's own model (#172)", () => {
+  beforeEach(() => {
+    useTutorialChoice.setState({ pending: null });
+    useTourStore.getState().stopTour();
+  });
+
+  it("opens a fresh copy for its own model, or the one a step teaches opening", () => {
+    expect(tutorialCopyFor("Stroop — Basic")).toBeNull();
+    useTourStore.getState().startTour("stroop");
+    expect(tutorialCopyFor("Stroop — Basic")).toBe("stroop");
+    expect(tutorialCopyFor("Hopfield Network")).toBeNull();
+    useTourStore.getState().startTour("orientation-open");
+    const teaching = WALKTHROUGHS["orientation-open"].steps.findIndex((s) => s.opens === "Stroop — Basic");
+    useTourStore.setState({ stepIndex: teaching });
+    expect(tutorialCopyFor("Stroop — Basic")).toBe("orientation-open");
+  });
+
+  it("remembers its model, and follows it to a saved copy", () => {
+    useTourStore.getState().startTour("stroop");
+    noteTutorialModel("/work/tutorials/stroop/s.py", { copy: true });
+    expect(useTourStore.getState().modelPath).toBe("/work/tutorials/stroop/s.py");
+    expect(isTutorialCopy("/work/tutorials/stroop/s.py")).toBe(true);
+    followSavedCopy("/elsewhere.py", "/x.py");
+    expect(useTourStore.getState().modelPath).toBe("/work/tutorials/stroop/s.py");
+    followSavedCopy("/work/tutorials/stroop/s.py", "/mine/s_copy.py");
+    expect(useTourStore.getState().modelPath).toBe("/mine/s_copy.py");
+  });
+
+  it("takes a New Model as its model only on the step that teaches it", () => {
+    useTourStore.getState().startTour("ddm");
+    noteNewModel("/mine/ddm_demo.py");
+    expect(useTourStore.getState().modelPath).toBe("/mine/ddm_demo.py");
+    useTourStore.getState().startTour("stroop");
+    noteNewModel("/mine/other.py");
+    expect(useTourStore.getState().modelPath).toBeNull();
+  });
+
+  it("knows when the window has moved off it", () => {
+    const w = WALKTHROUGHS.stroop;
+    expect(offTutorialModel(w, null, "/a.py")).toBe(false);
+    expect(offTutorialModel(w, "/t.py", "/t.py")).toBe(false);
+    expect(offTutorialModel(w, "/t.py", "/a.py")).toBe(true);
+    expect(offTutorialModel(w, "/t.py", null)).toBe(true);
+    expect(offTutorialModel(WALKTHROUGHS["orientation-settings"], "/t.py", "/a.py")).toBe(false);
+  });
+
+  it("doesn't ask about going back to its own model", async () => {
+    useTourStore.getState().startTour("stroop");
+    useTourStore.setState({ stepIndex: 2, modelPath: "/work/tutorials/stroop/s.py" });
+    openModel("/mine/other.py");
+    await expect(guardOpen({ kind: "path", path: "/work/tutorials/stroop/s.py" })).resolves.toBe(true);
+    expect(useTutorialChoice.getState().pending).toBeNull();
+  });
+
+  it("undoes the step's edits through Save", async () => {
+    useTourStore.getState().startTour("stroop");
+    useModelStore.setState({ filePath: "/t.py", source: "edited", savedSource: "edited" });
+    useTourStore.setState({ stepStart: { key: "k", filePath: "/t.py", source: "as the step began" } });
+    await expect(undoStepEdits()).resolves.toBe(true);
+    expect(useModelStore.getState().source).toBe("as the step began");
+    expect(useModelStore.getState().savedSource).toBe("as the step began");
+  });
+
+  it("won't undo onto another file", async () => {
+    useModelStore.setState({ filePath: "/other.py", source: "x", savedSource: "x" });
+    useTourStore.setState({ stepStart: { key: "k", filePath: "/t.py", source: "y" } });
+    await expect(undoStepEdits()).resolves.toBe(false);
+    expect(useModelStore.getState().source).toBe("x");
+  });
+
+  it("starts over from step 1", () => {
+    useTourStore.getState().startTour("stroop");
+    useTourStore.setState({ stepIndex: 4, modelPath: "/t.py" });
+    const before = useTourStore.getState().startCount;
+    startTutorialOver();
+    expect(useTourStore.getState()).toMatchObject({ activeTourId: "stroop", stepIndex: 0, modelPath: null, startCount: before + 1 });
+  });
+});
+
+describe("replacing unsaved work (#172)", () => {
+  beforeEach(() => {
+    useTutorialChoice.setState({ pending: null });
+    useTourStore.getState().stopTour();
+  });
+
+  it("doesn't ask with nothing unsaved", async () => {
+    openModel("/mine/model.py");
+    await expect(offerToSave()).resolves.toBe(true);
+    expect(useTutorialChoice.getState().pending).toBeNull();
+  });
+
+  it("saves first when asked to", async () => {
+    openModel("/mine/model.py", { edited: true });
+    const result = offerToSave();
+    await answer("save");
+    await expect(result).resolves.toBe(true);
+    expect(useModelStore.getState().savedSource).toBe("b");
+  });
+
+  it("goes ahead without saving, and doesn't ask again about the same changes", async () => {
+    openModel("/mine/model.py", { edited: true });
+    expect(discardIsApproved()).toBe(false);
+    const result = offerToSave();
+    await answer("discard");
+    await expect(result).resolves.toBe(true);
+    expect(useModelStore.getState().savedSource).toBe("a");
+    expect(discardIsApproved()).toBe(true);
+    useModelStore.setState({ source: "c" });
+    expect(discardIsApproved()).toBe(false);
+  });
+
+  it("changes nothing on Cancel", async () => {
+    openModel("/mine/model.py", { edited: true });
+    const result = offerToSave();
+    await answer("cancel");
+    await expect(result).resolves.toBe(false);
+  });
+
+  it("is offered when Replace starts a tutorial over unsaved work", async () => {
+    openModel("/mine/model.py", { edited: true });
+    const result = chooseTutorialStart("stroop");
+    await answer("here");
+    await vi.waitFor(() => expect(useTutorialChoice.getState().pending?.type).toBe("save"));
+    await answer("cancel");
+    await result;
+    expect(useTourStore.getState().activeTourId).toBeNull();
   });
 });
