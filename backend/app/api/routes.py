@@ -4,6 +4,7 @@ import io
 import json as json_mod
 import logging
 import os
+import re
 import shutil
 import time
 import zipfile
@@ -2785,6 +2786,29 @@ def _demo_working_dir() -> Path:
     return working_copies.working_copies_dir()
 
 
+#: A tutorial id, as the walkthrough files name them ("hopfield", "pnl-control").
+_TUTORIAL_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
+
+
+def _tutorial_working_dir(tutorial: str) -> Path:
+    """A tutorial's own folder for its model, emptied for a fresh start (#172).
+
+    Bundled models share one working copy, so a tutorial that used it would
+    start on whatever the learner last did to that model, and a second window
+    opening the model would write over the copy the tutorial is using. Each
+    tutorial gets ``<working copies>/tutorials/<id>/`` instead, emptied every
+    time the tutorial opens its model, so every start is clean and the
+    learner's own copy is never touched.
+    """
+    if not _TUTORIAL_ID.match(tutorial):
+        raise HTTPException(status_code=400, detail=f"Not a tutorial id: {tutorial!r}")
+    folder = _demo_working_dir() / "tutorials" / tutorial
+    if folder.exists():
+        shutil.rmtree(folder)
+    folder.mkdir(parents=True)
+    return folder
+
+
 @router.get("/demos")
 async def list_demos():
     """List available demo models."""
@@ -2802,6 +2826,8 @@ async def list_demos():
 
 class ResetDemoRequest(BaseModel):
     demo_name: str
+    # #172: open it as this tutorial's own fresh copy, not the shared one.
+    tutorial: Optional[str] = None
 
 
 @router.post("/demos/reset", response_model=LoadModelResponse)
@@ -2811,8 +2837,10 @@ def reset_demo(request: ResetDemoRequest):
     if not pristine.exists():
         raise HTTPException(status_code=404, detail=f"Demo not found: {request.demo_name}")
 
-    # Working copy lives in the configured working dir (default: backend/).
-    working = _demo_working_dir() / f"{request.demo_name}.py"
+    # Working copy lives in the configured working dir (default: backend/),
+    # or a tutorial's own folder (#172).
+    folder = _tutorial_working_dir(request.tutorial) if request.tutorial else _demo_working_dir()
+    working = folder / f"{request.demo_name}.py"
     shutil.copy2(pristine, working)
 
     # Stamp the sidecar with demo_origin so the "Reset to Demo" affordance
@@ -2899,6 +2927,8 @@ class LoadReferenceRequest(BaseModel):
     # source. Reopening never does this on its own — losing work has to be
     # asked for, not inferred.
     restore_pristine: bool = False
+    # #172: open it as this tutorial's own fresh copy, not the shared one.
+    tutorial: Optional[str] = None
 
 
 @router.post("/reference-models/load", response_model=LoadModelResponse)
@@ -2920,8 +2950,12 @@ def load_reference_model(request: LoadReferenceRequest):
     # the bundle. Otherwise keep the edits and report the divergence so the UI
     # can offer the choice — restoring is opt-in via `restore_pristine`.
     # #1416: a working copy made under a model's old name is adopted first.
-    working_copies.adopt_renamed_working_copy(request.name, _demo_working_dir())
-    working = _demo_working_dir() / f"{request.name}.py"
+    # #172: a tutorial's copy is its own and always fresh (the folder starts empty).
+    if request.tutorial:
+        working = _tutorial_working_dir(request.tutorial) / f"{request.name}.py"
+    else:
+        working_copies.adopt_renamed_working_copy(request.name, _demo_working_dir())
+        working = _demo_working_dir() / f"{request.name}.py"
     pristine_text = pristine.read_text()
     had_edits = working.exists() and working.read_text() != pristine_text
     restored = bool(had_edits and request.restore_pristine)
