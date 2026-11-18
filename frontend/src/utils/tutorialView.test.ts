@@ -18,26 +18,26 @@ describe("the graph's view during a tutorial (#172)", () => {
   });
 
   it("shows the graph as a fresh window does, and puts the learner's choices back", () => {
-    useGraphSettings.setState({ showController: false, direction: "LR", collapsedCompositions: new Set(["inner"]) });
+    useGraphSettings.setState({ showNodeNames: false, direction: "LR", collapsedCompositions: new Set(["inner"]) });
     applyTutorialView();
-    expect(g().showController).toBe(true);
+    expect(g().showNodeNames).toBe(true);
     expect(g().direction).toBe("BT");
     expect(g().collapsedCompositions.size).toBe(0);
     restoreTutorialView();
-    expect(g().showController).toBe(false);
+    expect(g().showNodeNames).toBe(false);
     expect(g().direction).toBe("LR");
     expect([...g().collapsedCompositions]).toEqual(["inner"]);
     expect(reloadView).not.toHaveBeenCalled();
   });
 
-  it("sets the nested and PyTorch views only as it opens its model, and reloads to put them back", () => {
-    useGraphSettings.setState({ flat: false, pytorch: true });
+  it("sets what the server draws only as it opens its model, and reloads to put it back", () => {
+    useGraphSettings.setState({ flat: false, pytorch: true, showController: false });
     applyTutorialView();
-    expect(g().pytorch).toBe(true);
+    expect(g()).toMatchObject({ pytorch: true, showController: false });
     applyTutorialViewModes();
-    expect(g()).toMatchObject({ flat: true, pytorch: false });
+    expect(g()).toMatchObject({ flat: true, pytorch: false, showController: true });
     restoreTutorialView();
-    expect(g()).toMatchObject({ flat: false, pytorch: true });
+    expect(g()).toMatchObject({ flat: false, pytorch: true, showController: false });
     expect(reloadView).toHaveBeenCalledTimes(1);
   });
 
@@ -51,6 +51,15 @@ describe("the graph's view during a tutorial (#172)", () => {
     expect(reloadView).not.toHaveBeenCalled();
   });
 
+  it("remembers both, whichever comes first", () => {
+    useGraphSettings.setState({ showNodeNames: false, flat: false });
+    applyTutorialViewModes();
+    applyTutorialView();
+    expect(g()).toMatchObject({ showNodeNames: true, flat: true });
+    restoreTutorialView();
+    expect(g()).toMatchObject({ showNodeNames: false, flat: false });
+  });
+
   it("doesn't reload when another tutorial is starting", () => {
     useGraphSettings.setState({ flat: false });
     applyTutorialView();
@@ -60,8 +69,8 @@ describe("the graph's view during a tutorial (#172)", () => {
   });
 
   it("does nothing when no tutorial changed the view", () => {
-    useGraphSettings.setState({ showController: false });
+    useGraphSettings.setState({ showNodeNames: false });
     restoreTutorialView();
-    expect(g().showController).toBe(false);
+    expect(g().showNodeNames).toBe(false);
   });
 });

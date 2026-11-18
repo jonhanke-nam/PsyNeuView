@@ -14,9 +14,10 @@
  * Choices made in Settings (the automatic layout, port dots) are the
  * learner's preferences, not leftovers, and are left alone.
  *
- * The nested and PyTorch views change what the server sends, so they take
- * effect when the walkthrough opens its model (`applyTutorialViewModes`),
- * never under a model already on screen.
+ * The nested and PyTorch views, and what the graph shows (the controller,
+ * learning, the interface mechanisms, inactive nodes), change what the server
+ * sends, so they take effect when the walkthrough opens its model
+ * (`applyTutorialViewModes`), never under a model already on screen.
  */
 
 import { useGraphSettings } from "@/stores/graphSettingsStore";
@@ -25,13 +26,11 @@ import { useCatalogOpener } from "@/stores/catalogOpenerStore";
 
 /** View choices that apply as they change, without reloading the model. */
 export const LIVE_VIEW_KEYS = [
-  "showController",
-  "showLearning",
-  "showInactive",
-  "showCIMs",
   "showExecutionOrder",
   "showNodeNames",
+  "showFullTypes",
   "showProjectionLabels",
+  "showArrowheads",
   "showDimensions",
   "colorByRole",
   "direction",
@@ -40,8 +39,11 @@ export const LIVE_VIEW_KEYS = [
   "insetCompositions",
 ] as const;
 
-/** View choices the server draws for: they take effect on the next load. */
-export const MODE_VIEW_KEYS = ["flat", "pytorch"] as const;
+/**
+ * View choices the server draws for (the nested and PyTorch views, and what
+ * the graph shows): they take effect on the next load.
+ */
+export const MODE_VIEW_KEYS = ["flat", "pytorch", "showController", "showLearning", "showCIMs", "showInactive"] as const;
 
 type ViewKey = (typeof LIVE_VIEW_KEYS)[number] | (typeof MODE_VIEW_KEYS)[number];
 type ViewState = Partial<Record<ViewKey, unknown>>;
@@ -68,15 +70,17 @@ function now(): Record<string, unknown> {
 
 /** A walkthrough is starting: remember the view, and show the graph as a fresh window does. */
 export function applyTutorialView(): void {
-  if (before === null) before = pick(LIVE_VIEW_KEYS, now());
+  // The walkthrough may have opened its model (and so remembered the modes) first.
+  if (before === null) before = {};
+  if (!(LIVE_VIEW_KEYS[0] in before)) Object.assign(before, pick(LIVE_VIEW_KEYS, now()));
   useGraphSettings.setState(pick(LIVE_VIEW_KEYS, initial()) as never);
   // A collapsed composition is re-seeded from its default on the next load.
   useGraphSettings.getState().resetCollapseSeed();
 }
 
 /**
- * The walkthrough is opening its own model: the nested and PyTorch views as a
- * fresh window has them, for this load and the rest of the walkthrough.
+ * The walkthrough is opening its own model: the view choices the server draws
+ * for as a fresh window has them, for this load and the rest of the walkthrough.
  */
 export function applyTutorialViewModes(): void {
   if (before === null) before = {};
@@ -85,8 +89,8 @@ export function applyTutorialViewModes(): void {
 }
 
 /**
- * The walkthrough ended: the learner's view comes back. The nested and PyTorch
- * views need the model drawn again, so the open file is reloaded in them, unless
+ * The walkthrough ended: the learner's view comes back. The choices the server
+ * draws for need the model drawn again, so the open file is reloaded, unless
  * it has unsaved changes (a reload would ask about them) or another
  * walkthrough is starting and opens its own. Then those two stay as they are,
  * which is still how the model on screen is drawn.
