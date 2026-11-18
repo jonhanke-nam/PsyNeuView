@@ -11,6 +11,12 @@ export interface ConnectionOption {
   type: string;
   sender_port: string;
   receiver_port: string;
+  /** Into a collapsed composition: the input node it goes into (#253). */
+  receiver?: string;
+  /** What the chooser lists for it, when not just the port's name. */
+  label?: string;
+  /** The composition to add the projection to, when PsyNeuLink names one. */
+  composition?: string;
 }
 
 export function PortChooser({ x, y, receiver, options, onPick, onClose }: {
@@ -54,7 +60,7 @@ export function PortChooser({ x, y, receiver, options, onPick, onClose }: {
       </div>
       {options.map((o) => (
         <button
-          key={o.receiver_port}
+          key={`${o.receiver ?? ""}/${o.receiver_port}`}
           role="menuitem"
           data-testid="port-chooser-option"
           onClick={() => onPick(o)}
@@ -72,7 +78,7 @@ export function PortChooser({ x, y, receiver, options, onPick, onClose }: {
           onMouseEnter={(e) => (e.currentTarget.style.background = "var(--pnv-primary-tint)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
         >
-          {o.receiver_port}
+          {o.label ?? o.receiver_port}
         </button>
       ))}
     </div>
