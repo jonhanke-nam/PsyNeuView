@@ -101,6 +101,10 @@ test.describe("Resuming a tutorial", { tag: "@ci" }, () => {
     await expect(page.getByTestId("tour-bar")).toContainText("step 1 of 2");
     await modelReady(page);
     await expect.poll(async () => (await tourState(page)).source, { timeout: 30_000 }).not.toContain("# to be dropped");
+    // color_hidden, selected last time, isn't still selected: step 1 waits for
+    // the learner rather than finishing itself (it did in CI, run 44276662551).
+    await page.waitForTimeout(2_000);
+    await expect(page.getByTestId("tour-bar")).toContainText("step 1 of 2");
     expect(await page.evaluate((k) => localStorage.getItem(k), PROGRESS_KEY)).toBeNull();
   });
 

@@ -169,6 +169,10 @@ export function TourBar() {
   useEffect(() => {
     if (!tourKey) return;
     applyTutorialView();
+    // A selection left from before would finish a "select this node" step on
+    // its own: starting over with color_hidden still selected went straight
+    // to step 2. Every start begins with nothing selected (#172, #173).
+    useModelStore.getState().setSelectedNodeId(null);
     return () => restoreTutorialView({ anotherStarting: !!useTourStore.getState().activeTourId });
   }, [tourKey]);
   // A reload mid-walkthrough never ran that cleanup. Unless the page is about
