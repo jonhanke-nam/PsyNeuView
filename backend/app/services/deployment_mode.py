@@ -81,6 +81,12 @@ class Capabilities:
     #: them the operator's account, so off outside local use.
     github_token: bool
 
+    #: Offer the AI assistant (#179). Only where the machine and its files are
+    #: the user's own: a container or hosted deployment serves a visitor whose
+    #: files these are not, so the assistant is off there until reviewed
+    #: separately.
+    assistant: bool = False
+
     # Deliberately absent: confining host filesystem access. Every model route
     # still takes an absolute ``file_path``, so a capability claiming otherwise
     # would be a false statement in an API response. Tracked in #1058, which is
@@ -88,15 +94,15 @@ class Capabilities:
 
 
 _CAPABILITIES: dict[Mode, Capabilities] = {
-    LOCAL: Capabilities(install=True, github_token=True),
+    LOCAL: Capabilities(install=True, github_token=True, assistant=True),
     # install=True since #132: the Mac app is a conduit for this setting, not a
     # separate implementation of it. It no longer keeps its own copy of which
     # PsyNeuLink is wanted, so an install started from the gear icon is no
     # longer undone by the app's next update. Loopback still gates the actual
     # endpoint, and the Mac app is loopback.
-    MAC_APP: Capabilities(install=True, github_token=True),
-    CONTAINER: Capabilities(install=False, github_token=False),
-    HOSTED: Capabilities(install=False, github_token=False),
+    MAC_APP: Capabilities(install=True, github_token=True, assistant=True),
+    CONTAINER: Capabilities(install=False, github_token=False, assistant=False),
+    HOSTED: Capabilities(install=False, github_token=False, assistant=False),
 }
 
 
