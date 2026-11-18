@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit reviews every PR to devel with the rules below (#246). They are
+# the ones reviews keep catching by hand; when a CodeRabbit finding recurs, it
+# becomes a check in the standing code scan (#243), and the reverse.
+language: en-US
+tone_instructions: "Plain English, short sentences, no jargon abbreviations. Say what breaks, for whom, and the fix."
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - devel
+
+  path_filters:
+    - "!frontend/public/narration/**"
+    - "!docs/tutorials/assets/**"
+    - "!**/*.png"
+    - "!**/*.m4a"
+    - "!frontend/dist/**"
+    - "!**/package-lock.json"
+    - "!**/uv.lock"
+
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        House rules for every file:
+        - No other people's names or initials anywhere: code, comments, docs, tests, fixtures, assets. Use roles ("the PsyNeuLink lead", "a tester"). The repo owner's own name is fine.
+        - Anything a person reads (UI text, log lines shown in the app, errors, docs) is plain English: no dev abbreviations (WIP, LGTM, PTAL, ack), no unexplained jargon.
+        - A bug fix comes with a regression test (backend pytest or Playwright e2e). Flag a fix without one.
+
+    - path: "backend/**/*.py"
+      instructions: |
+        - Package installs use uv first (`uv pip install --python <venv python> …`, or `uv sync`/`uv run` once #247 lands), with pip only as a fallback that logs why. Flag any subprocess call to `pip`, `bin/pip` or `-m pip` that isn't that fallback, and any text people see that says "pip" when uv did the work (#244).
+        - Subprocesses: no `shell=True` with interpolated input; paths from requests are resolved and checked before use.
+        - Anything written to logs, problem reports or diagnostics redacts tokens and shows the home folder as `~`.
+        - Every route that changes state goes through the request-origin check.
+        - Style follows docs/python-code-conventions-peps.md.
+
+    - path: "frontend/src/**/*.{ts,tsx,css}"
+      instructions: |
+        - Colours come from tokens in frontend/src/styles/palette.css; buttons are `Button` kinds (docs/ui-style-conventions.md). Flag hand-written colours.
+        - Anything clickable is a real `<button>`, or carries the hover affordance a button gets for free (docs/ui-interaction-conventions.md). A `<div onClick>` silently loses hover feedback.
+        - Every dialog, panel and pop-up menu uses `useDismiss` + `DialogHeader` and is listed in docs/dialog-inventory.md.
+        - One control per setting, listed in docs/settings-inventory.yaml (docs/settings-and-mac-app.md). Flag a second control for an existing setting.
+        - Graph conventions match PsyNeuLink's show_graph: input nodes green and on the bottom, output nodes red and on top.
+        - Don't duplicate PsyNeuLink's own naming with new names for the same thing; build in the view or link to PsyNeuLink deliberately.
+
+    - path: "frontend/src/walkthroughs/**"
+      instructions: |
+        Walkthrough changes follow docs/guided-walkthroughs.md, and the tutorial specs in frontend/e2e/tutorials stay green. A changed caption needs its recorded narration re-rendered (`npm run narration:render`).
+
+    - path: "frontend/e2e/**"
+      instructions: |
+        Drive the app as docs/testing.md and the canonical example specs do. No fixed sleeps: wait for a condition (for example, the busy wheel gone) before measuring.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        devel is gated: never weaken a required check or add a bypass. Prefer uv for Python setup. Long steps carry a timeout.
+
+chat:
+  auto_reply: true
