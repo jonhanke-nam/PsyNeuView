@@ -213,7 +213,8 @@ button:hover {
    the lock); keep it where React Flow's own sat, between zoom-out and lock. */
 .react-flow__controls .pnv-controls-fit { order: 1; }
 .react-flow__controls .react-flow__controls-interactive { order: 2; }
-/* #289: the Fit button says "Fit". Small and bold enough to read in the
+/* #289: the Fit button's optional word (Settings ▸ Appearance ▸ Canvas
+   controls; the icon is the default). Small and bold enough to read in the
    26px square the other controls use, so the column keeps its shape. */
 .react-flow__controls .pnv-controls-fit-label {
   font-size: var(--pnv-fs-10);
