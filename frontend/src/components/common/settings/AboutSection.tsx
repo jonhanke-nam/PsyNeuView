@@ -81,6 +81,7 @@ export function AboutSection({ info, loadError }: { info: SettingsInfo | null; l
           PsyNeuLink
         </a>
       </div>
+      <BuiltWith />
       {info && (
         <div style={{ ...mutedStyle, marginTop: 8 }}>
           Where everything is kept: Folders. The PsyNeuLink details, and changing it: Developer.
@@ -89,6 +90,33 @@ export function AboutSection({ info, loadError }: { info: SettingsInfo | null; l
       {/* In the Mac app, Help ▸ Report a Problem… gathers the same thing (#1287). */}
       {!hasSettingsBridge() && <DownloadDiagnostics />}
     </Group>
+  );
+}
+
+/**
+ * Built with (#290): open-source libraries we credit by name. React Flow
+ * draws the canvas; its corner credit is hidden there, so it is credited here
+ * instead, as its maintainers ask.
+ */
+export const CREDITS: { name: string; note: string; url: string }[] = [
+  { name: "React Flow", note: "xyflow, MIT licence", url: "https://reactflow.dev" },
+];
+
+function BuiltWith() {
+  return (
+    <div data-testid="about-built-with" style={{ ...mutedStyle, marginTop: 8 }}>
+      Built with{" "}
+      {CREDITS.map((c, i) => (
+        <span key={c.name}>
+          {i > 0 && ", "}
+          <a href={c.url} target="_blank" rel="noreferrer" style={linkStyle} data-testid="about-credit">
+            {c.name}
+          </a>{" "}
+          ({c.note})
+        </span>
+      ))}
+      .
+    </div>
   );
 }
 
