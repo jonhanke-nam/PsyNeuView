@@ -19,15 +19,9 @@ import {
 } from "@/constants/pnlTypes";
 import { addNodeToModel } from "@/utils/nodeActions";
 import { useDismiss } from "@/components/common/dialog/useDismiss";
+import { iconForCategory, iconForType } from "@/utils/componentIcons";
+import { ComponentIcon } from "./ComponentIcon";
 
-// TODO(#74): replace with real ontology icons once the official PsyNeuLink icon set is in.
-const COMPACT_GLYPHS: Record<string, string> = {
-  mechanisms: "M",
-  projections: "→",
-  compositions: "C",
-  functions: "ƒ",
-  ports: "•",
-};
 
 function findNode(id: string, nodes: TaxonomyNode[] = PNL_TAXONOMY_TREE): TaxonomyNode | null {
   for (const n of nodes) {
@@ -477,6 +471,9 @@ function PaletteLeaf({
   // #252: picked up and waiting to be put on the graph.
   const armed = usePaletteStore((s) => s.armed?.type === item.type);
   const armedStyle = armed ? { background: "var(--pnv-primary-tint)", outline: "2px solid var(--pnv-primary)", outlineOffset: -2 } : {};
+  // #283: the component's icon, in its type colour. The text glyph is only a
+  // fallback; componentIcons.test.ts checks every item has an icon.
+  const icon = iconForType(item.type);
   if (compact) {
     return (
       <div
@@ -506,7 +503,7 @@ function PaletteLeaf({
           userSelect: "none",
         }}
       >
-        {item.icon}
+        {icon ? <ComponentIcon icon={icon} size={16} color={item.color} /> : item.icon}
       </div>
     );
   }
@@ -540,16 +537,21 @@ function PaletteLeaf({
       }}
       title={`${item.type} \u2014 drag onto the graph, or click it and then click where it goes`}
     >
-      {/* Color dot */}
-      <span
-        style={{
-          width: 8,
-          height: 8,
-          borderRadius: "50%",
-          background: item.color,
-          flexShrink: 0,
-        }}
-      />
+      {/* Icon, centred where the 8px colour dot was, taking the dot's width in
+          the row (the negative margins) so the labels stay where they were. */}
+      {icon ? (
+        <ComponentIcon icon={icon} size={14} color={item.color} style={{ margin: "0 -3px" }} />
+      ) : (
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: item.color,
+            flexShrink: 0,
+          }}
+        />
+      )}
       {/* Label */}
       <span style={{ flex: 1, color: "var(--pnv-text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {isDefault ? item.type : item.label}
@@ -656,7 +658,7 @@ function CompactCategoryIcon({
   node: TaxonomyNode;
   isActive: boolean;
 }) {
-  const glyph = COMPACT_GLYPHS[node.id] ?? node.label.charAt(0).toUpperCase();
+  const icon = iconForCategory(node.id);
   return (
     <div
       onClick={(e) => {
@@ -666,6 +668,8 @@ function CompactCategoryIcon({
         else store.openCompactFlyout(node.id);
       }}
       title={node.label}
+      data-testid="palette-category"
+      data-category={node.id}
       style={{
         width: 32,
         height: 32,
@@ -683,7 +687,11 @@ function CompactCategoryIcon({
         userSelect: "none",
       }}
     >
-      {glyph}
+      {icon ? (
+        <ComponentIcon icon={icon} size={18} color="var(--pnv-text-body)" />
+      ) : (
+        node.label.charAt(0).toUpperCase()
+      )}
     </div>
   );
 }

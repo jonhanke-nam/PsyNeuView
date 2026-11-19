@@ -34,5 +34,11 @@ test.describe("React Flow credit (#290)", { tag: "@ci" }, () => {
     await expect(builtWith).toContainText("React Flow");
     await expect(builtWith).toContainText("xyflow");
     await expect(builtWith.getByRole("link", { name: "React Flow" })).toHaveAttribute("href", "https://reactflow.dev");
+    // The Components panel's icons (#283), partly MetaCell's.
+    await expect(builtWith).toContainText("Icons adapted from MetaCell's PsyNeuLinkView, used with permission.");
+    await expect(builtWith.getByRole("link", { name: "MetaCell's PsyNeuLinkView" })).toHaveAttribute(
+      "href",
+      "https://github.com/MetaCell/PsyNeuLinkView",
+    );
   });
 });
