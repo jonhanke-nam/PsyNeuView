@@ -243,10 +243,11 @@ export function SettingsPanel({ isOpen, onClose, section: requested = null }: Pr
               query={query}
               onQueryChange={setQuery}
               inMacApp={inMacApp}
+              assistant={assistantAvailable}
               onChoose={chooseResult}
             />
             {query.trim() ? (
-              <SettingsSearchResults query={query} inMacApp={inMacApp} onChoose={chooseResult} />
+              <SettingsSearchResults query={query} inMacApp={inMacApp} assistant={assistantAvailable} onChoose={chooseResult} />
             ) : availableSections(inMacApp, assistantAvailable).map((s) => {
               const active = s.id === section;
               return (
