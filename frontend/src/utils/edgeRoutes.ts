@@ -84,7 +84,7 @@ export function ambiguousKeys(edges: RoutableEdge[]): Set<string> {
 export function serializeRoutes(
   edges: RoutableEdge[],
   shaped: Record<string, true>,
-  waypoints: Record<string, Pt[]>,
+  waypoints: Record<string, Waypoint[]>,
   overrides: Record<string, { s?: number; t?: number }>,
   curves: CurveState = {},
 ): EdgeRouteMap {

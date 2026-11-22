@@ -37,6 +37,9 @@ import { EDGE_LINE_HIGHLIGHT_EXTRA, EDGE_LINE_HOVER_EXTRA, edgeArrowheadScale, u
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useNodeBoxes } from "@/hooks/useNodeBoxes";
+import {
+  SOFT_TENSION, anchorHandles, handlePath, handleTip, hasPinnedHandles, pinFromDrag, type Anchor,
+} from "@/utils/curveHandles";
 
 const FAN_SPACING_PX = 18;
 // Label width estimate: monospace 10px font ≈ 6px per char, plus ~12px
@@ -171,6 +174,10 @@ export function ProjectionEdge({
   const edgeAttach = useEdgeAttach((s) => s.overrides);
   // #951: user waypoints this edge routes through (absolute flow coords).
   const waypoints = useEdgeAttach((s) => s.waypoints[id]);
+  // #39: the handles pinned at this edge's ends, and the tension it is drawn
+  // with (a route saved before the softer default keeps its old one).
+  const endHandles = useEdgeAttach((s) => s.handles[id]);
+  const edgeTension = useEdgeAttach((s) => s.tension[id]) ?? SOFT_TENSION;
   const { screenToFlowPosition } = useReactFlow();
   const alwaysVisible = useUIStore((s) => s.edgeLabelsAlwaysVisible);
   const cursorHighlightedEdgeId = useModelStore((s) => s.cursorHighlightedEdgeId);
@@ -280,7 +287,11 @@ export function ProjectionEdge({
     return obstacles;
   };
 
-  const manual = !!(waypoints && waypoints.length > 0);
+  // #39: a pinned handle shapes the curve, as a bend does.
+  const pinned = hasPinnedHandles(waypoints, endHandles);
+  const manual = !!(waypoints && waypoints.length > 0) || pinned;
+  // Handles shape a Smooth curve; the other styles draw corners, which have none.
+  const handleCurve = pinned && edgeRouting === "spline";
   // #23: in the "Like show_graph" layout, follow show_graph's own course for
   // this edge — while both nodes are where that layout put them. Moving one
   // hands the edge back to normal routing; a hand-shaped edge stays manual.
@@ -305,13 +316,18 @@ export function ProjectionEdge({
   let edgePath: string;
   if (curve) {
     edgePath = curvePath(curve.points);
+  } else if (handleCurve) {
+    // #39: a curve shaped with handles is drawn exactly as shaped, through
+    // the user's bends with the user's tangents.
+    edgePath = handlePath([{ x: sx, y: sy }, ...(waypoints ?? []), { x: tx, y: ty }], edgeTension, endHandles);
   } else if (manual) {
     // #963: honor the user's bends but obstacle-avoid between them so no leg
     // passes behind a node.
     edgePath = renderStyledPathSafe(
-      [{ x: sx, y: sy }, ...waypoints!, { x: tx, y: ty }],
+      [{ x: sx, y: sy }, ...(waypoints ?? []), { x: tx, y: ty }],
       edgeRouting,
       collectObstacles(),
+      edgeTension,
     );
   } else if (bundleSize > 1) {
     edgePath = fannedBezierPath(
@@ -606,7 +622,10 @@ export function ProjectionEdge({
   // are freely editable (forced: false); geometry-driven bends (node detour,
   // lane bow) are "forced" — shown as a distinct dot that promotes to a user
   // waypoint on grab, so every bend has a dot and its origin is legible.
-  const cornerPts: { x: number; y: number; forced: boolean }[] = manual
+  const cornerPts: { x: number; y: number; forced: boolean }[] = handleCurve
+    // #39: a handle-shaped curve goes through the user's bends and nothing else.
+    ? (waypoints ?? []).map((p) => ({ x: p.x, y: p.y, forced: false }))
+    : manual
     // #1019: take the handles from the same expansion the renderer draws, not
     // from the raw waypoint list. The renderer inserts corners between
     // consecutive waypoints to route around nodes; listing only the user's
@@ -615,12 +634,74 @@ export function ProjectionEdge({
     // could not then grab. Inserted corners come back forced:true, so they
     // render as the promote-on-grab dot like any other geometry-driven bend.
     ? expandedCorners(
-        [{ x: sx, y: sy }, ...(waypoints as { x: number; y: number }[]), { x: tx, y: ty }],
+        [{ x: sx, y: sy }, ...(waypoints ?? []), { x: tx, y: ty }],
         collectObstacles(),
       )
     : (handlesActive && (curve || (avoidNodes && bundleSize <= 1))
         ? autoBends().map((p) => ({ x: p.x, y: p.y, forced: true }))
         : []);
+
+  // #39: tangent handles, like a pen tool's, on a selected Smooth arrow. The
+  // anchors are its ends and the bends it is drawn through; each handle's tip
+  // is a control point of the curve. Dragging one pins it (the bends the curve
+  // goes through become the user's own first, so the shape holds); dragging an
+  // anchor moves it, handles and all.
+  const curveAnchors: Anchor[] = isSelected && edgeRouting === "spline"
+    ? [
+        { x: sx, y: sy },
+        ...(handleCurve ? (waypoints ?? []) : cornerPts.map((p) => ({ x: p.x, y: p.y }))),
+        { x: tx, y: ty },
+      ]
+    : [];
+  const curveHandleSet = curveAnchors.length ? anchorHandles(curveAnchors, edgeTension, endHandles) : [];
+  const handlePinned = (i: number): boolean =>
+    i === 0 ? !!endHandles?.s
+      : i === curveAnchors.length - 1 ? !!endHandles?.t
+      : handleCurve && !!waypoints?.[i - 1]?.h;
+  const startTangentDrag = (index: number, side: "in" | "out") => (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const anchors = curveAnchors.map((p) => ({ x: p.x, y: p.y }));
+    const startX = e.clientX, startY = e.clientY;
+    let moved = false;
+    const move = (ev: PointerEvent) => {
+      if (!moved) {
+        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DOT_DRAG_THRESHOLD_PX) return;
+        moved = true;
+        startShapingArrow(); // #164: in Auto, the layout becomes Custom
+        // The bends the curve is drawn through become the user's own, so
+        // pinning one handle keeps the rest of the shape (promote on grab, #951).
+        if (!handleCurve && anchors.length > 2) {
+          useEdgeAttach.getState().setWaypoints(id, anchors.slice(1, -1));
+        }
+      }
+      const pin = pinFromDrag(anchors, index, side, screenToFlowPosition({ x: ev.clientX, y: ev.clientY }));
+      if ("end" in pin) useEdgeAttach.getState().setEndHandle(id, pin.end, pin.h);
+      else useEdgeAttach.getState().setWaypointHandle(id, pin.bend, pin.h);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      if (moved) arrowShaped(reshapeDescription(arrowName)); // one History step
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+  /** Double-click a pinned handle: the curve picks that tangent again. */
+  const releaseHandle = (index: number) => {
+    if (!handlePinned(index)) return;
+    startShapingArrow();
+    if (index === 0) useEdgeAttach.getState().setEndHandle(id, "s", null);
+    else if (index === curveAnchors.length - 1) useEdgeAttach.getState().setEndHandle(id, "t", null);
+    else useEdgeAttach.getState().setWaypointHandle(id, index - 1, null);
+    arrowShaped(reshapeDescription(arrowName));
+  };
+  /** Every handle to draw: its anchor, which side, and where its tip sits. */
+  const tangentKnobs = curveHandleSet.flatMap((hs, i) =>
+    (["in", "out"] as const)
+      .filter((side) => hs[side])
+      .map((side) => ({ i, side, anchor: curveAnchors[i], tip: handleTip(curveAnchors[i], hs[side]!, 22) })),
+  );
 
   const effectiveStroke = isSelected
     ? "var(--pnv-primary)"
@@ -677,7 +758,7 @@ export function ProjectionEdge({
         onMouseLeave={() => setHovered(false)}
         onPointerDown={startEdgeShape}
         onDoubleClick={() => {
-          if (!(waypoints && waypoints.length)) return;
+          if (!manual) return;
           startShapingArrow();
           useEdgeAttach.getState().clearWaypoints(id);
           arrowShaped(reshapeDescription(arrowName, "reset")); // #164
@@ -697,6 +778,17 @@ export function ProjectionEdge({
       {/* Hidden measurement path — same geometry as the visible edge,
           referenced for getPointAtLength to position the chevron. */}
       <path ref={pathRef} data-testid="edge-measure-path" d={edgePath} fill="none" stroke="none" style={{ pointerEvents: "none" }} />
+      {/* #39: the stalks from each anchor to its handles. */}
+      {tangentKnobs.map((k) => (
+        <line
+          key={`tl-${k.i}-${k.side}`}
+          data-testid="edge-curve-handle-line"
+          x1={k.anchor.x} y1={k.anchor.y} x2={k.tip.x} y2={k.tip.y}
+          stroke="var(--pnv-primary)"
+          strokeWidth={1}
+          style={{ pointerEvents: "none" }}
+        />
+      ))}
       {showArrowheads && arrow && (
         <polygon
           points={`0,0 ${-2 * headSize},${-headSize * 0.6} ${-2 * headSize},${headSize * 0.6}`}
@@ -819,6 +911,38 @@ export function ProjectionEdge({
                   style={{ position: "absolute", left: -12, top: -12, width: 24, height: 24, borderRadius: "50%", pointerEvents: "all", display: "flex", alignItems: "center", justifyContent: "center" }}
                 >
                   <div style={{ width: r, height: r, borderRadius: "50%", background: hot ? color : "var(--pnv-surface)", border: `2px ${wp.forced ? "dashed" : "solid"} ${color}`, boxSizing: "border-box", transition: "width 0.1s, height 0.1s, background 0.1s" }} />
+                </div>
+              </div>
+            );
+          })}
+        </ViewportPortal>
+      )}
+      {/* #39: tangent handles, above the nodes like the bend handles. Each is
+          an 18px grab target round a small dot: filled once pinned, hollow
+          while the curve picks the tangent itself. Shown only on a selected
+          arrow, so they never cover a node otherwise. */}
+      {tangentKnobs.length > 0 && (
+        <ViewportPortal>
+          {tangentKnobs.map((k) => {
+            const pin = handlePinned(k.i);
+            return (
+              <div key={`th-${k.i}-${k.side}`} style={{ position: "absolute", transform: `translate(${k.tip.x}px, ${k.tip.y}px)`, pointerEvents: "none", zIndex: 21 }}>
+                <div
+                  // #975: nopan, or d3-zoom takes the drag over; #40: the precise pointer.
+                  className="nodrag nopan graph-control-point pnv-curve-handle"
+                  data-testid="edge-curve-handle"
+                  data-anchor={k.i}
+                  data-side={k.side}
+                  data-pinned={pin ? "true" : "false"}
+                  title={pin
+                    ? "drag: shape the curve · double-click: let the curve choose again"
+                    : "drag: shape the curve"}
+                  onPointerDown={startTangentDrag(k.i, k.side)}
+                  onClick={(ev) => ev.stopPropagation()}
+                  onDoubleClick={(ev) => { ev.stopPropagation(); releaseHandle(k.i); }}
+                  style={{ position: "absolute", left: -9, top: -9, width: 18, height: 18, borderRadius: "50%", pointerEvents: "all", display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  <div className="pnv-curve-handle-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: pin ? "var(--pnv-primary)" : "var(--pnv-surface)", border: "1.5px solid var(--pnv-primary)", boxSizing: "border-box" }} />
                 </div>
               </div>
             );
