@@ -116,6 +116,19 @@ def test_the_written_control_projection_loads_and_controls_the_parameter(model_f
     assert "gain" not in again
 
 
+def test_a_control_mechanism_can_control_the_learning_mechanisms_learning_rate(model_file):
+    # Dropped on the node the canvas shows as "Learning Mechanism for ab",
+    # which the file names `lm`: its learning rate can be controlled.
+    result = _options(model_file, "ctrl", "Learning Mechanism for ab")
+    [option] = result["options"]
+    assert option["receiver"] == "lm"
+    assert option["receiver_port"] == "learning_rate"
+    source = _write(model_file, "ctrl", "Learning Mechanism for ab", option)
+    assert "receiver=lm.parameter_ports['learning_rate']" in source
+    ns = _loads_and_runs(model_file)
+    assert ns[option["var_name"]].receiver is ns["lm"].parameter_ports["learning_rate"]
+
+
 def test_control_on_a_composition_says_it_needs_a_parameter(model_file):
     result = _options(model_file, "ctrl", "comp")
     assert "needs a parameter to control" in result["refused"]
@@ -213,6 +226,10 @@ def test_while_dragging_a_control_mechanism_mechanisms_light_up(model_file):
     targets = run_in_sandbox("connection_targets", {"file_path": model_file, "sender": "ctrl"})["targets"]
     assert targets["b"] is None
     assert "needs a parameter" in targets["comp"]
+    # The named learning mechanism, under the name the canvas shows it by.
+    assert targets["Learning Mechanism for ab"] is None
+    # The pathway's comparator has no name in the file, and says why.
+    assert "made by a learning pathway" in targets["Comparator"]
     # Arrows are only targets for a learning mechanism.
     assert "ab" not in targets
 

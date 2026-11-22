@@ -2135,14 +2135,33 @@ def _model_nodes(pnl, module):
     return out
 
 
-def _unnamed_reason(node):
+def _made_by_learning_pathway(pnl, module, node):
+    """True when a learning pathway made ``node`` (its learning mechanism,
+    comparator or TARGET), in any composition the module names."""
+    from app.services.pathway_learning import is_generated_learning_node
+
+    if isinstance(node, getattr(pnl, "LearningMechanism", ())):
+        return True
+    if module is None:
+        return False
+    for value in list(vars(module).values()):
+        if isinstance(value, pnl.Composition):
+            try:
+                if node in value.nodes and is_generated_learning_node(value, node):
+                    return True
+            except Exception:
+                continue
+    return False
+
+
+def _unnamed_reason(node, module=None):
     import psyneulink as pnl
 
-    # A learning pathway's own learning mechanisms have no variable either,
-    # but they aren't made inside a function: say what does make them.
-    if isinstance(node, getattr(pnl, "LearningMechanism", ())):
-        return (f"{node.name} is made by a learning pathway, which already connects it "
-                "to the arrow it trains; the file has no name to connect it by.")
+    # A learning pathway's own nodes have no variable either, but they
+    # aren't made inside a function: say what does make them.
+    if _made_by_learning_pathway(pnl, module, node):
+        return (f"{node.name} is made by a learning pathway, so the file has no name "
+                "to connect it by; add the connection in the code.")
     return (f"{node.name} is made inside a function, so the file has no name to "
             "connect it by; add the connection in the code.")
 
@@ -2184,7 +2203,7 @@ def _resolve_end(pnl, module, key, name_to_var):
             # variable): that variable is what's written (#253, stage 3).
             if _var_name_of(module, node):
                 return node, None
-            return None, _unnamed_reason(node)
+            return None, _unnamed_reason(node, module)
     return None, None
 
 
@@ -2311,6 +2330,7 @@ def _control_options(pnl, module, sender, receiver):
         options.append({
             "type": "ControlProjection",
             "sender": sender_var,
+            "receiver": receiver_var,
             "receiver_port": port.name,
             "receiver_port_kind": "parameter",
             "label": _parameter_label(port.name),
@@ -2348,6 +2368,7 @@ def _gating_options(pnl, module, sender, receiver):
             options.append({
                 "type": "GatingProjection",
                 "sender": sender_var,
+                "receiver": receiver_var,
                 "receiver_port": port.name,
                 "receiver_port_kind": kind,
                 "label": f"{kind}: {port.name}",
@@ -2539,14 +2560,21 @@ def task_connection_targets(params):
         except Exception as e:  # one odd node never hides the others
             result = {"refused": f"Can't tell: {e}"}
         targets[name] = result.get("refused")
-    # Nodes built inside a function have no variable; keyed by their name,
-    # as the canvas keys them, they say why they can't be connected.
+        # The canvas may key a named node by its PsyNeuLink name instead (a
+        # learning pathway's learning mechanism, taken out into a variable):
+        # give it the same answer under that key too.
+        if isinstance(obj, pnl.Mechanism):
+            for key in _canvas_keys(obj, handles):
+                targets.setdefault(key, targets[name])
+    # Nodes built inside a function, or made by a learning pathway, have no
+    # variable; keyed by their name, as the canvas keys them, they say why
+    # they can't be connected.
     for node in _model_nodes(pnl, module):
         if id(node) in named:
             continue
         for key in _canvas_keys(node, handles):
             if key not in targets:
-                targets[key] = sender_why or _unnamed_reason(node)
+                targets[key] = sender_why or _unnamed_reason(node, module)
     return {"targets": targets}
 
 
