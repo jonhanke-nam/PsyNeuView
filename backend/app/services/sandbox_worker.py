@@ -2179,6 +2179,11 @@ def _resolve_end(pnl, module, key, name_to_var):
         return obj, None
     for node in _model_nodes(pnl, module):
         if key and key in _canvas_keys(node, name_to_var):
+            # Known on the canvas by its name, but the file names it too (a
+            # learning pathway's learning mechanism, taken out into a
+            # variable): that variable is what's written (#253, stage 3).
+            if _var_name_of(module, node):
+                return node, None
             return None, _unnamed_reason(node)
     return None, None
 
@@ -2305,6 +2310,7 @@ def _control_options(pnl, module, sender, receiver):
             continue
         options.append({
             "type": "ControlProjection",
+            "sender": sender_var,
             "receiver_port": port.name,
             "receiver_port_kind": "parameter",
             "label": _parameter_label(port.name),
@@ -2341,6 +2347,7 @@ def _gating_options(pnl, module, sender, receiver):
                 continue
             options.append({
                 "type": "GatingProjection",
+                "sender": sender_var,
                 "receiver_port": port.name,
                 "receiver_port_kind": kind,
                 "label": f"{kind}: {port.name}",
@@ -2397,6 +2404,7 @@ def _learning_options(pnl, module, sender, receiver):
     receiver_var = _var_name_of(module, receiver) or receiver.name
     return {"options": [{
         "type": "LearningProjection",
+        "sender": sender_var,
         "sender_port": signals[0].name,
         "receiver_port": "matrix",
         "receiver_port_kind": "parameter",

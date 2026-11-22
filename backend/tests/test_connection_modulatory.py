@@ -63,7 +63,7 @@ def _options(path, sender, receiver):
 def _write(path, sender, receiver, option):
     """What the canvas sends for a picked option (GraphCanvas.makeDraggedConnection)."""
     changes = {
-        "action": "add_projection", "var_name": option["var_name"], "sender": sender,
+        "action": "add_projection", "var_name": option["var_name"], "sender": option.get("sender", sender),
         "receiver": option.get("receiver", receiver), "type": option["type"],
         "receiver_port": option["receiver_port"], "receiver_port_kind": option["receiver_port_kind"],
         "composition": option["composition"],
@@ -160,6 +160,13 @@ def test_a_learning_mechanism_dropped_on_an_arrow_trains_its_matrix(model_file):
     assert option["sender_port"] == "LearningSignal"
 
 
+def test_the_learning_mechanism_is_found_by_the_name_the_canvas_knows_it_by(model_file):
+    # The canvas keys a pathway's learning mechanism by its PsyNeuLink name;
+    # the file names it `lm`, and that is what's written.
+    [option] = _options(model_file, "Learning Mechanism for ab", "ac")["options"]
+    assert option["sender"] == "lm"
+
+
 def test_the_written_learning_projection_loads_and_trains_the_arrow(model_file):
     import numpy as np
 
@@ -208,3 +215,12 @@ def test_while_dragging_a_control_mechanism_mechanisms_light_up(model_file):
     assert "needs a parameter" in targets["comp"]
     # Arrows are only targets for a learning mechanism.
     assert "ab" not in targets
+
+
+def test_an_unnamed_learning_mechanism_says_the_pathway_makes_it(tmp_path):
+    # Without `lm = ...` the file has no name for it; it isn't made inside a
+    # function, so the reason says what does make it.
+    path = tmp_path / "unnamed.py"
+    path.write_text(MODEL.replace("lm = pathway.learning_components[pnl.LEARNING_MECHANISMS][0]\n", ""))
+    result = _options(str(path), "Learning Mechanism for ab", "ac")
+    assert "made by a learning pathway" in result["refused"]
