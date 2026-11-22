@@ -168,7 +168,10 @@ export function sameRoutes(a: EdgeRouteMap | undefined, b: EdgeRouteMap | undefi
     if (!wx.every((p, i) => near(p, wy[i]) && near(p.h, wy[i].h))) return false;
     // #39: a handle drag is a reshape of its own.
     if (!near(x.handles?.s, y.handles?.s) || !near(x.handles?.t, y.handles?.t)) return false;
-    if (!close(x.tension, y.tension)) return false;
+    // A route with no tension was saved before #39 and is drawn with the old one.
+    const tensionOf = (r: EdgeRoute) =>
+      r.tension ?? (r.waypoints?.length || r.handles ? LEGACY_TENSION : undefined);
+    if (!close(tensionOf(x), tensionOf(y))) return false;
     return close(x.ends?.s, y.ends?.s) && close(x.ends?.t, y.ends?.t);
   });
 }

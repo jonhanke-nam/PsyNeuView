@@ -204,5 +204,7 @@ describe("curve handles and tension (#39)", () => {
     expect(sameRoutes(base, ended)).toBe(false);
     expect(sameRoutes(pinned, pinned)).toBe(true);
     expect(sameRoutes(base, { [key]: { ...base[key], tension: LEGACY_TENSION } })).toBe(false);
+    // No tension saved means the old one.
+    expect(sameRoutes({ [key]: { waypoints: [{ x: 5, y: 6 }] } }, { [key]: { ...base[key], tension: LEGACY_TENSION } })).toBe(true);
   });
 });
