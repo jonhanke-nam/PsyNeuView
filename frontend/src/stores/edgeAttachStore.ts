@@ -24,16 +24,34 @@
  */
 
 import { create } from "zustand";
+import type { EndHandles } from "@/utils/curveHandles";
 
 /** s = source end, t = target end. */
 export type EdgeEnd = "s" | "t";
 export interface Pt { x: number; y: number }
+/**
+ * A bend. `h`, when present, is its pinned out handle (#39): an offset from
+ * the bend, so it moves with it. Absent, the curve picks the tangent itself.
+ */
+export interface Waypoint extends Pt { h?: Pt }
 
 interface EdgeAttachState {
   /** edgeId → { s?: angle, t?: angle } (radians). */
   overrides: Record<string, { s?: number; t?: number }>;
   /** #951: edgeId → user waypoints the edge routes through (absolute flow coords). */
-  waypoints: Record<string, Pt[]>;
+  waypoints: Record<string, Waypoint[]>;
+  /** #39: edgeId → the pinned handles at the arrow's two ends (offsets). */
+  handles: Record<string, EndHandles>;
+  /**
+   * #39: edgeId → the spline tension the arrow is drawn with, when it is not
+   * the current default — a route saved before the softer default keeps its
+   * old one, so an old layout looks as it did.
+   */
+  tension: Record<string, number>;
+  /** #39: pin (or, with null, release) bend `index`'s handle. */
+  setWaypointHandle: (edgeId: string, index: number, h: Pt | null) => void;
+  /** #39: pin (or, with null, release) the handle at one end of the arrow. */
+  setEndHandle: (edgeId: string, end: EdgeEnd, h: Pt | null) => void;
   setEnd: (edgeId: string, end: EdgeEnd, angle: number) => void;
   /** Replace an edge's waypoints wholesale (e.g. materialize auto corners, #951). */
   setWaypoints: (edgeId: string, pts: Pt[]) => void;
@@ -55,9 +73,11 @@ interface EdgeAttachState {
   clearEdge: (edgeId: string) => void;
   /** Replace everything — used to restore a loaded sidecar (#1162). */
   hydrate: (state: {
-    waypoints: Record<string, Pt[]>;
+    waypoints: Record<string, Waypoint[]>;
     overrides: Record<string, { s?: number; t?: number }>;
     shaped: Record<string, true>;
+    handles?: Record<string, EndHandles>;
+    tension?: Record<string, number>;
   }) => void;
   clearAll: () => void;
 }
@@ -66,6 +86,28 @@ export const useEdgeAttach = create<EdgeAttachState>((set) => ({
   overrides: {},
   waypoints: {},
   shaped: {},
+  handles: {},
+  tension: {},
+  setWaypointHandle: (edgeId, index, h) =>
+    set((s) => {
+      const cur = s.waypoints[edgeId];
+      if (!cur || index < 0 || index >= cur.length) return s;
+      const next = cur.slice();
+      const { h: _old, ...rest } = next[index];
+      next[index] = h ? { ...rest, h: { x: h.x, y: h.y } } : rest;
+      return {
+        waypoints: { ...s.waypoints, [edgeId]: next },
+        shaped: { ...s.shaped, [edgeId]: true },
+      };
+    }),
+  setEndHandle: (edgeId, end, h) =>
+    set((s) => {
+      const cur = { ...(s.handles[edgeId] || {}) };
+      if (h) cur[end] = { x: h.x, y: h.y }; else delete cur[end];
+      const handles = { ...s.handles };
+      if (cur.s || cur.t) handles[edgeId] = cur; else delete handles[edgeId];
+      return { handles, shaped: { ...s.shaped, [edgeId]: true } };
+    }),
   setEnd: (edgeId, end, angle) =>
     set((s) => ({
       overrides: {
@@ -93,7 +135,8 @@ export const useEdgeAttach = create<EdgeAttachState>((set) => ({
       const cur = s.waypoints[edgeId];
       if (!cur || index < 0 || index >= cur.length) return s;
       const next = cur.slice();
-      next[index] = p;
+      // #39: the bend's pinned handle is an offset, so it comes along.
+      next[index] = cur[index].h ? { x: p.x, y: p.y, h: cur[index].h } : { x: p.x, y: p.y };
       return {
         waypoints: { ...s.waypoints, [edgeId]: next },
         shaped: { ...s.shaped, [edgeId]: true },
@@ -114,15 +157,21 @@ export const useEdgeAttach = create<EdgeAttachState>((set) => ({
     }),
   clearWaypoints: (edgeId) =>
     set((s) => {
-      if (!s.waypoints[edgeId]) return s;
+      if (!s.waypoints[edgeId] && !s.handles[edgeId]) return s;
       const wp = { ...s.waypoints };
       delete wp[edgeId];
+      // #39: "Reset shape" puts the curve back too: no pinned handles, and
+      // the current default tension.
+      const handles = { ...s.handles };
+      delete handles[edgeId];
+      const tension = { ...s.tension };
+      delete tension[edgeId];
       // Reset route means "forget what I did", so drop the shaped mark too:
       // persisting an empty route would claim the user shaped it to have no
       // bends, when what they asked for is the automatic one back (#1162).
       const shaped = { ...s.shaped };
       delete shaped[edgeId];
-      return { waypoints: wp, shaped };
+      return { waypoints: wp, shaped, handles, tension };
     }),
   clearEdge: (edgeId) =>
     set((s) => {
@@ -130,9 +179,17 @@ export const useEdgeAttach = create<EdgeAttachState>((set) => ({
       delete next[edgeId];
       const wp = { ...s.waypoints };
       delete wp[edgeId];
-      return { overrides: next, waypoints: wp };
+      const handles = { ...s.handles };
+      delete handles[edgeId];
+      return { overrides: next, waypoints: wp, handles };
     }),
-  clearAll: () => set({ overrides: {}, waypoints: {}, shaped: {} }),
-  hydrate: ({ waypoints, overrides, shaped }) =>
-    set({ waypoints: waypoints || {}, overrides: overrides || {}, shaped: shaped || {} }),
+  clearAll: () => set({ overrides: {}, waypoints: {}, shaped: {}, handles: {}, tension: {} }),
+  hydrate: ({ waypoints, overrides, shaped, handles, tension }) =>
+    set({
+      waypoints: waypoints || {},
+      overrides: overrides || {},
+      shaped: shaped || {},
+      handles: handles || {},
+      tension: tension || {},
+    }),
 }));

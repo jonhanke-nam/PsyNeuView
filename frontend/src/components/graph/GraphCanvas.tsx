@@ -131,6 +131,7 @@ function saveLayoutDebounced(filePath: string, nodes: any[]) {
       ea.shaped,
       ea.waypoints,
       ea.overrides,
+      ea,
     );
     const body = usesFlatPositions()
       ? { file_path: filePath, flatPositions: merged, flatEdgeRoutes: routes }

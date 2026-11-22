@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ambiguousKeys, hydrateRoutes, routeKey, sameRoutes, serializeRoutes } from "./edgeRoutes";
+import { LEGACY_TENSION, SOFT_TENSION } from "./curveHandles";
 
 const edge = (id: string, s: string, t: string, sh = "out", th = "in") => ({
   id, source: s, target: t, sourceHandle: sh, targetHandle: th,
@@ -96,7 +97,11 @@ describe("hydrate", () => {
     const back = hydrateRoutes([A_TO_B], saved);
     expect(back.shaped[A_TO_B.id]).toBe(true);
     // ...and a save made from that state still contains the route.
-    expect(serializeRoutes([A_TO_B], back.shaped, back.waypoints, back.overrides)).toEqual(saved);
+    // (#39: now with the tension it was drawn with — the old one, for a route
+    // saved before the softer default.)
+    expect(serializeRoutes([A_TO_B], back.shaped, back.waypoints, back.overrides, back)).toEqual({
+      [routeKey(A_TO_B)]: { ...saved[routeKey(A_TO_B)], tension: LEGACY_TENSION },
+    });
   });
 
   it("ignores routes for edges the model no longer has", () => {
@@ -131,5 +136,73 @@ describe("sameRoutes (#164)", () => {
   it("tells an arrow shaped or no longer shaped apart", () => {
     expect(sameRoutes({}, r(10))).toBe(false);
     expect(sameRoutes(r(10), {})).toBe(false);
+  });
+});
+
+describe("curve handles and tension (#39)", () => {
+  const key = routeKey(A_TO_B);
+  const id = A_TO_B.id;
+
+  it("saves pinned handles and the tension with the route", () => {
+    const out = serializeRoutes(
+      [A_TO_B],
+      { [id]: true },
+      { [id]: [{ x: 5, y: 6, h: { x: 20, y: -4 } }] },
+      {},
+      { handles: { [id]: { s: { x: 1, y: 2 } } } },
+    );
+    expect(out[key]).toEqual({
+      waypoints: [{ x: 5, y: 6, h: { x: 20, y: -4 } }],
+      handles: { s: { x: 1, y: 2 } },
+      tension: SOFT_TENSION,
+    });
+  });
+
+  it("persists an arrow shaped only by an end's handle", () => {
+    const out = serializeRoutes([A_TO_B], { [id]: true }, {}, {}, { handles: { [id]: { t: { x: -9, y: 3 } } } });
+    expect(out[key]).toEqual({ handles: { t: { x: -9, y: 3 } }, tension: SOFT_TENSION });
+  });
+
+  it("round-trips through a reload", () => {
+    const saved = serializeRoutes(
+      [A_TO_B],
+      { [id]: true },
+      { [id]: [{ x: 5, y: 6, h: { x: 20, y: -4 } }] },
+      {},
+      { handles: { [id]: { s: { x: 1, y: 2 } } } },
+    );
+    const back = hydrateRoutes([A_TO_B], saved);
+    expect(back.waypoints[id]).toEqual([{ x: 5, y: 6, h: { x: 20, y: -4 } }]);
+    expect(back.handles[id]).toEqual({ s: { x: 1, y: 2 } });
+    // The default tension is not stored per arrow.
+    expect(back.tension[id]).toBeUndefined();
+    const again = serializeRoutes([A_TO_B], back.shaped, back.waypoints, back.overrides, back);
+    expect(sameRoutes(again, saved)).toBe(true);
+  });
+
+  /** Backwards compatibility: an old layout must look as it did. */
+  it("draws a route saved before #39 with the old tension, and keeps it", () => {
+    const old = { [key]: { waypoints: [{ x: 5, y: 6 }] } };
+    const back = hydrateRoutes([A_TO_B], old);
+    expect(back.waypoints[id]).toEqual([{ x: 5, y: 6 }]);
+    expect(back.tension[id]).toBe(LEGACY_TENSION);
+    expect(back.handles[id]).toBeUndefined();
+    const again = serializeRoutes([A_TO_B], back.shaped, back.waypoints, back.overrides, back);
+    expect(again[key].tension).toBe(LEGACY_TENSION);
+  });
+
+  it("gives no tension to an old route that only moved an end", () => {
+    const back = hydrateRoutes([A_TO_B], { [key]: { ends: { s: 1 } } });
+    expect(back.tension[id]).toBeUndefined();
+  });
+
+  it("tells a handle drag apart from the step before it", () => {
+    const base = { [key]: { waypoints: [{ x: 5, y: 6 }], tension: SOFT_TENSION } };
+    const pinned = { [key]: { waypoints: [{ x: 5, y: 6, h: { x: 20, y: 0 } }], tension: SOFT_TENSION } };
+    const ended = { [key]: { ...base[key], handles: { s: { x: 3, y: 3 } } } };
+    expect(sameRoutes(base, pinned)).toBe(false);
+    expect(sameRoutes(base, ended)).toBe(false);
+    expect(sameRoutes(pinned, pinned)).toBe(true);
+    expect(sameRoutes(base, { [key]: { ...base[key], tension: LEGACY_TENSION } })).toBe(false);
   });
 });
