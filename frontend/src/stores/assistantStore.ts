@@ -14,7 +14,7 @@ import { create } from "zustand";
 import { record } from "@/utils/activityLog";
 import { applyAppEdit } from "@/utils/assistantApply";
 import { contextFor, setProposalState, sha256Hex, withProposal } from "@/utils/assistantProposals";
-import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
 import { useModelStore } from "./modelStore";
 import {
   DEFAULT_ASSISTANT_SETTINGS,
@@ -393,7 +393,8 @@ export async function openModelPath(path: string): Promise<boolean> {
   const resp = await fetch("/api/model/load", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ file_path: path, ...showGraphLoadRequest() }),
+    // The view on screen, nested or not (#257), as the Open menu sends it.
+    body: JSON.stringify({ file_path: path, ...modelLoadOptions() }),
   });
   if (!resp.ok) {
     if (resp.status !== 409) {
