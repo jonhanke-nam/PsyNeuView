@@ -82,7 +82,6 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
     what: "the Layout / Labels trigger, drawn like a select; a variant's name row, + Add variant, and a row's ↑ ↓ ↺ ✎ ⧉ ✕ icons",
   },
   "components/editor/SidecarPlacementPicker.tsx": { count: 2, what: "the Files: trigger, drawn like a select; a placement row" },
-  "components/scheduler/SchedulerPanel.tsx": { count: 2, what: "the font size A- and A+, the editor header's size" },
   "components/graph/MechanismNode.tsx": { count: 1, what: "a collapsed composition's + on the node" },
   "components/graph/CompositionNode.tsx": { count: 3, what: "a frame's ⤵ enter, ▣ inset toggle and − collapse" },
   "components/graph/GSCLegend.tsx": { count: 1, what: "the Legend button that shows a hidden legend" },

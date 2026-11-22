@@ -1,3 +1,4 @@
+import { Button } from "@/components/common/Button";
 import { useModelStore } from "@/stores/modelStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useTextScale } from "@/stores/textSizeStore";
@@ -96,8 +97,10 @@ export function SchedulerPanel() {
           <SchedulerModeToggle mode={schedulerConfig.mode} fontPx={s(11)} />
         )}
         <span style={{ marginLeft: "auto", display: "flex", gap: 2 }}>
-          <button onClick={zoomOut} title="Decrease font size" style={{ fontSize: "var(--pnv-fs-11)", padding: "1px 5px", border: "1px solid var(--pnv-border)", borderRadius: 3, background: "var(--pnv-surface-sunken)", cursor: "pointer", color: "var(--pnv-text-secondary)" }}>A-</button>
-          <button onClick={zoomIn} title="Increase font size" style={{ fontSize: "var(--pnv-fs-11)", padding: "1px 5px", border: "1px solid var(--pnv-border)", borderRadius: 3, background: "var(--pnv-surface-sunken)", cursor: "pointer", color: "var(--pnv-text-secondary)" }}>A+</button>
+          {/* #109: the same A- A+ as the Inspector's, a small Button each (they
+              were a darker grey box of their own). */}
+          <Button kind="small" onClick={zoomOut} title="Decrease font size">A-</Button>
+          <Button kind="small" onClick={zoomIn} title="Increase font size">A+</Button>
         </span>
       </div>
       <div style={{ fontSize: s(11), color: "var(--pnv-text-faint)", marginBottom: 14 }}>
