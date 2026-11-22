@@ -224,6 +224,13 @@
   /* Edges. A projection's own colour comes with its type; these are the rest. */
   --pnv-edge-default: #b1b1b7;      /* an edge with no type colour (React Flow's default) */
   --pnv-edge-hover: #5b9bd5;        /* an edge under the pointer: a light blue that reads on dark edges */
+  /* #253: where a connection being dragged can be dropped. Teal, so it reads
+     neither as the selection blue nor as a role's green or red: a pulsing
+     halo on each valid target, held steady on the one under the pointer,
+     and the rubber-band arrow being drawn. */
+  --pnv-connect-target: #00a3a3;
+  --pnv-connect-glow: rgba(0, 163, 163, 0.55);
+  --pnv-connect-tint: rgba(0, 163, 163, 0.14);
   --pnv-edge-bend-forced: #8a8f98;  /* a bend the router placed (a bend you placed is the primary blue) */
   --pnv-edge-label-bg: rgba(255, 255, 255, 0.95);
   --pnv-edge-legend: #888;          /* the legend's sample line for a data projection */

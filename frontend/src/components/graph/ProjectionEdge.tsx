@@ -632,7 +632,7 @@ export function ProjectionEdge({
         ? autoBends().map((p) => ({ x: p.x, y: p.y, forced: true }))
         : []);
 
-  const effectiveStroke = isSelected || dropStatus === "valid"
+  const effectiveStroke = isSelected
     ? "var(--pnv-primary)"
     : isCursorHighlighted
     ? "var(--pnv-cursor-highlight)"
@@ -653,6 +653,17 @@ export function ProjectionEdge({
   const headSize = arrowheadSize * edgeArrowheadScale(lineWidth);
   return (
     <>
+      {/* #253: an arrow a learning mechanism could train: a pulsing teal
+          halo under it, steady under the pointer (index.css). */}
+      {dropStatus === "valid" && (
+        <path
+          d={edgePath}
+          data-testid="connect-arrow-halo"
+          className={`pnv-connect-arrow-halo${hovered ? " pnv-connect-locked" : ""}`}
+          strokeWidth={scaledStrokeWidth + 10}
+          strokeLinecap="round"
+        />
+      )}
       <BaseEdge
         id={id}
         path={edgePath}
@@ -670,7 +681,7 @@ export function ProjectionEdge({
           // previous order let ...style clobber them, making thickness, hover,
           // and selection-recolor inert (#319).
           ...style,
-          strokeWidth: hovered ? scaledStrokeWidth + EDGE_LINE_HOVER_EXTRA : isCursorHighlighted || dropStatus === "valid" ? scaledStrokeWidth + EDGE_LINE_HIGHLIGHT_EXTRA : scaledStrokeWidth,
+          strokeWidth: hovered ? scaledStrokeWidth + EDGE_LINE_HOVER_EXTRA : isCursorHighlighted ? scaledStrokeWidth + EDGE_LINE_HIGHLIGHT_EXTRA : scaledStrokeWidth,
           stroke: effectiveStroke,
           opacity: dropStatus === "invalid" ? 0.4 : (style as { opacity?: number } | undefined)?.opacity,
         }}
