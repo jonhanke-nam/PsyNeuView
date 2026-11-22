@@ -21,6 +21,20 @@ The file is the narrative record; the label is the filter. (We deliberately
 don't use a single GitHub issue as the ledger — it gets noisy and is awkward to
 format.) Tracked as a process in #709.
 
+## A model the assistant opened came back in the other view (2026-11-22)
+
+**Caught by:** `Frontend` → `unit tests (vitest)`, `src/modelLoadView.test.ts`,
+"every load and preview sends the flat/PyTorch view", on the AI assistant's
+branch after it took in devel (#179, PR #186)
+
+The assistant opens a file (an accepted open, or a file the user has just
+approved) through the same load route as the Open menu, but it sent only
+show_graph's options. The backend's default view is nested, so the graph
+switched view under the user. Devel's check that every load sends the view
+(#257) arrived with the merge and named the line; the local pre-push run had
+included only the assistant's own unit tests. Fixed by sending the view as
+every other load does.
+
 ## An arrow into a frame lay over the nodes it passed (2026-11-18)
 
 **Caught by:** `e2e` → `graph-hit-areas.spec.ts`, "the sweep, at three zooms
