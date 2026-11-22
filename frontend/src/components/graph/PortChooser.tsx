@@ -28,7 +28,7 @@ export interface ConnectionOption {
 }
 
 /** What the chooser asks, by what the drop needs chosen. */
-export function chooserQuestion(ask: string | undefined, receiver: string): [string, string] {
+export function chooserQuestion(ask: string | undefined): [string, string] {
   if (ask === "parameter") return ["Control which parameter of", "?"];
   if (ask === "port") return ["Gate which port of", "?"];
   return ["Connect into which input of", "?"];
@@ -53,7 +53,7 @@ export function PortChooser({ x, y, receiver, ask, options, onPick, onClose }: {
     return () => document.removeEventListener("mousedown", handler);
   }, [onClose]);
   useDismiss(true, onClose);
-  const question = chooserQuestion(ask, receiver);
+  const question = chooserQuestion(ask);
   return (
     <div
       ref={ref}
