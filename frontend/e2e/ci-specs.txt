@@ -18,6 +18,7 @@ dialog-sweep.spec.ts
 drag-to-connect-stage2.spec.ts
 drag-to-connect.spec.ts
 drop-new-model-file.spec.ts
+edge-curve-handles.spec.ts
 edge-line-width.spec.ts
 edge-routing-no-crossings.spec.ts
 edge-shaping-auto-layout.spec.ts
