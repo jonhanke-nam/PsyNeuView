@@ -94,7 +94,8 @@ def test_watchers_refuse_unreviewed(state, monkeypatch):
     monkeypatch.setattr(ws, "_loop", Loop())
     monkeypatch.setattr(ws.asyncio, "run_coroutine_threadsafe", record)
     ws._on_file_changed(str(state["model"]))
-    monkeypatch.setattr(ws.file_watcher, "_watched_path", str(state["model"]))
+    # Open in some window (#272), so PsyNeuLink's code changing re-reads it.
+    monkeypatch.setattr(ws.file_watcher, "watched_paths", lambda: [str(state["model"])])
     ws._on_psyneulink_changed(["x.py"])
     assert [m["type"] for m in sent] == ["reload_blocked", "reload_blocked"]
     assert all(m["reason"] == REASON for m in sent)
