@@ -32,7 +32,7 @@ names.
 | Value grid | `--pnv-grid-low` `#f4f6f9`, `--pnv-grid-high` `#1d3557`, `--pnv-grid-mid` `#a9b4c2`, `--pnv-grid-neg` `#fbe3c9` | a layer's values drawn as shaded cells (#1387: Run results, Run State, the value pill): low to high from light to dark; values that go negative are centred on 0 (`mid`), the negative side running to a pale warm tint. A cell's colour is a `color-mix` of two of these, from `utils/valueGrid.ts` |
 | Charts | `--pnv-chart-1` … `--pnv-chart-8` | a chart's series in order: each node's line in the Run panel's trial-by-trial charts, the Learn panel's loss line (the first). Plotly cannot read `var()`, so a chart takes these through `paletteColor()` in `frontend/src/utils/paletteColor.ts` |
 | Over the page | `--pnv-scrim`, `--pnv-shadow-dialog`, `--pnv-shadow-popover`, `--pnv-shadow-float`, `--pnv-shadow-flyout` | the dim behind a dialog; a dialog's and a pop-up's shadow (the node menu's too); a small thing floating over the page (a toast, a combobox's list, the focus breadcrumb, the dangling-projection list); the Components palette's flyout |
-| Node roles | `--pnv-role-input` green, `--pnv-role-output` red, `--pnv-role-control` blue, `--pnv-role-learning` orange, `--pnv-role-probe` pink, `--pnv-role-internal` black, `--pnv-role-singleton` brown, `--pnv-role-controller` purple, `--pnv-role-feedback-sender` black, `--pnv-role-cycle` black; `--pnv-role-input-text`, `-output-text`, `-learning-text`, `-probe-text` darker; `--pnv-role-no-gradient` brown (+ `-tint`, `-border`) | a mechanism's role, the colours PsyNeuLink's own `show_graph` uses, red, green and purple exactly as its PDF draws them ([icon ontology](icon-ontology.md)) — `ROLE_COLORS` in `constants/pnlTypes.ts` names them, and `ROLE_TEXT_COLORS` the darker ones for a role whose outline colour is too light as text (#190); a node the PyTorch view leaves out of the gradient |
+| Node roles | `--pnv-role-input` green, `--pnv-role-output` red, `--pnv-role-control` blue, `--pnv-role-learning` orange, `--pnv-role-probe` pink, `--pnv-role-internal` black, `--pnv-role-singleton` brown, `--pnv-role-controller` purple, `--pnv-role-feedback-sender` black, `--pnv-role-cycle` black; `--pnv-role-input-text`, `-output-text`, `-learning-text`, `-probe-text` darker, same hue; `--pnv-role-no-gradient` brown (+ `-tint`, `-border`) | a mechanism's role, in **exactly** the colours PsyNeuLink's own `show_graph` draws (its X11 values; see [icon ontology](icon-ontology.md)) — `ROLE_COLORS` in `constants/pnlTypes.ts` names them, and `ROLE_TEXT_COLORS` the darker ones for a role whose outline colour is too light as text (#190, #306); a node the PyTorch view leaves out of the gradient |
 | Graph conditions | `--pnv-gsc-before` blue, `--pnv-gsc-after` orange, `--pnv-gsc-add-edge` green, `--pnv-gsc-remove-edge` red, `--pnv-gsc-with` purple, `--pnv-gsc-other` grey; `--pnv-gsc-badge-edge`, `--pnv-gsc-badge-hover-ring` | the badge for each kind of graph-structure condition (Inspector, Scheduler tab) and its dashed edge on the canvas; the edge of the badge on the canvas and the ring round it under the pointer |
 | Graph canvas | `--pnv-node-*` (border, tag, divider, three text greys), `--pnv-count-badge`, `--pnv-order-badge`; `--pnv-cursor-highlight` cyan (+ `-glow`); `--pnv-tooltip-bg`, `-text-muted`, `-accent`; `--pnv-port-input`, `-output`, `-parameter` (Okabe-Ito); `--pnv-composition*` (a frame's tag, edges, tints, and its ⛶ ▣ − controls); `--pnv-edge-default`, `-hover`, `-bend-forced`, `-label-bg`, `-legend`; `--pnv-projection-mapping`, `-control`, `-learning`, `-autoassociative`, `-inactive`, `-cim`, `-dangling`; `--pnv-gesture-condition`, `-projection`; `--pnv-shadow-node`, `-node-raised`, `-cim`, `-dangling`, `-frame`, `-badge`, `-tooltip`, `-chip`, `-banner` | the rest of what the canvas draws, each at the value it had when the graph was swept, so the canvas looks exactly as it did: a node's outline and badges, the node or edge the editor cursor is in, the dark port tooltip, port handles and an edge's ends, a composition's frame, an edge under the pointer and a bend the router placed, a projection's line and arrowhead by its type, the banner while you pick a node, and the canvas's shadows |
 | Code editor | `--pnv-editor-node-tint` `#fef6e4`, `--pnv-editor-node-accent` `#e8a317` | the band behind the selected node's lines and its left edge (the selected parameter's line is the primary tint, an error's line the danger tint) |
@@ -45,6 +45,16 @@ coincide today, so one can change without the other. The graph-condition
 colours, the projection types and the component types are sets of their own
 in the same way. White text on any filled
 colour — the primary button, a condition badge — is `--pnv-on-primary`.
+
+**Role colours match show_graph exactly** (#306, a design decision).
+PsyNeuLink's `show_graph` is the gold standard: every `--pnv-role-*` outline
+token, and `--pnv-projection-inactive`, is the X11 value Graphviz draws for
+show_graph's default colour name (orange is `#ffa500`, pink `#ffc0cb`, even
+though they are faint on white). A test enforces it (see Checks). The only
+exception is the text variants, `--pnv-role-*-text`, for legibility:
+show_graph draws no text in a role's colour, so a role drawn as text keeps
+its hue, darker. Change a role colour only when show_graph changes. The
+table is in the [icon ontology](icon-ontology.md).
 
 **A colour at an opacity.** Where code appended an alpha to a hex
 (`${color}33`), it writes `color-mix(in srgb, ${color} 20%, transparent)`
@@ -209,6 +219,13 @@ Settings). Escape and the × are the other way out, always
   without the table there (`REMAINING_RAW_BUTTONS`) being updated, for any
   file using a token the palette does not define, and for a component type
   or node role without its token.
+- **`frontend/src/styles/showGraphColours.test.ts`** (vitest) holds every
+  role token to a checked-in copy of show_graph's colours, and the text
+  variants to the same hue as their role. Its partner,
+  **`backend/tests/test_show_graph_palette.py`** (pytest, with PsyNeuLink
+  installed), reads the colours from `ShowGraph.__init__` itself and fails
+  when a token differs or when PsyNeuLink adds or renames a colour argument
+  (#306).
 - **`frontend/e2e/style-sizes.spec.ts`** (Playwright, in the CI list) holds
   the heights of the swept areas' buttons and rows — Settings' footer,
   Move…, the file browser, the orientation offer, both toolbars, the

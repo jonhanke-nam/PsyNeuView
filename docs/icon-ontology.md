@@ -285,16 +285,29 @@ open model uses:
 | Nested composition | rectangle | pink | rectangle when collapsed; a frame when expanded |
 | agent_rep (OCM) | egg | purple | not drawn: the canvas has no agent_rep node yet |
 
+**Role colours match show_graph exactly** (#306). show_graph is the gold
+standard; a test enforces it; the only exception is the text variants, for
+legibility.
+
 show_graph names its colours (`green`, `red`, `blue`, `purple`, `orange`,
 `pink`, `brown`, `black`), and Graphviz draws each name with its X11 value in
 show_graph's own PDF and PNG. (A browser reads the same names in an SVG with
 their CSS values, which differ for green, #008000, and purple, #800080; the
 app's show_graph tab redraws both as the PDF does, so the two agree.)
-PsyNeuView's role tokens (`--pnv-role-*` in `frontend/src/styles/palette.css`,
-#190) take the X11 values for red, green and purple, which must match
-show_graph exactly; the other roles read the same both ways, except that orange
-and pink are too pale on white for an outline and use the nearest named orange
-and pink that still read:
+PsyNeuView's role tokens (`--pnv-role-*` in `frontend/src/styles/palette.css`)
+take exactly those X11 values, every one of them, by design.
+
+Two tests keep them in step. `backend/tests/test_show_graph_palette.py` reads
+show_graph's defaults from PsyNeuLink itself (`ShowGraph.__init__`) and fails
+if a token differs, or if PsyNeuLink adds or renames a colour argument.
+`frontend/src/styles/showGraphColours.test.ts` holds the tokens to a
+checked-in copy of this table, so a frontend-only change can't drift.
+
+The one exception is a role drawn as **text** (a node's type tag) or behind
+white text (its role tag). show_graph draws no text in a role's colour, and
+its green, orange and pink are unreadable as text on white (1.4:1, 2:1,
+1.5:1), so those roles have a darker `--pnv-role-*-text` variant in the same
+hue (the vitest checks the hue):
 
 | Role | show_graph | PsyNeuView outline | As text |
 |------|-----------|--------------------|---------|
@@ -302,10 +315,15 @@ and pink that still read:
 | OUTPUT | red (#ff0000) | #ff0000 | #dd0000 |
 | CONTROL | blue (#0000ff) | #0000ff | same |
 | Controller and its objective | purple (#a020f0) | #a020f0 | same (5.3:1 on white) |
-| LEARNING | orange (#ffa500) | darkorange (#ff8c00) | #e65100 |
-| PROBE | pink (#ffc0cb) | hotpink (#ff69b4) | #d81b60 |
+| LEARNING | orange (#ffa500) | #ffa500 | #e65100 |
+| PROBE | pink (#ffc0cb) | #ffc0cb | #d81b60 |
 | INPUT and OUTPUT | brown (#a52a2a) | #a52a2a | same |
-| INTERNAL | black | #000 | same |
+| INTERNAL, FEEDBACK_SENDER, CYCLE | black | #000000 | same |
+| Inactive projection | red (#ff0000) | #ff0000 (`--pnv-projection-inactive`) | — |
+
+show_graph's `composition_color` (pink) has no token to match: the canvas
+draws a nested composition as a frame with its own `--pnv-composition-*`
+colours, not as a role-coloured node.
 
 The palette icons don't need to match show_graph's shape/color system exactly,
 since show_graph is about runtime graph rendering, while the palette is about
