@@ -41,7 +41,7 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
   "components/common/settings/ShortcutsSection.tsx": { count: 1, what: "a shortcut's key chip, which records when pressed" },
   "components/common/settings/SwitchListbox.tsx": { count: 3, what: "a group heading, an option row, Show older" },
   "components/common/FileBrowserModal.tsx": { count: 2, what: "a root folder chip, ↑ Up" },
-  "components/common/HistoryPanel.tsx": { count: 2, what: "the History toggle in the editor header; a save marker row (#1349)" },
+  "components/common/HistoryPanel.tsx": { count: 2, what: "the History toggle in the toolbar, a menu trigger drawn like Layout ▾ (#109); a save marker row (#1349)" },
   "components/common/ValueGrid.tsx": { count: 1, what: "the list / grid segments beside a layer's values (#1387)" },
   "components/common/dialog/DialogHeader.tsx": { count: 2, what: "the × at its full/compact size, and inline" },
   "components/common/SyncIndicator.tsx": { count: 1, what: "the file-watch status in the diagnostics bar, which opens its popover (#103)" },

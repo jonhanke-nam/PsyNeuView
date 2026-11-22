@@ -32,6 +32,7 @@
  * opened it.
  */
 
+import { toggleColours } from "@/components/common/toolbarStyles";
 import { useEffect, useRef, useState } from "react";
 import { useHistoryStore, type Snapshot } from "@/stores/historyStore";
 import { useEditLockStore } from "@/stores/editLockStore";
@@ -248,13 +249,13 @@ export function HistoryPanel() {
         aria-haspopup="dialog"
         aria-expanded={open}
         data-testid="history-button"
+        // #109: a toolbar menu trigger like Layout ▾ and Tutorials ▾ beside it,
+        // at their size and in their colours (it was a smaller, fainter box).
         style={{
-          fontSize: "var(--pnv-fs-10)",
-          padding: "1px 5px",
-          border: open ? "1px solid var(--pnv-primary)" : "1px solid var(--pnv-border-light)",
-          borderRadius: 3,
-          background: open ? "var(--pnv-primary-tint)" : "var(--pnv-surface)",
-          color: open ? "var(--pnv-primary)" : "var(--pnv-text-hint)",
+          fontSize: "var(--pnv-fs-13)",
+          padding: "4px 10px",
+          ...toggleColours(open),
+          borderRadius: 4,
           cursor: "pointer",
         }}
         title="Show action history, and how each action changed the code"

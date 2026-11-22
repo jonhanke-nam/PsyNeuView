@@ -1720,6 +1720,9 @@ export function Toolbar() {
           cursor: "pointer",
           lineHeight: 1,
           flexShrink: 0,
+          // #109: as tall as its neighbours (Layout ▾, Open ▾), the glyph
+          // keeping its size: the toolbar's controls stand level.
+          alignSelf: "stretch",
         }}
         title="Settings"
         aria-label="Settings"

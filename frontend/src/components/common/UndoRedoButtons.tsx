@@ -29,7 +29,9 @@ export function UndoRedoButtons() {
   const handleRedo = () => void applyHistoryStep(true);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+    // #109: the pair stands as tall as the toolbar's other buttons (Layout ▾,
+    // Open ▾), the arrows keeping their size.
+    <div style={{ display: "flex", alignItems: "stretch", alignSelf: "stretch", gap: 2 }}>
       <button
         onClick={handleUndo}
         data-testid="undo-button"
@@ -68,7 +70,7 @@ export function UndoRedoButtons() {
         ↪
       </button>
       {historyDepth > 0 && (
-        <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", marginLeft: 4 }}>
+        <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", marginLeft: 4, alignSelf: "center" }}>
           {historyDepth}
         </span>
       )}
