@@ -334,6 +334,7 @@ _AUDIT_EVENTS = frozenset({
 _PROCESS_EVENTS = frozenset({"subprocess.Popen", "os.system", "os.exec", "os.posix_spawn", "os.spawn", "pty.spawn"})
 _audit_local = threading.local()  # per thread: a model thread can't ride on another's check
 _audit_installed = False
+_audit_wanted = False
 _audit_everywhere = False  # True in the worker; in the server only inside active()
 
 
@@ -443,14 +444,24 @@ def _audit(event: str, args: tuple) -> None:
 
 
 def install_audit_hook(everywhere: bool = False) -> None:
-    """Add the audit hook (once; it can't be removed). ``everywhere`` is for
-    the sandbox worker running as the worker: every thread, every task. The
-    server adds it with ``everywhere`` False, so it acts only inside
-    ``active()``."""
-    global _audit_installed, _audit_everywhere
+    """Ask for the audit hook. ``everywhere`` is for the sandbox worker
+    running as the worker: every thread, every task. The server asks with
+    ``everywhere`` False, so it acts only inside ``active()``.
+
+    The hook is added (once; it can't be removed) the first time a refresh
+    finds something tracked, and at once if something already is. With
+    nothing tracked it would have nothing to refuse, and leaving it out
+    keeps every task as fast as before the assistant existed."""
+    global _audit_wanted, _audit_everywhere
     if everywhere:
         _audit_everywhere = True
-    if not _audit_installed:
+    _audit_wanted = True
+    _add_audit_hook_if_needed()
+
+
+def _add_audit_hook_if_needed() -> None:
+    global _audit_installed
+    if _audit_wanted and not _audit_installed and _state.tracked:
         sys.addaudithook(_audit)
         _audit_installed = True
 
@@ -469,9 +480,11 @@ class active:
 
 def refresh(path: str | None = None, exempt_roots=None) -> None:
     """Read the state again if it changed (or ask the provider), put the
-    finder first again, and drop cached user modules. Called by the worker
-    before every task, and by the server before an in-process load."""
+    finder first again, drop cached user modules, and add the audit hook if
+    something is now tracked. Called by the worker before every task, and by
+    the server before an in-process load."""
     _state.refresh(path, exempt_roots)
+    _add_audit_hook_if_needed()
 
 
 def tracked_count() -> int:

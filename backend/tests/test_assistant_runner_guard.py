@@ -630,3 +630,26 @@ def test_the_server_hook_acts_only_inside_an_in_process_load(st):
             open(st["agent_file"]).read()
     assert st["agent_file"].read_text() == st["text"]
     assert client.post("/api/assistant/review/status", json={"path": str(st["agent_file"])}).status_code == 200
+
+
+def test_the_audit_hook_is_added_only_once_something_is_tracked(tmp_path):
+    """With nothing tracked the hook would refuse nothing, so it isn't added
+    and a task costs what it did before; the first refresh that finds a
+    tracked file adds it. In a fresh interpreter, since a hook can't be removed."""
+    state = tmp_path / "state.json"
+    state.write_text(json.dumps({"files": {}}))
+    guard_file = APP_DIR / "services" / "assistant" / "import_guard.py"
+    script = (
+        "import importlib.util, json, sys\n"
+        f"spec = importlib.util.spec_from_file_location('g', {str(guard_file)!r})\n"
+        "g = importlib.util.module_from_spec(spec); spec.loader.exec_module(g)\n"
+        "g.install_audit_hook(everywhere=True)\n"
+        f"g.refresh({str(state)!r})\n"
+        "before = g._audit_installed\n"
+        f"open({str(state)!r}, 'w').write(json.dumps({{'files': {{'/nowhere/x.py': {{'approved': None}}}}}}))\n"
+        f"g.refresh({str(state)!r})\n"
+        "print(json.dumps([before, g._audit_installed]))\n"
+    )
+    out = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=60)
+    assert out.returncode == 0, out.stderr
+    assert json.loads(out.stdout.strip().splitlines()[-1]) == [False, True]
