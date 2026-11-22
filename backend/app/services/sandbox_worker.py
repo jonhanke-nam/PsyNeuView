@@ -2136,6 +2136,13 @@ def _model_nodes(pnl, module):
 
 
 def _unnamed_reason(node):
+    import psyneulink as pnl
+
+    # A learning pathway's own learning mechanisms have no variable either,
+    # but they aren't made inside a function: say what does make them.
+    if isinstance(node, getattr(pnl, "LearningMechanism", ())):
+        return (f"{node.name} is made by a learning pathway, which already connects it "
+                "to the arrow it trains; the file has no name to connect it by.")
     return (f"{node.name} is made inside a function, so the file has no name to "
             "connect it by; add the connection in the code.")
 
@@ -2166,7 +2173,9 @@ def _resolve_end(pnl, module, key, name_to_var):
     for a node the model builds inside a function (EGO's), which has no
     variable in the file to write a projection with, or ``(None, None)``."""
     obj = getattr(module, key, None) if key else None
-    if isinstance(obj, (pnl.Mechanism, pnl.Composition)):
+    # An arrow (a MappingProjection the file names) is a drop target too: a
+    # learning mechanism trains its matrix (#253, stage 3).
+    if isinstance(obj, (pnl.Mechanism, pnl.Composition, pnl.MappingProjection)):
         return obj, None
     for node in _model_nodes(pnl, module):
         if key and key in _canvas_keys(node, name_to_var):
@@ -2178,26 +2187,40 @@ def _connection_options(pnl, module, sender, receiver):
     """What dragging ``sender`` onto ``receiver`` connects (#253): the
     shared rule behind ``connection_options`` and ``connection_targets``.
 
+    The projection's type follows the sender, and the receiver gives the port:
+
+    - a control mechanism: a ControlProjection into one of the receiver's
+      parameters;
+    - a gating mechanism: a GatingProjection into one of its input or output
+      ports;
+    - a learning mechanism, dropped on an arrow: a LearningProjection to that
+      arrow's matrix;
+    - any other mechanism: a MappingProjection into an input port (or, on a
+      collapsed composition, into one of its input nodes).
+
     Returns ``{"options": [...]}`` or ``{"refused": "<plain reason>"}``.
     """
     if not isinstance(sender, pnl.Mechanism):
         return {"refused": "Drag from a mechanism to connect it."}
+    learning_cls = getattr(pnl, "LearningMechanism", None)
+    gating_cls = getattr(pnl, "GatingMechanism", None)
+    control_cls = getattr(pnl, "ControlMechanism", None)
+    # GatingMechanism is a kind of ControlMechanism, so it is asked first.
+    if learning_cls is not None and isinstance(sender, learning_cls):
+        return _learning_options(pnl, module, sender, receiver)
+    if isinstance(receiver, pnl.MappingProjection):
+        return {"refused": (
+            "Only a learning mechanism connects to an arrow (to train its weights); "
+            "drop on a mechanism to connect."
+        )}
     if not isinstance(receiver, (pnl.Mechanism, pnl.Composition)):
         return {"refused": "Drop on a mechanism or a collapsed composition to connect."}
     if sender is receiver:
         return {"refused": "A mechanism can't be connected to itself by dragging."}
-    kinds = [
-        ("GatingMechanism", "a gating mechanism"),
-        ("LearningMechanism", "a learning mechanism"),
-        ("ControlMechanism", "a control mechanism"),
-    ]
-    for cls_name, what in kinds:
-        cls = getattr(pnl, cls_name, None)
-        if cls is not None and isinstance(sender, cls):
-            return {"refused": (
-                f"{sender.name} is {what}. Its projections go to a parameter, a port "
-                "or an arrow, which dragging can't choose yet; add it in the code for now."
-            )}
+    if gating_cls is not None and isinstance(sender, gating_cls):
+        return _gating_options(pnl, module, sender, receiver)
+    if control_cls is not None and isinstance(sender, control_cls):
+        return _control_options(pnl, module, sender, receiver)
     if not sender.output_ports:
         return {"refused": f"{sender.name} has no output to connect."}
     out = sender.output_ports[0].name
@@ -2217,6 +2240,170 @@ def _connection_options(pnl, module, sender, receiver):
         {"type": "MappingProjection", "sender_port": out, "receiver_port": port.name, **extra}
         for port in receiver.input_ports
     ]}
+
+
+def _modulatory_holder(pnl, module, sender, receiver):
+    """The composition a control or gating projection from ``sender`` to
+    ``receiver`` is added to: the one holding both, or the one whose
+    ``controller`` the sender is (a controller isn't one of its nodes)."""
+    holder = _composition_holding(pnl, module, sender, receiver)
+    if holder:
+        return holder
+    for name, value in vars(module).items():
+        if isinstance(value, pnl.Composition) and not name.startswith("_"):
+            try:
+                if value.controller is sender and receiver in value.nodes:
+                    return name
+            except Exception:
+                continue
+    return None
+
+
+def _projection_var(module, *parts):
+    """A variable name for a new projection that the model doesn't use yet."""
+    base = re.sub(r"\W+", "_", "_".join(p for p in parts if p)).strip("_") or "projection"
+    name, n = base, 2
+    while name in vars(module):
+        name, n = f"{base}_{n}", n + 1
+    return name
+
+
+def _modulated_by(port, sender):
+    """True when ``sender`` already sends a modulatory projection to ``port``."""
+    for proj in getattr(port, "mod_afferents", []):
+        if getattr(getattr(proj, "sender", None), "owner", None) is sender:
+            return True
+    return False
+
+
+def _parameter_label(name):
+    """``offset-function`` (PsyNeuLink's name for the function's ``offset``,
+    when the mechanism has one too) reads as ``offset (function)``."""
+    base, _, where = name.partition("-")
+    return f"{base} ({where.replace('_', ' ')})" if where else name
+
+
+def _control_options(pnl, module, sender, receiver):
+    """A control mechanism dropped on a mechanism: a ControlProjection into
+    one of the receiver's parameters, one option per ParameterPort it doesn't
+    already control. Written as ``pnl.ControlProjection(sender=<control
+    mechanism>, receiver=<mech>.parameter_ports['<name>'])``: PsyNeuLink adds
+    a ControlSignal to the sender for it, as ``control=[...]`` would."""
+    if isinstance(receiver, pnl.Composition):
+        return {"refused": (
+            f"A control projection needs a parameter to control: drop {sender.name} "
+            "on a mechanism, not a composition."
+        )}
+    holder = _modulatory_holder(pnl, module, sender, receiver)
+    if holder is None:
+        return {"refused": f"{sender.name} and {receiver.name} aren't in the same composition."}
+    sender_var = _var_name_of(module, sender) or sender.name
+    receiver_var = _var_name_of(module, receiver) or receiver.name
+    options = []
+    for port in receiver.parameter_ports:
+        if _modulated_by(port, sender):
+            continue
+        options.append({
+            "type": "ControlProjection",
+            "receiver_port": port.name,
+            "receiver_port_kind": "parameter",
+            "label": _parameter_label(port.name),
+            "composition": holder,
+            "var_name": _projection_var(module, sender_var, "controls", receiver_var, port.name),
+        })
+    if not options:
+        if receiver.parameter_ports:
+            return {"refused": f"{sender.name} already controls every parameter of {receiver.name}."}
+        return {"refused": f"{receiver.name} has no parameter to control."}
+    return {"options": options, "ask": "parameter"}
+
+
+def _gating_options(pnl, module, sender, receiver):
+    """A gating mechanism dropped on a mechanism: a GatingProjection into one
+    of the receiver's input or output ports, one option per port it doesn't
+    already gate. Written as ``pnl.GatingProjection(sender=<gating
+    mechanism>, receiver=<mech>.input_ports['<name>'])`` (or
+    ``output_ports``): PsyNeuLink adds a GatingSignal to the sender for it."""
+    if isinstance(receiver, pnl.Composition):
+        return {"refused": (
+            f"A gating projection needs a port to gate: drop {sender.name} "
+            "on a mechanism, not a composition."
+        )}
+    holder = _modulatory_holder(pnl, module, sender, receiver)
+    if holder is None:
+        return {"refused": f"{sender.name} and {receiver.name} aren't in the same composition."}
+    sender_var = _var_name_of(module, sender) or sender.name
+    receiver_var = _var_name_of(module, receiver) or receiver.name
+    options = []
+    for kind, ports in (("input", receiver.input_ports), ("output", receiver.output_ports)):
+        for port in ports:
+            if _modulated_by(port, sender):
+                continue
+            options.append({
+                "type": "GatingProjection",
+                "receiver_port": port.name,
+                "receiver_port_kind": kind,
+                "label": f"{kind}: {port.name}",
+                "composition": holder,
+                "var_name": _projection_var(module, sender_var, "gates", receiver_var, port.name),
+            })
+    if not options:
+        return {"refused": f"{sender.name} already gates every port of {receiver.name}."}
+    return {"options": options, "ask": "port"}
+
+
+def _learning_options(pnl, module, sender, receiver):
+    """A learning mechanism dropped on an arrow: a LearningProjection to that
+    arrow's ``matrix``, from the mechanism's LearningSignal. Written as
+    ``pnl.LearningProjection(sender=<lm>.output_ports['LearningSignal'],
+    receiver=<arrow>.parameter_ports['matrix'])``: the arrow is then trained
+    by the same learning signal as the mechanism's own arrow, so its matrix
+    must have the same shape."""
+    if not isinstance(receiver, pnl.MappingProjection):
+        return {"refused": (
+            f"A learning projection trains an arrow's weights: drop {sender.name} "
+            "on an arrow (a mapping projection)."
+        )}
+    signals = list(getattr(sender, "learning_signals", []) or [])
+    if not signals:
+        return {"refused": f"{sender.name} has no learning signal to send."}
+    try:
+        matrix_port = receiver.parameter_ports["matrix"]
+    except Exception:
+        return {"refused": f"{receiver.name} has no matrix to learn."}
+    if _modulated_by(matrix_port, sender):
+        return {"refused": f"{sender.name} already trains {receiver.name}."}
+    try:
+        import numpy as np
+
+        want = np.shape(signals[0].defaults.value)
+        # ``defaults.matrix`` can still be a spec ("AUTO_ASSIGN_MATRIX"); the
+        # built matrix has the shape.
+        have = np.shape(receiver.matrix.base)
+        if want and have and want != have:
+            return {"refused": (
+                f"{sender.name}'s learning signal is {want[0]}x{want[1] if len(want) > 1 else 1}, "
+                f"but {receiver.name}'s matrix is {have[0]}x{have[1] if len(have) > 1 else 1}; "
+                "a learning projection needs the same shape."
+            )}
+    except Exception:
+        pass
+    ends = (getattr(getattr(receiver, "sender", None), "owner", None),
+            getattr(getattr(receiver, "receiver", None), "owner", None))
+    holder = _composition_holding(pnl, module, *[e for e in ends if e is not None])
+    if holder is None:
+        return {"refused": f"{receiver.name} isn't in a composition the file names."}
+    sender_var = _var_name_of(module, sender) or sender.name
+    receiver_var = _var_name_of(module, receiver) or receiver.name
+    return {"options": [{
+        "type": "LearningProjection",
+        "sender_port": signals[0].name,
+        "receiver_port": "matrix",
+        "receiver_port_kind": "parameter",
+        "label": f"{receiver.name}: matrix",
+        "composition": holder,
+        "var_name": _projection_var(module, sender_var, "learns", receiver_var),
+    }]}
 
 
 def _options_into_composition(pnl, module, sender, comp, out):
@@ -2281,17 +2468,20 @@ def task_connection_options(params):
     Asks PsyNeuLink, on the model's own objects, rather than a table kept by
     hand: the sender must be a mechanism; the receiver a different mechanism,
     or a collapsed composition (then into one of its input nodes); a sender
-    that is a control, gating or learning mechanism is not connected by
-    dragging yet (its projection targets a parameter, a port or an arrow,
-    which needs design input: #253's later stage); an existing connection
-    between the two is not made twice. Otherwise it is a MappingProjection
-    from the sender's primary output port, with one option per input port of
-    the receiver (or of each of the composition's input nodes).
+    that is a control or gating mechanism goes into one of the receiver's
+    parameters or ports, and a learning mechanism onto an arrow (a
+    MappingProjection the file names), to train its matrix (#253, stage 3);
+    an existing connection between the two is not made twice. Otherwise it
+    is a MappingProjection from the sender's primary output port, with one
+    option per input port of the receiver (or of each of the composition's
+    input nodes).
 
     Returns ``{"options": [{type, sender_port, receiver_port, ...}]}`` or
     ``{"refused": "<plain reason>"}``. An option into a composition also
     names its ``receiver`` node, a ``label`` and the ``composition`` to add
-    the projection to.
+    the projection to; a control, gating or learning option names the
+    ``receiver_port_kind`` (parameter, input or output) and the
+    ``var_name`` to declare it as.
     """
     import psyneulink as pnl
 
@@ -2303,7 +2493,8 @@ def task_connection_options(params):
     receiver, why = _resolve_end(pnl, module, params.get("receiver"), handles)
     if why:
         return {"refused": why}
-    if not isinstance(sender, pnl.Mechanism) or not isinstance(receiver, (pnl.Mechanism, pnl.Composition)):
+    if not isinstance(sender, pnl.Mechanism) or not isinstance(
+            receiver, (pnl.Mechanism, pnl.Composition, pnl.MappingProjection)):
         return {"refused": "Drag from one mechanism to another to connect them."}
     return _connection_options(pnl, module, sender, receiver)
 
@@ -2322,8 +2513,14 @@ def task_connection_targets(params):
     sender, sender_why = _resolve_end(pnl, module, params.get("sender"), handles)
     targets = {}
     named = set()
+    # Arrows are targets only for a learning mechanism (it trains one); for
+    # any other sender they'd all just dim, so they're left out.
+    learning_cls = getattr(pnl, "LearningMechanism", None)
+    kinds = (pnl.Mechanism, pnl.Composition)
+    if learning_cls is not None and isinstance(sender, learning_cls):
+        kinds = kinds + (pnl.MappingProjection,)
     for name, obj in list(vars(module).items()):
-        if name.startswith("_") or not isinstance(obj, (pnl.Mechanism, pnl.Composition)):
+        if name.startswith("_") or not isinstance(obj, kinds):
             continue
         named.add(id(obj))
         if not isinstance(sender, pnl.Mechanism):

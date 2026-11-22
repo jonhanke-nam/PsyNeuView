@@ -61,8 +61,8 @@ def test_a_node_inside_the_composition_is_refused():
     assert "inside" in _run("connection_options", sender="x", receiver="inner")["refused"]
 
 
-def test_a_control_sender_still_waits():
-    assert "control mechanism" in _run("connection_options", sender="ctrl", receiver="inner")["refused"]
+def test_a_control_sender_on_a_composition_needs_a_parameter():
+    assert "needs a parameter to control" in _run("connection_options", sender="ctrl", receiver="inner")["refused"]
 
 
 def test_the_written_projection_builds_and_runs():
@@ -93,9 +93,13 @@ def test_targets_light_up_mechanisms_and_compositions_and_say_why_not():
     assert targets["outer"]
 
 
-def test_a_control_sender_has_no_valid_target():
+def test_a_control_sender_lights_up_only_mechanisms_beside_it():
     targets = _run("connection_targets", sender="ctrl")["targets"]
-    assert all(reason for reason in targets.values())
+    # a is in outer with ctrl: its parameters can be controlled.
+    assert targets["a"] is None
+    # Compositions have no parameter to control; x is inside inner.
+    assert "needs a parameter" in targets["inner"]
+    assert targets["x"]
 
 
 BUILT_IN_A_FUNCTION = """import psyneulink as pnl
