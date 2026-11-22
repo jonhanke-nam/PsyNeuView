@@ -21,7 +21,7 @@ The file is the narrative record; the label is the filter. (We deliberately
 don't use a single GitHub issue as the ledger — it gets noisy and is awkward to
 format.) Tracked as a process in #709.
 
-## A model the assistant opened came back in the other view (2026-11-22)
+## Two AI assistant gaps found when it took in devel (2026-11-22)
 
 **Caught by:** `Frontend` → `unit tests (vitest)`, `src/modelLoadView.test.ts`,
 "every load and preview sends the flat/PyTorch view", on the AI assistant's
@@ -34,6 +34,14 @@ switched view under the user. Devel's check that every load sends the view
 (#257) arrived with the merge and named the line; the local pre-push run had
 included only the assistant's own unit tests. Fixed by sending the view as
 every other load does.
+
+The same refresh's `e2e` run (shard 3, `settings-search.spec.ts`, "every
+inventoried setting is reachable from search", failed on retry too) found
+five assistant settings that search listed but couldn't take you to: four in
+the folded "Limits and log" group, and the server address, shown only for an
+OpenAI-compatible agent. A folded group can now name the controls it holds
+and unfolds when search goes to one; the server address is marked as shown
+only for that agent.
 
 ## An arrow into a frame lay over the nodes it passed (2026-11-18)
 
