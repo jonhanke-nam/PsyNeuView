@@ -275,7 +275,11 @@
 
   /* Component types: each PsyNeuLink class's colour in the Components
      palette (its dot) and on its node when nodes are coloured by type
-     (constants/pnlTypes.ts names each one). Their own set, like the roles. */
+     (constants/pnlTypes.ts names each one). Their own set, like the roles.
+     Each is drawn as an icon or an outline, so each clears 3:1 against the
+     panel (--pnv-surface-muted) and a node's fill (--pnv-surface); the pale
+     ones were darkened to that, keeping their hue (#283).
+     styles/typeColourContrast.test.ts fails on one that does not. */
   /* Mechanisms */
   --pnv-type-transfer-mechanism: #1a73e8;
   --pnv-type-recurrent-transfer-mechanism: #7b1fa2;
