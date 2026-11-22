@@ -278,12 +278,8 @@
      (constants/pnlTypes.ts names each one). Their own set, like the roles.
      Each is drawn as an icon or an outline, so each clears 3:1 against the
      panel (--pnv-surface-muted) and a node's fill (--pnv-surface); the pale
-     ones were darkened to that, keeping their hue (#283). The shades of one
-     family (the timers, the transfer blues, …) are spread from that limit
-     down to a darker shade, palest first, so neighbours stay apart; where a
-     family has too many members for lightness alone, every other one is a
-     muted shade of the same hue. styles/typeColourContrast.test.ts fails on
-     a colour under 3:1 or two family members too alike. */
+     ones were darkened to that, keeping their hue (#283).
+     styles/typeColourContrast.test.ts fails on one that does not. */
   /* Mechanisms */
   --pnv-type-transfer-mechanism: #1a73e8;
   --pnv-type-recurrent-transfer-mechanism: #7b1fa2;
@@ -305,10 +301,10 @@
   --pnv-type-agt-control-mechanism: #b71c1c;
   --pnv-type-lc-control-mechanism: #c62828;
   --pnv-type-gating-mechanism: #4a148c;
-  --pnv-type-learning-mechanism: #c88300;
-  --pnv-type-auto-associative-learning-mechanism: #803e01;
-  --pnv-type-kohonen-learning-mechanism: #995401;
-  --pnv-type-em-storage-mechanism: #af6c01;
+  --pnv-type-learning-mechanism: #c78302;
+  --pnv-type-auto-associative-learning-mechanism: #e27202;
+  --pnv-type-kohonen-learning-mechanism: #d97902;
+  --pnv-type-em-storage-mechanism: #cd8004;
   /* Projections */
   --pnv-type-mapping-projection: #555;
   --pnv-type-masked-mapping-projection: #616161;
@@ -317,76 +313,76 @@
   --pnv-type-gating-projection: #4a148c;
   --pnv-type-learning-projection: #e65100;
   /* Compositions */
-  --pnv-type-composition: #15242b;
-  --pnv-type-autodiff-composition: #22353f;
-  --pnv-type-gru-composition: #2f4853;
-  --pnv-type-em-composition: #3f5b68;
-  --pnv-type-parameter-estimation-composition: #566d79;
-  --pnv-type-composition-function-approximator: #6d808a;
+  --pnv-type-composition: #37474f;
+  --pnv-type-autodiff-composition: #455a64;
+  --pnv-type-gru-composition: #546e7a;
+  --pnv-type-em-composition: #607d8b;
+  --pnv-type-parameter-estimation-composition: #78909c;
+  --pnv-type-composition-function-approximator: #80949e;
   --pnv-type-regression-cfa: #86939a;
   /* Functions */
-  --pnv-type-identity: #304056;
-  --pnv-type-linear: #004788;
-  --pnv-type-exponential: #015aa0;
-  --pnv-type-logistic: #4f6479;
-  --pnv-type-tanh: #006fb5;
-  --pnv-type-relu: #60778c;
-  --pnv-type-gaussian: #0184cc;
-  --pnv-type-gaussian-distort: #718a9f;
-  --pnv-type-binomial-distort: #039ae0;
-  --pnv-type-softmax: #3f5267;
-  --pnv-type-transfer-with-costs: #003570;
-  --pnv-type-angle: #222f44;
-  --pnv-type-hyperspherical-to-cartesian: #090055;
-  --pnv-type-dropout: #00225c;
-  --pnv-type-user-defined-function: #052330;
-  --pnv-type-linear-timer: #015861;
-  --pnv-type-accelerating-timer: #026f7d;
-  --pnv-type-decelerating-timer: #008796;
-  --pnv-type-asymptotic-timer: #04a0b0;
-  --pnv-type-simple-integrator: #003505;
-  --pnv-type-accumulator-integrator: #00500c;
-  --pnv-type-adaptive-integrator: #3f533f;
-  --pnv-type-dual-adaptive-integrator: #006d14;
-  --pnv-type-drift-diffusion-integrator: #576c57;
-  --pnv-type-drift-on-a-sphere-integrator: #18892d;
-  --pnv-type-ornstein-uhlenbeck-integrator: #708671;
-  --pnv-type-leaky-competing-integrator: #3aa54a;
-  --pnv-type-fitz-hugh-nagumo-integrator: #283b28;
-  --pnv-type-interactive-activation-integrator: #132413;
-  --pnv-type-normal-dist: #33004f;
-  --pnv-type-uniform-dist: #4e006a;
-  --pnv-type-exponential-dist: #6c0084;
-  --pnv-type-gamma-dist: #8a089e;
-  --pnv-type-wald-dist: #9c38ad;
-  --pnv-type-uniform-to-normal-dist: #b67dc0;
-  --pnv-type-drift-diffusion-analytical: #ac5ab9;
-  --pnv-type-linear-combination: #755744;
-  --pnv-type-matrix-transform: #7d3500;
-  --pnv-type-reduce: #543429;
-  --pnv-type-concatenate: #a05d01;
-  --pnv-type-rearrange: #957d61;
-  --pnv-type-combine-means: #c68401;
-  --pnv-type-prediction-error-delta-function: #521800;
-  --pnv-type-stability: #9a2700;
-  --pnv-type-energy: #bd3400;
-  --pnv-type-entropy: #e14001;
+  --pnv-type-identity: #1565c0;
+  --pnv-type-linear: #1976d2;
+  --pnv-type-exponential: #1e88e5;
+  --pnv-type-logistic: #2095f2;
+  --pnv-type-tanh: #3197e5;
+  --pnv-type-relu: #4597d6;
+  --pnv-type-gaussian: #5e97c3;
+  --pnv-type-gaussian-distort: #7495b0;
+  --pnv-type-binomial-distort: #85939d;
+  --pnv-type-softmax: #1e88e5;
+  --pnv-type-transfer-with-costs: #1565c0;
+  --pnv-type-angle: #0d47a1;
+  --pnv-type-hyperspherical-to-cartesian: #1a237e;
+  --pnv-type-dropout: #0d47a1;
+  --pnv-type-user-defined-function: #37474f;
+  --pnv-type-linear-timer: #00838f;
+  --pnv-type-accelerating-timer: #05a0b3;
+  --pnv-type-decelerating-timer: #06a0b1;
+  --pnv-type-asymptotic-timer: #02a0b0;
+  --pnv-type-simple-integrator: #2e7d32;
+  --pnv-type-accumulator-integrator: #388e3c;
+  --pnv-type-adaptive-integrator: #43a047;
+  --pnv-type-dual-adaptive-integrator: #41a546;
+  --pnv-type-drift-diffusion-integrator: #4ea353;
+  --pnv-type-drift-on-a-sphere-integrator: #5ca05f;
+  --pnv-type-ornstein-uhlenbeck-integrator: #6d9c70;
+  --pnv-type-leaky-competing-integrator: #7c987d;
+  --pnv-type-fitz-hugh-nagumo-integrator: #388e3c;
+  --pnv-type-interactive-activation-integrator: #1b5e20;
+  --pnv-type-normal-dist: #6a1b9a;
+  --pnv-type-uniform-dist: #7b1fa2;
+  --pnv-type-exponential-dist: #8e24aa;
+  --pnv-type-gamma-dist: #9c27b0;
+  --pnv-type-wald-dist: #ab47bc;
+  --pnv-type-uniform-to-normal-dist: #b67cc0;
+  --pnv-type-drift-diffusion-analytical: #ba68c8;
+  --pnv-type-linear-combination: #e27203;
+  --pnv-type-matrix-transform: #ec6b01;
+  --pnv-type-reduce: #e65100;
+  --pnv-type-concatenate: #d27d02;
+  --pnv-type-rearrange: #cb8102;
+  --pnv-type-combine-means: #c68303;
+  --pnv-type-prediction-error-delta-function: #e65100;
+  --pnv-type-stability: #d84315;
+  --pnv-type-energy: #e64a19;
+  --pnv-type-entropy: #f4511e;
   --pnv-type-distance: #ff5722;
-  --pnv-type-gradient-optimization: #351d17;
-  --pnv-type-grid-search: #4a2f26;
-  --pnv-type-gaussian-process: #614136;
+  --pnv-type-gradient-optimization: #4e342e;
+  --pnv-type-grid-search: #5d4037;
+  --pnv-type-gaussian-process: #6d4c41;
   --pnv-type-pec-optimization-function: #795548;
   --pnv-type-one-hot: #795548;
-  --pnv-type-hebbian: #422618;
-  --pnv-type-contrastive-hebbian: #592e00;
-  --pnv-type-kohonen: #5a432a;
-  --pnv-type-reinforcement: #734e00;
-  --pnv-type-td-learning: #726344;
-  --pnv-type-back-propagation: #8c7001;
-  --pnv-type-bayes-glm: #8d8260;
-  --pnv-type-em-storage: #af8e01;
-  --pnv-type-buffer: #311b18;
-  --pnv-type-content-addressable-memory: #472d27;
+  --pnv-type-hebbian: #ef6803;
+  --pnv-type-contrastive-hebbian: #d97902;
+  --pnv-type-kohonen: #cd8004;
+  --pnv-type-reinforcement: #c08602;
+  --pnv-type-td-learning: #b78a05;
+  --pnv-type-back-propagation: #b08d03;
+  --pnv-type-bayes-glm: #ac8e2b;
+  --pnv-type-em-storage: #a2905a;
+  --pnv-type-buffer: #3e2723;
+  --pnv-type-content-addressable-memory: #4e342e;
   --pnv-type-dictionary-memory: #5d4037;
   /* Ports */
   --pnv-type-input-port: #2e7d32;
