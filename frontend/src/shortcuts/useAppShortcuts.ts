@@ -9,25 +9,21 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { applyHistoryStep } from "@/hooks/useUndoRedo";
-import { useLayoutStore, type AnyPanel } from "@/stores/layoutStore";
+import type { AnyPanel } from "@/stores/layoutStore";
 import { useModelStore } from "@/stores/modelStore";
-import { useNotificationStore } from "@/stores/notificationStore";
+import { displayBinding } from "./binding";
 import { runCommand } from "./commands";
+import { openShortcutsReference } from "./reference";
+import { togglePanelOrExplain } from "./lastPanel";
 import { OVERRIDES_CHANGED, loadOverrides } from "./storage";
 import { resolveShortcuts, type ResolvedShortcut } from "./registry";
 import { useShortcuts } from "./useShortcuts";
 
-/** Shown when a shortcut would hide the last visible panel (#191). */
-export const LAST_PANEL_MESSAGE = "Can't hide the last visible panel";
-
-// Shows or hides one panel. The store refuses to hide the last visible one and
-// says so by returning false; the key is still consumed (the browser would
-// otherwise take it), and a short notice says why nothing moved.
+// Shows or hides one panel. The store refuses to hide the last visible one;
+// the key is still consumed (the browser would otherwise take it), and the
+// shared notice says why nothing moved (#213).
 function togglePanel(panel: AnyPanel) {
-  if (useLayoutStore.getState().togglePanel(panel)) return;
-  useNotificationStore
-    .getState()
-    .addNotification("info", LAST_PANEL_MESSAGE, { durationMs: 2500, key: "layout.lastPanel" });
+  togglePanelOrExplain(panel);
 }
 
 /** Actions by shortcut id. Anything not listed simply does nothing. */
@@ -50,10 +46,21 @@ function buildActions(): Record<string, () => boolean | void> {
     "graph.deleteSelection": () => {
       // The precondition lives with the action, not the registry: the registry
       // should not have to know what a selected node is.
-      const { selectedNodeId, filePath } = useModelStore.getState();
-      if (!selectedNodeId || !filePath) return;
+      const { selectedNodeId, selectedEdgeId, filePath } = useModelStore.getState();
+      if ((!selectedNodeId && !selectedEdgeId) || !filePath) return;
       runCommand("graph.deleteSelection");
     },
+
+    // #289: one fit, shared with the Fit button, the canvas menu and the
+    // off-screen badge. The canvas registers it; with the graph hidden there
+    // is nothing to fit, so the key is declined and goes on to the browser.
+    "view.fitGraph": () => runCommand("graph.fit"),
+    "view.fitGraphShift": () => runCommand("graph.fit"),
+    "view.actualSize": () => runCommand("graph.actualSize"),
+
+    // #292: Help ▸ Keyboard Shortcuts.
+    "help.shortcuts": () => openShortcutsReference(),
+    "help.shortcutsQuestion": () => openShortcutsReference(),
 
     // The bottom panel is App's own state, so App registers this one.
     "inspector.focus": () => void runCommand("inspector.focus"),
@@ -101,6 +108,20 @@ export function useResolvedShortcuts(): ResolvedShortcut[] {
     }
     return resolved;
   }, [overrides]);
+}
+
+/**
+ * The keys for one or more shortcuts as they read on this platform ("⌘9 or
+ * ⇧1"), current with any rebinding. For tooltips and menu rows, so what they
+ * name is always what fires (#289).
+ */
+export function useShortcutKeys(...ids: string[]): string {
+  const resolved = useResolvedShortcuts();
+  return ids
+    .map((id) => resolved.find((s) => s.id === id))
+    .filter((s): s is ResolvedShortcut => !!s)
+    .map((s) => displayBinding(s.binding))
+    .join(" or ");
 }
 
 /** Install the app's shortcuts. Call once, high in the tree. */

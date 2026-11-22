@@ -96,6 +96,20 @@ describe("Like show_graph layout (#19)", () => {
     expect(at("word_hidden").x).toBeLessThan(at("color_hidden").x);
   });
 
+  it("scales with Spacing between nodes (#278), boxes still apart", async () => {
+    const nodes = NAMES.map((n) => mech(n));
+    const placement = await stroopPlacement(nodes);
+    const own = scaleFor(nodes, placement).sx;
+    const compact = scaleFor(nodes, placement, 0.6).sx;
+    const roomy = scaleFor(nodes, placement, 1.4).sx;
+    expect(compact).toBeLessThanOrEqual(own);
+    expect(roomy).toBeGreaterThan(own);
+    // Even compact, neighbouring boxes in a row keep a gap.
+    const at = new Map([...placement.nodes].map(([id, o]) => [id, { x: o.x * compact, y: o.y * compact }]));
+    const row = ["task_input", "word_input", "color_input"].map((id) => at.get(id)!.x).sort((a, b) => a - b);
+    for (let i = 1; i < row.length; i++) expect(row[i] - row[i - 1]).toBeGreaterThanOrEqual(190);
+  });
+
   it("enlarges the picture so no two boxes overlap", async () => {
     const W = 260;
     const H = 90;

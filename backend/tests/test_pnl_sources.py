@@ -356,7 +356,7 @@ def test_switching_back_to_the_installed_checkout_skips_pip(monkeypatch, two_che
     assert im.local_install_can_skip_pip(str(a))
     job, calls = _run_local(monkeypatch, a)
     assert job.status == "succeeded" and calls == []
-    assert any("skipping pip install -e" in line for line in job.log)
+    assert any("skipping the reinstall" in line for line in job.log)
 
 
 def test_a_changed_pyproject_reinstalls_even_the_installed_checkout(monkeypatch, two_checkouts):

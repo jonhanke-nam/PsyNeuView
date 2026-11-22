@@ -69,6 +69,9 @@ test.describe("Guided walkthroughs are discoverable", () => {
     await expect(page.getByTestId("tour-instruction")).toHaveText(demo.steps[0].instruct, {
       timeout: 15000,
     });
+    // Every start opens a fresh copy of its model (#172), even this one, which
+    // was open already: let that finish, so its status line isn't measured.
+    await expect(page.getByTestId("status-bar")).toHaveCount(0, { timeout: 60_000 });
 
     // The bar RESERVES space rather than covering the app (#1181): the canvas
     // gets shorter, so nothing the learner needs is hidden behind the

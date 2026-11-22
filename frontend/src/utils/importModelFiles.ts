@@ -12,8 +12,10 @@
  */
 
 import { useModelStore } from "@/stores/modelStore";
+import { useLayoutStore } from "@/stores/layoutStore";
 import { useNotificationStore } from "@/stores/notificationStore";
-import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
+import { guardOpen } from "@/utils/tutorialGuard";
 
 /** Extensions the importer understands — also the file picker's `accept`. */
 export const IMPORTABLE_EXTENSIONS = [".py", ".pnlproject"] as const;
@@ -49,6 +51,7 @@ async function importProject(file: File): Promise<void> {
     store.setFilePath(data.file_path);
     store.setSource(data.source);
     store.markFreshOpen(); // #906: re-pick layout mode from the sidecar
+    useLayoutStore.getState().showPanelsForOpen(); // #215: also when the same file is dropped again
     store.loadModelFromServer(data.model, data.layout);
     notify.addNotification(
       "success",
@@ -71,27 +74,41 @@ async function importPython(file: File): Promise<void> {
     const dirsResp = await fetch("/api/models/dirs");
     const dirsData = await dirsResp.json();
     const dir = dirsData.default_save_dir || "";
-    const fullPath = `${dir}/${fileName}`;
+    let fullPath = `${dir}/${fileName}`;
 
-    // Ensure directory exists and write file directly (no conflict check)
-    await fetch("/api/model/save-source", {
+    // A file of that name already in the models folder is written over, with
+    // no conflict check: dropping it again means "use this version".
+    const saveResp = await fetch("/api/model/save-source", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ file_path: fullPath, source }),
-    }).catch(() => {
-      // If save-source fails (file doesn't exist yet), create via save-as
-      return fetch("/api/models/save-as", {
+    });
+    if (saveResp.status === 404) {
+      // A new name: save-source only writes files that exist, so create it
+      // with save-as (#227). The server answers 404 here, it does not throw.
+      const createResp = await fetch("/api/models/save-as", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ source, file_name: fileName }),
       });
-    });
+      if (!createResp.ok) {
+        const err = await createResp.json().catch(() => ({ detail: createResp.statusText }));
+        notify.addNotification("error", `Import failed: ${err.detail}`);
+        return;
+      }
+      const created = await createResp.json().catch(() => ({}));
+      if (created.file_path) fullPath = created.file_path;
+    } else if (!saveResp.ok) {
+      const err = await saveResp.json().catch(() => ({ detail: saveResp.statusText }));
+      notify.addNotification("error", `Import failed: ${err.detail}`);
+      return;
+    }
 
     // Load the file (handles star import conversion)
     const loadResp = await fetch("/api/model/load", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: fullPath, ...showGraphLoadRequest() }),
+      body: JSON.stringify({ file_path: fullPath, ...modelLoadOptions() }),
     });
     if (!loadResp.ok) {
       const err = await loadResp.json().catch(() => ({ detail: "Load failed" }));
@@ -102,6 +119,7 @@ async function importPython(file: File): Promise<void> {
     store.setFilePath(fullPath);
     store.setSource(data.source);
     store.markFreshOpen(); // #906: re-pick layout mode from the sidecar
+    useLayoutStore.getState().showPanelsForOpen(); // #215: also when the same file is dropped again
     store.loadModelFromServer(
       data.model,
       data.layout,
@@ -150,6 +168,13 @@ export async function importModelFiles(
     );
     return false;
   }
+
+  // A walkthrough in progress gets a say first (#172). `importing` holds off the
+  // repeat firings of one drop while the question is up.
+  importing = true;
+  const passes = await guardOpen({ kind: "file", name: (projectFile ?? pyFile)!.name });
+  importing = false;
+  if (!passes) return false;
 
   // Warn before discarding unsaved edits (#345)
   {

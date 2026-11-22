@@ -54,6 +54,15 @@ steps:
       lastTraining: { targets: { out_layer: [0, 0, 0, 1] }, epochsAtLeast: 50 }
     act:                        # what the test driver does (the app ignores it)
       train: { inputs: { … }, targets: { … }, epochs: 50 }
+
+  - id: open-it                 # a step that teaches opening a model
+    anchor: { testid: open-menu }
+    instruct: Open ▸ Logic Gate Network.
+    say: Open the logic gate network.
+    done: { nodeExists: out_layer }
+    opens: Logic Gate Network   # the app reads this: `new model` for New Model…
+    act:
+      openModel: Logic Gate Network
 ```
 
 - `course:` must look like `"0.3"`, and quoting it keeps YAML from reading it as
@@ -86,6 +95,69 @@ steps:
 - Then **register** the walkthrough in `frontend/src/utils/tourStep.ts`: add an
   `import …Yaml from "@/walkthroughs/<id>.yaml?raw"` and an entry in
   `WALKTHROUGHS`. A malformed file fails at app startup, on purpose.
+
+## Staying on the walkthrough's model (#172)
+
+Everything that replaces the model asks first while a walkthrough that uses one
+is running (`utils/tutorialGuard.ts`): stay, leave, or open it in a new window
+with the walkthrough left on its step. The exception is what the current step
+asks for, which it names with **`opens:`**: a catalog label as the Open menu
+shows it, or `new model` for Open ▸ New Model…. That step is also done only
+once that model is open. The app reads `opens:`, never `act`; a unit test in
+`tourStep.test.ts` fails unless `opens:` matches the step's `act.openModel` or
+`act.newModel`, so give a step both. A walkthrough with no model of its own is
+never interrupted. Replacing unsaved work offers to save it first, rather than
+warning that it will be lost.
+
+**The walkthrough's own model.** The tour store keeps the file the walkthrough
+is using (`modelPath`). A catalog model opened for it (on start, by the step
+that teaches opening it, or by the bar's Open button) is a fresh copy of its
+own, in `<working copies>/tutorials/<id>/`, emptied on every open
+(`tutorial` on `/api/demos/reset` and `/api/reference-models/load`). So every
+start is clean, even with the model already open, and the learner's own copy
+of a bundled model is never touched; a second window on that model no longer
+writes over the walkthrough's. A walkthrough that has the learner start a New
+Model uses that file once it's created. Save a copy as takes the walkthrough
+along to the copy.
+
+**Known view settings.** While a walkthrough runs, the graph's view is as a
+fresh window has it, and the learner's choices come back when it ends
+(`utils/tutorialView.ts`): what the graph shows (controller, learning,
+interface mechanisms, inactive nodes), names, types, direction, collapsed and
+inset compositions, and the nested and PyTorch views. The ones the server draws
+for change only as the walkthrough opens its model, and changing them back
+reloads the model, unless it has unsaved changes. Settings' own preferences
+(the automatic layout, port dots) are left as they are.
+
+**Ways back.** The code as each step began is kept (`stepStart`), taken when the
+step starts on the walkthrough's model or when that model opens during it, so
+a walkthrough file needs no per-step code. When the step's node is missing or
+the code has changed since, the bar offers **Undo my edits since this step
+began** (through Save, so the edits are one Undo away in History) and **Start
+the tutorial over** (step 1, and a fresh copy). If the open file changes by a
+route nothing asked about, the bar says so and offers **Go back to the
+tutorial's model** or **End tutorial**, and steps don't complete until then.
+
+## Resuming where the learner left off (#173)
+
+The bar remembers, per tutorial and per browser
+(`psyneuview.tutorials.progress`, `utils/tutorialProgress.ts`), the step the
+learner is on and the code as that step began. Starting that tutorial again
+asks **Resume at step N** (the default) or **Start over**; picking the one
+already running is starting it over, and a `?tour=` link starts from the
+beginning. Finishing forgets the place, and so do Start over and **Start the
+tutorial over**. Step 1 is never saved: a fresh start there leaves an earlier
+place alone until the learner moves on.
+
+Resuming opens a fresh copy of the tutorial's model and writes the saved code
+into that copy, never into a file of the learner's. A tutorial that has the
+learner create a model keeps only that file's path, and resuming opens it as
+it is. A place that no longer fits (a step renamed, added or removed, or a
+bundled model whose code changed in an update) is forgotten, the bar says why
+(until the step moves on), and the tutorial starts from the beginning.
+
+So **renaming a step's `id`** sends anyone part-way through that tutorial back
+to the start. That is safe, but keep ids stable when only the wording changes.
 
 ## `done` — when a step is finished
 
@@ -157,6 +229,20 @@ Automatic picks the best English voice installed (Premium/Enhanced first, then
 Karen, Daniel, …, never the novelty voices; `pickVoice` in
 `utils/narration.ts`), reading at 0.95. Never required: the caption is always on screen.
 
+**Recorded voices (#159).** By default narration plays clips recorded ahead
+of time in Heart's voice; Michael is the other recorded voice, and the
+computer's own voices are still in the list. The clips are made with Kokoro, a
+free voice model (Apache 2.0) run on your own Mac, and ship in
+`frontend/public/narration/<voice>/`, one `.m4a` per caption, named by a hash
+of the words said (the caption after `pronunciations.yaml`). A caption with no
+clip is read by the computer's voice, so nothing is silent, but
+`utils/recordedNarration.test.ts` fails on any caption without a clip, or a
+clip without a caption. **When you add or reword a `say:` caption (or a
+respelling), run `npm run narration:render` in `frontend/` and commit the
+clips.** It makes only the missing clips and removes those no longer needed.
+It needs `uv` (`brew install uv`) and, on first run, downloads the model
+(about 350 MB) to `~/.psyneuview/kokoro`. Never in CI.
+
 **What narration reads, and how the bar shows it (#86).** Narration reads only
 the caption, never the instruction. Captions run about 11 words (a few
 seconds), instructions about 33 (up to 81), too long to hear on every step.
@@ -193,7 +279,7 @@ Every walkthrough shows every panel (the code editor, the graph, the bottom
 panel's tabs and the Components panel) while it runs, since the window opens
 with the graph alone (#189) and steps point at the others. The layout from
 before comes back when the walkthrough ends, finished or stopped, and is kept
-in the browser (`psynewview_layout_before_walkthrough`) meanwhile, so a reload
+in the browser (`psyneuview_layout_before_walkthrough`) meanwhile, so a reload
 mid-walkthrough puts it back too rather than leaving the tutorial's layout
 behind as a choice. The e2e fixture (`test-base.ts`) turns the code editor and
 the bottom panel on for every spec, as the suite was written; a spec about the
@@ -262,9 +348,8 @@ python3 scripts/tutorial-review-book.py --out /tmp/review-book --voice Daniel  #
 the book renders a preview of each step with `say`, in the voice the app picks
 by default (Karen, else Daniel) at the narration rate, with the dictionary's
 respellings applied. The previews are written only to the output folder,
-never committed. If the repo ever carries recorded narration
-(`narration-manifest.json`), the book plays those recordings instead and also
-flags stale or missing ones.
+never committed. The app's default voice is now recorded (#159,
+`frontend/public/narration/`); the book still previews with `say`.
 
 It writes `index.html` with `shots/` (JPEG, shrunk with `sips` on macOS) and
 `audio/` (AAC `.mp4`, which an Artifact serves; it won't serve `.m4a`) beside
@@ -295,7 +380,7 @@ page and `shots/`, then `audio/`), since one publish takes at most 255.
   `backend/demos/` (the label comes from the filename), and the test pins the
   numbers or node names the walkthrough relies on, so a PsyNeuLink bump fails
   there, with the names. Seed any random weights. `/demos/reset`'s working
-  copy goes in `PSYNEWVIEW_WORKING_DIR`, which the backend tests' conftest
+  copy goes in `PSYNEUVIEW_WORKING_DIR`, which the backend tests' conftest
   points at a temp folder for every test, so it never lands in `backend/` or
   in the developer's real `~/.psyneuview/working-copies` (#1134, #1319).
 - **Mind load time.** The app gives a model load 30 seconds, and CI runners

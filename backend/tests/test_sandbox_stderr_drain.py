@@ -28,7 +28,7 @@ print("###READY###", flush=True)
 for _line in sys.stdin:
     sys.stderr.write("x" * 300_000 + "\\n")  # >> 64KB OS pipe buffer
     sys.stderr.flush()
-    print("###PSYNEWVIEW_RESULT###", flush=True)
+    print("###PSYNEUVIEW_RESULT###", flush=True)
     print(\'{"ok": true}\', flush=True)
 '''
 

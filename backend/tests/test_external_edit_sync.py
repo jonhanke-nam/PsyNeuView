@@ -185,6 +185,8 @@ def test_file_change_broadcast_reaches_clients_from_watcher_thread(model_file):
     async def scenario():
         ws_module._connected_clients.add(client)
         ws_module._loop = asyncio.get_running_loop()
+        # Changes go to the windows following the file (#272).
+        ws_module.file_watcher.subscribe(client, str(model_file), lambda p: None)
         try:
             # Call from a non-event-loop thread, exactly as watchdog does.
             done = threading.Event()
@@ -198,6 +200,7 @@ def test_file_change_broadcast_reaches_clients_from_watcher_thread(model_file):
             while not client.messages and time.time() < deadline:
                 await asyncio.sleep(0.02)
         finally:
+            ws_module.file_watcher.unsubscribe(client)
             ws_module._connected_clients.discard(client)
             ws_module._loop = None
 

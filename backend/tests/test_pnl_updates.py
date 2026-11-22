@@ -204,13 +204,13 @@ class TestInstallReadyUpdate:
         assert "already running" in record["detail"]
 
     def test_run_at_start_does_nothing_in_the_test_harness(self, monkeypatch):
-        monkeypatch.setenv("PSYNEWVIEW_TEST_MODE", "1")
+        monkeypatch.setenv("PSYNEUVIEW_TEST_MODE", "1")
         assert pu.checks_enabled() is False
         pu.run_at_start()  # no scheduler, no install
         assert pu._scheduler is None
 
     def test_checks_can_be_switched_off_by_environment(self, monkeypatch):
-        monkeypatch.delenv("PSYNEWVIEW_TEST_MODE", raising=False)
+        monkeypatch.delenv("PSYNEUVIEW_TEST_MODE", raising=False)
         monkeypatch.setenv(pu.ENABLE_ENV, "0")
         assert pu.checks_enabled() is False
 

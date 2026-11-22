@@ -45,6 +45,7 @@ steps:
       Open the Stroop With Control demo again.
     done:
       nodeExists: Conflict Monitor
+    opens: Stroop With Control
     act:
       openModel: Stroop With Control
 

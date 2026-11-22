@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DialogHeader } from "./dialog/DialogHeader";
 import { useDismiss } from "./dialog/useDismiss";
 import { Button } from "./Button";
+import { DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
 
 export interface DevTestRef {
   file: string;
@@ -54,7 +55,7 @@ export interface DeveloperTestsModalProps {
 
 const overlayStyle: React.CSSProperties = {
   position: "fixed",
-  inset: 0,
+  inset: 0, bottom: DIALOG_SCRIM_BOTTOM,
   background: "var(--pnv-scrim)",
   display: "flex",
   alignItems: "center",

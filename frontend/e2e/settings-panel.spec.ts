@@ -115,7 +115,7 @@ test.describe("Settings: sections", { tag: "@ci" }, () => {
     const folder = page.getByTestId("project-folder-current");
     await expect(folder).toContainText("Full path");
     await expect(folder).toHaveAttribute("title", /^\//);
-    await expect(page.getByTestId("project-folder-fixed")).toContainText("PSYNEWVIEW_MODELS_DIR");
+    await expect(page.getByTestId("project-folder-fixed")).toContainText("PSYNEUVIEW_MODELS_DIR");
     await expect(page.getByTestId("project-folder-fixed").getByTestId("developer-badge")).toBeVisible();
 
     await page.getByTestId("settings-section-shortcuts").click();

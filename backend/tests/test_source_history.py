@@ -5,7 +5,7 @@ Covers the four properties that matter for the typeahead in #251:
 2. Re-selecting an existing (repo, ref) pair bumps it to the top, doesn't
    duplicate.
 3. The history is capped — old entries fall off.
-4. Existing keys in ``.psynewview.json`` (like ``model_dirs``) are
+4. Existing keys in ``.psyneuview.json`` (like ``model_dirs``) are
    preserved across writes; malformed files don't crash reads.
 """
 
@@ -19,8 +19,8 @@ from app.services import source_history
 
 @pytest.fixture
 def config_path(tmp_path) -> Path:
-    """Each test gets its own throwaway config file — never touch ~/.psynewview.json."""
-    return tmp_path / ".psynewview.json"
+    """Each test gets its own throwaway config file — never touch ~/.psyneuview.json."""
+    return tmp_path / ".psyneuview.json"
 
 
 def test_record_creates_file(config_path):
@@ -134,7 +134,7 @@ def test_list_refs_for_repo_filters_and_orders(config_path):
 
 def test_atomic_write_leaves_no_tmp_files(config_path):
     source_history.record_selection("a/a", "main", config_file=config_path)
-    leftover = [p for p in config_path.parent.iterdir() if p.name.startswith(".psynewview.") and p.suffix == ".tmp"]
+    leftover = [p for p in config_path.parent.iterdir() if p.name.startswith(".psyneuview.") and p.suffix == ".tmp"]
     assert leftover == []
 
 

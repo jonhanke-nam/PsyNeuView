@@ -161,7 +161,7 @@ def test_a_direct_worker_task_with_no_review_state_is_still_refused(st, monkeypa
     payload = json.dumps({"task": "introspect", "params": {"file_path": str(st["agent_file"])}})
     proc = subprocess.run([sys.executable, WORKER_PATH], input=payload, capture_output=True, text=True, env=env, timeout=300)
     assert proc.returncode == 0, proc.stderr[-2000:]
-    result = json.loads(proc.stdout.split("###PSYNEWVIEW_RESULT###")[-1].strip())
+    result = json.loads(proc.stdout.split("###PSYNEUVIEW_RESULT###")[-1].strip())
     assert result.get("unreviewed_import") == str(st["agent_file"].resolve()), result
     assert not st["marker"].exists()
 
@@ -174,7 +174,7 @@ def test_a_direct_worker_task_with_unreadable_state_fails_closed(st):
     own.write_text(marker_model(st["tmp"] / "own_ran.txt"))
     payload = json.dumps({"task": "introspect", "params": {"file_path": str(own)}})
     proc = subprocess.run([sys.executable, WORKER_PATH], input=payload, capture_output=True, text=True, env=env, timeout=300)
-    result = json.loads(proc.stdout.split("###PSYNEWVIEW_RESULT###")[-1].strip())
+    result = json.loads(proc.stdout.split("###PSYNEUVIEW_RESULT###")[-1].strip())
     assert result.get("unreviewed_state") is True, result
     assert not (st["tmp"] / "own_ran.txt").exists()
 

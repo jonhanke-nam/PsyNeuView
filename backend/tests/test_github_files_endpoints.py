@@ -8,7 +8,7 @@ Covers:
 
 The service layer (github_files) is stubbed so we can hit deterministic
 errors without patching urlopen at every test. The preferences file is
-redirected to a tmp_path so we never touch ~/.psynewview.json.
+redirected to a tmp_path so we never touch ~/.psyneuview.json.
 """
 
 from unittest.mock import patch
@@ -25,7 +25,7 @@ client = TestClient(app)
 
 @pytest.fixture
 def isolated_file_history(tmp_path, monkeypatch):
-    config_path = tmp_path / ".psynewview.json"
+    config_path = tmp_path / ".psyneuview.json"
     monkeypatch.setenv(CONFIG_ENV, str(config_path))
     yield config_path
 

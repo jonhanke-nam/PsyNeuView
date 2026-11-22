@@ -153,3 +153,80 @@ describe("save marks", () => {
     expect(useHistoryStore.getState().past[0].saves?.map((m) => m.kind)).toEqual(["manual", "auto"]);
   });
 });
+
+// A step that only moves nodes (#219): Tidy inputs and outputs changes no
+// code and no graph, only where the nodes are.
+describe("steps that only move nodes", () => {
+  beforeEach(() => {
+    useHistoryStore.getState().clear();
+  });
+
+  const at = (y: number) => ({ positions: { a: { x: 0, y } } });
+
+  it("is kept when the positions changed, so it can be undone", () => {
+    const h = useHistoryStore.getState();
+    h.pushSnapshot(snap({ description: "Model loaded", ...at(0) }));
+    h.pushSnapshot(snap({ description: "Tidied inputs and outputs", moves: true, ...at(100) }));
+    expect(useHistoryStore.getState().canUndo()).toBe(true);
+    expect(useHistoryStore.getState().undo()?.positions).toEqual({ a: { x: 0, y: 0 } });
+  });
+
+  it("is skipped when nothing moved", () => {
+    const h = useHistoryStore.getState();
+    h.pushSnapshot(snap({ description: "Model loaded", ...at(0) }));
+    h.pushSnapshot(snap({ description: "Positions before tidying", moves: true, ...at(0) }));
+    expect(useHistoryStore.getState().canUndo()).toBe(false);
+  });
+
+  it("other steps are still told apart by their code and graph alone", () => {
+    const h = useHistoryStore.getState();
+    h.pushSnapshot(snap({ description: "Model loaded", ...at(0) }));
+    h.pushSnapshot(snap({ description: "Model updated", ...at(100) }));
+    expect(useHistoryStore.getState().canUndo()).toBe(false);
+  });
+});
+
+// A step that only reshapes an arrow (#164): bending it or moving an end
+// changes no code, no graph and no node, only the arrow's route.
+describe("steps that only reshape arrows", () => {
+  beforeEach(() => {
+    useHistoryStore.getState().clear();
+  });
+
+  const route = (x: number) => ({ edgeRoutes: { "a|out|b|in": { waypoints: [{ x, y: 0 }] } } });
+
+  it("is kept when an arrow's route changed, and Undo gives back the route before", () => {
+    const h = useHistoryStore.getState();
+    h.pushSnapshot(snap({ description: "Model loaded", edgeRoutes: {} }));
+    h.pushSnapshot(snap({ description: "Reshaped arrow a_to_b", reshapes: true, ...route(50) }));
+    expect(useHistoryStore.getState().canUndo()).toBe(true);
+    expect(useHistoryStore.getState().undo()?.edgeRoutes).toEqual({});
+  });
+
+  it("each reshape is a step of its own once the last one is done", () => {
+    const h = useHistoryStore.getState();
+    h.pushSnapshot(snap({ description: "Model loaded", edgeRoutes: {} }));
+    h.pushSnapshot(snap({ description: "Reshaped arrow a_to_b", reshapes: true, ...route(50), timestamp: 0 }));
+    useHistoryStore.setState({ lastPushTime: 0 }); // past the batching window
+    h.pushSnapshot(snap({ description: "Reshaped arrow a_to_b", reshapes: true, ...route(90) }));
+    expect(useHistoryStore.getState().past).toHaveLength(3);
+  });
+
+  it("is skipped when the route is as it was", () => {
+    const h = useHistoryStore.getState();
+    h.pushSnapshot(snap({ description: "Model loaded", ...route(50) }));
+    h.pushSnapshot(snap({ description: "Reshaped arrow a_to_b", reshapes: true, ...route(50) }));
+    expect(useHistoryStore.getState().canUndo()).toBe(false);
+  });
+
+  it("a reshape that left Auto still did once merged with the next", () => {
+    const h = useHistoryStore.getState();
+    h.pushSnapshot(snap({ description: "Model loaded", edgeRoutes: {} }));
+    h.pushSnapshot(snap({ description: "Reshaped arrow a_to_b", reshapes: true, fromAuto: true, ...route(50) }));
+    h.pushSnapshot(snap({ description: "Reshaped arrow a_to_b", reshapes: true, ...route(90) }));
+    const past = useHistoryStore.getState().past;
+    expect(past).toHaveLength(2);
+    expect(past[1].fromAuto).toBe(true);
+    expect(past[1].edgeRoutes).toEqual(route(90).edgeRoutes);
+  });
+});

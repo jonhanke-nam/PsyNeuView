@@ -1,7 +1,7 @@
 /**
  * Move… moves My Project Folder, and the Open menu follows (#1295).
  *
- * The harness fixes the project folder through PSYNEWVIEW_MODELS_DIR, and
+ * The harness fixes the project folder through PSYNEUVIEW_MODELS_DIR, and
  * while that is set the folder can't be moved — by design, the variable
  * wins. So this spec clears the variable in the running backend through the
  * test-only endpoint, points the folder at a temp folder through the

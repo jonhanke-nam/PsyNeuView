@@ -204,10 +204,12 @@ async function act(page: Page, step: TourStep): Promise<void> {
     const type = step.act.addFromPalette;
     const palette = page.getByTestId("palette-sidebar");
     await palette.getByPlaceholder("Search components...").fill(type);
-    // By tooltip, not visible text: the palette shows a short display label
-    // ("Transfer"), and `exact` keeps "TransferMechanism" off
+    // By type, not visible text: the palette shows a short display label
+    // ("Transfer"), and the exact type keeps "TransferMechanism" off
     // "RecurrentTransferMechanism", which the same search also returns.
-    await palette.getByTitle(`${type} \u2014 drag or click to add`, { exact: true }).click();
+    await palette.locator(`[data-testid="palette-item"][data-type="${type}"]`).first().click();
+    // #252: then a click on the graph says where it goes.
+    await clickEmptyCanvas(page);
     return;
   }
   if (step.act?.selectNode) {
@@ -295,7 +297,7 @@ async function act(page: Page, step: TourStep): Promise<void> {
     if (!(await palette.isVisible())) await page.getByTitle("Show object palette").click();
     await expect(palette).toBeVisible();
     await palette.getByPlaceholder("Search components...").fill("MappingProjection");
-    const item = palette.getByTitle("MappingProjection \u2014 drag or click to add", { exact: true });
+    const item = palette.locator('[data-testid="palette-item"][data-type="MappingProjection"]').first();
     await item.dragTo(canvasNode(page, receiver).first());
     await expect(page.getByText("Click the source node to connect into")).toBeVisible({ timeout: 10_000 });
     const created = page.waitForResponse(
@@ -481,4 +483,24 @@ export async function runWalkthrough(
         .toBe(true);
     }
   }
+}
+
+
+/**
+ * Click a point of empty canvas (#252): where a component picked up in the
+ * palette is put down. Searches the visible pane for a point that is canvas,
+ * not a node or an arrow.
+ */
+export async function clickEmptyCanvas(page: import("@playwright/test").Page) {
+  const spot = await page.evaluate(() => {
+    const pane = document.querySelector(".react-flow__pane")!.getBoundingClientRect();
+    for (const fy of [0.85, 0.7, 0.55, 0.4, 0.25])
+      for (const fx of [0.15, 0.3, 0.5, 0.7, 0.85]) {
+        const x = pane.left + pane.width * fx, y = pane.top + pane.height * fy;
+        if (document.elementFromPoint(x, y)?.classList.contains("react-flow__pane")) return { x, y };
+      }
+    return null;
+  });
+  if (!spot) throw new Error("no empty canvas to put the component on");
+  await page.mouse.click(spot.x, spot.y);
 }

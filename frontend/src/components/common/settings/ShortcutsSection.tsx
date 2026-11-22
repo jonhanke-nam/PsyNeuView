@@ -9,7 +9,8 @@
 import { useEffect, useState } from "react";
 import { displayBinding, isMac } from "@/shortcuts/binding";
 import { captureBinding } from "@/shortcuts/capture";
-import { findConflicts, resolveShortcuts } from "@/shortcuts/registry";
+import { SHORTCUT_GROUPS, findConflicts, resolveShortcuts } from "@/shortcuts/registry";
+import { openShortcutsReference } from "@/shortcuts/reference";
 import { clearOverrides, loadOverrides, setOverride } from "@/shortcuts/storage";
 import { Group } from "./shared";
 import { Button } from "../Button";
@@ -63,13 +64,19 @@ function ShortcutRows({ deployment }: { deployment: "macApp" | "browser" }) {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [capturing, mac, deployment, resolved]);
 
-  const groups = ["View", "Model", "Run", "Edit"] as const;
-  const byGroup = groups
+  const byGroup = SHORTCUT_GROUPS
     .map((group) => ({ group, items: resolved.filter((s) => s.group === group) }))
     .filter((g) => g.items.length > 0);
 
   return (
     <div style={{ fontSize: "var(--pnv-fs-13)" }} data-testid="setting-keyboard-shortcuts">
+      {/* #292: the read-only list, with what you have changed marked, opens on top. */}
+      <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", marginBottom: 8 }}>
+        Every shortcut in one list, with what you have changed marked:{" "}
+        <Button kind="link" data-testid="shortcuts-open-reference" onClick={openShortcutsReference}>
+          Help ▸ Keyboard Shortcuts
+        </Button>
+      </div>
       {byGroup.map(({ group, items }) => (
         <div key={group} style={{ marginBottom: 10 }}>
           <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", marginBottom: 3 }}>{group}</div>
@@ -89,6 +96,7 @@ function ShortcutRows({ deployment }: { deployment: "macApp" | "browser" }) {
                 {overrides[shortcut.id] && (
                   <Button
                     kind="link"
+                    data-testid={`shortcut-reset-${shortcut.id}`}
                     onClick={() => setOverrides(setOverride(shortcut.id, null))}
                     title="Reset to the default"
                     style={{ fontSize: "var(--pnv-fs-10)" }}
@@ -97,6 +105,7 @@ function ShortcutRows({ deployment }: { deployment: "macApp" | "browser" }) {
                   </Button>
                 )}
                 <button
+                  data-testid={`shortcut-binding-${shortcut.id}`}
                   onClick={() => {
                     setCaptureError(null);
                     setCapturing(capturing === shortcut.id ? null : shortcut.id);
@@ -133,11 +142,17 @@ function ShortcutRows({ deployment }: { deployment: "macApp" | "browser" }) {
           Press the combination you want, or Escape to leave it alone.
         </div>
       )}
-      {Object.keys(overrides).length > 0 && (
-        <Button kind="small" onClick={() => setOverrides(clearOverrides())} style={{ marginTop: 8 }}>
-          Reset all to defaults
-        </Button>
-      )}
+      {/* Always shown (#292), so it is where you expect it; nothing to reset greys it out. */}
+      <Button
+        kind="small"
+        data-testid="shortcuts-reset-all"
+        disabled={Object.keys(overrides).length === 0}
+        title={Object.keys(overrides).length === 0 ? "Every shortcut is already on its default" : undefined}
+        onClick={() => setOverrides(clearOverrides())}
+        style={{ marginTop: 8 }}
+      >
+        Reset all to defaults
+      </Button>
 
       {conflicts.length > 0 && (
         <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-danger)", marginTop: 6 }}>

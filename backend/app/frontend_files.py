@@ -13,11 +13,17 @@ the hashed files under ``assets/`` never change and can be kept for good.
 
 from __future__ import annotations
 
+import mimetypes
 import os
 
 from starlette.responses import Response
 from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
+
+# The recorded narration clips (#159) as audio/mp4. Python takes types from the
+# system's mime.types, which on macOS calls .m4a "audio/mp4a-latm", a type
+# WebKit (the Mac app's web view) need not play; Chrome plays it regardless.
+mimetypes.add_type("audio/mp4", ".m4a")
 
 REVALIDATE = "no-cache"
 IMMUTABLE = "public, max-age=31536000, immutable"

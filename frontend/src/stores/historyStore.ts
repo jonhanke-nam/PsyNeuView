@@ -51,7 +51,9 @@
  */
 
 import { create } from "zustand";
+import { sameView, type GraphView } from "@/utils/graphView";
 import type { Node, Edge } from "@xyflow/react";
+import { sameRoutes, type EdgeRouteMap } from "@/utils/edgeRoutes";
 
 export interface Snapshot {
   /** Python source code */
@@ -75,6 +77,35 @@ export interface Snapshot {
    * save memory, and is rebuilt from `source` when undo reaches it.
    */
   compact?: boolean;
+  /**
+   * The view the graph was built in (#194): nested, flattened or PyTorch,
+   * the composition entered, those folded and those shown as insets. Undo
+   * and redo put it back along with the step, so a frame button's press is
+   * undone as a whole; without it the earlier nodes came back under the
+   * later settings, with no breadcrumb or frame buttons to leave by.
+   */
+  view?: GraphView;
+  /**
+   * A step that only moves nodes (#219, Tidy inputs and outputs): kept when
+   * its positions differ from the step before, though the code and the
+   * graph are the same. Other steps are told apart by their code and graph.
+   */
+  moves?: boolean;
+  /**
+   * The arrows shaped by hand (#164), keyed by their ends as the layout file
+   * keeps them. Undo and redo put them back.
+   */
+  edgeRoutes?: EdgeRouteMap;
+  /**
+   * A step that only reshapes arrows (#164): kept when its arrows' routes
+   * differ from the step before, though the code and the graph are the same.
+   */
+  reshapes?: boolean;
+  /**
+   * The reshape took the layout from Auto to Custom (#164): undoing it puts
+   * the layout back to Auto, and redoing it makes it Custom again.
+   */
+  fromAuto?: boolean;
 }
 
 /** How a save came about. */
@@ -334,6 +365,7 @@ function admit(step: Snapshot, previous: Snapshot | undefined): Snapshot {
   if (previous && !deltas.has(previous)) {
     if (step.source === previous.source) step.source = previous.source;
     if (positionsEqual(step.positions, previous.positions)) step.positions = previous.positions;
+    if (step.edgeRoutes && sameRoutes(step.edgeRoutes, previous.edgeRoutes)) step.edgeRoutes = previous.edgeRoutes;
   }
   const sourceShared = previous !== undefined && !deltas.has(previous) && step.source === previous.source;
   metas.set(step, {
@@ -426,9 +458,20 @@ function rebaseOnto(past: Snapshot[], old: Snapshot, next: Snapshot): void {
 
 function snapshotsEqual(a: Snapshot, b: Snapshot): boolean {
   if (a.filePath !== b.filePath || !sameSource(a, b.source)) return false;
+  // The same code drawn another way is a step of its own (#194): an inset
+  // keeps every node and edge, and only the view tells the two apart.
+  if (a.view && b.view && !sameView(a.view, b.view)) return false;
   // A compact step's graph is rebuilt from its code, so the code decides.
   if (a.compact) return true;
   return a.nodes.length === b.nodes.length && a.edges.length === b.edges.length;
+}
+
+/** Whether two steps have every node at the same place. */
+function samePositions(a: Snapshot, b: Snapshot): boolean {
+  const [pa, pb] = [a.positions ?? {}, b.positions ?? {}];
+  const keys = Object.keys(pb);
+  if (keys.length !== Object.keys(pa).length) return false;
+  return keys.every((k) => pa[k] && Math.abs(pa[k].x - pb[k].x) < 0.5 && Math.abs(pa[k].y - pb[k].y) < 0.5);
 }
 
 export const useHistoryStore = create<HistoryState>((set, get) => ({
@@ -450,7 +493,12 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     const lastEntry = state.past[state.past.length - 1];
 
     // Skip if snapshot is identical to the last one
-    if (lastEntry && snapshotsEqual(lastEntry, snapshot)) return;
+    if (
+      lastEntry &&
+      snapshotsEqual(lastEntry, snapshot) &&
+      !(snapshot.moves && !samePositions(lastEntry, snapshot)) &&
+      !(snapshot.reshapes && !sameRoutes(lastEntry.edgeRoutes, snapshot.edgeRoutes))
+    ) return;
 
     // The redo steps are about to go; the current step may hold its code as a
     // delta from one of them.
@@ -466,8 +514,10 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       lastEntry.description &&
       getBatchKey(lastEntry.description) === getBatchKey(snapshot.description)
     ) {
-      // Replace the last entry instead of adding a new one
-      const next = admit({ ...snapshot, timestamp: now }, state.past[state.past.length - 2]);
+      // Replace the last entry instead of adding a new one. A reshape that
+      // left Auto still did once merged with the next one (#164).
+      const merged = lastEntry.fromAuto ? { ...snapshot, fromAuto: true } : snapshot;
+      const next = admit({ ...merged, timestamp: now }, state.past[state.past.length - 2]);
       rebaseOnto(state.past, lastEntry, next);
       set({
         past: [...state.past.slice(0, -1), next],

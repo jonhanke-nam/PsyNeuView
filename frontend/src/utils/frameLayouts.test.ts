@@ -1,3 +1,4 @@
+import { ovalBoxFor } from "./nodeBox";
 import { describe, it, expect } from "vitest";
 import type { Edge, Node } from "@xyflow/react";
 import { applyForceLayout, applyRadialLayout, topLevelEdges } from "./layout";
@@ -23,10 +24,11 @@ const EDGES: Edge[] = [
   e("STATE [VALUE]", "STATE [RETRIEVED]"),
 ];
 
+// A node is drawn the size of its name's oval (#210), centred where the layout puts it.
 const boxes = (laid: Node[]) =>
   laid.filter((n) => !n.parentId).map((n) => ({
     id: n.id, x: n.position.x, y: n.position.y,
-    w: (n.style?.width as number) ?? 180, h: (n.style?.height as number) ?? 60,
+    w: (n.style?.width as number) ?? ovalBoxFor(n.id).width, h: (n.style?.height as number) ?? ovalBoxFor(n.id).height,
   }));
 
 describe("Radial and Force with frames (#35)", () => {
@@ -48,6 +50,10 @@ describe("Radial and Force with frames (#35)", () => {
     for (const x of b.filter((y) => y.id !== f.id)) {
       const overlap = x.x < f.x + f.w && f.x < x.x + x.w && x.y < f.y + f.h && f.y < x.y + x.h;
       expect(overlap, `${x.id} on top of EM`).toBe(false);
+      for (const y of b.filter((z) => z.id !== f.id && z.id !== x.id)) {
+        const touching = x.x < y.x + y.w && y.x < x.x + x.w && x.y < y.y + y.h && y.y < x.y + x.h;
+        expect(touching, `${x.id} on top of ${y.id}`).toBe(false);
+      }
     }
   });
 

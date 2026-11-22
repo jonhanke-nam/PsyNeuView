@@ -54,6 +54,7 @@ steps:
       Open the Elaborate Configurations demo: the Primer's Stroop model.
     done:
       nodeExists: DECISION
+    opens: Elaborate Configurations
     act:
       openModel: Elaborate Configurations
 

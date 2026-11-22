@@ -9,7 +9,7 @@
  */
 
 import type { Binding } from "./binding";
-import { parseBinding } from "./binding";
+import { isMac, parseBinding } from "./binding";
 
 /**
  * Where a shortcut is allowed to fire.
@@ -27,12 +27,32 @@ export type Scope =
   /** Everywhere, including inputs. For Escape and the like. */
   | "always";
 
+/**
+ * The areas shortcuts are listed under, in Settings and in Help ▸ Keyboard
+ * Shortcuts, in this order (#292). Named after the menus they would sit in.
+ */
+export const SHORTCUT_GROUPS = ["File", "Edit", "View", "Graph", "Help"] as const;
+export type ShortcutGroup = (typeof SHORTCUT_GROUPS)[number];
+
+/** Which platform's defaults apply: macOS, or everything else (#292). */
+export type Platform = "mac" | "other";
+
 export interface Shortcut {
   /** Stable across renames — overrides are stored against this. */
   id: string;
   label: string;
-  group: "View" | "Model" | "Run" | "Edit";
+  group: ShortcutGroup;
+  /**
+   * The default on every platform. `Mod` is Cmd on macOS and Ctrl elsewhere,
+   * so most shortcuts need nothing more.
+   */
   defaultBinding: string;
+  /**
+   * A different default on one platform (#292). Stored per platform from the
+   * start, so a Windows build that needs another key changes data, not code.
+   * Every entry must also be listed in docs/keyboard-shortcuts.md.
+   */
+  platformDefaults?: Partial<Record<Platform, string>>;
   scope: Scope;
   /**
    * Set at registration; the registry is a description, not a dispatcher.
@@ -66,7 +86,7 @@ export const SHORTCUTS: Shortcut[] = [
   {
     id: "model.save",
     label: "Save model",
-    group: "Model",
+    group: "File",
     defaultBinding: "Mod+s",
     // The editor is exactly where you press Cmd+S.
     scope: "codeEditorToo",
@@ -89,8 +109,8 @@ export const SHORTCUTS: Shortcut[] = [
   },
   {
     id: "graph.deleteSelection",
-    label: "Delete selected node",
-    group: "Model",
+    label: "Delete the selected nodes",
+    group: "Graph",
     defaultBinding: "Backspace",
     // Never while typing — Backspace is Backspace in a text field.
     scope: "outsideText",
@@ -106,7 +126,8 @@ export const SHORTCUTS: Shortcut[] = [
   },
   // #191: one key per panel, in the order they appear across the window. The
   // graph-only default (#189) makes these the quick way to bring a panel back.
-  // Hiding the last visible panel is refused, and the shortcut says so.
+  // Hiding the last visible panel is refused, and the shortcut says so, unless
+  // Settings allows a blank screen (#215).
   // A browser keeps Cmd+1..9 for its tabs, so there they can be rebound in
   // Settings; inside the Mac app they reach the page.
   {
@@ -137,10 +158,37 @@ export const SHORTCUTS: Shortcut[] = [
     defaultBinding: "Mod+4",
     scope: "codeEditorToo",
   },
+  // #289: recentring the graph, with Preview's keys. A browser keeps Cmd+9 and
+  // Cmd+0 for its tabs and page zoom, so Shift+1 (as in Figma and Sketch) also
+  // fits; inside the Mac app all three reach the page.
+  {
+    id: "view.fitGraph",
+    label: "Fit the graph to the window",
+    group: "View",
+    defaultBinding: "Mod+9",
+    scope: "codeEditorToo",
+  },
+  {
+    id: "view.fitGraphShift",
+    label: "Fit the graph to the window (second key)",
+    group: "View",
+    defaultBinding: "Shift+1",
+    // It types "!": never while typing, in the editor or anywhere else.
+    scope: "outsideText",
+  },
+  {
+    id: "view.actualSize",
+    label: "Show the graph at actual size (100%)",
+    group: "View",
+    defaultBinding: "Mod+0",
+    scope: "codeEditorToo",
+  },
   {
     id: "assistant.stop",
     label: "Stop the assistant",
-    group: "Run",
+    // There is no Run menu among the areas (#292); Edit is where Stop sits in
+    // most editors' menus beside Undo and Redo.
+    group: "Edit",
     defaultBinding: "Mod+.",
     // Stop has to be reachable while typing in the assistant's text box, so
     // it fires everywhere; it declines when no turn is running.
@@ -149,29 +197,60 @@ export const SHORTCUTS: Shortcut[] = [
   {
     id: "gesture.cancel",
     label: "Cancel the current gesture",
-    group: "View",
+    group: "Graph",
     defaultBinding: "Escape",
     // Escape closes a menu or abandons a gesture wherever you are, including
     // out of a field.
     scope: "always",
   },
+  // #292: Help ▸ Keyboard Shortcuts. Cmd+/ is the convention in Google's apps,
+  // Slack and GitHub; nothing in the browser or the Mac app's menu takes it,
+  // and the code editor binds no comment toggle. A typed "?" also opens it,
+  // but only away from typing.
+  {
+    id: "help.shortcuts",
+    label: "Show keyboard shortcuts",
+    group: "Help",
+    defaultBinding: "Mod+/",
+    scope: "always",
+  },
+  {
+    id: "help.shortcutsQuestion",
+    label: "Show keyboard shortcuts (second key)",
+    group: "Help",
+    defaultBinding: "?",
+    // It types "?": never while typing, in the editor or anywhere else.
+    scope: "outsideText",
+  },
 ];
+
+/** This platform, for choosing defaults. */
+export function currentPlatform(): Platform {
+  return isMac() ? "mac" : "other";
+}
+
+/** A shortcut's default on `platform`: its own entry for it, or the shared one. */
+export function defaultBindingFor(shortcut: Shortcut, platform: Platform = currentPlatform()): string {
+  return shortcut.platformDefaults?.[platform] ?? shortcut.defaultBinding;
+}
 
 /** Parse the declared set, applying any user overrides. */
 export function resolveShortcuts(
   overrides: Record<string, string> = {},
-  shortcuts: Shortcut[] = SHORTCUTS
+  shortcuts: Shortcut[] = SHORTCUTS,
+  platform: Platform = currentPlatform()
 ): { resolved: ResolvedShortcut[]; errors: string[] } {
   const resolved: ResolvedShortcut[] = [];
   const errors: string[] = [];
   for (const shortcut of shortcuts) {
-    const spec = overrides[shortcut.id] ?? shortcut.defaultBinding;
+    const fallbackSpec = defaultBindingFor(shortcut, platform);
+    const spec = overrides[shortcut.id] ?? fallbackSpec;
     const parsed = parseBinding(spec);
     if (!parsed.ok) {
       // A bad override must not take the shortcut down with it: fall back to
       // the default and say so, rather than leaving the action unreachable.
       errors.push(`${shortcut.id}: ${parsed.reason}`);
-      const fallback = parseBinding(shortcut.defaultBinding);
+      const fallback = parseBinding(fallbackSpec);
       if (fallback.ok) resolved.push({ ...shortcut, binding: fallback.binding });
       continue;
     }

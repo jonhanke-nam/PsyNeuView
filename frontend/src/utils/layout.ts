@@ -14,6 +14,10 @@ import { acyclicEdges } from "./roleRanks";
 import { applyShowGraphPlacementWithCurves, knownSize } from "./showGraphLayout";
 import { useShowGraphCurves } from "@/stores/showGraphCurvesStore";
 import { placeCims } from "./cimPlacement";
+import { ovalBoxFor } from "./nodeBox";
+import { tidyIoRows } from "./ioRows";
+import { ioRowsNotApplying, useIoRowsStore, type IoRows } from "@/stores/ioRowsStore";
+import { currentSpacingFactor } from "@/stores/layoutSpacingStore";
 
 interface LayoutOptions {
   direction?: "TB" | "BT" | "LR" | "RL";
@@ -25,6 +29,12 @@ interface LayoutOptions {
   // added to the parent graph as a single fixed-size node (its children are
   // excluded and laid out independently by layoutInsetInternals).
   insetSizes?: Map<string, { width: number; height: number }>;
+  // Settings ▸ Appearance ▸ Keep inputs on the bottom and outputs on top
+  // (#219); read from the setting when not given.
+  ioRows?: IoRows;
+  // Settings ▸ Appearance ▸ Spacing between nodes (#278): the factor the gaps
+  // are scaled by. applyDagreLayout alone takes 1; applyLayout reads the setting.
+  spacingFactor?: number;
 }
 
 /** Height of one edge label including padding and buffer. */
@@ -83,13 +93,26 @@ function computeMinRankSep(nodes: Node[], edges: Edge[], baseRankSep: number): n
 export const LAYERED_NODE_WIDTH = 180;
 
 /**
- * The width to lay a node out at: its drawn width, once it has been drawn,
- * when that is wider than the width assumed for every node. A long name makes
- * a wide box, and spacing it at the assumed width overlaps its neighbours
- * (#72). Narrower boxes keep the assumed width, so their layout is unchanged.
+ * A node's drawn box: as measured, or before it has been drawn, the box for its
+ * name. A layout's slot can be bigger than the box (#210), and a box placed by
+ * its slot's corner would sit off-centre, out of line with its row and column.
+ */
+function drawnBox(node: Node): { w: number; h: number } {
+  const known = knownSize(node);
+  if (known.w !== undefined && known.h !== undefined) return { w: known.w, h: known.h };
+  const label = (node.data as { label?: string } | undefined)?.label;
+  const box = ovalBoxFor(label ?? node.id);
+  return { w: known.w ?? box.width, h: known.h ?? box.height };
+}
+
+/**
+ * The width to lay a node out at: its drawn width when that is wider than the
+ * width assumed for every node. A long name makes a wide box, and spacing it at
+ * the assumed width overlaps its neighbours (#72). Narrower boxes keep the
+ * assumed width, so their spacing is unchanged.
  */
 function boxWidth(node: Node, assumed: number): number {
-  return Math.max(assumed, knownSize(node).w ?? 0);
+  return Math.max(assumed, node.type === "mechanismNode" ? drawnBox(node).w : knownSize(node).w ?? 0);
 }
 
 export function applyDagreLayout(
@@ -101,11 +124,14 @@ export function applyDagreLayout(
     direction = "TB",
     nodeWidth = LAYERED_NODE_WIDTH,
     nodeHeight = 60,
-    nodeSep = 60,
   } = options;
+  // #278: Spacing between nodes scales the gaps; edge labels still get room
+  // (computeMinRankSep), so a compact layout never stacks them.
+  const spacing = options.spacingFactor ?? 1;
+  const nodeSep = (options.nodeSep ?? 60) * spacing;
 
   // Compute dynamic rankSep based on edge density
-  const baseRankSep = options.rankSep ?? 120;
+  const baseRankSep = (options.rankSep ?? 120) * spacing;
   const rankSep = computeMinRankSep(nodes, edges, baseRankSep);
 
   const g = new Dagre.graphlib.Graph({ compound: true });
@@ -159,13 +185,37 @@ export function applyDagreLayout(
   // Dropping the edges that close a cycle leaves a graph acyclic by
   // construction, so depth is defined for every node. Those edges still render;
   // like the scheduler edges above, they simply don't influence placement.
+  // #209: a projection crossing a frame's boundary is drawn to the member
+  // inside, but ranks as an edge to the frame: to one whole unit if the frame
+  // is inset (its members are laid out on their own), and to the frame's entry
+  // or exit members if it is open (below). Given a vote to itself, one member
+  // would be pulled off its row by whichever outer node feeds it.
+  const parentOf = new Map(nodes.map((n) => [n.id, n.parentId]));
+  const insetOwner = (id: string): string => {
+    let owner = id;
+    for (let cur = parentOf.get(id), i = 0; cur && i < 50; cur = parentOf.get(cur), i++) {
+      if (insetFrameIds.has(cur)) owner = cur;
+    }
+    return owner;
+  };
+  const chainOf = (id: string): string[] => {
+    const chain = [id];
+    for (let cur = parentOf.get(id), i = 0; cur && i < 50; cur = parentOf.get(cur), i++) chain.unshift(cur);
+    return chain;
+  };
+  /** Both ends, each raised to its frame at the level where the two meet. */
+  const rankEnds = (source: string, target: string): { source: string; target: string } => {
+    const [s, t] = [chainOf(insetOwner(source)), chainOf(insetOwner(target))];
+    let shared = 0;
+    while (shared < s.length - 1 && shared < t.length - 1 && s[shared] === t[shared]) shared++;
+    return { source: s[shared], target: t[shared] };
+  };
   const rankable = acyclicEdges(
     nodes.filter((n) => g.hasNode(n.id)).map((n) => ({ id: n.id })),
     edges
       .filter((e) => e.type !== "gscEdge")
       .map((e) => ({
-        source: e.source,
-        target: e.target,
+        ...rankEnds(e.source, e.target),
         feedback: Boolean((e.data as { feedback?: boolean } | undefined)?.feedback),
         control: (e.data as { type?: string } | undefined)?.type === "ControlProjection",
       })),
@@ -257,8 +307,9 @@ export function applyDagreLayout(
     if (!d) continue;
     const isGroup = node.type === "compositionNode";
     const insetSize = insetSizes?.get(node.id);
-    const w = isCluster(node.id) ? d.width : insetSize ? insetSize.width : isGroup ? 300 : boxWidth(node, nodeWidth);
-    const h = isCluster(node.id) ? d.height : insetSize ? insetSize.height : isGroup ? 200 : nodeHeight;
+    const isMechanism = node.type === "mechanismNode";
+    const w = isCluster(node.id) ? d.width : insetSize ? insetSize.width : isGroup ? 300 : isMechanism ? drawnBox(node).w : boxWidth(node, nodeWidth);
+    const h = isCluster(node.id) ? d.height : insetSize ? insetSize.height : isGroup ? 200 : isMechanism ? drawnBox(node).h : nodeHeight;
     topLeft.set(node.id, { x: d.x - w / 2, y: d.y - h / 2 });
   }
 
@@ -348,7 +399,7 @@ function nodeSize(node: Node): { w: number; h: number } {
     return typeof w === "number" && typeof h === "number" ? { w, h } : { w: 300, h: 200 };
   }
   if (node.type === "cimNode") return { w: 110, h: 30 };
-  return { w: 180, h: 60 };
+  return { w: Math.max(180, drawnBox(node).w), h: 60 };
 }
 
 // Apply center positions to top-level nodes, normalized so the bounding box
@@ -364,7 +415,7 @@ function repositionTopLevel(
   for (const node of nodes) {
     const c = centers.get(node.id);
     if (!c) continue;
-    const { w, h } = nodeSize(node);
+    const { w, h } = node.type === "mechanismNode" ? drawnBox(node) : nodeSize(node);
     const x = c.x - w / 2;
     const y = c.y - h / 2;
     topLeft.set(node.id, { x, y });
@@ -553,17 +604,24 @@ export function applyForceLayout(nodes: Node[], edges: Edge[]): Node[] {
   return repositionTopLevel(nodes, pos);
 }
 
+/** Bigger than any node's box: the default group box, or an open frame. */
+const NODE_AREA_LIMIT = 50_000;
+
 /**
  * Push overlapping top-level boxes apart (#35). Force treats nodes as points,
  * so a node could land on top of a big frame (EGO flattened: STATE and
  * PREDICTION inside EM's box). Each overlapping pair is separated along the
- * axis that needs the smaller move, and the smaller box moves, so a frame stays
- * where the simulation put it.
+ * axis that needs the smaller move, so a frame stays where the simulation put
+ * it.
  */
-function separateBoxes(top: Node[], centers: Map<string, { x: number; y: number }>) {
+function separateBoxes(nodes: Node[], centers: Map<string, { x: number; y: number }>) {
   const GAP = 30;
+  // Frames last: each pass ends by clearing them, whatever else moved (#210).
+  const top = [...nodes].sort((a, b) => Number(a.type === "compositionNode") - Number(b.type === "compositionNode"));
   const size = new Map(top.map((n) => [n.id, nodeSize(n)]));
-  for (let pass = 0; pass < 60; pass++) {
+  const biggest = top.reduce((a, b) => (size.get(b.id)!.w * size.get(b.id)!.h > size.get(a.id)!.w * size.get(a.id)!.h ? b : a), top[0]);
+  const anchor = biggest ? { ...centers.get(biggest.id)! } : { x: 0, y: 0 };
+  for (let pass = 0; pass < 200; pass++) {
     let moved = false;
     for (let i = 0; i < top.length; i++) {
       for (let j = i + 1; j < top.length; j++) {
@@ -573,7 +631,13 @@ function separateBoxes(top: Node[], centers: Map<string, { x: number; y: number 
         const ox = (sa.w + sb.w) / 2 + GAP - Math.abs(pa.x - pb.x);
         const oy = (sa.h + sb.h) / 2 + GAP - Math.abs(pa.y - pb.y);
         if (ox <= 0 || oy <= 0) continue;
-        const mover = sa.w * sa.h <= sb.w * sb.h ? pa : pb;
+        // A frame stays put. Of two nodes, the one further out moves, further
+        // out: moving the inner one can push it back onto the frame, and the
+        // two would trade places for ever.
+        const aFrame = sa.w * sa.h > NODE_AREA_LIMIT, bFrame = sb.w * sb.h > NODE_AREA_LIMIT;
+        const mover = aFrame !== bFrame
+          ? (aFrame ? pb : pa)
+          : Math.hypot(pa.x - anchor.x, pa.y - anchor.y) >= Math.hypot(pb.x - anchor.x, pb.y - anchor.y) ? pa : pb;
         const other = mover === pa ? pb : pa;
         if (ox < oy) mover.x += (mover.x >= other.x ? 1 : -1) * ox;
         else mover.y += (mover.y >= other.y ? 1 : -1) * oy;
@@ -684,14 +748,28 @@ export function applyLayout(
   options: LayoutOptions = {},
 ): Node[] {
   const cims = new Set(nodes.filter((n) => n.type === "cimNode").map((n) => n.id));
-  if (cims.size === 0) return layOut(style, nodes, edges, options);
+  if (cims.size === 0) return keepIoRows(style, layOut(style, nodes, edges, options), options);
   const laid = layOut(
     style,
     nodes.filter((n) => !cims.has(n.id)),
     edges.filter((e) => !cims.has(e.source) && !cims.has(e.target)),
     options,
   );
-  return placeCims([...laid, ...nodes.filter((n) => cims.has(n.id))]);
+  return placeCims([...keepIoRows(style, laid, options), ...nodes.filter((n) => cims.has(n.id))]);
+}
+
+/**
+ * #219: inputs on the bottom row and outputs on the top, inside each
+ * composition, where the setting asks for it and the layout has a bottom and
+ * a top (Like show_graph, and Layered flowing bottom-to-top). Before the CIMs
+ * go on, since a frame can grow to keep what moved inside it.
+ */
+function keepIoRows(style: LayoutStyle, nodes: Node[], options: LayoutOptions): Node[] {
+  const setting = options.ioRows ?? useIoRowsStore.getState().ioRows;
+  // Layered's own default is top-down (applyDagreLayout); show_graph's is bottom-to-top.
+  const direction = style === "showgraph" ? "BT" : options.direction ?? "TB";
+  if (setting === "off" || ioRowsNotApplying(style, direction)) return nodes;
+  return tidyIoRows(nodes, { closeUp: true }).nodes;
 }
 
 function layOut(
@@ -725,10 +803,19 @@ function layOut(
         return placed.nodes;
       }
       useShowGraphCurves.getState().clear();
-      return applyDagreLayout(nodes, edges, { ...options, direction: "BT", insetSizes });
+      return applyDagreLayout(nodes, edges, {
+        ...options,
+        direction: "BT",
+        insetSizes,
+        spacingFactor: options.spacingFactor ?? currentSpacingFactor("showgraph"),
+      });
     }
     case "layered":
     default:
-      return applyDagreLayout(nodes, edges, { ...options, insetSizes });
+      return applyDagreLayout(nodes, edges, {
+        ...options,
+        insetSizes,
+        spacingFactor: options.spacingFactor ?? currentSpacingFactor("layered"),
+      });
   }
 }

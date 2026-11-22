@@ -213,7 +213,7 @@ def test_resolver_trains_a_pathway_composition_under_python():
 
 
 def test_introspection_reports_profile_and_target_less_training_set(tmp_path, monkeypatch):
-    monkeypatch.setenv("PSYNEWVIEW_WORKING_DIR", str(tmp_path))
+    monkeypatch.setenv("PSYNEUVIEW_WORKING_DIR", str(tmp_path))
     hebb = client.post("/api/demos/reset", json={"demo_name": "hebbian_learning"}).json()["model"]
     comp = hebb["compositions"][0]
     assert comp["learningProfile"]["metric"]["id"] == "weight_change"

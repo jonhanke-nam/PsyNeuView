@@ -1,6 +1,6 @@
 """AI assistant settings, stored and enforced by the backend (#179).
 
-Kept in the same ``~/.psynewview.json`` as the other app settings, under one
+Kept in the same ``~/.psyneuview.json`` as the other app settings, under one
 ``assistant`` key, following :mod:`app_settings`. The defaults are the
 contract's: off, no agent, no folders, suggest-only. Anything unset or
 malformed in the file falls back to the default, so a hand-edited file can't

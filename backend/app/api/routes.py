@@ -4,6 +4,7 @@ import io
 import json as json_mod
 import logging
 import os
+import re
 import shutil
 import time
 import zipfile
@@ -788,7 +789,7 @@ class LoadModelResponse(BaseModel):
     starImportConverted: bool = False
     # Absolute path of the working copy the model was loaded into. Set by the
     # reference/demo loaders so the client doesn't have to guess it from the
-    # pristine path — the working dir may be isolated (e.g. PSYNEWVIEW_WORKING_DIR
+    # pristine path — the working dir may be isolated (e.g. PSYNEUVIEW_WORKING_DIR
     # under the E2E harness), where the guess "backend/<name>.py" is wrong.
     file_path: str | None = None
     # #864: server-side load timing (milliseconds) so the client can log one
@@ -999,7 +1000,7 @@ def _github_files_http_status(reason: str) -> int:
 async def github_tree(repo: str, ref: str):
     """List ``.py`` paths in ``repo`` at ``ref``, plus the user's recently
     opened files for that (repo, ref). Tree is cached 5 min; recents are
-    read from ``~/.psynewview.json`` on every call (cheap)."""
+    read from ``~/.psyneuview.json`` on every call (cheap)."""
     try:
         listing = github_files.list_tree(repo, ref)
     except github_files.GithubFilesError as e:
@@ -1615,6 +1616,10 @@ def remove_port(request: RemovePortRequest):
 class PreviewSourceRequest(BaseModel):
     file_path: str
     source: str
+    # The view to build it in (#194), as for /model/load: undo rebuilds a
+    # step made in the flattened or PyTorch view from its unsaved code.
+    flat: bool = False
+    pytorch: bool = False
 
 
 class PreviewSourceResponse(BaseModel):
@@ -1650,8 +1655,27 @@ def preview_source_endpoint(request: PreviewSourceRequest):
 
     preview = write_preview(request.file_path, request.source)
 
+    # #256: a syntax error or an undefined name is found in milliseconds
+    # without running the model, which takes seconds. Answer at once; the
+    # page holds the last graph and shows the error on its line.
+    from app.services.quick_check import quick_check
+
+    problem = quick_check(request.source, str(preview))
+    if problem:
+        return PreviewSourceResponse(
+            model=_attach_dangling(
+                {"compositions": [], "lineMap": {}, "error": problem["error"],
+                 "errorLine": problem["line"], "quickCheck": True},
+                request.source,
+            ),
+            source=request.source,
+            preview_path=str(preview),
+        )
+
     try:
-        model = load_and_introspect(str(preview))
+        model = load_and_introspect(
+            str(preview), flat=request.flat, pytorch=request.pytorch
+        )
     except Exception as e:
         # Invalid code is the normal state of a file being typed into, not an
         # error worth failing the request over. Report it the way save-source
@@ -2723,6 +2747,10 @@ async def import_mdf(file: UploadFile = File(...)):
 class StructuralChangeRequest(BaseModel):
     file_path: str
     changes: dict  # {action, var_name, type?, params?, sender?, receiver?, composition?}
+    # The view the page shows (as LoadModelRequest): the model sent back is
+    # re-read in it, or a flattened view turns nested after every change (#252).
+    flat: bool = False
+    pytorch: bool = False
 
 
 @router.post("/model/structural-change", response_model=LoadModelResponse)
@@ -2751,7 +2779,7 @@ def structural_change(request: StructuralChangeRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
     try:
-        model = load_and_introspect(request.file_path)
+        model = load_and_introspect(request.file_path, flat=request.flat, pytorch=request.pytorch)
     except Exception as e:
         return LoadModelResponse(
             model=_attach_dangling(
@@ -2804,13 +2832,36 @@ DEMOS_DIR = Path(__file__).resolve().parent.parent.parent / "demos"
 def _demo_working_dir() -> Path:
     """Where the working copy of an included model goes: a Demo (reset on
     every open), a Reference Model, or a PsyNeuLink Example from a managed
-    install. One answer for all three (#1319): ``PSYNEWVIEW_WORKING_DIR``
+    install. One answer for all three (#1319): ``PSYNEUVIEW_WORKING_DIR``
     when set (the e2e harness), otherwise ``~/.psyneuview/working-copies``
     — a per-user folder outside every install, so edits survive an app
     update. It used to be ``backend/`` itself; working copies left there are
     moved on startup (``working_copies.migrate_legacy_working_copies``).
     """
     return working_copies.working_copies_dir()
+
+
+#: A tutorial id, as the walkthrough files name them ("hopfield", "pnl-control").
+_TUTORIAL_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
+
+
+def _tutorial_working_dir(tutorial: str) -> Path:
+    """A tutorial's own folder for its model, emptied for a fresh start (#172).
+
+    Bundled models share one working copy, so a tutorial that used it would
+    start on whatever the learner last did to that model, and a second window
+    opening the model would write over the copy the tutorial is using. Each
+    tutorial gets ``<working copies>/tutorials/<id>/`` instead, emptied every
+    time the tutorial opens its model, so every start is clean and the
+    learner's own copy is never touched.
+    """
+    if not _TUTORIAL_ID.match(tutorial):
+        raise HTTPException(status_code=400, detail=f"Not a tutorial id: {tutorial!r}")
+    folder = _demo_working_dir() / "tutorials" / tutorial
+    if folder.exists():
+        shutil.rmtree(folder)
+    folder.mkdir(parents=True)
+    return folder
 
 
 @router.get("/demos")
@@ -2830,6 +2881,8 @@ async def list_demos():
 
 class ResetDemoRequest(BaseModel):
     demo_name: str
+    # #172: open it as this tutorial's own fresh copy, not the shared one.
+    tutorial: Optional[str] = None
 
 
 @router.post("/demos/reset", response_model=LoadModelResponse)
@@ -2839,8 +2892,10 @@ def reset_demo(request: ResetDemoRequest):
     if not pristine.exists():
         raise HTTPException(status_code=404, detail=f"Demo not found: {request.demo_name}")
 
-    # Working copy lives in the configured working dir (default: backend/).
-    working = _demo_working_dir() / f"{request.demo_name}.py"
+    # Working copy lives in the configured working dir (default: backend/),
+    # or a tutorial's own folder (#172).
+    folder = _tutorial_working_dir(request.tutorial) if request.tutorial else _demo_working_dir()
+    working = folder / f"{request.demo_name}.py"
     shutil.copy2(pristine, working)
 
     # Stamp the sidecar with demo_origin so the "Reset to Demo" affordance
@@ -2927,6 +2982,8 @@ class LoadReferenceRequest(BaseModel):
     # source. Reopening never does this on its own — losing work has to be
     # asked for, not inferred.
     restore_pristine: bool = False
+    # #172: open it as this tutorial's own fresh copy, not the shared one.
+    tutorial: Optional[str] = None
 
 
 @router.post("/reference-models/load", response_model=LoadModelResponse)
@@ -2948,8 +3005,12 @@ def load_reference_model(request: LoadReferenceRequest):
     # the bundle. Otherwise keep the edits and report the divergence so the UI
     # can offer the choice — restoring is opt-in via `restore_pristine`.
     # #1416: a working copy made under a model's old name is adopted first.
-    working_copies.adopt_renamed_working_copy(request.name, _demo_working_dir())
-    working = _demo_working_dir() / f"{request.name}.py"
+    # #172: a tutorial's copy is its own and always fresh (the folder starts empty).
+    if request.tutorial:
+        working = _tutorial_working_dir(request.tutorial) / f"{request.name}.py"
+    else:
+        working_copies.adopt_renamed_working_copy(request.name, _demo_working_dir())
+        working = _demo_working_dir() / f"{request.name}.py"
     pristine_text = pristine.read_text()
     had_edits = working.exists() and working.read_text() != pristine_text
     restored = bool(had_edits and request.restore_pristine)
@@ -3709,3 +3770,46 @@ def pnl_source_protect(request: PnlSourceProtectRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"owned": True, **owned}
+
+class ConnectionOptionsRequest(BaseModel):
+    file_path: str
+    sender: str
+    receiver: str
+
+
+@router.post("/model/connection-options")
+def connection_options_endpoint(request: ConnectionOptionsRequest):
+    """What dragging from ``sender`` to ``receiver`` would connect (#253),
+    asked of PsyNeuLink on the model's own objects. Both are variable names."""
+    path = Path(request.file_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {path}")
+    from app.services.sandbox import run_in_sandbox
+
+    result = run_in_sandbox("connection_options", {
+        "file_path": str(path), "sender": request.sender, "receiver": request.receiver,
+    })
+    if "error" in result and "options" not in result and "refused" not in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+class ConnectionTargetsRequest(BaseModel):
+    file_path: str
+    sender: str
+
+
+@router.post("/model/connection-targets")
+def connection_targets_endpoint(request: ConnectionTargetsRequest):
+    """Which nodes a drag from ``sender`` could be dropped on (#253):
+    ``{"targets": {var_name: null | reason}}``, asked of PsyNeuLink. Lights up
+    valid targets while a connection is being dragged."""
+    path = Path(request.file_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {path}")
+    from app.services.sandbox import run_in_sandbox
+
+    result = run_in_sandbox("connection_targets", {"file_path": str(path), "sender": request.sender})
+    if "targets" not in result:
+        raise HTTPException(status_code=400, detail=result.get("error", "No targets"))
+    return result

@@ -1,6 +1,6 @@
 """Unit tests for the test-only /api/test/reset endpoint (#147).
 
-The endpoint is gated by PSYNEWVIEW_TEST_MODE=1; both states are covered.
+The endpoint is gated by PSYNEUVIEW_TEST_MODE=1; both states are covered.
 We build a fresh FastAPI instance with the gate flipped on instead of
 reusing the module-level client, because the gate is evaluated at
 module import time.
@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 
 
 def _build_test_app() -> FastAPI:
-    """Mirror app.main wiring but with PSYNEWVIEW_TEST_MODE=1 enabled."""
+    """Mirror app.main wiring but with PSYNEUVIEW_TEST_MODE=1 enabled."""
     from app.api.routes import router
     from app.api.test_routes import router as test_router
     app = FastAPI()
@@ -25,7 +25,7 @@ def _build_test_app() -> FastAPI:
 
 
 def test_reset_endpoint_not_exposed_in_production():
-    """Without PSYNEWVIEW_TEST_MODE=1, the reset router isn't registered.
+    """Without PSYNEUVIEW_TEST_MODE=1, the reset router isn't registered.
 
     Asserts route presence directly rather than POST status — once
     frontend/dist exists the SPA fallback mount swallows /api/test/reset
@@ -37,14 +37,14 @@ def test_reset_endpoint_not_exposed_in_production():
 
 
 def test_reset_endpoint_clears_working_dir(tmp_path: Path):
-    """Files in PSYNEWVIEW_WORKING_DIR are removed; the dir itself remains."""
+    """Files in PSYNEUVIEW_WORKING_DIR are removed; the dir itself remains."""
     leftover = tmp_path / "leftover_demo.py"
     leftover.write_text("# stale working copy from a prior test\n")
     sidecar = tmp_path / "leftover_demo.pnlview.json"
     sidecar.write_text("{}")
 
     app = _build_test_app()
-    with mock.patch.dict(os.environ, {"PSYNEWVIEW_WORKING_DIR": str(tmp_path)}):
+    with mock.patch.dict(os.environ, {"PSYNEUVIEW_WORKING_DIR": str(tmp_path)}):
         # Patch the warm worker so the test doesn't actually restart it
         # (the subprocess spawn is slow and not what we're asserting here).
         with mock.patch("app.services.sandbox._warm_worker", None):
@@ -63,7 +63,7 @@ def test_reset_endpoint_clears_working_dir(tmp_path: Path):
 def test_reset_endpoint_handles_empty_working_dir(tmp_path: Path):
     """No files to clear is not an error — empty list, dir still there."""
     app = _build_test_app()
-    with mock.patch.dict(os.environ, {"PSYNEWVIEW_WORKING_DIR": str(tmp_path)}):
+    with mock.patch.dict(os.environ, {"PSYNEUVIEW_WORKING_DIR": str(tmp_path)}):
         with mock.patch("app.services.sandbox._warm_worker", None):
             client = TestClient(app)
             resp = client.post("/api/test/reset")
@@ -73,9 +73,9 @@ def test_reset_endpoint_handles_empty_working_dir(tmp_path: Path):
 
 
 def test_reset_endpoint_works_without_working_dir_env(tmp_path: Path):
-    """If PSYNEWVIEW_WORKING_DIR is unset we still restart the worker."""
+    """If PSYNEUVIEW_WORKING_DIR is unset we still restart the worker."""
     app = _build_test_app()
-    env = {k: v for k, v in os.environ.items() if k != "PSYNEWVIEW_WORKING_DIR"}
+    env = {k: v for k, v in os.environ.items() if k != "PSYNEUVIEW_WORKING_DIR"}
     with mock.patch.dict(os.environ, env, clear=True):
         with mock.patch("app.services.sandbox._warm_worker", None):
             client = TestClient(app)

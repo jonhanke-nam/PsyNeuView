@@ -29,7 +29,7 @@ one.
 
 There are two ways to add a component, and they do exactly the same thing:
 
-- **Click** it — the component is added to your model straight away.
+- **Click** it, then **click the graph** where it should go. It is added there. Option-click puts down several; Esc puts it back (#252).
 - **Drag** it onto the canvas — useful when you care where it lands.
 
 Rather than opening groups, you can **search**: type into the box at the top of
@@ -62,7 +62,7 @@ written into the source, and it's added to the composition.
       with matching source in the Code Editor.
 - [x] The canvas and the generated code stay in sync.
 - [x] The palette exposes the full PsyNeuLink component set.
-- [x] **Clicking a palette component adds it** — to the canvas, to the generated
+- [x] **Picking a palette component and clicking the graph adds it** — to the canvas, to the generated
       source, and to the composition, under a generated default name.
 
 > Click-to-add is verified by the spec. The **drag** variants — drag-to-add and

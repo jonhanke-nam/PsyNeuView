@@ -8,15 +8,13 @@
  * Folder itself is in Folders, with every other folder.
  */
 
+import { DEFAULT_LIVE_PREVIEW_MS, LIVE_PREVIEW_DELAYS, useLivePreviewStore } from "@/stores/livePreviewStore";
 import { useEffect, useState } from "react";
 import { useAutosaveStore } from "@/stores/autosaveStore";
 import {
   BUSY_THRESHOLDS,
-  BUSY_TIMER_PLACES,
   DEFAULT_BUSY_THRESHOLD_MS,
-  DEFAULT_BUSY_TIMER_PLACE,
   useBusyStore,
-  type BusyTimerPlace,
 } from "@/stores/busyStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { actionLoggingOn, onActionLoggingChanged, setActionLogging } from "@/utils/activityLog";
@@ -59,12 +57,12 @@ export function GeneralSection({
       </Group>
       <Group id="model-files" title="Model files">
         <AutosaveRows />
+        <LivePreviewRow />
         <SidecarPlacementDefaultRow />
         <div style={{ ...mutedStyle, marginTop: 10 }}>Where models are saved, and every other folder: Folders.</div>
       </Group>
       <Group id="busy-indicator" title="Busy indicator">
         <BusyThresholdRow />
-        <BusyTimerRow />
       </Group>
       <Group id="activity-log" title="Problem reports">
         <ActionLoggingRow />
@@ -248,8 +246,38 @@ function SidecarPlacementDefaultRow() {
 
 /**
  * When the wheel of patience appears (#38): anything that takes longer than
- * this shows it in the toolbar and where the result will appear.
+ * this shows it where the result will appear (#220).
  */
+/**
+ * When the graph follows the code being typed (#255). Off: on save.
+ */
+function LivePreviewRow() {
+  const ms = useLivePreviewStore((s) => s.delayMs);
+  const setMs = useLivePreviewStore((s) => s.setDelayMs);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <SettingLabel title="Update the graph while typing" htmlFor="setting-live-preview">
+        As you edit the code, the graph is rebuilt from it once you pause, without
+        saving the file. Off: the graph updates when you save. Autosave is separate.
+      </SettingLabel>
+      <select
+        id="setting-live-preview"
+        data-testid="setting-live-preview"
+        value={ms}
+        onChange={(e) => setMs(Number(e.target.value))}
+        style={{ marginTop: 6, fontSize: "var(--pnv-fs-12)", padding: "3px 6px" }}
+      >
+        {LIVE_PREVIEW_DELAYS.map((d) => (
+          <option key={d.ms} value={d.ms}>
+            {d.label}
+            {d.ms === DEFAULT_LIVE_PREVIEW_MS ? " (default)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function BusyThresholdRow() {
   const ms = useBusyStore((s) => s.thresholdMs);
   const setMs = useBusyStore((s) => s.setThresholdMs);
@@ -257,9 +285,9 @@ function BusyThresholdRow() {
     <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="Show the busy wheel" htmlFor="setting-busy-threshold">
         When something takes a while (opening a model, saving, undo, a layout,
-        a run), a spinning wheel and Working… show in the toolbar and over the
-        graph, and the pointer shows it is busy. Anything quicker than this
-        shows nothing.
+        a run), a spinning wheel shows over the graph, or in the middle of the
+        window when the graph is hidden, and the pointer shows it is busy.
+        Anything quicker than this shows nothing.
       </SettingLabel>
       <select
         id="setting-busy-threshold"
@@ -272,34 +300,6 @@ function BusyThresholdRow() {
           <option key={t.ms} value={t.ms}>
             {t.label}
             {t.ms === DEFAULT_BUSY_THRESHOLD_MS ? " (default)" : ""}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-/** Where the wheel says how long it has been spinning (#176). */
-function BusyTimerRow() {
-  const place = useBusyStore((s) => s.timerPlace);
-  const setPlace = useBusyStore((s) => s.setTimerPlace);
-  return (
-    <div style={{ fontSize: "var(--pnv-fs-13)", marginTop: 10 }}>
-      <SettingLabel title="Show how long it has been spinning" htmlFor="setting-busy-timer">
-        Where the wheel shows the time so far, once it has spun for a second.
-        Problem reports record how long each wait took either way.
-      </SettingLabel>
-      <select
-        id="setting-busy-timer"
-        data-testid="setting-busy-timer"
-        value={place}
-        onChange={(e) => setPlace(e.target.value as BusyTimerPlace)}
-        style={{ marginTop: 6, fontSize: "var(--pnv-fs-12)", padding: "3px 6px" }}
-      >
-        {BUSY_TIMER_PLACES.map((p) => (
-          <option key={p.place} value={p.place}>
-            {p.label}
-            {p.place === DEFAULT_BUSY_TIMER_PLACE ? " (default)" : ""}
           </option>
         ))}
       </select>

@@ -52,6 +52,7 @@ steps:
       next, multiplied by its matrix.
     done:
       nodeExists: output_node
+    opens: new model
     act:
       newModel: adding_projections
 

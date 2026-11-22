@@ -2,8 +2,7 @@
  * Top toolbar with file operations, model browser, and demo models.
  */
 
-import { BusyIndicator } from "@/components/common/BusyIndicator";
-import { Z_MENU } from "@/constants/zLayers";
+import { Z_MENU, DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { errorDetail } from "@/utils/errorDetail";
 import { Button } from "@/components/common/Button";
@@ -24,6 +23,8 @@ import { useStatusStore } from "@/stores/statusStore";
 import { useLayoutStore, type AnyPanel, type LayoutPreset } from "@/stores/layoutStore";
 import { usePaletteStore } from "@/stores/paletteStore";
 import { displayBinding } from "@/shortcuts/binding";
+import { runCommand } from "@/shortcuts/commands";
+import { setPanelVisibleOrExplain } from "@/shortcuts/lastPanel";
 import { useResolvedShortcuts } from "@/shortcuts/useAppShortcuts";
 import { focusComposition } from "@/utils/nodeActions";
 import { hasFileBridge, pickOpenPath, pickSavePath } from "@/utils/fileBridge";
@@ -41,6 +42,7 @@ import {
 import { SettingsPanel } from "@/components/common/SettingsPanel";
 import { DeveloperBadge } from "@/components/common/DeveloperBadge";
 import { DeveloperModeIndicator } from "./DeveloperModeIndicator";
+import { HelpMenu, OPEN_TUTORIALS_MENU } from "./HelpMenu";
 import { onOpenSettings, type SettingsSectionId } from "@/components/common/settings/sections";
 import { onOpenSettingsRequest } from "@/utils/macAppSettings";
 import {
@@ -77,10 +79,25 @@ import { abbreviateHome } from "@/components/common/settings/shared";
 import { record as recordActivity } from "@/utils/activityLog";
 import { causedBy } from "@/utils/waitLog";
 import { noteModelOrigin } from "@/utils/diagnostics";
+import { windowRequest } from "@/utils/appWindow";
+import {
+  chooseTutorialStart,
+  discardIsApproved,
+  followSavedCopy,
+  guardOpen,
+  isTutorialCopy,
+  noteNewModel,
+  noteTutorialModel,
+  tutorialCopyFor,
+  useTutorialChoice,
+} from "@/utils/tutorialGuard";
+import { applyTutorialViewModes } from "@/utils/tutorialView";
 import { SAVE_COPY_EVENT, requestSaveCopy } from "@/utils/saveRequest";
 import { stripProtectionLine } from "@/utils/protectionLine";
 import { AutosaveStatus } from "./AutosaveStatus";
 import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { ioRowViolations } from "@/utils/ioRows";
+import { canvasTidyHandle } from "@/stores/ioRowsStore";
 
 function newModelTemplate(pnlVersion: string) {
   return `# PsyNeuLink Model File
@@ -786,19 +803,28 @@ export function Toolbar() {
 
   const handleSave = useCallback(() => {
     if (!filePath || source === savedSource) return;
-    window.dispatchEvent(new CustomEvent("psynewview:save"));
+    window.dispatchEvent(new CustomEvent("psyneuview:save"));
   }, [filePath, source, savedSource]);
 
   // Guard against silently discarding unsaved edits when switching models (#345).
   const confirmDiscard = useCallback(() => {
     const s = useModelStore.getState();
     if (!s.filePath || s.source === s.savedSource) return true;
+    // Already answered: the learner chose not to save these (#172).
+    if (discardIsApproved()) return true;
     return window.confirm(
       "You have unsaved changes that will be lost. Load anyway?"
     );
   }, []);
 
   const { setStatus, clearStatus } = useStatusStore();
+
+  // A walkthrough in progress gets a say before its model is replaced (#172).
+  // The Open menu draws above dialogs, so it closes when the question comes up.
+  const tutorialQuestion = useTutorialChoice((s) => s.pending);
+  useEffect(() => {
+    if (tutorialQuestion) setDropdownOpen(false);
+  }, [tutorialQuestion]);
 
   // Open a local .pnlproject bundle in place (#348): the backend extracts it
   // to a working dir and reports the origin, so Save re-zips back into it.
@@ -855,6 +881,7 @@ export function Toolbar() {
    * which is the flow most likely to be used for a deliberate re-open.
    */
   const loadFromPath = async (path: string, { fresh = true }: { fresh?: boolean } = {}) => {
+    if (fresh && !(await guardOpen({ kind: "path", path }))) return;
     if (!confirmDiscard()) return;
     if (fresh) useModelStore.getState().markFreshOpen(); // #906
     if (path.endsWith(".pnlproject")) {
@@ -952,8 +979,13 @@ export function Toolbar() {
     }
   };
 
-  const loadDemo = async (demo: DemoModel) => {
-    if (!confirmDiscard()) return;
+  const loadDemo = async (demo: DemoModel, { byTutorial = false }: { byTutorial?: boolean } = {}) => {
+    if (!byTutorial && !(await guardOpen({ kind: "catalog", label: demo.label, file: demo.pristine_path }))) return;
+    // #172: a walkthrough opens its own fresh copy. Starting over discards the
+    // last one's edits without asking: that is what starting over is.
+    const tutorial = tutorialCopyFor(demo.label);
+    if (!(byTutorial && isTutorialCopy(useModelStore.getState().filePath)) && !confirmDiscard()) return;
+    if (tutorial) applyTutorialViewModes();
     setDropdownOpen(false);
     clearNotifications();
     setStatus(`Loading demo: ${demo.label}...`);
@@ -962,7 +994,7 @@ export function Toolbar() {
       const resp = await fetch("/api/demos/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ demo_name: demo.name }),
+        body: JSON.stringify(tutorial ? { demo_name: demo.name, tutorial } : { demo_name: demo.name }),
       });
       const apiDoneAt = performance.now();
       if (!resp.ok) {
@@ -978,6 +1010,8 @@ export function Toolbar() {
         data.file_path ?? demo.pristine_path.replace("/demos/", "/");
       noteModelOrigin(workingPath, { kind: "demo", section: "demos" });
       setFilePath(workingPath);
+      if (tutorial) noteTutorialModel(workingPath, { copy: true, source: data.source });
+      useLayoutStore.getState().showPanelsForOpen(); // #215: also when re-opening the same demo
       setSource(data.source);
       loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
       logLoadPerf({
@@ -1022,10 +1056,22 @@ export function Toolbar() {
       },
       open: async (label) => {
         const { rm, demo } = find(label);
-        if (rm) await loadReference(rm);
-        else if (demo) await loadDemo(demo);
+        if (rm) await loadReference(rm, { byTutorial: true });
+        else if (demo) await loadDemo(demo, { byTutorial: true });
         else return false;
         return useCatalogOpener.getState().isOpen?.(label) ?? false;
+      },
+      // #172: back to a walkthrough's model, through the same Open.
+      openPath: (path) => loadFromPath(path),
+      // #172: the view modes changed back after a walkthrough; same file, same layout.
+      reloadView: async () => {
+        const path = useModelStore.getState().filePath;
+        if (path) await loadFromPath(path, { fresh: false });
+      },
+      // #172: a bundled model as it shipped, so replacing it loses nothing.
+      isUntouched: () => {
+        const { source } = useModelStore.getState();
+        return (!!currentDemo && source === pristineSource) || (!!currentReference && !referenceEdited);
       },
       // Both lists, not either: when demos answered first, a walkthrough
       // written for a reference model (Stroop) looked it up too early, found
@@ -1033,6 +1079,70 @@ export function Toolbar() {
       ready: bundledListsSettled >= 2 && (referenceModels.length > 0 || demos.length > 0),
     });
   });
+
+  const startNewModel = async () => {
+                setDropdownOpen(false);
+                if (!(await guardOpen({ kind: "newModel" }))) return;
+                setPromptState({
+                  title: "New model",
+                  message: "Name for new model:",
+                  placeholder: "my_model",
+                  onSubmit: async (name) => {
+                    setPromptState(null);
+                    const varName = name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "").toLowerCase();
+                    if (!varName) return;
+                try {
+                  // Fetch PNL version for the template header
+                  let pnlVer = "unknown";
+                  try {
+                    const vr = await fetch("/api/pnl-version");
+                    if (vr.ok) { const vd = await vr.json(); pnlVer = vd.version || "unknown"; }
+                  } catch { /* use default */ }
+
+                  const resp = await fetch("/api/models/save-as", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      source: newModelTemplate(pnlVer).replace(/my_model/g, varName),
+                      file_name: `${varName}.py`,
+                    }),
+                  });
+                  if (!resp.ok) {
+                    const detail = await errorDetail(resp);
+                    addNotification("error", `Failed: ${detail}`);
+                    return;
+                  }
+                  const data = await resp.json();
+                  setFilePath(data.file_path);
+                  // #172: the model a walkthrough step had the learner create is its model.
+                  noteNewModel(data.file_path);
+                  setSource(data.source);
+                  loadModelFromServer(data.model);
+                  setCurrentDemo(null);
+                  setPristineSource(null);
+                  addNotification("success", `Created new model: ${varName}.py`);
+                } catch (e) {
+                  addNotification("error", `Failed to create model: ${e}`);
+                }
+                  },
+                });
+  };
+
+  // #172: a window opened to show something else while a walkthrough carries
+  // on in the first. Once only, and off the address so a reload doesn't repeat it.
+  const windowRequestDone = useRef(false);
+  const catalogSettled = bundledListsSettled >= 2;
+  useEffect(() => {
+    if (windowRequestDone.current || !catalogSettled) return;
+    windowRequestDone.current = true;
+    const request = windowRequest(window.location.search);
+    if (!request) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    if (request.path) void loadFromPath(request.path);
+    else if (request.model) void useCatalogOpener.getState().open?.(request.model);
+    else if (request.newModel) void startNewModel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalogSettled]);
 
   const resetCurrentDemo = async () => {
     if (!currentDemo) return;
@@ -1044,10 +1154,19 @@ export function Toolbar() {
   // can be put back to the bundled version (backend's restore_pristine).
   const [referenceEdited, setReferenceEdited] = useState(false);
 
-  const loadReference = async (rm: ReferenceModel, { restore = false }: { restore?: boolean } = {}) => {
+  const loadReference = async (
+    rm: ReferenceModel,
+    { restore = false, byTutorial = false }: { restore?: boolean; byTutorial?: boolean } = {},
+  ) => {
+    if (!restore && !byTutorial && !(await guardOpen({ kind: "catalog", label: rm.label, file: rm.pristine_path }))) return;
+    // #172: a walkthrough opens its own fresh copy (see loadDemo).
+    // Reset on the tutorial's own copy resets that copy, not the shared one.
+    const tutorial =
+      restore && !isTutorialCopy(useModelStore.getState().filePath) ? null : tutorialCopyFor(rm.label);
     if (restore) {
       if (!window.confirm(`Put ${rm.label} back to the bundled version? Your edits to it will be lost.`)) return;
-    } else if (!confirmDiscard()) return;
+    } else if (!(byTutorial && isTutorialCopy(useModelStore.getState().filePath)) && !confirmDiscard()) return;
+    if (tutorial) applyTutorialViewModes();
     setDropdownOpen(false);
     clearNotifications();
     setStatus(`Loading reference model: ${rm.label}...`);
@@ -1056,7 +1175,7 @@ export function Toolbar() {
       const resp = await fetch("/api/reference-models/load", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: rm.name, restore_pristine: restore }),
+        body: JSON.stringify(tutorial ? { name: rm.name, tutorial } : { name: rm.name, restore_pristine: restore }),
       });
       const apiDoneAt = performance.now();
       if (!resp.ok) {
@@ -1073,6 +1192,7 @@ export function Toolbar() {
         data.file_path ?? rm.pristine_path.replace("/reference_models/", "/");
       noteModelOrigin(workingPath, { kind: "reference", section: "references" });
       setFilePath(workingPath);
+      if (tutorial) noteTutorialModel(workingPath, { copy: true, source: data.source });
       // setFilePath cleared currentReference; re-arm it so the Open dropdown
       // marks this reference as loaded (#830). Must come after setFilePath.
       setCurrentReference(rm.name);
@@ -1080,6 +1200,7 @@ export function Toolbar() {
       // #906: re-opening the same reference must re-pick Auto/Custom from its
       // (curated) sidecar, not keep a stale mode from a prior open.
       useModelStore.getState().markFreshOpen();
+      useLayoutStore.getState().showPanelsForOpen(); // #215: also when re-opening the same model
       loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
       logLoadPerf({
         label: rm.label,
@@ -1119,6 +1240,7 @@ export function Toolbar() {
   // source file into a working dir before loading, so the open reflects the
   // live source yet edits never mutate the PsyNeuLink source clone.
   const loadPnlExample = async (m: LibraryModel) => {
+    if (!(await guardOpen({ kind: "file", name: m.label }))) return;
     if (!confirmDiscard()) return;
     setDropdownOpen(false);
     clearNotifications();
@@ -1145,6 +1267,7 @@ export function Toolbar() {
       setCurrentReference(m.name);
       setSource(data.source);
       useModelStore.getState().markFreshOpen(); // #906
+      useLayoutStore.getState().showPanelsForOpen(); // #215: also when re-opening the same model
       loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
       logLoadPerf({
         label: m.label,
@@ -1195,6 +1318,7 @@ export function Toolbar() {
     path: string;
     content: string;
   }) => {
+    if (!(await guardOpen({ kind: "file", name: file.path.split("/").pop() ?? file.path }))) return;
     if (!confirmDiscard()) return;
     setGithubLoaderOpen(false);
     clearNotifications();
@@ -1343,6 +1467,7 @@ export function Toolbar() {
     // Reset so the same file can be picked again later.
     e.target.value = "";
     if (!file) return;
+    if (!(await guardOpen({ kind: "file", name: file.name }))) return;
 
     clearNotifications();
     setStatus(`Importing MDF: ${file.name}...`);
@@ -1418,7 +1543,10 @@ export function Toolbar() {
       const data = await resp.json();
       const newPath = data.file_path;
       recordActivity("model", `Saved as ${newPath}`, { path: newPath, saveAs: true });
-      setFilePath(newPath);
+      // A walkthrough using the file follows it to the copy (#172).
+      followSavedCopy(useModelStore.getState().filePath, newPath);
+      // Saving is not opening: a blank screen stays blank (#215).
+      setFilePath(newPath, { keepPanels: true });
       setSource(data.source);
       // The copy opens with its own sidecars — copies of this model's (#1244).
       loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
@@ -1575,7 +1703,6 @@ export function Toolbar() {
       }}
     >
       <strong style={{ fontSize: "var(--pnv-fs-14)", flexShrink: 0 }}>PsyNeuView</strong>
-      <BusyIndicator placement="toolbar" />
 
       {/* Settings (gear icon) — opens sectioned settings panel (#119). Next to
           the name, where nothing a model adds to the toolbar can push it off
@@ -1669,50 +1796,7 @@ export function Toolbar() {
 
             {/* New Model */}
             <button
-              onClick={() => {
-                setDropdownOpen(false);
-                setPromptState({
-                  title: "New model",
-                  message: "Name for new model:",
-                  placeholder: "my_model",
-                  onSubmit: async (name) => {
-                    setPromptState(null);
-                    const varName = name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "").toLowerCase();
-                    if (!varName) return;
-                try {
-                  // Fetch PNL version for the template header
-                  let pnlVer = "unknown";
-                  try {
-                    const vr = await fetch("/api/pnl-version");
-                    if (vr.ok) { const vd = await vr.json(); pnlVer = vd.version || "unknown"; }
-                  } catch { /* use default */ }
-
-                  const resp = await fetch("/api/models/save-as", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      source: newModelTemplate(pnlVer).replace(/my_model/g, varName),
-                      file_name: `${varName}.py`,
-                    }),
-                  });
-                  if (!resp.ok) {
-                    const detail = await errorDetail(resp);
-                    addNotification("error", `Failed: ${detail}`);
-                    return;
-                  }
-                  const data = await resp.json();
-                  setFilePath(data.file_path);
-                  setSource(data.source);
-                  loadModelFromServer(data.model);
-                  setCurrentDemo(null);
-                  setPristineSource(null);
-                  addNotification("success", `Created new model: ${varName}.py`);
-                } catch (e) {
-                  addNotification("error", `Failed to create model: ${e}`);
-                }
-                  },
-                });
-              }}
+              onClick={() => void startNewModel()}
               data-testid="open-menu-new-model"
               style={{
                 ...itemStyle,
@@ -2275,6 +2359,8 @@ export function Toolbar() {
           onChange={(e) => {
             const val = e.target.value;
             const gs = useGraphSettings.getState();
+            // #215: picking what to look at on a blank screen brings the chosen panels.
+            useLayoutStore.getState().showPanelsForOpen();
             if (val === "__flat__") {
               gs.setPytorch(false);
               gs.setFlat(true);
@@ -2392,6 +2478,9 @@ export function Toolbar() {
           when presence can't be determined, which is every local run. */}
       <PresenceIndicator />
 
+      {/* Help ▾ (#292): last, at the right-hand end, so it moves nothing else. */}
+      <HelpMenu />
+
       <SettingsPanel
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -2429,7 +2518,7 @@ export function Toolbar() {
         <div
           style={{
             position: "fixed",
-            inset: 0,
+            inset: 0, bottom: DIALOG_SCRIM_BOTTOM,
             background: "var(--pnv-scrim)",
             display: "flex",
             alignItems: "center",
@@ -2952,6 +3041,53 @@ function EditModeBadge() {
 }
 
 /**
+ * Tidy inputs and outputs, as a row of the Layout menu (#219).
+ *
+ * A layout you saved never moves by itself, whatever Settings ▸ Appearance ▸
+ * Keep inputs on the bottom and outputs on top says. Where one breaks the
+ * rule (utils/ioRows.ts), this puts each composition's inputs on its bottom
+ * row and its outputs on its top row, as a History step that Undo takes back.
+ * Shown while a model is open; greyed out, saying why, when the layout is
+ * automatic (the setting looks after that) or there is nothing to tidy.
+ */
+function TidyIoRowsMenuItem({ onDone }: { onDone: () => void }) {
+  const filePath = useModelStore((s) => s.filePath);
+  const autoLayout = useModelStore((s) => s.autoLayout);
+  if (!filePath) return null;
+  const canvas = canvasTidyHandle();
+  const broken = canvas ? ioRowViolations(canvas.nodes()).length > 0 : false;
+  const why = !canvas
+    ? "Show the graph to tidy its inputs and outputs"
+    : autoLayout
+      ? "The layout is automatic: Settings ▸ Appearance ▸ Keep inputs on the bottom and outputs on top looks after it"
+      : !broken
+        ? "Every composition already has its inputs on the bottom row and its outputs on the top"
+        : null;
+  return (
+    <>
+      <button
+        data-testid="layout-menu-tidy-io-rows"
+        aria-disabled={why ? true : undefined}
+        onClick={() => {
+          if (why) return;
+          onDone();
+          canvas?.tidy();
+        }}
+        title={why ?? "Move each composition's inputs onto its bottom row and its outputs onto its top row. Undo puts them back."}
+        style={{ ...menuRowStyle(false), cursor: why ? "not-allowed" : "pointer", opacity: why ? 0.5 : 1 }}
+        onMouseEnter={(e) => {
+          if (!why) e.currentTarget.style.background = MENU_ROW_HOVER;
+        }}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
+        Tidy inputs and outputs
+      </button>
+      <span style={{ display: "block", height: 1, background: "var(--pnv-border-faint)", margin: "4px 4px" }} />
+    </>
+  );
+}
+
+/**
  * Lock / Unlock, as a row of the Layout menu (#1309).
  *
  * Hidden when no model is open, and for a PsyNeuLink that PsyNeuView manages
@@ -3259,7 +3395,6 @@ const LAYOUT_PRESETS: { id: LayoutPreset; label: string; title: string }[] = [
  */
 function WalkthroughMenu() {
   const activeTourId = useTourStore((s) => s.activeTourId);
-  const startTour = useTourStore((s) => s.startTour);
   const stopTour = useTourStore((s) => s.stopTour);
 
   const [open, setOpen] = useState(false);
@@ -3274,6 +3409,15 @@ function WalkthroughMenu() {
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [open]);
   useDismiss(open, () => setOpen(false));
+  // Help ▸ Tutorials and walkthroughs opens this menu (#292).
+  useEffect(() => {
+    const show = () => {
+      recordActivity("menu", "Tutorials menu opened");
+      setOpen(true);
+    };
+    window.addEventListener(OPEN_TUTORIALS_MENU, show);
+    return () => window.removeEventListener(OPEN_TUTORIALS_MENU, show);
+  }, []);
 
   // #136: the course's section can be hidden from Settings; hidden means
   // left out of the menu, nothing more (a course walkthrough still opens
@@ -3315,7 +3459,7 @@ function WalkthroughMenu() {
       writeOfferChoice("started");
       setOfferChoice("started");
     }
-    startTour(id);
+    void chooseTutorialStart(id);
     setOpen(false);
   };
 
@@ -3500,7 +3644,6 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   const codeVisible = useLayoutStore((s) => s.codeVisible);
   const graphVisible = useLayoutStore((s) => s.graphVisible);
   const bottomVisible = useLayoutStore((s) => s.bottomVisible);
-  const setPanelVisible = useLayoutStore((s) => s.setPanelVisible);
   const applyPreset = useLayoutStore((s) => s.applyPreset);
   const paletteOpen = usePaletteStore((s) => s.isOpen);
 
@@ -3526,12 +3669,16 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   };
 
   // Hiding the last visible of code/graph/bottom is blocked by the store, so
-  // grey out that row's toggle to signal it can't be turned off right now.
-  const lastTopLevel = [codeVisible, graphVisible, bottomVisible].filter(Boolean).length === 1;
+  // grey out that row's toggle to signal it can't be turned off right now. The
+  // row stays clickable (aria-disabled, not disabled): a click on it brings up
+  // the notice that says why nothing changed and what to do instead (#213).
+  // Unless a blank screen is allowed (#215): then nothing is locked.
+  const allowBlank = useLayoutStore((s) => s.allowBlank);
+  const lastTopLevel = !allowBlank && [codeVisible, graphVisible, bottomVisible].filter(Boolean).length === 1;
   const panels: { id: AnyPanel; label: string; visible: boolean; locked: boolean; shortcut: string; onToggle: () => void }[] = [
-    { id: "graph", label: "Graph canvas", visible: graphVisible, locked: lastTopLevel && graphVisible, shortcut: keyFor("layout.toggleGraph"), onToggle: () => setPanelVisible("graph", !graphVisible) },
-    { id: "code", label: "Code editor", visible: codeVisible, locked: lastTopLevel && codeVisible, shortcut: keyFor("layout.toggleCode"), onToggle: () => setPanelVisible("code", !codeVisible) },
-    { id: "bottom", label: "Inspector / tabs", visible: bottomVisible, locked: lastTopLevel && bottomVisible, shortcut: keyFor("layout.toggleBottom"), onToggle: () => setPanelVisible("bottom", !bottomVisible) },
+    { id: "graph", label: "Graph canvas", visible: graphVisible, locked: lastTopLevel && graphVisible, shortcut: keyFor("layout.toggleGraph"), onToggle: () => setPanelVisibleOrExplain("graph", !graphVisible) },
+    { id: "code", label: "Code editor", visible: codeVisible, locked: lastTopLevel && codeVisible, shortcut: keyFor("layout.toggleCode"), onToggle: () => setPanelVisibleOrExplain("code", !codeVisible) },
+    { id: "bottom", label: "Inspector / tabs", visible: bottomVisible, locked: lastTopLevel && bottomVisible, shortcut: keyFor("layout.toggleBottom"), onToggle: () => setPanelVisibleOrExplain("bottom", !bottomVisible) },
     { id: "palette", label: "Components panel", visible: paletteOpen, locked: false, shortcut: keyFor("layout.togglePalette"), onToggle: () => usePaletteStore.getState().setOpen(!paletteOpen) },
   ];
 
@@ -3603,10 +3750,10 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
               key={panel.id}
               data-testid={`layout-menu-panel-${panel.id}`}
               onClick={panel.onToggle}
-              disabled={panel.locked}
+              aria-disabled={panel.locked || undefined}
               title={
                 panel.locked
-                  ? "Can't hide the last visible panel"
+                  ? "One panel has to stay open: show another panel before hiding this one"
                   : `Show/hide ${panel.label}${panel.shortcut ? ` (${panel.shortcut})` : ""}`
               }
               style={{
@@ -3637,6 +3784,44 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
             </button>
           ))}
           <span style={{ display: "block", height: 1, background: "var(--pnv-border-faint)", margin: "4px 4px" }} />
+          {/* #289: recentring the graph, with the keys that do it. The same fit
+              as the canvas's Fit button; nothing to fit while the graph is hidden. */}
+          {[
+            { testId: "layout-menu-fit", label: "Fit the graph to the window", keys: [keyFor("view.fitGraph"), keyFor("view.fitGraphShift")], command: "graph.fit" as const },
+            { testId: "layout-menu-actual-size", label: "Actual size (100%)", keys: [keyFor("view.actualSize")], command: "graph.actualSize" as const },
+          ].map((row) => (
+            <button
+              key={row.testId}
+              data-testid={row.testId}
+              aria-disabled={!graphVisible || undefined}
+              onClick={() => {
+                if (!graphVisible) return;
+                runCommand(row.command);
+                setOpen(false);
+              }}
+              title={graphVisible ? row.label : "Show the graph canvas first"}
+              style={{
+                ...menuRowStyle(false),
+                cursor: graphVisible ? "pointer" : "not-allowed",
+                opacity: graphVisible ? 1 : 0.5,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+              onMouseEnter={(e) => {
+                if (graphVisible) e.currentTarget.style.background = MENU_ROW_HOVER;
+              }}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <span style={{ whiteSpace: "nowrap" }}>{row.label}</span>
+              <span style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", whiteSpace: "nowrap" }}>
+                {row.keys.filter(Boolean).join("  ")}
+              </span>
+            </button>
+          ))}
+          <span style={{ display: "block", height: 1, background: "var(--pnv-border-faint)", margin: "4px 4px" }} />
+          <TidyIoRowsMenuItem onDone={() => setOpen(false)} />
           <LockModelMenuItem onDone={() => setOpen(false)} />
           <button
             onClick={() => {

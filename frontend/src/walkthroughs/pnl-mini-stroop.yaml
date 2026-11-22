@@ -54,6 +54,7 @@ steps:
       Start a new model. Colours and words will both feed one response.
     done:
       nodeExists: output_node
+    opens: new model
     act:
       newModel: mini_stroop
 
@@ -62,7 +63,8 @@ steps:
       testid: palette-sidebar
     instruct: >-
       The word needs a mechanism of its own. Search the Components palette
-      for TransferMechanism and click it to add one. It arrives as
+      for TransferMechanism, click it, then click the graph where it should
+      go. It arrives as
       New_TransferMechanism_1, Linear with slope 1, and not yet joined to
       anything.
     say: >-

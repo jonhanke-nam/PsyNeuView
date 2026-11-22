@@ -63,12 +63,12 @@ _guard = importlib.util.module_from_spec(_guard_spec)
 _guard_spec.loader.exec_module(_guard)
 _guard.install()
 
-RESULT_MARKER = "###PSYNEWVIEW_RESULT###"
+RESULT_MARKER = "###PSYNEUVIEW_RESULT###"
 
 # Emitted on stdout *before* RESULT_MARKER by streaming-capable tasks
 # (#535 job layer). Consumers that split on RESULT_MARKER (warm worker,
 # cold-start fallback) are unaffected by these extra lines.
-PROGRESS_MARKER = "###PSYNEWVIEW_PROGRESS###"
+PROGRESS_MARKER = "###PSYNEUVIEW_PROGRESS###"
 
 # Parameters to skip in introspection
 _SKIP_MECH_PARAMS = {
@@ -1212,7 +1212,26 @@ def task_introspect(params):
                 broken = []
             if broken:
                 result["brokenProjections"] = broken
-        if compositions:
+            # #254: a skipped statement that *defines* the model (a scheduler
+            # condition, an add_* call, a mechanism) is a real error even
+            # though the rest built. Reported as the load's error, with its
+            # line, every time; the graph still shows what did build.
+            try:
+                from app.services.dangling_check import find_skipped_definitions
+            except ModuleNotFoundError:
+                from dangling_check import find_skipped_definitions  # script context
+            try:
+                definitions = find_skipped_definitions(
+                    _Path(file_path).read_text(), skipped_statements)
+            except OSError:
+                definitions = []
+            if definitions and compositions:
+                result["error"] = definitions[0]["error"]
+                result["errorLine"] = definitions[0]["line"]
+                result["definitionErrors"] = definitions
+        if compositions and "error" in result:
+            pass  # a definition error, set above (#254): not a driver notice
+        elif compositions:
             # #796: the model's definition loaded (compositions present). The
             # error is from a skipped module-level driver statement — e.g.
             # accessing run results / log data after the introspector's no-op'd
@@ -2090,6 +2109,260 @@ def _output_labels(comp):
     return labels
 
 
+def _var_name_of(module, obj):
+    """The model's variable name for ``obj``, or None."""
+    for name, value in vars(module).items():
+        if value is obj and not name.startswith("_"):
+            return name
+    return None
+
+
+def _composition_holding(pnl, module, *nodes):
+    """Variable name of the composition that has all of ``nodes`` as its own
+    nodes (the one a projection between them is added to), or None."""
+    for name, value in vars(module).items():
+        if isinstance(value, pnl.Composition) and not name.startswith("_"):
+            try:
+                if all(n in value.nodes for n in nodes):
+                    return name
+            except Exception:
+                continue
+    return None
+
+
+def _model_nodes(pnl, module):
+    """Every node of every composition the module names, nested ones too."""
+    seen, out = set(), []
+    stack = [v for k, v in vars(module).items() if not k.startswith("_") and isinstance(v, pnl.Composition)]
+    while stack:
+        comp = stack.pop()
+        if id(comp) in seen:
+            continue
+        seen.add(id(comp))
+        try:
+            nodes = list(comp.nodes)
+        except Exception:
+            continue
+        for node in nodes:
+            if id(node) not in seen:
+                out.append(node)
+                if isinstance(node, pnl.Composition):
+                    stack.append(node)
+                else:
+                    seen.add(id(node))
+    return out
+
+
+def _unnamed_reason(node):
+    return (f"{node.name} is made inside a function, so the file has no name to "
+            "connect it by; add the connection in the code.")
+
+
+def _canvas_keys(node, name_to_var):
+    """The keys the canvas may know ``node`` by: its cleaned name and, for a
+    node built inside a function, the local variable it was assigned to (the
+    handle #422 gives it)."""
+    clean = re.sub(r"-\d+$", "", node.name)
+    keys = {node.name, clean}
+    for k in (node.name, clean):
+        if name_to_var.get(k):
+            keys.add(name_to_var[k])
+    return keys
+
+
+def _function_handles(params, module):
+    """PNL name -> local variable, for nodes declared inside functions."""
+    try:
+        with open(params["file_path"]) as f:
+            return _build_name_index(f.read(), vars(module))
+    except Exception:
+        return {}
+
+
+def _resolve_end(pnl, module, key, name_to_var):
+    """The node a dragged end names: ``(node, None)``, or ``(None, reason)``
+    for a node the model builds inside a function (EGO's), which has no
+    variable in the file to write a projection with, or ``(None, None)``."""
+    obj = getattr(module, key, None) if key else None
+    if isinstance(obj, (pnl.Mechanism, pnl.Composition)):
+        return obj, None
+    for node in _model_nodes(pnl, module):
+        if key and key in _canvas_keys(node, name_to_var):
+            return None, _unnamed_reason(node)
+    return None, None
+
+
+def _connection_options(pnl, module, sender, receiver):
+    """What dragging ``sender`` onto ``receiver`` connects (#253): the
+    shared rule behind ``connection_options`` and ``connection_targets``.
+
+    Returns ``{"options": [...]}`` or ``{"refused": "<plain reason>"}``.
+    """
+    if not isinstance(sender, pnl.Mechanism):
+        return {"refused": "Drag from a mechanism to connect it."}
+    if not isinstance(receiver, (pnl.Mechanism, pnl.Composition)):
+        return {"refused": "Drop on a mechanism or a collapsed composition to connect."}
+    if sender is receiver:
+        return {"refused": "A mechanism can't be connected to itself by dragging."}
+    kinds = [
+        ("GatingMechanism", "a gating mechanism"),
+        ("LearningMechanism", "a learning mechanism"),
+        ("ControlMechanism", "a control mechanism"),
+    ]
+    for cls_name, what in kinds:
+        cls = getattr(pnl, cls_name, None)
+        if cls is not None and isinstance(sender, cls):
+            return {"refused": (
+                f"{sender.name} is {what}. Its projections go to a parameter, a port "
+                "or an arrow, which dragging can't choose yet; add it in the code for now."
+            )}
+    if not sender.output_ports:
+        return {"refused": f"{sender.name} has no output to connect."}
+    out = sender.output_ports[0].name
+    if isinstance(receiver, pnl.Composition):
+        return _options_into_composition(pnl, module, sender, receiver, out)
+    for proj in getattr(receiver, "path_afferents", []):
+        owner = getattr(getattr(proj, "sender", None), "owner", None)
+        if owner is sender:
+            return {"refused": f"{sender.name} is already connected to {receiver.name}."}
+    if not receiver.input_ports:
+        return {"refused": f"{receiver.name} has no input to connect."}
+    # The composition holding both ends, so the projection is added there;
+    # left out when none does (ends in different compositions).
+    holder = _composition_holding(pnl, module, sender, receiver)
+    extra = {"composition": holder} if holder else {}
+    return {"options": [
+        {"type": "MappingProjection", "sender_port": out, "receiver_port": port.name, **extra}
+        for port in receiver.input_ports
+    ]}
+
+
+def _options_into_composition(pnl, module, sender, comp, out):
+    """A mechanism dropped on a (collapsed) composition: a MappingProjection
+    into one of the composition's INPUT nodes, as PsyNeuLink routes it through
+    the composition's input interface. One option per input port of each
+    input mechanism; nodes already fed by ``sender`` are left out."""
+    try:
+        if sender in comp.nodes:
+            return {"refused": f"{sender.name} is inside {comp.name}; connect it to a node there."}
+    except Exception:
+        pass
+    holder = _composition_holding(pnl, module, sender, comp)
+    if holder is None:
+        return {"refused": f"{sender.name} and {comp.name} aren't in the same composition."}
+    try:
+        comp._analyze_graph()
+    except Exception:
+        pass
+    from app.services.pathway_learning import is_generated_learning_node
+
+    already = set()
+    try:
+        for cim_port in comp.input_CIM.input_ports:
+            if any(getattr(getattr(p, "sender", None), "owner", None) is sender
+                   for p in cim_port.path_afferents):
+                _port, node, _c = comp.input_CIM._get_destination_info_from_input_CIM(cim_port)
+                already.add(id(node))
+    except Exception:
+        pass
+
+    options = []
+    for node in comp.get_nodes_by_role(pnl.NodeRole.INPUT):
+        # Mechanisms only: a composition nested deeper is connected inside it.
+        if not isinstance(node, pnl.Mechanism) or is_generated_learning_node(comp, node):
+            continue
+        if id(node) in already:
+            continue
+        var = _var_name_of(module, node)
+        if var is None:
+            continue
+        several = len(node.input_ports) > 1
+        for port in node.input_ports:
+            options.append({
+                "type": "MappingProjection",
+                "sender_port": out,
+                "receiver": var,
+                "receiver_port": port.name,
+                "label": f"{node.name}: {port.name}" if several else node.name,
+                "composition": holder,
+            })
+    if not options:
+        if already:
+            return {"refused": f"{sender.name} is already connected to {comp.name}."}
+        return {"refused": f"{comp.name} has no input mechanism to connect into."}
+    return {"options": options}
+
+
+def task_connection_options(params):
+    """What a drag from one node to another would connect (#253).
+
+    Asks PsyNeuLink, on the model's own objects, rather than a table kept by
+    hand: the sender must be a mechanism; the receiver a different mechanism,
+    or a collapsed composition (then into one of its input nodes); a sender
+    that is a control, gating or learning mechanism is not connected by
+    dragging yet (its projection targets a parameter, a port or an arrow,
+    which needs design input: #253's later stage); an existing connection
+    between the two is not made twice. Otherwise it is a MappingProjection
+    from the sender's primary output port, with one option per input port of
+    the receiver (or of each of the composition's input nodes).
+
+    Returns ``{"options": [{type, sender_port, receiver_port, ...}]}`` or
+    ``{"refused": "<plain reason>"}``. An option into a composition also
+    names its ``receiver`` node, a ``label`` and the ``composition`` to add
+    the projection to.
+    """
+    import psyneulink as pnl
+
+    module = load_module(params["file_path"], reset_registry=True, tolerate_exec_error=True)
+    handles = _function_handles(params, module)
+    sender, why = _resolve_end(pnl, module, params.get("sender"), handles)
+    if why:
+        return {"refused": why}
+    receiver, why = _resolve_end(pnl, module, params.get("receiver"), handles)
+    if why:
+        return {"refused": why}
+    if not isinstance(sender, pnl.Mechanism) or not isinstance(receiver, (pnl.Mechanism, pnl.Composition)):
+        return {"refused": "Drag from one mechanism to another to connect them."}
+    return _connection_options(pnl, module, sender, receiver)
+
+
+def task_connection_targets(params):
+    """Every node a drag from ``sender`` could be dropped on, and why not for
+    the rest (#253): lights up valid targets while the drag is in progress.
+
+    Returns ``{"targets": {var_name: null | "<reason>"}}`` over the model's
+    mechanisms and compositions; ``null`` means the drop connects.
+    """
+    import psyneulink as pnl
+
+    module = load_module(params["file_path"], reset_registry=True, tolerate_exec_error=True)
+    handles = _function_handles(params, module)
+    sender, sender_why = _resolve_end(pnl, module, params.get("sender"), handles)
+    targets = {}
+    named = set()
+    for name, obj in list(vars(module).items()):
+        if name.startswith("_") or not isinstance(obj, (pnl.Mechanism, pnl.Composition)):
+            continue
+        named.add(id(obj))
+        if not isinstance(sender, pnl.Mechanism):
+            targets[name] = sender_why or "Drag from a mechanism to connect it."
+            continue
+        try:
+            result = _connection_options(pnl, module, sender, obj)
+        except Exception as e:  # one odd node never hides the others
+            result = {"refused": f"Can't tell: {e}"}
+        targets[name] = result.get("refused")
+    # Nodes built inside a function have no variable; keyed by their name,
+    # as the canvas keys them, they say why they can't be connected.
+    for node in _model_nodes(pnl, module):
+        if id(node) in named:
+            continue
+        for key in _canvas_keys(node, handles):
+            if key not in targets:
+                targets[key] = sender_why or _unnamed_reason(node)
+    return {"targets": targets}
+
+
 def task_get_input_nodes(params):
     """Get input nodes for a composition.
 
@@ -2213,12 +2486,15 @@ def task_show_graph(params):
     # show_graph's refusal as it stands.
     try:
         import graphviz as gv
+        from app.services.show_graph_picture import as_graphviz_draws_it
         # Use 'source' format to get the final DOT with all colors applied,
         # then render to SVG. The 'gv' format returns an intermediate object
         # that may not have role-based colors (green/red/purple) applied.
         dot_source = comp.show_graph(output_fmt='source', **options)
         svg_bytes = gv.Source(dot_source).pipe(format='svg')
-        return {"svg": svg_bytes.decode('utf-8')}
+        # Graphviz keeps show_graph's colour names in the SVG, and a browser
+        # reads "green" and "purple" darker than show_graph's own PDF draws them (#190).
+        return {"svg": as_graphviz_draws_it(svg_bytes.decode('utf-8'))}
     except Exception as e:
         return {"error": f"show_graph failed: {exception_text(e)}"}
 
@@ -2856,6 +3132,61 @@ def _pick_primary_projection(chain):
     return chain[0]
 
 
+def _flat_root_cim(comp, cim_info, flat_nodes, pnl):
+    """The outer composition's CIMs for the flat view (#257).
+
+    Keeps the outer composition's interface nodes and connects them to the
+    nodes the flat graph shows, following each line on through any nested
+    composition's own CIM to the mechanism it ends at. ``None`` when there are
+    no CIMs or nothing in the flat graph connects to them.
+    """
+    if not cim_info:
+        return None
+    visible = {n.get("name") for n in flat_nodes}
+    roots = [c for c in (getattr(comp, "input_CIM", None), getattr(comp, "output_CIM", None),
+                         getattr(comp, "parameter_CIM", None)) if c is not None]
+    root_ids = {id(c) for c in roots}
+
+    def ends(mech, downstream, depth=0):
+        """The mechanisms a line reaches, passing through nested CIMs."""
+        if depth > 20 or mech is None:
+            return []
+        if not isinstance(mech, pnl.CompositionInterfaceMechanism) or id(mech) in root_ids:
+            return [mech]
+        found = []
+        ports = mech.output_ports if downstream else mech.input_ports
+        for port in ports:
+            for proj in (port.efferents if downstream else port.path_afferents):
+                nxt = (proj.receiver.owner if downstream else proj.sender.owner) if (
+                    proj.receiver if downstream else proj.sender) else None
+                found.extend(ends(nxt, downstream, depth + 1))
+        return found
+
+    projections = []
+    for cim in roots:
+        downstream = cim is not getattr(comp, "output_CIM", None)
+        ports = cim.output_ports if downstream else cim.input_ports
+        for port in ports:
+            for proj in (port.efferents if downstream else port.path_afferents):
+                other_port = proj.receiver if downstream else proj.sender
+                if other_port is None:
+                    continue
+                for mech in ends(other_port.owner, downstream):
+                    if mech.name not in visible:
+                        continue
+                    cim_end = {"mechanism": cim.name, "port": port.name}
+                    mech_end = {"mechanism": mech.name, "port": None}
+                    projections.append({
+                        "name": proj.name,
+                        "type": type(proj).__name__,
+                        "sender": cim_end if downstream else mech_end,
+                        "receiver": mech_end if downstream else cim_end,
+                    })
+    if not projections:
+        return None
+    return {"nodes": cim_info["nodes"], "projections": projections}
+
+
 def _serialize_flat_projection(sender_mech, receiver_mech, chain, proj_name_lookup, via_cim=None):
     """Serialize one CIM-stitched edge between two real mechanisms (#657).
 
@@ -3374,7 +3705,11 @@ def serialize_composition(var_name, comp, line_map, proj_name_lookup=None, name_
     if flat:
         nodes, projections = _flatten_graph(comp, line_map, proj_name_lookup, name_to_var)
         inactive_projections = []
-        cim_info = None
+        # #257: flattening removes the *inner* compositions' CIMs, but the
+        # outer one's are the model's real inputs and outputs. Dropping them
+        # too meant "Interface nodes (CIMs)" showed nothing in this view (the
+        # default), and appeared only after a load that happened to be nested.
+        cim_info = _flat_root_cim(comp, cim_info, nodes, pnl)
 
     # #230: PyTorch view — the autodiff-flattened graph PNL builds for gradient
     # computation. Specialization of the flat view; falls back to whatever was
@@ -4018,6 +4353,8 @@ def _handle_one_task(payload_str: str) -> str:
         "show_graph": task_show_graph,
         "export_mdf": task_export_mdf,
         "mdf_gaps": task_mdf_gaps,
+        "connection_options": task_connection_options,
+        "connection_targets": task_connection_targets,
     }
 
     try:
@@ -4144,7 +4481,7 @@ def _run_persistent():
     Protocol:
     1. Print "###READY###" when PsyNeuLink is imported and ready
     2. Read one JSON line from stdin per task
-    3. Print "###PSYNEWVIEW_RESULT###" marker, then JSON result on next line
+    3. Print "###PSYNEUVIEW_RESULT###" marker, then JSON result on next line
     4. Repeat until stdin closes
     """
     import time

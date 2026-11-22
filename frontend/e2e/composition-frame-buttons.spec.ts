@@ -21,6 +21,7 @@ import { fixturePath } from "./fixtures";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const EGO = path.resolve(__dirname, "..", "..", "backend", "reference_models", "Giallanza2024_ego_study2.py");
+const NESTED_DEMO = path.resolve(__dirname, "..", "..", "backend", "demos", "nested_compositions.py");
 
 const loaded = (page: Page) =>
   page.waitForResponse((r) => r.url().includes("/api/model/load"), { timeout: 60_000 });
@@ -122,6 +123,45 @@ test.describe("composition frame buttons (#194)", { tag: "@ci" }, () => {
     expect(await border()).toBe("dashed");
   });
 
+  // A projection from a member is drawn above the frame, and here one leaves
+  // through the header, right across Enter (#209). A press there selected the
+  // edge, and Enter did nothing.
+  test("the buttons take a press with an edge across them, and after the frame is clicked", async ({ page }) => {
+    await openFromPath(page, NESTED_DEMO);
+    await Promise.all([loaded(page), viewMenu(page).selectOption({ label: "outer_comp" })]);
+    await Promise.all([
+      page.waitForResponse((r) => r.url().includes("/api/model/show-graph") && r.ok(), { timeout: 60_000 }),
+      page.locator('select:has(option[value="showgraph"])').selectOption("showgraph"),
+    ]);
+    await press(page, /^Expand composition inner_comp$/);
+    await expect(frame(page, "inner_comp")).toBeVisible();
+
+    const enter = page.getByTestId("graph-canvas").getByRole("button", { name: /^Enter composition inner_comp$/ });
+    await expect(enter).toBeVisible();
+    // Every part of a button answers: the edge's hit band is wider than a line.
+    const missed = () =>
+      enter.evaluate((b) => {
+        const r = b.getBoundingClientRect();
+        const off: string[] = [];
+        for (const fx of [0.2, 0.5, 0.8]) {
+          for (const fy of [0.2, 0.5, 0.8]) {
+            const el = document.elementFromPoint(r.left + fx * r.width, r.top + fy * r.height);
+            if (!el || !b.contains(el)) off.push(`${fx},${fy}: ${el?.closest("[data-id]")?.getAttribute("data-id") ?? el?.tagName}`);
+          }
+        }
+        return off;
+      });
+    await expect.poll(missed, { message: "parts of Enter under something" }).toEqual([]);
+
+    const box = (await frame(page, "inner_comp").boundingBox())!;
+    await page.mouse.click(box.x + 20, box.y + box.height - 20);
+    await expect.poll(missed, { message: "parts of Enter under something, frame clicked" }).toEqual([]);
+
+    await press(page, /^Enter composition inner_comp$/);
+    await expect(page.getByText("Full model")).toBeVisible({ timeout: 15_000 });
+    await expect(canvasText(page, "outer_b")).toHaveCount(0);
+  });
+
   test("a rebuild that fails says so and leaves the graph and the settings as they were", async ({ page }) => {
     await openFromPath(page, fixturePath("nested_minimal"));
     await expect(frame(page, "inner_comp")).toBeVisible();
@@ -135,7 +175,7 @@ test.describe("composition frame buttons (#194)", { tag: "@ci" }, () => {
       await new Promise((r) => setTimeout(r, 700));
       await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ detail: "no can do" }) });
     });
-    const wheel = page.locator("[data-testid=busy-indicator][data-visible=true]");
+    const wheel = page.getByTestId("busy-wheel");
     const button = page.getByTestId("graph-canvas").getByRole("button", { name: /^Collapse composition inner_comp$/ });
     const done = loaded(page);
     await button.click();

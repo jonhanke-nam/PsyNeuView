@@ -20,9 +20,9 @@ export const GRAPH_ONLY: Panels = { code: false, graph: true, bottom: false, pal
 export const EVERYTHING: Panels = { code: true, graph: true, bottom: true, palette: true };
 
 /** Storage keys, kept literal: the suite drives the built app from outside. */
-export const GRAPH_VISIBLE_KEY = "psynewview_layout_graph_visible";
-export const PALETTE_OPEN_KEY = "psynewview_palette_open";
-export const BEFORE_WALKTHROUGH_KEY = "psynewview_layout_before_walkthrough";
+export const GRAPH_VISIBLE_KEY = "psyneuview_layout_graph_visible";
+export const PALETTE_OPEN_KEY = "psyneuview_palette_open";
+export const BEFORE_WALKTHROUGH_KEY = "psyneuview_layout_before_walkthrough";
 
 const ANCHORS: Record<keyof Panels, string> = {
   code: "code-editor-pane",

@@ -59,6 +59,12 @@ button:hover {
 .react-flow__node {
   transition: box-shadow 0.15s ease;
 }
+/* #250: what is drawn above the nodes on purpose (connection dots, bend
+   handles, a frame's buttons) stays above them now that nodes sit in a high
+   layer (canvasLayers.ts, NODE_LAYER_Z = 4000). */
+.react-flow__viewport-portal {
+  z-index: 4100;
+}
 .react-flow__node.selected {
   box-shadow: 0 0 0 2px var(--pnv-primary), 0 2px 8px var(--pnv-primary-ring);
 }
@@ -109,11 +115,6 @@ button:hover {
   cursor: var(--graph-pointer-grabbing-cursor, grabbing);
 }
 
-/* #41: in an automatic layout an edge can be selected but not shaped. */
-.graph-pointer-hand .projection-edge-hit.projection-edge-hit-auto {
-  cursor: pointer;
-}
-
 /* #40: a drag in progress — the canvas being panned, a node being moved —
    shows the closed hand at the chosen size under every setting. */
 .graph-pointer-image .react-flow__pane.dragging,
@@ -147,11 +148,11 @@ button:hover {
 /* #409: brief flash highlight on the labels.yaml line the Inspector
    just jumped to, in the amber of the YAML-cursor row (#1302). The fade-out is purely visual — the StateField
    clears the decoration after FLASH_DURATION_MS regardless. */
-.psynewview-yaml-flash {
+.psyneuview-yaml-flash {
   background: color-mix(in srgb, var(--pnv-warning-border) 55%, transparent);
-  animation: psynewview-yaml-flash-fade 1.2s ease-out;
+  animation: psyneuview-yaml-flash-fade 1.2s ease-out;
 }
-@keyframes psynewview-yaml-flash-fade {
+@keyframes psyneuview-yaml-flash-fade {
   0%   { background: color-mix(in srgb, var(--pnv-warning-border) 85%, transparent); }
   100% { background: color-mix(in srgb, var(--pnv-warning-border) 0%, transparent); }
 }
@@ -212,6 +213,16 @@ button:hover {
    the lock); keep it where React Flow's own sat, between zoom-out and lock. */
 .react-flow__controls .pnv-controls-fit { order: 1; }
 .react-flow__controls .react-flow__controls-interactive { order: 2; }
+/* #289: the Fit button's optional word (Settings ▸ Appearance ▸ Canvas
+   controls; the icon is the default). Small and bold enough to read in the
+   26px square the other controls use, so the column keeps its shape. */
+.react-flow__controls .pnv-controls-fit-label {
+  font-size: var(--pnv-fs-10);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.2px;
+  color: var(--xy-controls-button-color, currentColor);
+}
 
 /* The walkthrough ring's pulse (#100): a halo in the ring's own colour
    (currentColor) that spreads and fades. Strong spreads further and faster.
@@ -230,7 +241,10 @@ button:hover {
 
 
 /* The spinning wheel of patience (#38, BusyIndicator): twelve spokes that
-   step round like the Mac's; still under reduced motion. While it shows, the
+   step round like the Mac's. Settings can choose another style (#169): a
+   ring or a PsyNeuLink-style network that turns, nodes that light up in turn,
+   or a bar with a sliding segment. Everything that moves carries
+   .pnv-busy-anim and stands still under reduced motion. While it shows, the
    pointer says "working" everywhere. */
 .pnv-busy-wheel {
   animation: pnv-busy-spin 0.9s steps(12) infinite;
@@ -238,10 +252,76 @@ button:hover {
 @keyframes pnv-busy-spin {
   to { transform: rotate(360deg); }
 }
+.pnv-busy-turn { animation: pnv-busy-spin 1s linear infinite; }
+.pnv-busy-turn-orbit { animation: pnv-busy-spin 1.4s linear infinite; }
+.pnv-busy-turn-slow { animation: pnv-busy-spin 6s linear infinite; }
+/* A node lighting up: three of them with staggered delays pass the light along. */
+.pnv-busy-pulse { animation: pnv-busy-pulse 1.2s ease-in-out infinite; }
+@keyframes pnv-busy-pulse {
+  0%, 55%, 100% { fill-opacity: 0.15; }
+  20% { fill-opacity: 1; }
+}
+/* The bar's segment slides across the track; the frame clips it at both ends. */
+.pnv-busy-slide { animation: pnv-busy-slide 1.2s ease-in-out infinite; }
+@keyframes pnv-busy-slide {
+  from { transform: translateX(-8px); }
+  to { transform: translateX(24px); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .pnv-busy-wheel { animation: none; }
+  .pnv-busy-anim { animation: none; }
 }
 html.pnv-busy,
 html.pnv-busy * {
   cursor: progress !important;
+}
+
+/* #252: a component picked up in the panel waits for a click on the graph to
+   say where it goes; the crosshair says so, over the canvas and the nodes. */
+.graph-placing .react-flow__pane,
+.graph-placing .react-flow__node {
+  cursor: crosshair !important;
+}
+
+/* #253: the connector on each node, for dragging a connection to another
+   node. Shown while the pointer is on the node, or during a connection. */
+.react-flow__handle.pnv-connector {
+  width: 10px;
+  height: 10px;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 50%;
+  border: 2px solid var(--pnv-surface);
+  background: var(--pnv-port-output);
+  opacity: 0;
+  transition: opacity 0.12s;
+  cursor: crosshair;
+}
+.react-flow__node:hover .react-flow__handle.pnv-connector,
+.react-flow__handle.pnv-connector.connectingfrom {
+  opacity: 1;
+}
+/* Settings search (#271): the control a search result took you to. */
+@keyframes pnv-setting-flash {
+  0%, 40% { background: var(--pnv-primary-tint); box-shadow: 0 0 0 3px var(--pnv-primary-tint); }
+  100% { background: transparent; box-shadow: 0 0 0 3px transparent; }
+}
+.pnv-setting-flash {
+  border-radius: 6px;
+  animation: pnv-setting-flash 1.6s ease-out;
+}
+.pnv-settings-search-result:hover {
+  background: var(--pnv-primary-tint) !important;
+}
+
+/* #250: an open composition frame is clicked on its header and border only;
+   clicks inside go to the arrows, nodes and canvas there (CompositionNode). */
+/* React Flow sets pointer-events: all inline on every node, so only an
+   !important rule reaches it. */
+.react-flow__node-compositionNode {
+  pointer-events: none !important;
+}
+.react-flow__node-compositionNode .pnv-frame-grab,
+.react-flow__node-compositionNode .react-flow__handle,
+.react-flow__node-compositionNode button {
+  pointer-events: all;
 }

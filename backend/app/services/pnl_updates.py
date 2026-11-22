@@ -26,6 +26,7 @@ rules are tested without a network, a clock or a venv.
 """
 
 from __future__ import annotations
+from app.services.env_names import env
 
 import json
 import logging
@@ -76,7 +77,7 @@ def _read_config(path: Path) -> dict:
 
 def _write_config_atomic(path: Path, config: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(prefix=".psynewview.", suffix=".tmp", dir=str(path.parent))
+    fd, tmp_name = tempfile.mkstemp(prefix=".psyneuview.", suffix=".tmp", dir=str(path.parent))
     try:
         with os.fdopen(fd, "w") as f:
             json.dump(config, f, indent=2, sort_keys=True)
@@ -410,7 +411,7 @@ def checks_enabled() -> bool:
     is possible at all (a container's PsyNeuLink is fixed by its image)."""
     if os.environ.get(ENABLE_ENV, "").strip() == "0":
         return False
-    if os.environ.get("PSYNEWVIEW_TEST_MODE") == "1":
+    if env("TEST_MODE") == "1":
         return False
     try:
         from app.services import deployment_mode

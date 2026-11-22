@@ -5,7 +5,7 @@
 import { create } from "zustand";
 import { recordSettingChanged } from "@/utils/activityLog";
 
-const STORAGE_KEY = "psynewview_ui_prefs";
+const STORAGE_KEY = "psyneuview_ui_prefs";
 const MIN_SCALE = 0.8;
 const MAX_SCALE = 1.5;
 const STEP = 0.1;

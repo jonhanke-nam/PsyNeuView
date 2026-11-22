@@ -26,6 +26,10 @@ import { useState } from "react";
 import { routeAroundObstacles, type Rect } from "@/utils/edgeRouter";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useModelStore } from "@/stores/modelStore";
+import { useNodeBoxes } from "@/hooks/useNodeBoxes";
+
+/** A secondary click on a scheduling arrow's label opens the arrow's menu (#261). */
+export const EDGE_MENU_EVENT = "pnv:edge-menu";
 
 /** Point on `node`'s bounding box where the ray toward (tx, ty) exits it. */
 function boundaryPoint(node: InternalNode, tx: number, ty: number) {
@@ -96,6 +100,7 @@ export function GSCEdge({
   const avoidNodes = useGraphSettings((s) => s.avoidNodes);
   const edgeNodeClearance = useGraphSettings((s) => s.edgeNodeClearance);
   const nodeLookup = useStore((s) => s.nodeLookup);
+  useNodeBoxes(); // nodeLookup is updated in place: route again when a node moves
 
   // Floating endpoints on the node boundaries facing each other. Falls back to
   // React Flow's port-anchored coords if a node hasn't been measured yet.
@@ -196,6 +201,14 @@ export function GSCEdge({
           data-selected={isSelected ? "true" : "false"}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
+          // #261: the label is the arrow too: its menu, from a secondary click.
+          // The label is drawn outside the edge, so the graph's own edge menu
+          // never hears it; the canvas listens for this instead.
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.dispatchEvent(new CustomEvent(EDGE_MENU_EVENT, { detail: { edgeId: id, x: e.clientX, y: e.clientY } }));
+          }}
         >
           {isRemove ? "✕ " : ""}{label}
         </div>

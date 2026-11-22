@@ -119,7 +119,7 @@ mutatingTest("Settings: Close is primary and the default button; small and dange
         },
         projectFolder: { path: src, exists: true, fixed: false, fixedBy: null },
         catalogs: [],
-        appData: { root: "/Users/someone/.psyneuview", sources: "/Users/someone/.psyneuview/sources", configFile: "/Users/someone/.psynewview.json" },
+        appData: { root: "/Users/someone/.psyneuview", sources: "/Users/someone/.psyneuview/sources", configFile: "/Users/someone/.psyneuview.json" },
         managedCopies: [
           { name: "PsyNeuLink-PrincetonUniversity", path: "/Users/someone/.psyneuview/sources/PsyNeuLink-PrincetonUniversity", repo: "PrincetonUniversity/PsyNeuLink", size_bytes: 412_000_000, size_complete: true, last_used: Date.now() / 1000 - 86400, in_use: true },
           { name: "PsyNeuLink-jonhanke-nam", path: "/Users/someone/.psyneuview/sources/PsyNeuLink-jonhanke-nam", repo: "jonhanke-nam/PsyNeuLink", size_bytes: 398_000_000, size_complete: false, last_used: Date.now() / 1000 - 40 * 86400, in_use: false },

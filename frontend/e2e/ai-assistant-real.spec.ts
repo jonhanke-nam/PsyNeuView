@@ -194,7 +194,8 @@ function mtimeOrNull(p: string): number | null {
 
 // ── the story ────────────────────────────────────────────────────────────
 
-const REAL_PREFS = path.join(homedir(), ".psynewview.json");
+// The developer's real settings file, under the name it has had since #258.
+const REAL_PREFS = path.join(homedir(), ".psyneuview.json");
 const REAL_REVIEW = path.join(homedir(), ".psyneuview", "assistant-review.json");
 
 let folder: string;

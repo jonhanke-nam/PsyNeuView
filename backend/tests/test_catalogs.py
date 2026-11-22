@@ -15,7 +15,7 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def _no_models_dir_env(monkeypatch):
-    monkeypatch.delenv("PSYNEWVIEW_MODELS_DIR", raising=False)
+    monkeypatch.delenv("PSYNEUVIEW_MODELS_DIR", raising=False)
 
 
 def _folder(root, *models):

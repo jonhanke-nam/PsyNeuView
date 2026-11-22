@@ -4,6 +4,7 @@
  * Edits are sent to the backend, which updates the .py file and re-introspects.
  */
 
+import { modelViewOptions } from "@/utils/showGraphLoadRequest";
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useModelStore } from "@/stores/modelStore";
 import type { MechanismData, ParamMeta } from "@/stores/modelStore";
@@ -15,7 +16,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useTextScale } from "@/stores/textSizeStore";
 import { recordAction } from "@/utils/history";
 import { findGscEdgeId } from "@/utils/gscEdgeId";
-import { renameNode } from "@/utils/nodeActions";
+import { renameProjection, renameNode } from "@/utils/nodeActions";
 import { formatTraceValue } from "@/utils/traceValues";
 import {
   resolveOutputLabels,
@@ -388,7 +389,7 @@ export function SchedulerModeToggle({ mode, fontPx }: { mode: string; fontPx: nu
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          file_path: filePath,
+          file_path: filePath, ...modelViewOptions(),
           changes: { action: "set_scheduler_mode", composition: comp, mode: next },
         }),
       });
@@ -1105,7 +1106,7 @@ export function InspectorPanel() {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
-                    file_path: filePath,
+                    file_path: filePath, ...modelViewOptions(),
                     changes: {
                       action: "remove_gsc",
                       owner_var: ed.owner,
@@ -1143,7 +1144,18 @@ export function InspectorPanel() {
 
     return (
       <div style={{ padding: "12px 16px", overflow: "auto", height: "100%", fontSize: s(13) }}>
-        {renderHeader(ed.label || selectedEdge.id, ed.type || "Projection", ed.line)}
+        {renderHeader(
+          ed.label || selectedEdge.id,
+          ed.type || "Projection",
+          ed.line,
+          // #261: an arrow declared in the file can be renamed here, as from its menu.
+          ed.varName && ed.varName in useModelStore.getState().lineMap
+            ? (nn: string) => renameProjection(ed.varName, ed.label || selectedEdge.id, nn).then((err) => {
+                if (err) setRenameError(err);
+                else setEditingName(false);
+              })
+            : undefined,
+        )}
 
         {/* Connection info */}
         <div style={{ marginBottom: 12, fontSize: s(12), color: "var(--pnv-text-muted)" }}>
@@ -2673,7 +2685,7 @@ function SchedulingSection({
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                      file_path: filePath,
+                      file_path: filePath, ...modelViewOptions(),
                       changes: { action: "remove_basic_condition", owner_var: varName },
                     }),
                   });
@@ -2862,7 +2874,7 @@ function SchedulingSection({
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                          file_path: filePath,
+                          file_path: filePath, ...modelViewOptions(),
                           changes: {
                             action: "add_gsc",
                             composition: compVarName,
@@ -3224,7 +3236,7 @@ function ConditionBuilder({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          file_path: filePath,
+          file_path: filePath, ...modelViewOptions(),
           changes: {
             action: "add_basic_condition",
             composition: compVarName,
@@ -3346,7 +3358,7 @@ export function TerminationSection({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        file_path: filePath,
+        file_path: filePath, ...modelViewOptions(),
         changes: { action: "set_termination", composition: comp, conditions: next },
       }),
     });

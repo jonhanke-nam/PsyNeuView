@@ -9,6 +9,37 @@ import { useModelStore } from "@/stores/modelStore";
 import { record } from "@/utils/activityLog";
 import { useHistoryStore, type SaveMark, type Snapshot } from "@/stores/historyStore";
 import type { MechanismData } from "@/stores/modelStore";
+import { captureView } from "@/utils/graphView";
+import type { Node } from "@xyflow/react";
+import { serializeRoutes, type RoutableEdge } from "@/utils/edgeRoutes";
+import { useEdgeAttach } from "@/stores/edgeAttachStore";
+
+export interface RecordActionOptions {
+  /**
+   * Whether the step is an edit the user made to the model, which problem
+   * reports list (#177). Defaults to true. False for the app's own steps: a
+   * model loading or being rebuilt, and a frame button changing the view
+   * (#204), which change what is shown and not the model.
+   */
+  edit?: boolean;
+  /**
+   * The step only moves nodes (#219): kept when the positions changed,
+   * though the code and the graph did not. See `Snapshot.moves`.
+   */
+  moves?: boolean;
+  /**
+   * The step only reshapes arrows (#164): kept when the arrows' routes
+   * changed, though the code and the graph did not. See `Snapshot.reshapes`.
+   */
+  reshapes?: boolean;
+  /** The reshape took the layout from Auto to Custom (#164). See `Snapshot.fromAuto`. */
+  fromAuto?: boolean;
+  /**
+   * The nodes as the canvas has them (#164). The store's nodes don't follow a
+   * drag on the canvas, so a step taken there passes the canvas's own.
+   */
+  nodes?: Node[];
+}
 
 /**
  * Capture the current state and push it as a history snapshot.
@@ -17,13 +48,13 @@ import type { MechanismData } from "@/stores/modelStore";
  *
  * @param description - Human-readable description ("Modified gain in hidden_layer")
  */
-export function recordAction(description: string) {
-  // Every undo point is an edit the user made, for problem reports (#177).
-  // The description names what changed, never the new text or value. A
-  // model loading or being rebuilt is the app's doing, and logged elsewhere.
-  if (description !== "Model loaded" && description !== "Model updated") record("edit", description);
+export function recordAction(description: string, opts?: RecordActionOptions) {
+  // An edit the user made goes in the activity log, for problem reports
+  // (#177). The description names what changed, never the new text or value.
+  if (opts?.edit !== false) record("edit", description);
   const store = useModelStore.getState();
-  const { source, nodes, edges, filePath } = store;
+  const { source, edges, filePath } = store;
+  const nodes = opts?.nodes ?? store.nodes;
 
   // Capture current node positions for layout restore
   const positions: Record<string, { x: number; y: number }> = {};
@@ -40,6 +71,17 @@ export function recordAction(description: string) {
     description,
     timestamp: Date.now(),
     positions,
+    // The view the graph was built in, so undo puts it back too (#194).
+    view: captureView(),
+    // The arrows shaped by hand (#164), as the layout file keeps them, so
+    // Undo puts an arrow's shape back.
+    edgeRoutes: (() => {
+      const ea = useEdgeAttach.getState();
+      return serializeRoutes(edges as unknown as RoutableEdge[], ea.shaped, ea.waypoints, ea.overrides);
+    })(),
+    ...(opts?.moves ? { moves: true } : {}),
+    ...(opts?.reshapes ? { reshapes: true } : {}),
+    ...(opts?.fromAuto ? { fromAuto: true } : {}),
   };
 
   useHistoryStore.getState().pushSnapshot(snapshot);
@@ -50,7 +92,7 @@ export function recordAction(description: string) {
  * This creates the baseline for undo — the first entry in the stack.
  */
 export function recordInitialState() {
-  recordAction("Model loaded");
+  recordAction("Model loaded", { edit: false });
 }
 
 /**
@@ -76,6 +118,7 @@ export function recordSave(source: string, mark: SaveMark) {
       description: "Saved",
       timestamp: Date.now(),
       positions,
+      view: captureView(),
     },
     mark,
   );

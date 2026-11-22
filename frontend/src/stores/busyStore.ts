@@ -6,6 +6,7 @@
  * the page register through withBusy(label, promise). BusyIndicator shows the
  * wheel once the oldest piece of work has run for the threshold (0.2 s by
  * default, Settings ▸ General ▸ Busy indicator); quick actions show nothing.
+ * Settings ▸ Appearance ▸ Busy wheel chooses what it looks like (#169).
  *
  * Background requests (the health check, polls of a running job, checks
  * for updates) are not user actions and never register.
@@ -40,21 +41,53 @@ export function loadBusyThreshold(): number {
 }
 
 export const BUSY_TIMER_KEY = "psyneuview.busy.timerPlace";
-export type BusyTimerPlace = "off" | "toolbar" | "canvas" | "both";
-export const DEFAULT_BUSY_TIMER_PLACE: BusyTimerPlace = "toolbar";
+export type BusyTimerPlace = "off" | "below" | "center";
+export const DEFAULT_BUSY_TIMER_PLACE: BusyTimerPlace = "below";
 export const BUSY_TIMER_PLACES: { place: BusyTimerPlace; label: string }[] = [
   { place: "off", label: "Off" },
-  { place: "toolbar", label: "In the toolbar" },
-  { place: "canvas", label: "Over the graph" },
-  { place: "both", label: "Both" },
+  { place: "below", label: "Below the wheel" },
+  { place: "center", label: "In the centre of the wheel" },
 ];
 
+/**
+ * The stored choice. Before there was one wheel (#220) the values were "off",
+ * "toolbar", "canvas" and "both": Off stays Off; the old places, like anything
+ * else not recognised, are the default. They are only read differently, not
+ * rewritten, so the next choice made is what replaces them.
+ */
 export function loadBusyTimerPlace(): BusyTimerPlace {
   try {
     const stored = localStorage.getItem(BUSY_TIMER_KEY);
     return BUSY_TIMER_PLACES.find((p) => p.place === stored)?.place ?? DEFAULT_BUSY_TIMER_PLACE;
   } catch {
     return DEFAULT_BUSY_TIMER_PLACE;
+  }
+}
+
+export const BUSY_STYLE_KEY = "psyneuview.busy.style";
+/** What the busy indicator looks like (#169). */
+export type BusyStyle = "wheel" | "network" | "ring" | "nodes" | "orbit" | "bar" | "text";
+export const DEFAULT_BUSY_STYLE: BusyStyle = "wheel";
+export const BUSY_STYLES: { style: BusyStyle; label: string; description: string }[] = [
+  { style: "wheel", label: "Classic wheel", description: "Twelve fading spokes that step round, like the Mac's." },
+  {
+    style: "network",
+    label: "Network",
+    description: "Three nodes joined by projections, turning slowly, each lighting up in turn.",
+  },
+  { style: "ring", label: "Ring", description: "One arc going round a faint circle." },
+  { style: "nodes", label: "Pulsing nodes", description: "Three nodes in a row that brighten one after another. Nothing turns." },
+  { style: "orbit", label: "Orbit", description: "A node with a signal circling it, like a recurrent projection." },
+  { style: "bar", label: "Bar", description: "A thin bar with a segment sliding along it. Nothing turns." },
+  { style: "text", label: "Text only", description: "Just Working…, with no picture." },
+];
+
+export function loadBusyStyle(): BusyStyle {
+  try {
+    const stored = localStorage.getItem(BUSY_STYLE_KEY);
+    return BUSY_STYLES.find((s) => s.style === stored)?.style ?? DEFAULT_BUSY_STYLE;
+  } catch {
+    return DEFAULT_BUSY_STYLE;
   }
 }
 
@@ -86,6 +119,8 @@ interface BusyState {
   setThresholdMs: (ms: number) => void;
   timerPlace: BusyTimerPlace;
   setTimerPlace: (place: BusyTimerPlace) => void;
+  style: BusyStyle;
+  setStyle: (style: BusyStyle) => void;
 }
 
 export const useBusyStore = create<BusyState>((set) => ({
@@ -110,6 +145,16 @@ export const useBusyStore = create<BusyState>((set) => ({
     }
     recordSettingChanged("busy-timer", place);
     set({ timerPlace: place });
+  },
+  style: loadBusyStyle(),
+  setStyle: (style) => {
+    try {
+      localStorage.setItem(BUSY_STYLE_KEY, style);
+    } catch {
+      // Storage blocked: the choice holds for this page.
+    }
+    recordSettingChanged("busy-style", style);
+    set({ style });
   },
 }));
 
@@ -208,6 +253,21 @@ const BACKGROUND = [
   /^\/rendering-defaults\.json/,
 ];
 
+/**
+ * A request marked as background by its caller (#255, #256): work nobody is
+ * waiting on, though its path also serves requests that someone is. The
+ * editor's live preview sends it; an Undo through the same endpoint doesn't.
+ */
+export const BACKGROUND_HEADER = "X-PsyNeuView-Background";
+
+export function isMarkedBackground(init?: RequestInit): boolean {
+  const headers = init?.headers;
+  if (!headers) return false;
+  if (headers instanceof Headers) return headers.has(BACKGROUND_HEADER);
+  if (Array.isArray(headers)) return headers.some(([k]) => k.toLowerCase() === BACKGROUND_HEADER.toLowerCase());
+  return Object.keys(headers).some((k) => k.toLowerCase() === BACKGROUND_HEADER.toLowerCase());
+}
+
 export function isBackgroundRequest(url: string): boolean {
   let path = url;
   try {
@@ -249,7 +309,7 @@ export function installBusyFetch(target: { fetch: typeof fetch } = globalThis): 
   const original = target.fetch.bind(target);
   target.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
     const label = requestLabel(input, init);
-    const end = isBackgroundRequest(requestPath(input))
+    const end = isBackgroundRequest(requestPath(input)) || isMarkedBackground(init)
       ? beginWait(label, { kind: "background", minMs: BACKGROUND_WAIT_MIN_MS })
       : beginBusy(label);
     const path = requestPath(input);

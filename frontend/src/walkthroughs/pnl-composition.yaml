@@ -50,6 +50,7 @@ steps:
       joined by projections.
     done:
       nodeExists: output_node
+    opens: new model
     act:
       newModel: first_composition
 

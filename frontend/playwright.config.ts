@@ -76,9 +76,9 @@ const sessionLayoutsDir = path.join(sessionTmp, "layouts");
 // uvicorn loses PATH and can't resolve Python deps.
 const harnessEnv: Record<string, string> = {
   ...(process.env as Record<string, string>),
-  PSYNEWVIEW_TEST_MODE: "1",
-  PSYNEWVIEW_MODELS_DIR: sessionModelsDir,
-  PSYNEWVIEW_WORKING_DIR: sessionWorkingDir,
+  PSYNEUVIEW_TEST_MODE: "1",
+  PSYNEUVIEW_MODELS_DIR: sessionModelsDir,
+  PSYNEUVIEW_WORKING_DIR: sessionWorkingDir,
   // #1321: layouts and labels for read-only PsyNeuLink files (a stand-in
   // library model declared through /api/test/pnl-install) go here instead
   // of ~/.psyneuview/layouts, and the startup migration stays off.
@@ -86,13 +86,13 @@ const harnessEnv: Record<string, string> = {
   // #175: what the server keeps only for convenience (the PsyNeuLink examples'
   // load status) goes here instead of ~/.psyneuview/cache.
   PSYNEUVIEW_CACHE_DIR: path.join(sessionTmp, "cache"),
-  // #1025: user preferences (~/.psynewview.json) redirected into this session's
+  // #1025: user preferences (~/.psyneuview.json) redirected into this session's
   // temp dir. Without it, any test touching a persisted setting — the global
   // sidecar-placement default, install history, recent files — writes to the
   // developer's real preferences file on whatever machine runs the suite.
-  // Both spellings are correct: PSYNEUVIEW_ here, PSYNEWVIEW_ above. The env
+  // Both spellings are correct: PSYNEUVIEW_ here, PSYNEUVIEW_ above. The env
   // names are genuinely split; see #1025.
-  PSYNEUVIEW_CONFIG_FILE: path.join(sessionTmp, "psynewview.json"),
+  PSYNEUVIEW_CONFIG_FILE: path.join(sessionTmp, "psyneuview.json"),
   // Unsaved edits run from a private preview copy (#1029), by default under
   // ~/.psyneuview/previews. Keep this run's copies in its own temp dir (#160).
   PSYNEUVIEW_PREVIEW_ROOT: path.join(sessionTmp, "previews"),

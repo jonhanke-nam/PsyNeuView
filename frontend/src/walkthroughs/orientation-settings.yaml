@@ -105,6 +105,8 @@ steps:
       testid: settings-section-shortcuts
     instruct: >-
       Click Keyboard shortcuts. Every shortcut, and each can be rebound.
+      Help ▸ Keyboard Shortcuts (⌘/) lists them all, with any you have changed
+      marked.
     say: >-
       Every keyboard shortcut, rebindable.
     done:

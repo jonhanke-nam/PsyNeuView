@@ -4,6 +4,12 @@
  * Handles: drag layout saving, new connections → projections, node deletion.
  */
 
+import { CanvasContextMenu, EdgeContextMenu } from "./GraphMenus";
+import { arrowShaped, reshapeDescription, startShapingArrow } from "@/utils/arrowShapes";
+import { PortChooser, type ConnectionOption } from "./PortChooser";
+import { CONNECT_HANDLE, NODE_TARGET_HANDLE } from "./connectHandles";
+import { useConnectTargets } from "@/stores/connectTargetsStore";
+import { registerVisibleCentre } from "@/utils/graphViewport";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   ReactFlow,
@@ -14,6 +20,7 @@ import {
   useEdgesState,
   useReactFlow,
   type OnConnect,
+  type OnConnectStart,
   type OnNodeDrag,
   type Connection,
   type NodeChange,
@@ -22,7 +29,7 @@ import {
 import { useFitGraph } from "@/hooks/useFitGraph";
 import { computeShiftTable, shiftPosition, unshiftPosition } from "@/utils/viewTransform";
 
-import { useModelStore, type MechanismData, autoSizeGroups, usesFlatPositions } from "@/stores/modelStore";
+import { useModelStore, type MechanismData, autoSizeGroups, fitFramesAndMakeRoom, usesFlatPositions } from "@/stores/modelStore";
 import { recordAction } from "@/utils/history";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useStatusStore } from "@/stores/statusStore";
@@ -33,7 +40,7 @@ import { MechanismNode } from "./MechanismNode";
 import { CompositionNode } from "./CompositionNode";
 import { CIMNode } from "./CIMNode";
 import { DanglingNode } from "./DanglingNode";
-import { GSCEdge } from "./GSCEdge";
+import { EDGE_MENU_EVENT, GSCEdge } from "./GSCEdge";
 import { ProjectionEdge } from "./ProjectionEdge";
 import { GSCLegend } from "./GSCLegend";
 import { useSchedulingArrowsStore } from "@/stores/schedulingArrowsStore";
@@ -45,16 +52,37 @@ import { PaletteSidebar } from "./PaletteSidebar";
 import { NodeContextMenu } from "./NodeContextMenu";
 import { OffscreenNodesIndicator } from "./OffscreenNodesIndicator";
 import { TourOverlay } from "./TourOverlay";
-import { addNodeToModel } from "@/utils/nodeActions";
+import { addNodeToModel, deleteProjection, deleteSchedulingCondition, renameProjection } from "@/utils/nodeActions";
 import { isProjectionType, findDefByType } from "@/constants/pnlTypes";
+import { inNodeLayer } from "./canvasLayers";
 import { registerCommand } from "@/shortcuts/commands";
+import { useShortcutKeys } from "@/shortcuts/useAppShortcuts";
+import { useFitButtonStyleStore } from "@/stores/fitButtonStyleStore";
 import { LastGoodDiff } from "./LastGoodDiff";
 import { serializeRoutes, type RoutableEdge } from "@/utils/edgeRoutes";
+import { positionsOnScreen } from "@/utils/positionsOnScreen";
+import { registerArrowShapeCommit } from "@/utils/arrowShapes";
 import { useEdgeAttach } from "@/stores/edgeAttachStore";
 import { prunePositions } from "@/utils/prunePositions";
 import { useGraphPointerStore } from "@/stores/graphPointerStore";
 import { graphCursorVars, graphPointerClass } from "@/utils/graphCursor";
-import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { modelLoadOptions, modelViewOptions } from "@/utils/showGraphLoadRequest";
+import { clampIoDrag, tidyIoRows } from "@/utils/ioRows";
+import { ioRowsNotApplying, registerCanvasTidy, useIoRowsStore } from "@/stores/ioRowsStore";
+
+/** A Mac, judged as the graph library judges it (by the user agent). */
+const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
+
+/** #261: Command (Ctrl off the Mac) and Shift both add to or take from the selection. */
+const MULTI_SELECT_KEYS = IS_MAC ? ["Meta", "Shift"] : ["Control", "Shift"];
+
+/**
+ * #261: on a Mac, Control-click is a secondary click. macOS usually turns it
+ * into one before the page sees it, but not always (nor in a browser told it
+ * is on a Mac), so a Control-click that arrives as a click is routed to the
+ * menu here.
+ */
+const isMacSecondaryClick = (e: React.MouseEvent | MouseEvent) => IS_MAC && e.ctrlKey && !e.metaKey;
 
 const nodeTypes = {
   mechanismNode: MechanismNode,
@@ -73,18 +101,8 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 function saveLayoutDebounced(filePath: string, nodes: any[]) {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    const positions: Record<string, { x: number; y: number }> = {};
-    for (const node of nodes) {
-      // #697/#713: cluster frames are reconstructed each load — never persist.
-      if (node.id.startsWith("cluster::")) continue;
-      let key = (node.data as MechanismData)?.varName || node.id;
-      // CIM nodes have PNL numeric suffixes that change each load;
-      // save with a stable key by stripping the suffix.
-      if (node.type === "cimNode") {
-        key = key.replace(/-\d+\s/, " ");
-      }
-      positions[key] = { x: node.position.x, y: node.position.y };
-    }
+    // #697/#713: cluster frames are never saved; CIMs by a stable key.
+    const positions = positionsOnScreen(nodes);
     // #659: merge over the last loaded layout so positions for nodes not
     // currently on the canvas survive — e.g. a nested composition's group node
     // while flattened — keeping flat↔nested round-trips intact.
@@ -155,7 +173,7 @@ async function createProjectionOnServer(
     const resp = await fetch("/api/model/structural-change", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath, changes }),
+      body: JSON.stringify({ file_path: filePath, ...modelViewOptions(), changes }),
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -188,7 +206,7 @@ async function addBasicConditionOnServer(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        file_path: filePath,
+        file_path: filePath, ...modelViewOptions(),
         changes: {
           action: "add_basic_condition",
           composition,
@@ -211,20 +229,26 @@ async function addBasicConditionOnServer(
 
 async function deleteNodeOnServer(
   filePath: string,
-  varName: string,
+  varNames: string | string[],
   setSource: (s: string) => void,
   loadModel: (m: any, l?: any) => void,
   addNotification: (type: any, msg: string) => void,
 ) {
+  // #261: several at once is one change to the file, so one Undo.
+  const names = Array.isArray(varNames) ? varNames : [varNames];
+  const varName = names.join(", ");
   const { setStatus, clearStatus } = useStatusStore.getState();
-  setStatus(`Removing node: ${varName}...`);
+  setStatus(`Removing ${names.length > 1 ? "nodes" : "node"}: ${varName}...`);
   try {
     const resp = await fetch("/api/model/structural-change", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        file_path: filePath,
-        changes: { action: "remove_node", var_name: varName },
+        file_path: filePath, ...modelViewOptions(),
+        changes:
+          names.length > 1
+            ? { action: "remove_nodes", var_names: names }
+            : { action: "remove_node", var_name: names[0] },
       }),
     });
     if (!resp.ok) {
@@ -245,7 +269,7 @@ async function deleteNodeOnServer(
     const data = await resp.json();
     setSource(data.source);
     loadModel(data.model, data.layout);
-    recordAction(`Deleted node ${varName}`);
+    recordAction(`Deleted ${names.length > 1 ? "nodes" : "node"} ${varName}`);
   } catch (e) {
     addNotification("error", `Failed to delete node: ${e}`);
     await resyncFromFile(filePath, setSource, loadModel);
@@ -265,7 +289,7 @@ async function resyncFromFile(
     const resp = await fetch("/api/model/load", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
+      body: JSON.stringify({ file_path: filePath, ...modelLoadOptions() }),
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -302,12 +326,24 @@ export function GraphCanvas() {
     nodeType: string;
     x: number;
     y: number;
+    /** #261: the multi-selection the clicked node is part of, when there is one. */
+    selection?: { id: string; label: string; varName?: string }[];
   } | null>(null);
 
   const [nodes, setNodes, onNodesChangeRaw] = useNodesState(storeNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(storeEdges);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getInternalNode, zoomTo } = useReactFlow();
   const fitGraph = useFitGraph();
+  // #289: the keys fire the same fit as the button, the canvas menu and the
+  // off-screen badge; ⌘0 is actual size, about the canvas's centre, as in
+  // Preview.
+  const fitKeys = useShortcutKeys("view.fitGraph", "view.fitGraphShift");
+  const fitButtonStyle = useFitButtonStyleStore((s) => s.style);
+  useEffect(() => registerCommand("graph.fit", fitGraph), [fitGraph]);
+  useEffect(
+    () => registerCommand("graph.actualSize", () => void zoomTo(1)),
+    [zoomTo]
+  );
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
 
@@ -343,12 +379,21 @@ export function GraphCanvas() {
   // is what React Flow draws; the local `nodes` array stays canonical.
   const displayNodes = useMemo(
     () =>
-      nodes.map((n) => ({
+      // #250: every node above every arrow (canvasLayers explains why).
+      nodes.map((n) => inNodeLayer({
         ...n,
         position: shiftPosition(n.id, n.position, shiftTable),
       })),
     [nodes, shiftTable],
   );
+
+  // #219: Settings ▸ Appearance ▸ Keep inputs on the bottom and outputs on
+  // top, Also while dragging: inputs and outputs slide along their row, and
+  // other nodes stay between the two rows, where the layout has a bottom and
+  // a top.
+  const ioRows = useIoRowsStore((s) => s.ioRows);
+  const layoutStyle = useGraphSettings((s) => s.layoutStyle);
+  const keepIoRowsWhileDragging = ioRows === "drag" && !ioRowsNotApplying(layoutStyle, direction);
 
   // Inverse-transform position changes from React Flow before they hit
   // canonical state — drag deltas arrive in rendered space.
@@ -356,13 +401,16 @@ export function GraphCanvas() {
     (changes: NodeChange[]) => {
       const remapped = changes.map((c) => {
         if (c.type === "position" && c.position) {
-          return { ...c, position: unshiftPosition(c.id, c.position, shiftTable) };
+          let position = unshiftPosition(c.id, c.position, shiftTable);
+          const node = keepIoRowsWhileDragging ? nodesRef.current.find((n) => n.id === c.id) : undefined;
+          if (node) position = clampIoDrag(node, position, nodesRef.current);
+          return { ...c, position };
         }
         return c;
       });
       onNodesChangeRaw(remapped);
     },
-    [onNodesChangeRaw, shiftTable],
+    [onNodesChangeRaw, shiftTable, keepIoRowsWhileDragging],
   );
 
   // #53: Settings ▸ Appearance can hide scheduling-condition arrows, as
@@ -399,8 +447,86 @@ export function GraphCanvas() {
   }, [storeNodes, storeEdges, setNodes, setEdges, fitGraph, showProjectionLabels, showDimensions, schedulingArrows]);
 
   // When user draws a connection between nodes → create a projection
+  // #253: a connection dragged from a node's connector to anywhere on
+  // another node. What it connects is PsyNeuLink's answer, not a guess:
+  // one option is made at once, several ask which input, a refusal says why.
+  const [portChooser, setPortChooser] = useState<{
+    x: number; y: number; sender: string; receiver: string; receiverLabel: string; options: ConnectionOption[];
+  } | null>(null);
+  const connectFromDrag = useCallback(async (sourceId: string, targetId: string) => {
+    if (!filePath) return;
+    const node = (id: string) => nodesRef.current.find((n) => n.id === id);
+    const varOf = (id: string) => ((node(id)?.data as any)?.varName as string) || id;
+    const sender = varOf(sourceId), receiver = varOf(targetId);
+    const resp = await fetch("/api/model/connection-options", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_path: filePath, sender, receiver }),
+    });
+    if (!resp.ok) {
+      addNotification("error", "Couldn't work out what to connect.");
+      return;
+    }
+    const data = await resp.json();
+    if (data.refused) {
+      addNotification("info", data.refused);
+      return;
+    }
+    const options: ConnectionOption[] = data.options || [];
+    if (options.length === 1) {
+      void makeDraggedConnection(sender, options[0].receiver || receiver, options[0]);
+      return;
+    }
+    const el = document.querySelector(`.react-flow__node[data-id="${CSS.escape(targetId)}"]`);
+    const box = el?.getBoundingClientRect();
+    setPortChooser({
+      x: box ? box.left + box.width / 2 : 200, y: box ? box.bottom + 6 : 200,
+      sender, receiver, receiverLabel: ((node(targetId)?.data as any)?.label as string) || receiver, options,
+    });
+  }, [filePath, addNotification]);
+  const makeDraggedConnection = useCallback(async (sender: string, receiver: string, o: ConnectionOption) => {
+    if (!filePath) return;
+    const resp = await fetch("/api/model/load", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_path: filePath, ...modelLoadOptions() }),
+    });
+    const data = await resp.json();
+    // Into a collapsed composition, PsyNeuLink names the composition holding
+    // both ends; otherwise the model's first one, as before.
+    const compVarName = o.composition || data.model?.compositions?.[0]?.varName;
+    if (!compVarName) return;
+    createProjectionOnServer(
+      filePath, sender, receiver, compVarName, setSource, loadModelFromServer,
+      o.sender_port, o.receiver_port, o.type,
+    );
+  }, [filePath, setSource, loadModelFromServer]);
+
+  // #253: while a connection is dragged from a node's connector, PsyNeuLink
+  // says which nodes it could be dropped on; they light up, the rest dim.
+  const onConnectStart: OnConnectStart = useCallback((_e, { nodeId, handleId }) => {
+    if (!filePath || !nodeId || handleId !== CONNECT_HANDLE) return;
+    const n = nodesRef.current.find((x) => x.id === nodeId);
+    const sender = ((n?.data as any)?.varName as string) || nodeId;
+    useConnectTargets.getState().start(sender);
+    void fetch("/api/model/connection-targets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_path: filePath, sender }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data?.targets) useConnectTargets.getState().answer(sender, data.targets); })
+      .catch(() => {});
+  }, [filePath]);
+  const onConnectEnd = useCallback(() => useConnectTargets.getState().clear(), []);
+
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
+      if (connection.source && connection.target
+          && (connection.sourceHandle === CONNECT_HANDLE || connection.targetHandle === NODE_TARGET_HANDLE)) {
+        void connectFromDrag(connection.source, connection.target);
+        return;
+      }
       // Optimistic: add edge locally
       setEdges((eds) => addEdge(connection, eds));
 
@@ -413,7 +539,7 @@ export function GraphCanvas() {
           const resp = await fetch("/api/model/load", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
+            body: JSON.stringify({ file_path: filePath, ...modelLoadOptions() }),
           });
           const data = await resp.json();
           const compVarName = data.model?.compositions?.[0]?.varName;
@@ -433,7 +559,7 @@ export function GraphCanvas() {
         loadAndConnect();
       }
     },
-    [filePath, setEdges, setSource, loadModelFromServer]
+    [filePath, setEdges, setSource, loadModelFromServer, connectFromDrag]
   );
 
   const setSelectedEdgeId = useModelStore((s) => s.setSelectedEdgeId);
@@ -442,8 +568,70 @@ export function GraphCanvas() {
   const pendingProjectionGesture = useModelStore((s) => s.pendingProjectionGesture);
   const setPendingProjectionGesture = useModelStore((s) => s.setPendingProjectionGesture);
 
+  // #252: a component picked up in the panel goes where the graph is clicked.
+  const armed = usePaletteStore((s) => s.armed);
+  const placeArmed = useCallback((e: React.MouseEvent | MouseEvent, onNode?: { id: string; type?: string; parentId?: string }): boolean => {
+    const pick = usePaletteStore.getState().armed;
+    if (!pick || !filePath) return false;
+    const at = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    // Inside a composition, it goes into that composition: the frame of the
+    // node clicked, or else the innermost open frame around the point. (Open
+    // frames are click-through, #250, so a click inside one reaches the canvas
+    // or an arrow, not the frame.) Its position is then kept relative to the
+    // frame, as every node inside one is.
+    const frameAt = (): string | undefined => {
+      let best: { id: string; area: number } | undefined;
+      for (const n of nodesRef.current) {
+        if (n.type !== "compositionNode") continue;
+        const inode = getInternalNode(n.id);
+        const w = inode?.measured?.width, h = inode?.measured?.height;
+        if (!inode || !w || !h) continue;
+        const { x, y } = inode.internals.positionAbsolute;
+        if (at.x < x || at.x > x + w || at.y < y || at.y > y + h) continue;
+        if (!best || w * h < best.area) best = { id: n.id, area: w * h };
+      }
+      return best?.id;
+    };
+    const frameId =
+      onNode?.type === "compositionNode" ? onNode.id : onNode?.parentId ?? frameAt();
+    const frame = frameId ? getInternalNode(frameId) : undefined;
+    // A frame's id can carry the view's prefix ("cluster::inner"); the file
+    // knows the composition by its own name.
+    const composition = (frame?.data as { varName?: string } | undefined)?.varName?.replace(/^cluster::/, "");
+    const origin = composition ? frame!.internals.positionAbsolute : null;
+    addNodeToModel(
+      filePath, pick.type, pick.defaults, setSource, loadModelFromServer, addNotification,
+      origin ? { x: at.x - origin.x, y: at.y - origin.y } : at,
+      composition,
+    );
+    usePaletteStore.getState().addRecentlyUsed(pick.type);
+    // Option (Alt) keeps it picked up, for putting down several.
+    if (!e.altKey) usePaletteStore.getState().setArmed(null);
+    return true;
+  }, [filePath, setSource, loadModelFromServer, addNotification, screenToFlowPosition, getInternalNode]);
+  useEffect(() => {
+    if (!armed) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") usePaletteStore.getState().setArmed(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [armed]);
+  // Anything added with no point chosen goes in the middle of what's showing.
+  useEffect(() => {
+    registerVisibleCentre(() => {
+      const pane = containerRef.current?.querySelector(".react-flow__pane")?.getBoundingClientRect();
+      if (!pane || pane.width === 0) return null;
+      return screenToFlowPosition({ x: pane.left + pane.width / 2, y: pane.top + pane.height / 2 });
+    });
+    return () => registerVisibleCentre(null);
+  }, [screenToFlowPosition]);
+
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: any) => {
+      // #252: a component picked up goes where you click, on a node too, and
+      // into the composition clicked inside.
+      if (placeArmed(_, node)) return;
       // If a projection gesture is armed (#311), a projection was dropped onto
       // a receiver node and this click names the sender. Clicking the receiver
       // itself cancels (no self-projection from this gesture).
@@ -456,7 +644,7 @@ export function GraphCanvas() {
           const resp = await fetch("/api/model/load", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ file_path: filePath, ...showGraphLoadRequest() }),
+            body: JSON.stringify({ file_path: filePath, ...modelLoadOptions() }),
           });
           const data = await resp.json();
           const compVarName = data.model?.compositions?.[0]?.varName;
@@ -504,9 +692,15 @@ export function GraphCanvas() {
         }
         return;
       }
+      // #261: a plain click on a node inside a multi-selection selects just
+      // that node, as in Finder. The graph library keeps the group (so it can
+      // be dragged together); a click, not a drag, is the user picking one.
+      if (!(_.metaKey || _.ctrlKey || _.shiftKey) && nodesRef.current.some((n) => n.selected && n.id !== node.id)) {
+        setNodes((ns) => ns.map((n) => (n.selected === (n.id === node.id) ? n : { ...n, selected: n.id === node.id })));
+      }
       setSelectedNodeId(node.id);
     },
-    [setSelectedNodeId, setPendingConditionGesture, setPendingProjectionGesture, filePath, setSource, loadModelFromServer]
+    [setSelectedNodeId, setPendingConditionGesture, setPendingProjectionGesture, filePath, setSource, loadModelFromServer, setNodes, placeArmed]
   );
 
   // Esc cancels an armed condition gesture.
@@ -532,35 +726,106 @@ export function GraphCanvas() {
   const onNodeContextMenu = useCallback(
     (e: React.MouseEvent, node: any) => {
       e.preventDefault();
+      // #261: a secondary click on an unselected node makes it the selection,
+      // so the menu is about what is selected; inside a selection, the
+      // selection stays.
+      if (!node.selected) {
+        setNodes((ns) => ns.map((n) => (n.selected === (n.id === node.id) ? n : { ...n, selected: n.id === node.id })));
+        setEdges((es) => es.map((ed) => (ed.selected ? { ...ed, selected: false } : ed)));
+        setSelectedNodeId(node.id);
+      }
+      setGraphMenu(null);
       const label = (node.data as any)?.label || node.id;
-      setContextMenu({ nodeId: node.id, nodeLabel: label, nodeType: node.type || "", x: e.clientX, y: e.clientY });
+      // Inside a multi-selection, the menu acts on all of it (#261).
+      const selected = node.selected ? nodesRef.current.filter((n) => n.selected) : [];
+      const selection =
+        selected.length > 1
+          ? selected.map((n) => ({ id: n.id, label: (n.data as any)?.label || n.id, varName: (n.data as any)?.varName }))
+          : undefined;
+      setContextMenu({ nodeId: node.id, nodeLabel: label, nodeType: node.type || "", x: e.clientX, y: e.clientY, selection });
     },
-    []
+    [setNodes, setEdges, setSelectedNodeId]
   );
+
+  // #261: an arrow's menu and the canvas's, so everything on the graph has one.
+  const [graphMenu, setGraphMenu] = useState<
+    | {
+        kind: "edge"; edgeId: string; source: string; target: string; name: string; x: number; y: number;
+        /** A projection's variable, when the file declares it (#261: Rename, Delete). */
+        varName?: string;
+        /** A scheduling arrow's condition (#261: Edit condition, Delete). */
+        gsc?: { owner: string; gscType: string; target: string };
+      }
+    | { kind: "pane"; x: number; y: number }
+    | null
+  >(null);
+  const onEdgeContextMenu = useCallback(
+    (e: React.MouseEvent, edge: any) => {
+      e.preventDefault();
+      setContextMenu(null);
+      setSelectedEdgeId(edge.id);
+      const name = typeof edge.data?.label === "string" ? edge.data.label : (typeof edge.label === "string" ? edge.label : edge.id);
+      const d = edge.data ?? {};
+      const gsc = edge.type === "gscEdge" && d.owner && d.gscType && d.targetNode
+        ? { owner: d.owner, gscType: d.gscType, target: d.targetNode }
+        : undefined;
+      const varName = edge.type === "projectionEdge" && d.varName && d.varName in useModelStore.getState().lineMap ? d.varName : undefined;
+      setGraphMenu({ kind: "edge", edgeId: edge.id, source: edge.source, target: edge.target, name, x: e.clientX, y: e.clientY, varName, gsc });
+    },
+    [],
+  );
+  // #261: a scheduling arrow's label asks for the arrow's menu (GSCEdge).
+  useEffect(() => {
+    const open = (ev: Event) => {
+      const { edgeId, x, y } = (ev as CustomEvent<{ edgeId: string; x: number; y: number }>).detail;
+      const edge = useModelStore.getState().edges.find((ed) => ed.id === edgeId);
+      if (edge) onEdgeContextMenu({ preventDefault() {}, clientX: x, clientY: y } as React.MouseEvent, edge);
+    };
+    window.addEventListener(EDGE_MENU_EVENT, open);
+    return () => window.removeEventListener(EDGE_MENU_EVENT, open);
+  }, [onEdgeContextMenu]);
+  const onPaneContextMenu = useCallback((e: React.MouseEvent | MouseEvent) => {
+    // Never the web view's own menu (Reload, Inspect Element) on the graph.
+    e.preventDefault();
+    setContextMenu(null);
+    setGraphMenu({ kind: "pane", x: e.clientX, y: e.clientY });
+  }, []);
+  const selectOnly = useCallback((nodeIds: string[] | "all") => {
+    setNodes((ns) => ns.map((n) => ({ ...n, selected: nodeIds === "all" || nodeIds.includes(n.id) })));
+    setEdges((es) => es.map((ed) => (ed.selected ? { ...ed, selected: false } : ed)));
+    if (nodeIds !== "all" && nodeIds.length === 1) setSelectedNodeId(nodeIds[0]);
+  }, [setNodes, setEdges, setSelectedNodeId]);
 
   const onEdgeClick = useCallback(
-    (_: React.MouseEvent, edge: any) => {
+    (e: React.MouseEvent, edge: any) => {
+      // #252: while placing a component, a click on an arrow puts it down
+      // there, as on a node or the canvas; it doesn't select the arrow.
+      if (placeArmed(e)) return;
       setSelectedEdgeId(edge.id);
     },
-    [setSelectedEdgeId]
+    [setSelectedEdgeId, placeArmed]
   );
 
-  const onPaneClick = useCallback(() => {
+  const onPaneClick = useCallback((e: React.MouseEvent) => {
+    if (placeArmed(e)) return;
     setSelectedNodeId(null);
     setSelectedEdgeId(null);
     setContextMenu(null);
     setPendingConditionGesture(null);
     setPendingProjectionGesture(null);
-  }, [setSelectedNodeId, setSelectedEdgeId, setPendingConditionGesture, setPendingProjectionGesture]);
+  }, [placeArmed, setSelectedNodeId, setSelectedEdgeId, setPendingConditionGesture, setPendingProjectionGesture]);
 
   // Resize group nodes after drag completes (not during — that blocks dragging)
   const onNodeDrag: OnNodeDrag = useCallback(() => {}, []);
 
   const onNodeDragStop: OnNodeDrag = useCallback(
-    (_, node) => {
-      // Final resize + save layout
-      const currentNodes = [...nodesRef.current];
-      autoSizeGroups(currentNodes);
+    (_, node, dragged) => {
+      // Final resize + save layout. Copies, so React Flow draws what moves below.
+      const currentNodes = nodesRef.current.map((n) => ({ ...n }));
+      // #208: an open frame never covers an outer node, whichever of them was
+      // dragged. Moved now and saved below, or the next rebuild would do it.
+      if (usesFlatPositions()) autoSizeGroups(currentNodes);
+      else fitFramesAndMakeRoom(currentNodes, new Set(dragged.map((n) => n.id)));
       setNodes(currentNodes);
 
       // Record position change for undo
@@ -574,23 +839,108 @@ export function GraphCanvas() {
     [filePath, setNodes]
   );
 
-  // Delete selected node with Backspace/Delete key
+  // #164: an arrow bent, an end moved, a route reset. One History step, and
+  // saved on its own: the layout file gets the arrow's route, with the nodes
+  // where they are on screen (in Auto the reshape has just made the layout
+  // Custom, and these are the places it keeps). Steps take the canvas's
+  // nodes: the store's don't follow a drag, nor always a fit after a load.
+  useEffect(
+    () =>
+      registerArrowShapeCommit({
+        before: () =>
+          recordAction("Positions before reshaping an arrow", {
+            edit: false,
+            moves: true,
+            nodes: nodesRef.current.map((n) => ({ ...n })),
+          }),
+        done: (description, fromAuto) => {
+          const onScreen = nodesRef.current.map((n) => ({ ...n }));
+          recordAction(description, { reshapes: true, fromAuto, nodes: onScreen });
+          if (filePath) saveLayoutDebounced(filePath, onScreen);
+        },
+      }),
+    [filePath],
+  );
+
+  // #219: the Layout menu's Tidy inputs and outputs. The canvas holds the
+  // positions as dragged, so it tidies them here. Recorded as two History
+  // steps at most: the positions before (only if they differ from the step
+  // already there, as after a drag, which the model store hasn't caught up
+  // with) and the tidied ones, so one Undo puts them back.
+  useEffect(
+    () =>
+      registerCanvasTidy({
+        nodes: () => nodesRef.current,
+        tidy: () => {
+          const before = nodesRef.current.map((n) => ({ ...n }));
+          const { nodes: tidied, moved } = tidyIoRows(before);
+          if (moved.length === 0) return;
+          const after = tidied.map((n) => ({ ...n }));
+          if (usesFlatPositions()) autoSizeGroups(after);
+          else fitFramesAndMakeRoom(after);
+          const store = useModelStore.getState();
+          store.setNodes(before);
+          recordAction("Positions before tidying", { edit: false, moves: true });
+          store.setNodes(after);
+          recordAction("Tidied inputs and outputs", { moves: true });
+          if (filePath) saveLayoutDebounced(filePath, after);
+        },
+      }),
+    [filePath],
+  );
+
+  // Delete the selected nodes with the Delete shortcut (Backspace; #261: all of them)
   // Deleting the selection is registered as a command (#1112): the shortcut
   // registry owns the key, this owns what the key does. React Flow's own
   // onKeyDown is no longer used for it, so the binding is in one place and can
   // be shown — or rebound — from Settings.
+  // #261: delete an arrow, from its menu or the Delete shortcut.
+  const deleteEdge = useCallback(
+    async (m: { name: string; varName?: string; gsc?: { owner: string; gscType: string; target: string } }) => {
+      const what = m.gsc ? `the ${m.gsc.gscType} condition on ${m.gsc.owner}` : `projection "${m.name}"`;
+      if (!confirm(`Delete ${what}?`)) return;
+      const err = m.gsc
+        ? await deleteSchedulingCondition(m.gsc.owner, m.gsc.gscType, m.gsc.target)
+        : m.varName
+          ? await deleteProjection(m.varName, m.name)
+          : null;
+      if (err) addNotification("error", `Couldn't delete ${what}: ${err}`);
+    },
+    [addNotification],
+  );
+
+  // #261: the whole selection, when several nodes are selected.
+  const deleteNodes = useCallback(
+    (varNames: string[]) => {
+      if (!filePath || varNames.length === 0) return;
+      const question =
+        varNames.length === 1
+          ? `Delete node "${varNames[0]}"?`
+          : `Delete ${varNames.length} nodes (${varNames.join(", ")})?`;
+      if (confirm(question)) {
+        void deleteNodeOnServer(filePath, varNames, setSource, loadModelFromServer, addNotification);
+      }
+    },
+    [filePath, setSource, loadModelFromServer, addNotification],
+  );
   const deleteSelectedNode = useCallback(() => {
-    const selectedNodeId = useModelStore.getState().selectedNodeId;
-    if (!selectedNodeId || !filePath) return;
-
-    const node = nodes.find((n) => n.id === selectedNodeId);
-    if (!node) return;
-
-    const varName = (node.data as unknown as MechanismData).varName;
-    if (confirm(`Delete node "${varName}"?`)) {
-      deleteNodeOnServer(filePath, varName, setSource, loadModelFromServer, addNotification);
+    const { selectedNodeId, selectedEdgeId } = useModelStore.getState();
+    // #261: with an arrow selected and no node, the shortcut deletes the arrow.
+    if (!selectedNodeId && selectedEdgeId) {
+      const edge = edges.find((ed) => ed.id === selectedEdgeId);
+      const d = (edge?.data ?? {}) as { label?: string; varName?: string; owner?: string; gscType?: string; targetNode?: string };
+      if (!edge) return;
+      const gsc = edge.type === "gscEdge" && d.owner && d.gscType && d.targetNode
+        ? { owner: d.owner, gscType: d.gscType, target: d.targetNode }
+        : undefined;
+      const varName = edge.type === "projectionEdge" && d.varName && d.varName in useModelStore.getState().lineMap ? d.varName : undefined;
+      if (gsc || varName) void deleteEdge({ name: d.label ?? edge.id, varName, gsc });
+      return;
     }
-  }, [filePath, nodes, setSource, loadModelFromServer, addNotification]);
+    const many = nodes.filter((n) => n.selected && (n.data as unknown as MechanismData)?.varName);
+    const chosen = many.length > 1 ? many : nodes.filter((n) => n.id === selectedNodeId);
+    deleteNodes(chosen.map((n) => (n.data as unknown as MechanismData).varName).filter(Boolean));
+  }, [nodes, edges, deleteEdge, deleteNodes]);
 
   useEffect(
     () => registerCommand("graph.deleteSelection", deleteSelectedNode),
@@ -606,7 +956,7 @@ export function GraphCanvas() {
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      const data = e.dataTransfer.getData("application/psynewview-node");
+      const data = e.dataTransfer.getData("application/psyneuview-node");
       if (!data || !filePath) return;
       const { type: mechType, defaults } = JSON.parse(data);
 
@@ -698,7 +1048,8 @@ export function GraphCanvas() {
           // (arrow, hand, crosshair or ring, #40) at the chosen size, its
           // pressed look, the closed hand for a drag, and the pointer over a
           // control point (never the hand).
-          className={graphPointerClass(pointer)}
+          // #252: a crosshair while a component waits to be put down.
+          className={graphPointerClass(pointer) + (armed ? " graph-placing" : "")}
           style={{
             flex: 1,
             minWidth: 0,
@@ -736,6 +1087,38 @@ export function GraphCanvas() {
               wait for, then it runs when that node finishes. <span style={{ opacity: 0.8 }}>Esc to cancel.</span>
             </div>
           )}
+          {armed && (
+            <div
+              data-testid="place-component-hint"
+              style={{
+                position: "absolute",
+                top: 12,
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 20,
+                background: "var(--pnv-primary)",
+                color: "var(--pnv-on-primary)",
+                padding: "6px 14px",
+                borderRadius: 6,
+                fontSize: "var(--pnv-fs-13)",
+                boxShadow: "var(--pnv-shadow-banner)",
+                pointerEvents: "none",
+              }}
+            >
+              Click where the new <b>{armed.label}</b> should go.{" "}
+              <span style={{ opacity: 0.8 }}>Option-click to put down several. Esc to cancel.</span>
+            </div>
+          )}
+          {portChooser && (
+            <PortChooser
+              x={portChooser.x}
+              y={portChooser.y}
+              receiver={portChooser.receiverLabel}
+              options={portChooser.options}
+              onPick={(o) => { void makeDraggedConnection(portChooser.sender, o.receiver || portChooser.receiver, o); setPortChooser(null); }}
+              onClose={() => setPortChooser(null)}
+            />
+          )}
           {pendingProjectionGesture && (
             <div
               style={{
@@ -770,12 +1153,19 @@ export function GraphCanvas() {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
-              onNodeClick={onNodeClick}
+              onConnectStart={onConnectStart}
+              onConnectEnd={onConnectEnd}
+              onNodeClick={(e, n) => (isMacSecondaryClick(e) ? onNodeContextMenu(e, n) : onNodeClick(e, n))}
               onNodeContextMenu={onNodeContextMenu}
-              onEdgeClick={onEdgeClick}
+              onEdgeContextMenu={onEdgeContextMenu}
+              onPaneContextMenu={onPaneContextMenu}
+              // #261: Shift-click extends the selection as Command-click does
+              // (Ctrl-click off the Mac); Shift-drag still draws a box.
+              multiSelectionKeyCode={MULTI_SELECT_KEYS}
+              onEdgeClick={(e, ed) => (isMacSecondaryClick(e) ? onEdgeContextMenu(e, ed) : onEdgeClick(e, ed))}
               onNodeDrag={onNodeDrag}
               onNodeDragStop={onNodeDragStop}
-              onPaneClick={onPaneClick}
+              onPaneClick={(e) => (isMacSecondaryClick(e) ? onPaneContextMenu(e) : onPaneClick(e))}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               nodesDraggable={!autoLayout}
@@ -783,25 +1173,67 @@ export function GraphCanvas() {
               // a large model (EGO) didn't fit a normal-size canvas.
               minZoom={0.02}
               fitView
+              // #290: no library credit in the canvas corner; React Flow is
+              // credited in Settings ▸ About instead, as its licence allows.
+              proOptions={{ hideAttribution: true }}
             >
               <Background />
               {/* #52: our own Fit, framing edges too. The built-in one queues a
                   node-only fit that would land after ours, so it is hidden;
                   CSS keeps this button in its place above the lock. */}
               <Controls showFitView={false}>
+                {/* #289: the corner-brackets icon by default (it needs no
+                    translation), or the word "Fit" (Settings ▸ Appearance ▸
+                    Canvas controls). The same 26px square as the buttons
+                    above and below it either way. */}
                 <ControlButton
                   className="react-flow__controls-fitview pnv-controls-fit"
                   onClick={fitGraph}
-                  title="Fit view"
-                  aria-label="Fit view"
+                  title={`Fit the graph to the window${fitKeys ? ` (${fitKeys})` : ""}`}
+                  aria-label="Fit the graph to the window"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 30">
-                    <path d="M3.692 4.63c0-.53.4-.938.939-.938h5.215V0H4.708C2.13 0 0 2.054 0 4.63v5.216h3.692V4.631zM27.354 0h-5.2v3.692h5.17c.53 0 .984.4.984.939v5.215H32V4.631A4.624 4.624 0 0027.354 0zm.954 24.83c0 .532-.4.94-.939.94h-5.215v3.768h5.215c2.577 0 4.631-2.13 4.631-4.707v-5.139h-3.692v5.139zm-23.677.94c-.531 0-.939-.4-.939-.94v-5.138H0v5.139c0 2.577 2.13 4.707 4.708 4.707h5.138V25.77H4.631z" />
-                  </svg>
+                  {fitButtonStyle === "word" ? (
+                    <span className="pnv-controls-fit-label">Fit</span>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 30">
+                      <path d="M3.692 4.63c0-.53.4-.938.939-.938h5.215V0H4.708C2.13 0 0 2.054 0 4.63v5.216h3.692V4.631zM27.354 0h-5.2v3.692h5.17c.53 0 .984.4.984.939v5.215H32V4.631A4.624 4.624 0 0027.354 0zm.954 24.83c0 .532-.4.94-.939.94h-5.215v3.768h5.215c2.577 0 4.631-2.13 4.631-4.707v-5.139h-3.692v5.139zm-23.677.94c-.531 0-.939-.4-.939-.94v-5.138H0v5.139c0 2.577 2.13 4.707 4.708 4.707h5.138V25.77H4.631z" />
+                    </svg>
+                  )}
                 </ControlButton>
               </Controls>
               {/* TODO: Re-add MiniMap as a toggleable overlay with repositioning support */}
             </ReactFlow>
+          )}
+          {graphMenu?.kind === "edge" && (
+            <EdgeContextMenu
+              x={graphMenu.x}
+              y={graphMenu.y}
+              shaped={(useEdgeAttach.getState().waypoints[graphMenu.edgeId]?.length ?? 0) > 0}
+              onSelectSender={() => { selectOnly([graphMenu.source]); setGraphMenu(null); }}
+              onSelectReceiver={() => { selectOnly([graphMenu.target]); setGraphMenu(null); }}
+              onResetShape={() => {
+                // The same as double-clicking a shaped arrow (#164): one step.
+                startShapingArrow();
+                useEdgeAttach.getState().clearWaypoints(graphMenu.edgeId);
+                arrowShaped(reshapeDescription(graphMenu.name, "reset"));
+                setGraphMenu(null);
+              }}
+              name={graphMenu.name}
+              onRename={graphMenu.varName ? (nn) => renameProjection(graphMenu.varName!, graphMenu.name, nn) : undefined}
+              onEditCondition={graphMenu.gsc ? () => { setSelectedEdgeId(graphMenu.edgeId); setGraphMenu(null); } : undefined}
+              onDelete={graphMenu.varName || graphMenu.gsc ? () => { const m = graphMenu; setGraphMenu(null); deleteEdge(m); } : undefined}
+              onClose={() => setGraphMenu(null)}
+            />
+          )}
+          {graphMenu?.kind === "pane" && (
+            <CanvasContextMenu
+              x={graphMenu.x}
+              y={graphMenu.y}
+              onSelectAll={() => { selectOnly("all"); setGraphMenu(null); }}
+              onFit={() => { fitGraph(); setGraphMenu(null); }}
+              onShowComponents={() => { usePaletteStore.getState().setOpen(true); setGraphMenu(null); }}
+              onClose={() => setGraphMenu(null)}
+            />
           )}
           {contextMenu && (
             <NodeContextMenu
@@ -810,6 +1242,12 @@ export function GraphCanvas() {
               nodeType={contextMenu.nodeType}
               x={contextMenu.x}
               y={contextMenu.y}
+              selection={contextMenu.selection}
+              onDeleteNodes={deleteNodes}
+              onSelectOnly={(id) => {
+                setNodes((ns) => ns.map((n) => (n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })));
+                setSelectedNodeId(id);
+              }}
               onClose={() => setContextMenu(null)}
             />
           )}

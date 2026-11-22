@@ -1,5 +1,6 @@
 """PsyNeuView backend server."""
 
+from app.services.env_names import env
 import logging
 import os
 import threading
@@ -44,7 +45,7 @@ def _configure_app_logging() -> None:
     tests don't stack duplicate handlers.
 
     Level is INFO by default (``[perf]`` lines are INFO); override with
-    ``PSYNEWVIEW_LOG_LEVEL`` (e.g. ``WARNING`` to quiet, ``DEBUG`` to trace).
+    ``PSYNEUVIEW_LOG_LEVEL`` (e.g. ``WARNING`` to quiet, ``DEBUG`` to trace).
     """
     app_logger = logging.getLogger("app")
     if not any(getattr(h, "_psyneuview", False) for h in app_logger.handlers):
@@ -52,7 +53,7 @@ def _configure_app_logging() -> None:
         handler.setFormatter(logging.Formatter("%(levelname)s:     %(name)s: %(message)s"))
         handler._psyneuview = True  # type: ignore[attr-defined]
         app_logger.addHandler(handler)
-    app_logger.setLevel(os.environ.get("PSYNEWVIEW_LOG_LEVEL", "INFO").upper())
+    app_logger.setLevel(env("LOG_LEVEL", "INFO").upper())
     # Don't also bubble to the root logger (would double-print under some
     # uvicorn configs); this handler is the single sink for app.* logs.
     app_logger.propagate = False
@@ -244,10 +245,10 @@ async def _unhandled_error(request, exc: Exception):
 
 # Test-only endpoints (E2E harness — #147). Gated by an env var so they
 # never ship in production builds.
-if os.environ.get("PSYNEWVIEW_TEST_MODE") == "1":
+if env("TEST_MODE") == "1":
     from app.api.test_routes import router as test_router
     app.include_router(test_router, prefix="/api")
-    logger.warning("PSYNEWVIEW_TEST_MODE=1 — /api/test/reset is exposed")
+    logger.warning("PSYNEUVIEW_TEST_MODE=1 — /api/test/reset is exposed")
 
 
 @app.websocket("/ws")

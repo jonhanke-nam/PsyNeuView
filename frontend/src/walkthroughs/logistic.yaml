@@ -26,6 +26,7 @@ steps:
       Start a new model. It comes with an input node feeding an output node.
     done:
       nodeExists: output_node
+    opens: new model
     act:
       newModel: logistic_demo
 

@@ -4,9 +4,9 @@
  * The walkthroughs were only ever tested on a fresh app with the right model
  * already loaded. A learner who picked "Selecting nodes" from the menu with
  * another model open got an instruction pointing at a node that wasn't there,
- * and nothing to do. Now the walkthrough opens its model, or, when that would
- * discard unsaved work and the learner declines, says what's missing and
- * offers to open it.
+ * and nothing to do. Now the walkthrough opens its model, or, when it can't,
+ * says what's missing and offers to open it. Replacing unsaved work offers to
+ * save it first (#172).
  */
 import { mutatingTest as test, expect, canvasNode } from "../test-base";
 import { loadWalkthrough } from "../tourDriver";
@@ -29,6 +29,17 @@ async function startDemo(page: import("@playwright/test").Page) {
   await expect(page.getByTestId("tour-bar")).toBeVisible();
 }
 
+// With unsaved work open, starting one asks where (#172): replace it here,
+// then save the work first or not.
+async function startDemoHere(page: import("@playwright/test").Page, unsaved: "save" | "discard") {
+  await page.getByTestId("walkthrough-menu").click();
+  await page.getByTestId("walkthrough-demo").click();
+  await page.getByTestId("tutorial-choice-here").click();
+  await expect(page.getByTestId("tutorial-choice")).toContainText("Save your changes first?");
+  await page.getByTestId(unsaved === "save" ? "tutorial-choice-save" : "tutorial-choice-discard").click();
+  await expect(page.getByTestId("tour-bar")).toBeVisible();
+}
+
 test.describe("A walkthrough started with another model open", () => {
   test("opens its own model", async ({ page }) => {
     await openOther(page);
@@ -46,36 +57,21 @@ test.describe("A walkthrough started with another model open", () => {
     await expect(page.getByTestId("tour-missing-anchor")).toHaveCount(0);
   });
 
-  test("with unsaved changes kept, says what's missing and offers to open it", async ({ page }) => {
+  test("with unsaved changes, Replace saves them first when asked", async ({ page }) => {
     await openOther(page);
     // Unsaved changes: typed, not saved.
     await page.locator(".cm-content").first().click();
     await page.keyboard.press("End");
     await page.keyboard.type("  # an edit");
+    await expect(page.getByTestId("unsaved-dot")).toBeVisible();
 
-    page.once("dialog", (d) => d.dismiss()); // keep my changes
-    await startDemo(page);
-    const missing = page.getByTestId("tour-missing-anchor");
-    await expect(missing).toBeVisible();
-    await expect(missing).toContainText("color_hidden");
-    await expect(missing).toContainText(demo.model!);
-    // #1393: shown as a red, boxed warning with a sign, not as more instruction.
-    const warning = page.getByTestId("tour-warning");
-    await expect(page.getByTestId("tour-warning-icon")).toHaveText("⚠");
-    const look = await warning.evaluate((el) => {
-      const cs = getComputedStyle(el);
-      return { border: cs.borderTopStyle, borderColor: cs.borderTopColor, color: cs.color, bg: cs.backgroundColor };
+    // No "unsaved changes will be lost" prompt follows the save.
+    page.on("dialog", (d) => {
+      throw new Error(`unexpected prompt: ${d.message()}`);
     });
-    expect(look.border).toBe("solid");
-    expect(look.borderColor).toBe(look.color);
-    expect(look.bg).not.toBe("rgba(0, 0, 0, 0)");
-
-    page.once("dialog", (d) => d.accept()); // now open it
-    await page.getByTestId("tour-open-model").click();
-    // Present, not necessarily on screen: a zoom saved with the model can put
-    // it outside the viewport, where React Flow hides it.
+    await startDemoHere(page, "save");
     await expect(canvasNode(page, "color_hidden")).toHaveCount(1, { timeout: 30000 });
-    await expect(missing).toHaveCount(0);
+    await expect(page.getByTestId("tour-missing-anchor")).toHaveCount(0);
   });
 
   test("a slow open isn't overwritten by the old model's pending preview", async ({ page }) => {
@@ -98,8 +94,7 @@ test.describe("A walkthrough started with another model open", () => {
     await page.keyboard.press("End");
     await page.keyboard.type("  # an edit");
 
-    page.once("dialog", (d) => d.accept()); // discard my edit, open the model
-    await startDemo(page);
+    await startDemoHere(page, "discard"); // discard my edit, open the model
     await expect(canvasNode(page, "color_hidden")).toBeVisible({ timeout: 30000 });
     // Past the moment the stale preview would have answered.
     await page.waitForTimeout(5000);
@@ -115,7 +110,20 @@ test.describe("A walkthrough started with another model open", () => {
     await page.goto("/");
     await startDemo(page);
 
-    await expect(page.getByTestId("tour-missing-anchor")).toBeVisible();
+    const missing = page.getByTestId("tour-missing-anchor");
+    await expect(missing).toBeVisible();
+    await expect(missing).toContainText("color_hidden");
+    await expect(missing).toContainText(demo.model!);
+    // #1393: shown as a red, boxed warning with a sign, not as more instruction.
+    const warning = page.getByTestId("tour-warning");
+    await expect(page.getByTestId("tour-warning-icon")).toHaveText("⚠");
+    const look = await warning.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { border: cs.borderTopStyle, borderColor: cs.borderTopColor, color: cs.color, bg: cs.backgroundColor };
+    });
+    expect(look.border).toBe("solid");
+    expect(look.borderColor).toBe(look.color);
+    expect(look.bg).not.toBe("rgba(0, 0, 0, 0)");
     await expect(page.getByTestId("tour-open-failed")).toHaveCount(0);
     await page.getByTestId("tour-open-model").click();
     const failed = page.getByTestId("tour-open-failed");

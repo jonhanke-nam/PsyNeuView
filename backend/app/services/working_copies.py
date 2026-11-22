@@ -3,7 +3,7 @@
 Opening a Reference Model, a Demo, or a PsyNeuLink Example from a managed
 install copies the bundled file to a **working copy**, which is what gets
 edited and saved; the bundled original is never written. Until #1319 that
-copy went in ``PSYNEWVIEW_WORKING_DIR`` or, when unset, the running
+copy went in ``PSYNEUVIEW_WORKING_DIR`` or, when unset, the running
 PsyNeuView's ``backend/`` folder. The Mac app runs the backend from
 ``~/Library/Application Support/PsyNeuView/psyneuview-<version>/backend``, a
 folder that is replaced when the app moves to a new included version — so an
@@ -12,7 +12,7 @@ update.
 
 Now there is one answer, :func:`working_copies_dir`:
 
-- ``PSYNEWVIEW_WORKING_DIR`` when set (the e2e harness, developer setups);
+- ``PSYNEUVIEW_WORKING_DIR`` when set (the e2e harness, developer setups);
 - otherwise ``~/.psyneuview/working-copies``, a per-user folder outside every
   install, created on first use.
 
@@ -36,12 +36,13 @@ folder. It follows the folder-move policy of :mod:`project_folder`:
   file so Report a Problem can include it;
 - idempotent: a second run finds nothing and changes nothing.
 
-Skipped entirely when ``PSYNEWVIEW_WORKING_DIR`` is set (the environment
+Skipped entirely when ``PSYNEUVIEW_WORKING_DIR`` is set (the environment
 decides, and there is no "old place" to look in) and in container or hosted
 deployments (no per-user home to keep things in).
 """
 
 from __future__ import annotations
+from app.services import env_names
 
 import filecmp
 import logging
@@ -57,7 +58,7 @@ from app.services.app_config import app_config_path
 
 logger = logging.getLogger(__name__)
 
-WORKING_DIR_ENV = "PSYNEWVIEW_WORKING_DIR"
+WORKING_DIR_ENV = "PSYNEUVIEW_WORKING_DIR"  # PSYNEUVIEW_WORKING_DIR still read (#258)
 MIGRATION_KEY = "working_copies_last_migration"
 
 #: The file the Mac app writes at the root of an unpacked included PsyNeuView
@@ -78,8 +79,8 @@ _INSTALL_ROOT = _BACKEND_DIR.parent
 
 
 def fixed_by_env() -> bool:
-    """Whether ``PSYNEWVIEW_WORKING_DIR`` decides the folder."""
-    return bool(os.environ.get(WORKING_DIR_ENV))
+    """Whether ``PSYNEUVIEW_WORKING_DIR`` decides the folder."""
+    return bool(env_names.env("WORKING_DIR"))
 
 
 def default_working_copies_dir() -> Path:
@@ -90,10 +91,10 @@ def default_working_copies_dir() -> Path:
 def working_copies_dir(*, create: bool = True) -> Path:
     """Where working copies of included models are written and read back.
 
-    ``PSYNEWVIEW_WORKING_DIR`` when set; otherwise the per-user default.
+    ``PSYNEUVIEW_WORKING_DIR`` when set; otherwise the per-user default.
     Created unless ``create`` is False (a caller that only reports the path).
     """
-    env = os.environ.get(WORKING_DIR_ENV)
+    env = env_names.env("WORKING_DIR")
     d = Path(env).expanduser() if env else default_working_copies_dir()
     d = d.resolve() if env else d
     if create:

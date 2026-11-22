@@ -4,3 +4,14 @@ Copyright 2026 The PsyNeuView Authors
 This product includes software developed as part of the PsyNeuView project,
 a graphical interface for PsyNeuLink (https://github.com/PrincetonUniversity/PsyNeuLink).
 PsyNeuLink is licensed separately under the Apache License, Version 2.0.
+
+The graph canvas is drawn with React Flow (https://reactflow.dev,
+https://github.com/xyflow/xyflow), MIT License, Copyright (c) webkid GmbH.
+
+Icons adapted from MetaCell's PsyNeuLinkView, used with permission
+(https://github.com/MetaCell/PsyNeuLinkView). The Components panel's icons in
+frontend/src/assets/component-icons/ marked `source: metacell` in icons.yaml
+are adapted from that project's src/client/assets/svg/ files; the others are
+drawn for PsyNeuView in the same style.
+
+Other third-party components keep their own licenses.

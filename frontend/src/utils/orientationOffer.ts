@@ -58,7 +58,9 @@ export function clearOfferChoice(storage: Pick<Storage, "removeItem"> | null = s
  */
 export function shouldOfferOrientation(choice: OfferChoice | null, search: string): boolean {
   if (choice !== null) return false;
-  if (new URLSearchParams(search).has("tour")) return false;
+  const params = new URLSearchParams(search);
+  // A window opened for something else (#172) has its work to do too.
+  if (["tour", "open", "openModel", "newModel"].some((name) => params.has(name))) return false;
   return true;
 }
 

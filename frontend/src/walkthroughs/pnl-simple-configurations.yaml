@@ -57,6 +57,7 @@ steps:
       from a pathway.
     done:
       nodeExists: hidden
+    opens: Simple Configurations
     act:
       openModel: Simple Configurations
 

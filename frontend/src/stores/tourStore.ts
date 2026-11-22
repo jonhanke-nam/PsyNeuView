@@ -16,6 +16,7 @@ import { create } from "zustand";
 
 import { recordSettingChanged } from "@/utils/activityLog";
 import { loadNarrationPref, saveNarrationPref } from "@/utils/narration";
+import type { TutorialProgress } from "@/utils/tutorialProgress";
 
 interface TourState {
   /** Id of the running walkthrough, or null when none is. */
@@ -58,7 +59,33 @@ interface TourState {
   pointerArrived: boolean;
   /** Read captions aloud (Web Speech). Off by default; remembered per browser. */
   narration: boolean;
+  /**
+   * The model file this walkthrough is using (#172): its own fresh copy of a
+   * bundled model, or the file the learner created in a step that teaches New
+   * Model. Null until it has one, and for a walkthrough that uses none.
+   */
+  modelPath: string | null;
+  /**
+   * The code as the current step began (#172), so the bar can offer to undo
+   * the learner's edits since then. Taken when the step starts, or when the
+   * walkthrough's model opens during it; `key` names the step.
+   */
+  stepStart: { key: string; filePath: string; source: string } | null;
+  /** A fingerprint of the walkthrough's model as its fresh copy opened (#173). */
+  modelFresh: string | null;
+  /**
+   * Resuming a saved place (#173): the step is set at once; its code goes into
+   * the walkthrough's own copy once that has opened. Null when not resuming.
+   */
+  resuming: TutorialProgress | null;
+  /** A word from the app in the bar until the step moves on (#173: why it started over). */
+  notice: string | null;
+  setNotice: (notice: string | null) => void;
   startTour: (id: string) => void;
+  /** Start the walkthrough at a saved place (#173). */
+  resumeTour: (id: string, progress: TutorialProgress) => void;
+  /** The saved place is in, or turned out not to fit. */
+  doneResuming: () => void;
   stopTour: () => void;
   advance: () => void;
   setAnchorOffScreen: (off: boolean) => void;
@@ -67,6 +94,8 @@ interface TourState {
   replay: () => void;
   setPointerArrived: (arrived: boolean) => void;
   setNarration: (on: boolean) => void;
+  setModelPath: (path: string | null, fresh?: string | null) => void;
+  setStepStart: (start: TourState["stepStart"]) => void;
 }
 
 export const useTourStore = create<TourState>((set) => ({
@@ -79,6 +108,12 @@ export const useTourStore = create<TourState>((set) => ({
   replayCount: 0,
   pointerArrived: false,
   narration: loadNarrationPref(),
+  modelPath: null,
+  stepStart: null,
+  modelFresh: null,
+  resuming: null,
+  notice: null,
+  setNotice: (notice) => set({ notice }),
   startTour: (id) =>
     set((s) => ({
       activeTourId: id,
@@ -88,16 +123,51 @@ export const useTourStore = create<TourState>((set) => ({
       paused: false,
       nextPressed: false,
       pointerArrived: false,
+      modelPath: null,
+      stepStart: null,
+      modelFresh: null,
+      resuming: null,
+      notice: null,
     })),
+  resumeTour: (id, progress) =>
+    set((s) => ({
+      activeTourId: id,
+      stepIndex: progress.step,
+      startCount: s.startCount + 1,
+      anchorOffScreen: false,
+      paused: false,
+      nextPressed: false,
+      pointerArrived: false,
+      modelPath: null,
+      stepStart: null,
+      modelFresh: null,
+      resuming: progress,
+      notice: null,
+    })),
+  doneResuming: () => set({ resuming: null }),
   stopTour: () =>
-    set({ activeTourId: null, stepIndex: 0, anchorOffScreen: false, paused: false, nextPressed: false, pointerArrived: false }),
+    set({
+      activeTourId: null,
+      stepIndex: 0,
+      anchorOffScreen: false,
+      paused: false,
+      nextPressed: false,
+      pointerArrived: false,
+      modelPath: null,
+      stepStart: null,
+      modelFresh: null,
+      resuming: null,
+      notice: null,
+    }),
   advance: () =>
-    set((s) => ({ stepIndex: s.stepIndex + 1, anchorOffScreen: false, nextPressed: false, pointerArrived: false })),
+    set((s) => ({ stepIndex: s.stepIndex + 1, anchorOffScreen: false, nextPressed: false, pointerArrived: false, notice: null })),
   setAnchorOffScreen: (off) => set({ anchorOffScreen: off }),
   setPaused: (paused) => set({ paused }),
   pressNext: () => set({ nextPressed: true }),
   replay: () => set((s) => ({ replayCount: s.replayCount + 1, pointerArrived: false })),
   setPointerArrived: (arrived) => set({ pointerArrived: arrived }),
+  setModelPath: (path, fresh) => set(fresh === undefined ? { modelPath: path } : { modelPath: path, modelFresh: fresh }),
+  setStepStart: (start) => set({ stepStart: start }),
   setNarration: (on) => {
     saveNarrationPref(on);
     recordSettingChanged("walkthrough-narration", on);

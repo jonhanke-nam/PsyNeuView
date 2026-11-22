@@ -27,6 +27,7 @@ frontend/playwright-report/
 # Audit screenshots written by occlusion-audit.spec.ts (repo root, not frontend/).
 .curated/
 frontend/blob-report/
+frontend/all-blob-reports/
 frontend/playwright/.cache/
 # models/ doubles as runtime model-discovery directory (user-loaded .py
 # files land here) and as the home for the repo-tracked custom/experimental

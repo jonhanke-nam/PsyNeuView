@@ -32,6 +32,7 @@ import { ALL_PNL_DEFS, ROLE_TOKENS } from "./constants/pnlTypes";
  */
 const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
   "components/common/SettingsPanel.tsx": { count: 1, what: "the sidebar's section items" },
+  "components/common/settings/SettingsSearch.tsx": { count: 1, what: "Settings search results, in the sidebar like its section items (#271)" },
   "components/common/settings/shared.tsx": { count: 1, what: "a group's fold heading" },
   "components/common/settings/InstallControls.tsx": { count: 1, what: "the Switch to trigger, drawn like a select" },
   "components/common/settings/OpenMenuSection.tsx": { count: 1, what: "the ▲ ▼ reorder arrows" },
@@ -51,13 +52,14 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
       "the Show N warnings fold on a failed run; a trial card's ×N steps fold; a debugger-snapshot category chip",
   },
   "components/layout/Toolbar.tsx": {
-    count: 36,
+    count: 38,
     what:
       "toolbar-sized buttons and menu triggers (⚙, Open ▾, Save, Save a copy as…, Layout ▾, Tutorials ▾: 6); " +
       "the Open menu's rows (actions, catalog models, a folder heading, recent files: 14) and a section's fold heading and ⇅ reorder (2); " +
-      "the Layout and Tutorials menus' rows (6) and a Tutorials section's fold heading (1); the tags beside the model name (the unsaved dot, view only, the checkout tag, the managed PsyNeuLink's read-only tag (#50), Reset to Original for a demo and for a reference model: 6); " +
+      "the Layout and Tutorials menus' rows (8, with Tidy inputs and outputs, #219, and Fit / Actual size, #289) and a Tutorials section's fold heading (1); the tags beside the model name (the unsaved dot, view only, the checkout tag, the managed PsyNeuLink's read-only tag (#50), Reset to Original for a demo and for a reference model: 6); " +
       "the reminder's quiet Don't remind me (1)",
   },
+  "components/layout/HelpMenu.tsx": { count: 2, what: "Help ▾, a toolbar menu trigger, and the Help menu's rows (#292)" },
   "components/layout/DeveloperModeIndicator.tsx": { count: 3, what: "the Developer badge that opens its menu, and that menu's two rows" },
   "components/graph/GraphToolbar.tsx": {
     count: 3,
@@ -96,10 +98,12 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
   },
   "components/common/DiagnosticPanel.tsx": { count: 2, what: "the quiet collapse; the auto-conversion's Undo chip, 10px in a line of 11px text" },
   "components/common/TourBar.tsx": {
-    count: 9,
+    count: 13,
     what:
       "the walkthrough bar's buttons at the bar's size and in its blue (Open the model, fit the graph, Next, " +
-      "Pause, Replay, Skip, Narration, End, and the caption's Narration heading that opens the voice setting); kept as they were while the walkthroughs are being written",
+      "Pause, Replay, Skip, Narration, End, and the caption's Narration heading that opens the voice setting; " +
+      "#172's ways back, matching them: Go back to the tutorial's model, End tutorial, Undo my edits since this " +
+      "step began, Start the tutorial over); kept as they were while the walkthroughs are being written",
   },
   "components/inspector/ShowGraphPanel.tsx": { count: 5, what: "Refresh among the option checkboxes; the zoom bar's −, +, Fit and 100% (22px)" },
   "components/graph/GraphStylePanel.tsx": { count: 2, what: "Apply and Reset, 12px text on 4×14, a size no kind has" },
@@ -107,6 +111,8 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
   "components/graph/ValidationPanel.tsx": { count: 3, what: "the list's fold heading; a projection's name, which jumps to its line, for an unconnected and for a refused connection" },
   "components/graph/FocusBreadcrumb.tsx": { count: 2, what: "the breadcrumb's ⌂ Full model and a parent composition's crumb" },
   "components/graph/NodeContextMenu.tsx": { count: 1, what: "a menu row" },
+  "components/graph/GraphMenus.tsx": { count: 1, what: "a menu row, as NodeContextMenu's (#261)" },
+  "components/graph/PortChooser.tsx": { count: 1, what: "a menu row, as NodeContextMenu's (#253)" },
   "components/graph/OffscreenNodesIndicator.tsx": { count: 1, what: "the off-screen notice over the canvas, which fits the graph" },
   "components/common/Combobox.tsx": { count: 1, what: "the ▼ inside the field that opens its list" },
 };

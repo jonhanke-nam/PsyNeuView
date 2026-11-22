@@ -4,23 +4,34 @@
  */
 
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { Handle, Position, useConnection, type NodeProps } from "@xyflow/react";
+import { CONNECT_HANDLE, NODE_TARGET_HANDLE } from "./connectHandles";
+import { targetStatus, useConnectTargets } from "@/stores/connectTargetsStore";
 import { useSafeUpdateNodeInternals } from "@/hooks/useSafeUpdateNodeInternals";
 import { usePortLayout } from "@/stores/portLayoutStore";
 import type { MechanismData } from "@/stores/modelStore";
 import { useGraphSettings, type GraphDirection } from "@/stores/graphSettingsStore";
 import { useModelStore, NODE_HEIGHT, NODE_WIDTH } from "@/stores/modelStore";
+import { outlineThickness, ovalBoxFor } from "@/utils/nodeBox";
 import { TYPE_COLORS, ROLE_COLORS, ROLE_TEXT_COLORS, ROLE_PRIORITY } from "@/constants/pnlTypes";
 import { toggleCompositionCollapse } from "@/utils/nodeActions";
 import { formatTraceValue } from "@/utils/traceValues";
 import { ValueGrid, poolValues, useNodeGrid } from "@/components/common/ValueGrid";
 import { useValueViews, valueViewFor } from "@/stores/valueViewStore";
 import { NODE_OUTLINE_EMPHASIS_EXTRA, NODE_OUTLINE_SELECTED_EXTRA, useNodeOutlineWidth } from "@/stores/nodeOutlineStore";
+import { useViewOnlyTagsStore } from "@/stores/viewOnlyTagsStore";
 import {
   resolveOutputLabels,
   formatLabeledValue,
   labeledValueLines,
 } from "@/utils/labels";
+import { boundaryDir, boundaryInward, isDrawnOutline, nodeShapeFor, shapeTooltip, type NodeShape } from "@/utils/nodeShape";
+import { NodeShapeOutline } from "./NodeShapeOutline";
+
+/** A collapsed composition's Expand button: the frame buttons' 28 px (#194), and its gap from the edge. */
+const EXPAND_BUTTON_WIDTH = 28;
+const EXPAND_BUTTON_GAP = 6;
+const EXPAND_BUTTON_ROOM = EXPAND_BUTTON_WIDTH + 2 * EXPAND_BUTTON_GAP;
 
 /** How tall the value pill's grid is (#1387): its 10px line of text. */
 const PILL_GRID_HEIGHT = 10;
@@ -61,10 +72,11 @@ type EllipseArc = "top" | "bottom" | "left" | "right";
 //     pulls vertically toward the center as you approach the corners.
 //   For left/right arcs: pct walks the vertical axis 0%→100%, the result
 //     pulls horizontally inward at the top and bottom.
-function ellipseBoundaryStyle(arc: EllipseArc, pct: number): React.CSSProperties {
+// A node of another shape (#192, #193) pulls in by that shape's outline
+// instead: not at all for a rectangle, down the cut corners for an octagon.
+function ellipseBoundaryStyle(shape: NodeShape, arc: EllipseArc, pct: number): React.CSSProperties {
   const t = (pct - 50) / 50;            // -1..1
-  const r = Math.sqrt(Math.max(0, 1 - t * t)); // 0..1
-  const inward = (1 - r) * 50;          // distance from edge toward center, in %
+  const inward = boundaryInward(shape, t) * 50; // distance from edge toward center, in %
   switch (arc) {
     case "top":    return { left: `${pct}%`, top: `${inward}%`,         right: "auto", bottom: "auto", transform: "translate(-50%, -50%)" };
     case "bottom": return { left: `${pct}%`, top: `${100 - inward}%`,   right: "auto", bottom: "auto", transform: "translate(-50%, -50%)" };
@@ -74,11 +86,13 @@ function ellipseBoundaryStyle(arc: EllipseArc, pct: number): React.CSSProperties
 }
 
 // #282: place a port at an arbitrary angle around the node oval (the ellipse
-// parameter, radians). Point on the inscribed ellipse in box-percent units.
-function anglePortStyle(angle: number): React.CSSProperties {
+// parameter, radians). Point on the inscribed ellipse in box-percent units,
+// or on the node's own outline for another shape.
+function anglePortStyle(shape: NodeShape, angle: number): React.CSSProperties {
+  const [x, y] = boundaryDir(shape, Math.cos(angle), Math.sin(angle));
   return {
-    left: `${50 + 50 * Math.cos(angle)}%`,
-    top: `${50 + 50 * Math.sin(angle)}%`,
+    left: `${50 + 50 * x}%`,
+    top: `${50 + 50 * y}%`,
     right: "auto",
     bottom: "auto",
     transform: "translate(-50%, -50%)",
@@ -158,6 +172,16 @@ export const MechanismNode = memo(function MechanismNode({
   const direction = useGraphSettings((s) => s.direction);
   // Settings ▸ Appearance ▸ Node outlines (#42).
   const nodeBorderWidth = useNodeOutlineWidth();
+  // #253: a connection is being dragged, so this node accepts the drop.
+  const connecting = useConnection((c) => c.inProgress);
+  // #253: PsyNeuLink's answer for this node while a connection is dragged
+  // from another node: a valid target lights up, an invalid one dims and,
+  // under the pointer, says why. The node being dragged from stays as it is.
+  const dragFromHere = useConnection((c) => c.inProgress && c.fromNode?.id === id);
+  const pointerOnHere = useConnection((c) => c.inProgress && c.toNode?.id === id);
+  const connectReason = useConnectTargets((s) => (s.targets ? s.targets[d.varName || ""] : undefined));
+  const connectStatus = useConnectTargets((s) => targetStatus(s.targets, d.varName));
+  const dropStatus = connecting && !dragFromHere ? connectStatus : null;
   const nodeBorderWidthEmphasis = nodeBorderWidth + NODE_OUTLINE_EMPHASIS_EXTRA;
   const expanded = useGraphSettings((s) => s.expandedNodes.has(d.label || ""));
 
@@ -215,9 +239,16 @@ export const MechanismNode = memo(function MechanismNode({
     },
     [id],
   );
+  // show_graph's shape for this node (#192, #193): an oval, or an octagon
+  // for a feedback sender, a double octagon for a controller, a double
+  // outline for a node on a cycle, a rectangle for a collapsed composition.
+  // The oval and the rectangle are CSS borders; the rest are drawn.
+  const shape = nodeShapeFor(d);
+  const drawnOutline = isDrawnOutline(shape);
+
   const portStyle = (arc: EllipseArc, pct: number, portKey: string): React.CSSProperties => {
     const ov = portOverrides?.[portKey];
-    return ov != null ? anglePortStyle(ov) : ellipseBoundaryStyle(arc, pct);
+    return ov != null ? anglePortStyle(shape, ov) : ellipseBoundaryStyle(shape, arc, pct);
   };
 
   const isCollapsedComposition = d.type === "Composition";
@@ -239,6 +270,12 @@ export const MechanismNode = memo(function MechanismNode({
   // Check if this node is view-only (not in lineMap, so params can't be edited)
   const lineMap = useModelStore((s) => s.lineMap);
   const isViewOnly = d.varName ? !(d.varName in lineMap) : false;
+  // #211: its "view only" tag is hidden by default, as show_graph draws no
+  // such tag (Settings ▸ Appearance ▸ Node tags); the hover text below and
+  // the Inspector's notice say it either way.
+  const showViewOnlyTag = useViewOnlyTagsStore((s) => s.tags === "shown") && isViewOnly;
+  const viewOnlyNote = "View only: this node's declaration can't be edited from the GUI.";
+  const nodeTooltip = [shapeTooltip(shape), isViewOnly ? viewOnlyNote : undefined].filter(Boolean).join(" ") || undefined;
 
   const typeColor = TYPE_COLORS[d.type] || "var(--pnv-role-internal)";
   const customRoleColors = useGraphSettings((s) => s.customRoleColors);
@@ -249,11 +286,9 @@ export const MechanismNode = memo(function MechanismNode({
     ? getRoleBorderWidth(d.roles || [], nodeBorderWidth, nodeBorderWidthEmphasis)
     : nodeBorderWidth;
 
-  // Special node styling based on roles
-  const isSpecial = d.isController || d.isObjectiveMechanism;
-  const isFeedback = (d.roles || []).includes("FEEDBACK_SENDER");
-  const isCycle = (d.roles || []).includes("CYCLE");
-  const borderStyle = isSpecial ? "double" : isFeedback ? "dashed" : isCycle ? "double" : "solid";
+  // A feedback sender, a cycle node and a controller now carry their meaning
+  // in their shape (#192); the objective mechanism keeps its double oval.
+  const borderStyle = d.isObjectiveMechanism && shape === "oval" ? "double" : "solid";
 
   // Role label for role-coloring mode
   const roleLabel = colorByRole && d.roles?.length
@@ -374,25 +409,104 @@ export const MechanismNode = memo(function MechanismNode({
   const ovalBorderWidth = isActiveStep || selected ? borderWidth + NODE_OUTLINE_SELECTED_EXTRA : borderWidth;
   const ovalBorderStyle = isActiveStep || selected ? "solid" : borderStyle;
 
+  // A drawn outline (octagon, double octagon, double outline) takes the
+  // border's place: the box itself has none, and the SVG below draws the
+  // shape in the border's colour and width with the ring and shadow the oval
+  // would have. The cut corners of an octagon, and the second line of a
+  // double outline, need more room round the name.
+  const background = isActiveStep ? "var(--pnv-trace-tint)" : "var(--pnv-surface)";
+  const ring = isActiveStep
+    ? undefined
+    : selected
+    ? `color-mix(in srgb, ${accentColor} 20%, transparent)`
+    : isCursorHighlighted
+    ? "var(--pnv-cursor-highlight)"
+    : undefined;
+  // #210: a node showing just its name is the size show_graph() draws it, by
+  // Graphviz's rule (utils/nodeBox.ts), so its text has show_graph's proportion
+  // and the Like show_graph layout needs hardly any enlarging. Its outline is
+  // inside the box, so the box allows for it at its heaviest, selected, and so
+  // doesn't change size when selected. With
+  // the type and role tags on, it is the roomier slot of #122.
+  const double = shape === "doublecircle" || shape === "doubleoctagon";
+  const outline = outlineThickness(double, borderWidth + NODE_OUTLINE_SELECTED_EXTRA);
+  const nameBox = useMemo(
+    () => ovalBoxFor(d.label || "", shape === "oval" || shape === "doublecircle" ? outline : 0),
+    [d.label, shape, outline],
+  );
+  const minBox = showNodeElements ? { width: NODE_WIDTH, height: NODE_HEIGHT } : nameBox;
+  // An octagon's cut corners, and a heavy or double line, need room round the
+  // name that an oval's own rule has already given it.
+  const [padY, padX] =
+    shape === "doubleoctagon"
+      ? [Math.max(16, outline + 4), 37 + outline]
+      : shape === "octagon"
+      ? [Math.max(12, outline + 4), 36 + outline]
+      : showNodeElements
+      ? shape === "doublecircle" ? [14, 30] : [10, 24]
+      : [4, 8];
+  // #211: a collapsed composition's Expand button sits at the node's right
+  // edge, out of its middle, so a click on the node selects it rather than
+  // opening it. The same room on the left keeps the name centred.
+  const expandRoom = isCollapsedComposition ? EXPAND_BUTTON_ROOM : 0;
+  const padding = `${padY}px ${padX + expandRoom}px`;
+
   return (
+    <>
+      {/* Outside the node's box, so it isn't dimmed with it. */}
+        {dropStatus === "invalid" && pointerOnHere && connectReason && (
+          <div
+            role="status"
+            data-testid="connect-refusal-reason"
+            style={{
+              position: "absolute",
+              bottom: "calc(100% + 8px)",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "max-content",
+              maxWidth: 260,
+              padding: "4px 8px",
+              borderRadius: 4,
+              background: "var(--pnv-surface)",
+              border: "1px solid var(--pnv-border-light)",
+              boxShadow: "var(--pnv-shadow-popover)",
+              color: "var(--pnv-text-body)",
+              fontSize: "var(--pnv-fs-12)",
+              textAlign: "left",
+              pointerEvents: "none",
+              zIndex: 10,
+            }}
+          >
+            {connectReason}
+          </div>
+        )}
     <div
       onDoubleClick={onDoubleClick}
+      data-node-shape={shape}
+      data-connect-target={dropStatus ?? undefined}
+      title={nodeTooltip}
       style={{
-        padding: "10px 24px",
-        borderRadius: "50%",
-        border: `${ovalBorderWidth}px ${ovalBorderStyle} ${ovalBorderColor}`,
-        background: isActiveStep ? "var(--pnv-trace-tint)" : "var(--pnv-surface)",
-        boxShadow: isActiveStep
+        // #253: drop targets while a connection is dragged. An outline, so
+        // the node's size and place don't change.
+        outline: dropStatus === "valid" ? "2px solid var(--pnv-primary)" : undefined,
+        outlineOffset: dropStatus === "valid" ? 4 : undefined,
+        opacity: dropStatus === "invalid" ? 0.4 : undefined,
+        padding,
+        borderRadius: shape === "rectangle" ? 0 : "50%",
+        border: drawnOutline ? "none" : `${ovalBorderWidth}px ${ovalBorderStyle} ${ovalBorderColor}`,
+        background: drawnOutline ? "transparent" : background,
+        boxShadow: drawnOutline
+          ? "none"
+          : isActiveStep
           ? "var(--pnv-trace-glow), var(--pnv-shadow-node-raised)"
           : selected
           ? `0 0 0 2px color-mix(in srgb, ${accentColor} 20%, transparent), var(--pnv-shadow-node-raised)`
           : isCursorHighlighted
           ? "0 0 0 2px var(--pnv-cursor-highlight), var(--pnv-cursor-glow)"
           : "var(--pnv-shadow-node)",
-        // #122: the size of the slot the layout reserves, so a node showing
-        // just its name keeps the size and edge geometry it had with details.
-        minWidth: NODE_WIDTH,
-        minHeight: NODE_HEIGHT,
+        boxSizing: "border-box",
+        minWidth: minBox.width,
+        minHeight: minBox.height,
         textAlign: "center" as const,
         display: "flex",
         flexDirection: "column" as const,
@@ -402,6 +516,25 @@ export const MechanismNode = memo(function MechanismNode({
         position: "relative",
       }}
     >
+      {drawnOutline && (
+        <NodeShapeOutline
+          shape={shape}
+          stroke={ovalBorderColor}
+          strokeWidth={ovalBorderWidth}
+          fill={background}
+          ring={ring}
+          shadow={
+            isActiveStep
+              ? "drop-shadow(var(--pnv-trace-glow))"
+              : selected
+              ? "drop-shadow(var(--pnv-shadow-node-raised))"
+              : isCursorHighlighted
+              ? "drop-shadow(var(--pnv-cursor-glow))"
+              : "drop-shadow(var(--pnv-shadow-node))"
+          }
+        />
+      )}
+
       {/* Port hover tooltip — name, role, shape */}
       {hoveredPort && (
         <div
@@ -502,7 +635,7 @@ export const MechanismNode = memo(function MechanismNode({
       {/* Type + Role badges. With Elements off (the default, #122) and no
           other tag, the row is left out so the name sits centred in the oval,
           as show_graph() draws it. */}
-      {(showNodeElements || isViewOnly || isCollapsedComposition) && (
+      {(showNodeElements || showViewOnlyTag) && (
       <div data-testid="node-tags" style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
         {showNodeElements && (
           <span
@@ -535,8 +668,9 @@ export const MechanismNode = memo(function MechanismNode({
             {roleLabel}
           </span>
         )}
-        {isViewOnly && (
+        {showViewOnlyTag && (
           <span
+            data-testid="node-view-only-tag"
             style={{
               fontSize: 8,
               color: "var(--pnv-text-faint)",
@@ -545,31 +679,10 @@ export const MechanismNode = memo(function MechanismNode({
               borderRadius: 2,
               border: "1px solid var(--pnv-border-light)",
             }}
-            title="This node's source pattern isn't editable from the GUI"
+            title={viewOnlyNote}
           >
             view only
           </span>
-        )}
-        {isCollapsedComposition && (
-          <button
-            onClick={onExpandComposition}
-            title="Expand this composition to show its contents"
-            aria-label={`Expand composition ${d.label}`}
-            style={{
-              marginLeft: 2,
-              cursor: "pointer",
-              fontSize: 10,
-              lineHeight: 1,
-              padding: "1px 5px",
-              border: "1px solid var(--pnv-composition-control-border)",
-              borderRadius: 3,
-              background: "var(--pnv-surface)",
-              color: "var(--pnv-composition-control-text)",
-              fontWeight: 600,
-            }}
-          >
-            +
-          </button>
         )}
       </div>
       )}
@@ -577,6 +690,37 @@ export const MechanismNode = memo(function MechanismNode({
         <div data-testid="node-name" style={{ fontSize: 14, fontWeight: 600, color: "var(--pnv-text)" }}>
           {d.label}
         </div>
+      )}
+      {isCollapsedComposition && (
+        <button
+          onClick={onExpandComposition}
+          title="Expand this composition to show its contents"
+          aria-label={`Expand composition ${d.label}`}
+          // The size of the frame's buttons (#194), so Expand is as easy
+          // to find and press as the Collapse it undoes.
+          style={{
+            position: "absolute",
+            right: EXPAND_BUTTON_GAP,
+            top: "50%",
+            transform: "translateY(-50%)",
+            cursor: "pointer",
+            fontSize: 15,
+            lineHeight: 1,
+            minWidth: 28,
+            height: 26,
+            padding: "0 6px",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "1px solid var(--pnv-composition-control-border)",
+            borderRadius: 4,
+            background: "var(--pnv-surface)",
+            color: "var(--pnv-composition-control-text)",
+            fontWeight: 600,
+          }}
+        >
+          +
+        </button>
       )}
       {showNodeElements && d.function && (
         <div
@@ -602,7 +746,15 @@ export const MechanismNode = memo(function MechanismNode({
           and the full-precision value — labels the pill so a reader knows
           what the bare array means. */}
       {activeValue !== undefined && (
-        <div style={{ position: "relative", marginTop: 4 }}>
+        // #210: a node showing just its name is only tall enough for that, so
+        // the pill hangs just below it, and stepping doesn't resize the node.
+        <div
+          style={
+            showNodeElements
+              ? { position: "relative", marginTop: 4 }
+              : { position: "absolute", top: "calc(100% + 2px)", left: "50%", transform: "translateX(-50%)", zIndex: 5 }
+          }
+        >
           <div
             data-testid={`value-pill-${d.label}`}
             onMouseEnter={() => setPillHovered(true)}
@@ -900,6 +1052,41 @@ export const MechanismNode = memo(function MechanismNode({
           </>
         );
       })()}
+      {/* #253: drag from the connector (shown on hover, on the output side)
+          to another node to connect them, ports shown or not. While a
+          connection is being dragged, the whole node is the drop target;
+          otherwise that target takes no pointer at all, so a click anywhere
+          on the node still selects it (#250). */}
+      <Handle
+        type="source"
+        id={CONNECT_HANDLE}
+        position={Position.Top}
+        className="pnv-connector"
+        data-testid="node-connector"
+        title="Drag to another node to connect them"
+      />
+      <Handle
+        type="target"
+        id={NODE_TARGET_HANDLE}
+        position={Position.Top}
+        isConnectableStart={false}
+        data-testid="node-drop-target"
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          transform: "none",
+          left: 0,
+          top: 0,
+          borderRadius: shape === "rectangle" ? 0 : "50%",
+          border: "none",
+          background: "transparent",
+          opacity: 0,
+          pointerEvents: connecting ? "all" : "none",
+        }}
+      />
     </div>
+    </>
   );
 });

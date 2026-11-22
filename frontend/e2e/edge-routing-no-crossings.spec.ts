@@ -1,4 +1,9 @@
-import { readOnlyTest as test, expect } from "./test-base";
+import { readOnlyTest as test, expect, canvasNode, closePalette, fitGraph } from "./test-base";
+import { copyFileSync } from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // #914 — hard rule: a projection edge must never pass through a node it doesn't
 // connect to. EGO's PyTorch view is the dense stress case (22 nodes, 30 edges),
@@ -105,4 +110,81 @@ test("EGO PyTorch view: no projection edge crosses a node (#914)", { tag: "@ci" 
     report.crossing,
     `${report.crossing}/${report.edges} edges cross a node: ${report.offenders.join(", ")}`,
   ).toBe(0);
+});
+
+// An edge routes again when a node that isn't on either of its ends moves onto
+// it. Without this it kept the route it had made around the node's old place.
+// Opening a graph does the same thing, less visibly: it is drawn, then laid out
+// again at the boxes' measured sizes, and which edge that catches depends on the
+// font (EGO's PyTorch view above, on the Linux runner only). So here it is done
+// by hand, the same in any font.
+test("an edge routes around a node moved onto it", { tag: "@ci" }, async ({ page }) => {
+  // The drag saves a layout next to the model: use a copy.
+  const model = test.info().outputPath("feedforward_network.py");
+  copyFileSync(path.resolve(__dirname, "..", "..", "backend", "demos", "feedforward_network.py"), model);
+  await page.goto("/");
+  await closePalette(page);
+  await page.getByRole("button", { name: /Open/ }).first().click();
+  await page.getByRole("button", { name: "Open from path..." }).click();
+  const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
+  await prompt.fill(model);
+  await prompt.press("Enter");
+  const node = canvasNode(page, "output_layer").first();
+  await expect(node).toBeVisible({ timeout: 60_000 });
+  await page.getByRole("button", { name: /^Layout: Auto$/ }).click();
+  await expect(page.getByRole("button", { name: /^Layout: Custom$/ })).toBeVisible();
+  await fitGraph(page);
+
+  const moveTo = async (name: string, to: { x: number; y: number }) => {
+    const box = (await canvasNode(page, name).first().boundingBox())!;
+    const grab = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    await page.mouse.move(grab.x, grab.y);
+    await page.mouse.down();
+    await page.mouse.move((grab.x + to.x) / 2, (grab.y + to.y) / 2, { steps: 4 });
+    await page.mouse.move(to.x, to.y, { steps: 4 });
+    await page.mouse.up();
+  };
+
+  // Lengthen the edge, so the node can sit on it clear of both its ends: the
+  // router can't go round a node with an end of the edge right beside it.
+  const pane = (await page.getByTestId("graph-canvas").locator(".react-flow").boundingBox())!;
+  const hidden = (await canvasNode(page, "hidden_layer").first().boundingBox())!;
+  const centre = hidden.x + hidden.width / 2;
+  await moveTo("output_layer", { x: centre + 260, y: pane.y + pane.height / 2 });
+  await moveTo("hidden_layer", { x: centre, y: pane.y + 40 });
+
+  const edge = page.locator('.react-flow__edge[data-id*="input_to_hidden"] path.react-flow__edge-path');
+  await expect(edge).toHaveCount(1);
+  const middle = await edge.evaluate((el) => {
+    const path = el as unknown as SVGPathElement;
+    const pt = path.getPointAtLength(path.getTotalLength() / 2);
+    const at = new DOMPoint(pt.x, pt.y).matrixTransform(path.getScreenCTM()!);
+    return { x: at.x, y: at.y };
+  });
+  await moveTo("output_layer", middle);
+  await page.mouse.move(5, 5); // off the edge, so hovering doesn't re-render it
+
+  // Where the node is, and how far along the edge runs inside its box.
+  const id = await node.getAttribute("data-id");
+  const reading = () =>
+    edge.evaluate((el, id) => {
+      const b = document.querySelector(`.react-flow__node[data-id="${id}"]`)!.getBoundingClientRect();
+      const path = el as unknown as SVGPathElement;
+      const ctm = path.getScreenCTM()!;
+      const total = path.getTotalLength();
+      let inside = 0;
+      for (let l = 0; l < total; l += 2) {
+        const pt = path.getPointAtLength(l);
+        const p = new DOMPoint(pt.x, pt.y).matrixTransform(ctm);
+        if (p.x > b.left && p.x < b.right && p.y > b.top && p.y < b.bottom) inside += 2;
+      }
+      return { inside, left: b.left, right: b.right, top: b.top, bottom: b.bottom };
+    }, id);
+  await expect.poll(async () => (await reading()).inside, {
+    timeout: 5_000,
+    message: "the edge runs through the node moved onto it",
+  }).toBe(0);
+  // And it is still on the line the edge used to take.
+  const { left, right, top, bottom } = await reading();
+  expect(middle.x > left && middle.x < right && middle.y > top && middle.y < bottom, "the node stayed where it was dropped").toBe(true);
 });
