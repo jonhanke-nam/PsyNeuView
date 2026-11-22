@@ -93,7 +93,15 @@ jobs:
             # merge base unresolvable -> fail safe by running, never by skipping
             echo "run=true" >> "$GITHUB_OUTPUT"
           elif git diff --name-only "$mb" "${{ github.sha }}" | grep -qE "$PATTERN"; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
+            # #299: a release's version bump changes only version lines, and
+            # devel already passed this job on the same code, so skip it. The
+            # rule lives in scripts/version_only_diff.py; it exits 0 only for
+            # a pure bump, so any other change, or any error, still runs.
+            if python3 scripts/version_only_diff.py "$mb" "${{ github.sha }}"; then
+              echo "run=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "run=true" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
           fi

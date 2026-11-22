@@ -265,6 +265,18 @@ it stands now — not from `pull_request.base.sha`, which is the base as it was
 when the PR was opened. Diffing from the latter also sweeps up everything the
 base gained since, so an old branch runs gates it never touched (#989).
 
+**Version bumps skip the heavy jobs (#299).** When the path filter says "run",
+the `changes` job of backend pytest (both Python versions), tutorials, e2e and
+the pip suite then asks `scripts/version_only_diff.py` whether the diff is only
+a release's version bump: the `__version__` line in `backend/app/__init__.py`,
+`version` in `backend/pyproject.toml`'s `[project]` table, and psyneuview's own
+`version` in `backend/uv.lock`. If so, those jobs skip; devel already passed
+them on the same code. Any other change in the same PR, any other line in those
+files, or any error runs everything. The cheap checks (`version-matches-tag`,
+`PsyNeuLink pin matches CI`, code scan, docs) still run.
+`backend/tests/test_version_only_diff.py` covers the script; it runs in backend
+pytest, which any PR editing `scripts/` triggers.
+
 Branch protection on `devel` requires `tutorials` + `e2e` + `typecheck (tsc)`
 (strict/up-to-date **off**, admins **not** enforced, no PR-review requirement).
 To adjust the required set, edit `devel`'s protection
