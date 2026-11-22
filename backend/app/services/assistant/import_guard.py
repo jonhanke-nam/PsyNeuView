@@ -193,6 +193,10 @@ class _State:
 
     def __init__(self):
         self.tracked: dict = {}
+        #: The tracked files' names, so the audit hook resolves only a path
+        #: that could be one of them (a symlink under another name can't be
+        #: made in the worker: the hook refuses it).
+        self.tracked_names: frozenset = frozenset()
         self.broken = False
         self.provider: Callable[[], tuple[dict, bool]] | None = None
         self._path: str | None = None
@@ -223,6 +227,7 @@ class _State:
             if key != self._key:
                 self.tracked, self.broken = read_state(path)
                 self._key = key
+        self.tracked_names = frozenset(os.path.basename(k) for k in self.tracked)
         # Every task, not only when the state file changed: a tracked file's
         # content can change without the state changing, and the cache must
         # not serve what was imported before. In the server too: its own
@@ -328,7 +333,7 @@ def install(provider: Callable[[], tuple[dict, bool]] | None = None) -> None:
 # applying it to every open would stop the worker reading its own files.
 
 _AUDIT_EVENTS = frozenset({
-    "open", "compile", "exec", "os.rename", "os.link",
+    "open", "compile", "exec", "os.rename", "os.link", "os.symlink",
     "subprocess.Popen", "os.system", "os.exec", "os.posix_spawn", "os.spawn", "pty.spawn",
 })
 _PROCESS_EVENTS = frozenset({"subprocess.Popen", "os.system", "os.exec", "os.posix_spawn", "os.spawn", "pty.spawn"})
@@ -351,10 +356,14 @@ def _as_text(value) -> str | None:
     return None
 
 
-def _vet_tracked(path, cwd: str | None = None) -> None:
-    """``vet`` for a path the audit hook saw, tracked paths only."""
+def _vet_tracked(path, cwd: str | None = None, *, by_name: bool = True) -> None:
+    """``vet`` for a path the audit hook saw, tracked paths only. With
+    ``by_name``, a path whose file name no tracked file has is passed without
+    resolving it: most of what a model opens and runs is PsyNeuLink's own."""
     text = _as_text(path)
     if not text or text.startswith("<") or "\0" in text:
+        return
+    if by_name and os.path.basename(text) not in _state.tracked_names:
         return
     if cwd and not os.path.isabs(text):
         text = os.path.join(cwd, text)
@@ -415,7 +424,7 @@ def _vet_process(event: str, args: tuple) -> None:
                 continue
             _vet_tracked(part, cwd)
             for real in names.get(os.path.basename(part), ()):
-                _vet_tracked(real)
+                _vet_tracked(real, by_name=False)
 
 
 def _audit(event: str, args: tuple) -> None:
@@ -431,6 +440,12 @@ def _audit(event: str, args: tuple) -> None:
             _vet_tracked(getattr(args[0], "co_filename", None))
         elif event == "compile":
             _vet_tracked(args[1] if len(args) > 1 else None)
+        elif event == "os.symlink":
+            # (src, dst, dir_fd): a link to a tracked file, under any name.
+            src, dst = _as_text(args[0]), _as_text(args[1])
+            if src and dst and not os.path.isabs(src):
+                src = os.path.join(os.path.dirname(os.path.abspath(dst)), src)
+            _vet_tracked(src, by_name=False)
         else:  # open, os.rename, os.link: the first argument is the file read
             if not isinstance(args[0], int):
                 _vet_tracked(args[0])

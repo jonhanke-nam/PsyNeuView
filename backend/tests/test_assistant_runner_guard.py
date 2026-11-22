@@ -535,13 +535,14 @@ def _other_way(how: str, helper: Path) -> str:
         "copy_then_import": f"import shutil\nshutil.copy({h!r}, {str(helper.with_name('copied_' + helper.name))!r})\nimport copied_{helper.stem}",
         "rename_then_import": f"os.rename({h!r}, {str(helper.with_name('renamed_' + helper.name))!r})\nimport renamed_{helper.stem}",
         "link_then_import": f"os.link({h!r}, {str(helper.with_name('linked_' + helper.name))!r})\nimport linked_{helper.stem}",
+        "symlink_then_exec": f"os.symlink({h!r}, {str(helper.with_name('sym_' + helper.name))!r})\nexec(open({str(helper.with_name('sym_' + helper.name))!r}).read())",
     }[how]
 
 
 OTHER_WAYS = [
     "exec_open", "exec_open_caught", "pathlib_read", "exec_compile", "runpy_run_path", "runpy_run_module",
     "subprocess_list", "subprocess_shell_by_name", "os_system", "copy_then_import", "rename_then_import",
-    "link_then_import",
+    "link_then_import", "symlink_then_exec",
 ]
 
 
