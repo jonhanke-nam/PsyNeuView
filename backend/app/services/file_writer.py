@@ -824,14 +824,21 @@ def _add_projection(source: str, changes: dict) -> str:
     receiver_port = changes.get("receiver_port")
     proj_type = changes.get("type", "MappingProjection")
     comp_var = changes.get("composition", None)
+    # Which of the receiver's ports ``receiver_port`` names (#253, stage 3):
+    # "input" (a MappingProjection's, or a gated input), "output" (a gated
+    # output) or "parameter" (a controlled parameter, or a learned matrix).
+    port_kind = changes.get("receiver_port_kind", "input")
+    if port_kind not in ("input", "output", "parameter"):
+        raise ValueError(f"Unknown receiver port kind: {port_kind}")
 
     # Build sender/receiver specs with optional port qualifiers. Mechanisms
     # are not subscriptable by port name in PsyNeuLink (`mech['p']` raises
     # TypeError), so reference the port through its collection. For this
     # drag-to-connect path the sender handle is always an output port and the
-    # receiver handle an input port (#314).
+    # receiver handle an input port (#314), unless ``receiver_port_kind``
+    # says otherwise.
     sender_spec = f"{sender}.output_ports['{sender_port}']" if sender_port else sender
-    receiver_spec = f"{receiver}.input_ports['{receiver_port}']" if receiver_port else receiver
+    receiver_spec = f"{receiver}.{port_kind}_ports['{receiver_port}']" if receiver_port else receiver
 
     declaration = (
         f"\n{var_name} = pnl.{proj_type}(\n"
@@ -845,8 +852,14 @@ def _add_projection(source: str, changes: dict) -> str:
     lines = source.splitlines()
     proj_start, proj_end = _find_section(source, "Projections")
 
-    if proj_start >= 0:
+    # Never before its sender or receiver is defined: a learning mechanism
+    # taken from a learning pathway, for one, is named after the
+    # composition's section, below the Projections section (#253).
+    after = _last_definition_line(source, [sender, receiver])
+    if proj_start >= 0 and (after is None or proj_end >= after):
         lines.insert(proj_end, declaration)
+    elif proj_start >= 0:
+        lines.insert(after, declaration)
     else:
         # Append before compositions section
         comp_start, _ = _find_section(source, "Compositions")
@@ -868,9 +881,26 @@ def _add_projection(source: str, changes: dict) -> str:
 
     # Add to composition
     if comp_var:
-        source = _append_to_composition(source, comp_var, f"{comp_var}.add_projection({var_name})")
+        statement = f"{comp_var}.add_projection({var_name})"
+        source = _append_to_composition(source, comp_var, statement)
+        source = _keep_after_declaration(source, var_name, statement)
 
     return source
+
+
+def _keep_after_declaration(source: str, var_name: str, statement: str) -> str:
+    """Move ``statement`` (``comp.add_projection(<var_name>)``) to just after
+    ``var_name``'s declaration when it landed above it, as it does when the
+    declaration had to go below the composition's last add call (#253)."""
+    lines = source.splitlines()
+    decl = next((i for i, l in enumerate(lines) if re.match(rf"^{re.escape(var_name)}\s*=", l)), None)
+    use = next((i for i, l in enumerate(lines) if l.strip() == statement), None)
+    if decl is None or use is None or use > decl:
+        return source
+    del lines[use]
+    end = _find_closing_paren(lines, decl - 1)
+    lines.insert(end + 1, statement)
+    return "\n".join(lines)
 
 
 def _remove_projection(source: str, changes: dict) -> str:

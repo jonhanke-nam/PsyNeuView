@@ -155,28 +155,32 @@ test.describe("drag to connect, second part (#253)", { tag: "@ci" }, () => {
     await open(page, file);
     const shape = (id: string) => node(page, id).locator("[data-node-shape]").first();
 
-    // From a control mechanism nothing can be connected yet: all dim, and
-    // the one under the pointer says why. Dropped there: refused, nothing written.
+    // From a control mechanism (stage 3): the mechanisms beside it light up;
+    // one inside a nested composition dims and, under the pointer, says why.
+    // Dropped there: refused, nothing written.
     await startDrag(page, "ctrl");
-    await moveOnto(page, "b");
-    await expect(shape("b")).toHaveAttribute("data-connect-target", "invalid", { timeout: 30_000 });
-    await expect(shape("a")).toHaveAttribute("data-connect-target", "invalid");
-    await expect(page.getByTestId("connect-refusal-reason")).toContainText("is a control mechanism");
-    await expect(shape("b")).toHaveCSS("opacity", "0.4");
+    await moveOnto(page, "x");
+    await expect(shape("x")).toHaveAttribute("data-connect-target", "invalid", { timeout: 30_000 });
+    await expect(shape("a")).toHaveAttribute("data-connect-target", "valid");
+    await expect(page.getByTestId("connect-refusal-reason")).toContainText("aren't in the same composition");
+    await expect(shape("x")).toHaveCSS("opacity", "0.4");
     // The reason sits outside the dimmed node, so it reads at full strength.
     await expect(page.getByTestId("connect-refusal-reason")).toHaveCSS("opacity", "1");
     await page.mouse.up();
-    await expect(page.getByText(/is a control mechanism/).first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/aren't in the same composition/).first()).toBeVisible({ timeout: 30_000 });
     expect(changes).toEqual([]);
     expect(readFileSync(file, "utf8")).toBe(NESTED);
-    await expect(shape("b")).not.toHaveAttribute("data-connect-target", /.*/);
+    await expect(shape("x")).not.toHaveAttribute("data-connect-target", /.*/);
 
     // From a: the mechanisms and the compositions it could go into light up.
     await startDrag(page, "a");
     await moveOnto(page, "b");
     await expect(shape("b")).toHaveAttribute("data-connect-target", "valid", { timeout: 30_000 });
     await expect(shape("ctrl")).toHaveAttribute("data-connect-target", "valid");
-    await expect(shape("b")).toHaveCSS("outline-style", "solid");
+    // A halo, held steady under the pointer; the others pulse (#253 stage 3).
+    await expect(shape("b")).toHaveClass(/pnv-connect-target.*pnv-connect-locked/);
+    await expect(shape("ctrl")).toHaveClass(/pnv-connect-target/);
+    await expect(shape("ctrl")).not.toHaveClass(/pnv-connect-locked/);
     // The node dragged from stays as it is, and a valid target gives no reason.
     await expect(shape("a")).not.toHaveAttribute("data-connect-target", /.*/);
     await expect(page.getByTestId("connect-refusal-reason")).toHaveCount(0);

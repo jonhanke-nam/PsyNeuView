@@ -484,12 +484,12 @@ export const MechanismNode = memo(function MechanismNode({
       onDoubleClick={onDoubleClick}
       data-node-shape={shape}
       data-connect-target={dropStatus ?? undefined}
+      // #253: a valid drop target pulses a teal halo (index.css), held steady
+      // under the pointer; a halo, so it doesn't read as the selection ring,
+      // and nothing moves or resizes.
+      className={dropStatus === "valid" ? `pnv-connect-target${pointerOnHere ? " pnv-connect-locked" : ""}` : undefined}
       title={nodeTooltip}
       style={{
-        // #253: drop targets while a connection is dragged. An outline, so
-        // the node's size and place don't change.
-        outline: dropStatus === "valid" ? "2px solid var(--pnv-primary)" : undefined,
-        outlineOffset: dropStatus === "valid" ? 4 : undefined,
         opacity: dropStatus === "invalid" ? 0.4 : undefined,
         padding,
         borderRadius: shape === "rectangle" ? 0 : "50%",
