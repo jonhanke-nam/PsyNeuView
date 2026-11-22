@@ -50,9 +50,11 @@ def test_a_node_to_itself_is_refused():
     assert "itself" in _options("a", "a")["refused"]
 
 
-def test_control_and_gating_senders_wait_for_the_second_stage():
-    assert "control mechanism" in _options("ctrl", "a")["refused"]
-    assert "gating mechanism" in _options("gate", "a")["refused"]
+def test_control_and_gating_senders_ask_for_a_parameter_or_a_port():
+    # Stage 3: the type follows the sender (test_connection_modulatory.py).
+    assert {o["type"] for o in _options("ctrl", "a")["options"]} == {"ControlProjection"}
+    # gate isn't in comp, so no composition holds both ends.
+    assert "same composition" in _options("gate", "a")["refused"]
 
 
 def test_something_that_is_not_a_mechanism_is_refused():
