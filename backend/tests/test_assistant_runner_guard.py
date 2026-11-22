@@ -198,10 +198,11 @@ def test_every_spawn_and_exec_site_is_listed():
         "services/converter.py": (0, 1),         # in-process load: require_runnable + guard_imports()
         "services/executor.py": (0, 4),          # in-process run, learn, input nodes: require_runnable + guard_imports(); one keyword eval of a parameter
         "services/github_auth.py": (1, 0),       # git credential helper
-        "services/install_manager.py": (2, 0),   # pip
+        "services/install_manager.py": (3, 0),   # pip or uv; whether uv runs (#259)
         "services/introspector.py": (0, 2),      # in-process load: require_runnable + guard_imports(); one keyword eval of a parameter
         "services/jobs.py": (2, 0),              # the job worker: create_job → require_runnable; payload carries the state
         "services/locations.py": (1, 1),         # git; a dynamic import of an app module
+        "services/quick_check.py": (0, 1),       # not a load: the "exec(" and "eval(" it looks for in the text (#256); parse and compile only
         "services/running_from.py": (1, 0),      # which process runs the app
         "services/sandbox.py": (4, 0),           # warm worker + cold fallback: run_in_sandbox → require_runnable; payload carries the state
         "services/sandbox_worker.py": (0, 6),    # the guard's own load, load_module, load_module_resilient and its exec: check_model_path + hooks; two keyword evals
