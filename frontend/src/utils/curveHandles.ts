@@ -36,7 +36,7 @@ export interface EndHandles { s?: Pt; t?: Pt }
  * Softer since #39: the old 0.8 drew a bend as two near-straight runs with a
  * rounded corner between them. A longer tangent turns it into a curve.
  */
-export const SOFT_TENSION = 1.3;
+export const SOFT_TENSION = 1.6;
 
 /**
  * The tension every arrow was drawn with before #39. A route saved then has no
