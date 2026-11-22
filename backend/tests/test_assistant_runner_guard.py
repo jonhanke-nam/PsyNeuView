@@ -195,27 +195,31 @@ def test_every_spawn_and_exec_site_is_listed():
         "services/assistant/keys.py": (3, 0),    # the Keychain's `security` tool
         "services/checkout_updates.py": (1, 0),  # git
         "services/clone_manager.py": (3, 0),     # git
-        "services/converter.py": (0, 1),         # in-process load: require_runnable + guard_imports()
-        "services/executor.py": (0, 4),          # in-process run, learn, input nodes: require_runnable + guard_imports(); one keyword eval of a parameter
+        "services/converter.py": (0, 2),         # in-process load (spec + exec_module): require_runnable + guard_imports()
+        "services/executor.py": (0, 8),          # in-process run, learn, input nodes (spec + exec_module each): require_runnable + guard_imports(); one keyword compile + eval of a parameter
+        "services/file_writer.py": (0, 1),       # compile of a parameter value in "eval" mode to check its syntax; never run
         "services/github_auth.py": (1, 0),       # git credential helper
         "services/install_manager.py": (3, 0),   # pip or uv; whether uv runs (#259)
-        "services/introspector.py": (0, 2),      # in-process load: require_runnable + guard_imports(); one keyword eval of a parameter
+        "services/introspector.py": (0, 4),      # in-process load (spec + exec_module): require_runnable + guard_imports(); one keyword compile + eval of a parameter
         "services/jobs.py": (2, 0),              # the job worker: create_job → require_runnable; payload carries the state
         "services/locations.py": (1, 1),         # git; a dynamic import of an app module
-        "services/quick_check.py": (0, 1),       # not a load: the "exec(" and "eval(" it looks for in the text (#256); parse and compile only
+        "services/quick_check.py": (0, 2),       # not a load: the "exec(" and "eval(" it looks for in the text (#256), and a compile that is never run
         "services/running_from.py": (1, 0),      # which process runs the app
         "services/sandbox.py": (4, 0),           # warm worker + cold fallback: run_in_sandbox → require_runnable; payload carries the state
-        "services/sandbox_worker.py": (0, 6),    # the guard's own load, load_module, load_module_resilient and its exec: check_model_path + hooks; two keyword evals
+        "services/sandbox_worker.py": (0, 12),   # the guard's own load (spec + exec_module); load_module (spec + exec_module) and load_module_resilient (spec, compile + exec): check_model_path + hooks; introspect's syntax compile; two keyword compile + eval
         "services/settings_info.py": (2, 0),     # git
         "services/working_copies.py": (2, 0),    # which files are open
     }
     spawn = re.compile(
         r"WORKER_PATH|sandbox_worker\.py|Popen\(|subprocess\.run\(|subprocess\.check_output\(|subprocess\.call\(|"
-        r"subprocess\.check_call\(|os\.system|os\.popen|os\.exec|os\.spawn|multiprocessing"
+        r"subprocess\.check_call\(|subprocess\.getoutput\(|subprocess\.getstatusoutput\(|os\.system|os\.popen|"
+        r"os\.exec|os\.spawn|os\.posix_spawn|os\.fork|pty\.spawn|create_subprocess_|ProcessPoolExecutor|multiprocessing"
     )
     load = re.compile(
         r"spec_from_file_location\(|SourceFileLoader\(|SourcelessFileLoader\(|ExtensionFileLoader\(|runpy|"
-        r"(?<![\w.])exec\(|\.exec\(|(?<![\w.])eval\(|\.eval\(|__import__\(|import_module\("
+        r"(?<![\w.])exec\(|\.exec\(|(?<![\w.])eval\(|\.eval\(|__import__\(|import_module\(|"
+        r"exec_module\(|\.load_module\(|(?<![\w.])reload\(|\.reload\(|(?<![\w.])compile\(|InteractiveInterpreter|"
+        r"InteractiveConsole|execfile"
     )
     found: dict[str, tuple[int, int]] = {}
     for py in sorted(APP_DIR.rglob("*.py")):
@@ -238,6 +242,40 @@ def test_every_spawn_and_exec_site_is_listed():
     for rel, expected in allowed.items():
         assert found.get(rel, (0, 0)) == expected, f"{rel}: {found.get(rel)} (starts, loads) matching lines, listed as {expected}"
 
+
+
+def test_no_spawn_or_load_name_is_imported_under_another_name():
+    """The counting tripwire above matches names as they are spelled
+    (``subprocess.run(``, ``exec_module(``). It would miss one brought in
+    under another name: ``from subprocess import run``, ``import runpy as r``,
+    ``getattr(os, "system")``. None of those is allowed in ``backend/app``,
+    except the worker's ``import os as _os``, whose calls the patterns above
+    still match."""
+    modules = r"(subprocess|runpy|multiprocessing|pty|code|builtins|importlib(\.util|\.machinery)?|concurrent\.futures|asyncio|os)"
+    names = (
+        r"(run|Popen|call|check_call|check_output|getoutput|getstatusoutput|run_path|run_module|"
+        r"system|popen|exec\w*|spawn\w*|posix_spawn\w*|fork\w*|spec_from_file_location|module_from_spec|"
+        r"SourceFileLoader|SourcelessFileLoader|import_module|reload|ProcessPoolExecutor|create_subprocess_\w+|"
+        r"InteractiveInterpreter|InteractiveConsole|eval|compile|__import__)"
+    )
+    aliased_module = re.compile(rf"^\s*import\s+{modules}\s+as\s+\w+")
+    from_import = re.compile(rf"^\s*from\s+{modules}\s+import\s+(.*)$")
+    dynamic = re.compile(r"getattr\(\s*(os|subprocess|runpy|importlib|builtins|__builtins__)\b|__builtins__\[")
+    allowed = {("services/sandbox_worker.py", "import os as _os")}
+    found = []
+    for py in sorted(APP_DIR.rglob("*.py")):
+        rel = str(py.relative_to(APP_DIR))
+        if rel == "services/assistant/import_guard.py":
+            continue
+        for line in py.read_text(encoding="utf-8").splitlines():
+            code = line.split("#", 1)[0].rstrip()
+            hit = bool(aliased_module.search(code) or dynamic.search(code))
+            m = from_import.search(code)
+            if m and re.search(rf"\b{names}\b", m.group(m.lastindex)):
+                hit = True
+            if hit and (rel, code.strip()) not in allowed:
+                found.append((rel, code.strip()))
+    assert not found, f"a spawn or code-load name imported under another name: {found}"
 
 # ── 2. a tracked path under a site-packages name ─────────────────────────
 
