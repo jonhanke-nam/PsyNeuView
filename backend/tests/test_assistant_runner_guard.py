@@ -598,3 +598,35 @@ def test_a_model_that_opens_files_and_starts_processes_works_while_something_is_
     assert r.status_code == 200, r.text
     assert r.json()["model"].get("error") is None, r.text[:2000]
     assert out.exists() and child.exists()
+
+
+@pytest.mark.parametrize("how", ["import", "exec_open", "runpy_run_path", "subprocess_list"])
+def test_the_in_process_converter_refuses_a_tracked_file_run_any_way(st, how):
+    """``/model/convert`` runs the model in the server's own process. A
+    tracked, unapproved helper is refused there too, whether imported or run
+    another way, and its marker never appears."""
+    marker2 = st["tmp"] / f"conv_ran_{how}.txt"
+    helper = st["models"] / f"conv_helper_{how}.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    stmt = f"import conv_helper_{how}" if how == "import" else _other_way(how, helper)
+    model = st["tmp"] / "Own3" / f"convert_me_{how}.py"
+    model.parent.mkdir(exist_ok=True)
+    model.write_text(_model_importing(f"sys.path.insert(0, {str(st['models'])!r})\n{stmt}"))
+    r = client.post("/api/model/convert", json={"file_path": str(model), "backup": False})
+    assert r.status_code == 409, r.text
+    assert not marker2.exists()
+    if r.status_code == 409:
+        assert r.json()["path"] == str(helper.resolve())
+
+
+def test_the_server_hook_acts_only_inside_an_in_process_load(st):
+    """Outside an in-process load the server reads an unapproved file freely
+    (it has to, to show it for review); inside one, on that thread, it can't."""
+    assert review.is_tracked(str(st["agent_file"]))
+    assert st["agent_file"].read_text() == st["text"]
+    with pytest.raises(review.UnreviewedAssistantCode):
+        with review.guard_imports():
+            open(st["agent_file"]).read()
+    assert st["agent_file"].read_text() == st["text"]
+    assert client.post("/api/assistant/review/status", json={"path": str(st["agent_file"])}).status_code == 200

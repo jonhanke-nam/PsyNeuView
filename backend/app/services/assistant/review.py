@@ -307,9 +307,14 @@ def guard_imports():
 class _GuardImports:
     def __enter__(self):
         import_guard.refresh(exempt_roots=exempt_roots())
+        # The audit hook on this thread too: a tracked, unapproved file
+        # opened, compiled, run or handed to a process by the model (#187).
+        self._active = import_guard.active()
+        self._active.__enter__()
         return self
 
     def __exit__(self, exc_type, exc, tb):
+        self._active.__exit__(exc_type, exc, tb)
         if isinstance(exc, import_guard.UnreviewedImport):
             raise UnreviewedAssistantCode(
                 exc.path, str(exc),
@@ -354,3 +359,4 @@ def worker_payload_extras() -> dict:
 # The server's own importers go through the same finder as the worker's,
 # fed from this module's view of the state.
 import_guard.install(provider=lambda: (_load()["files"], _broken))
+import_guard.install_audit_hook()

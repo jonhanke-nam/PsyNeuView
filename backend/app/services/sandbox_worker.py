@@ -4535,7 +4535,7 @@ if __name__ == "__main__":
     # Running as the worker, where model code runs: a tracked, unapproved
     # file is also refused when it is opened, compiled, executed, handed to a
     # new process, renamed or linked (#187). Not when a test imports this file.
-    _guard.install_audit_hook()
+    _guard.install_audit_hook(everywhere=True)
     if persistent:
         _run_persistent()
     else:

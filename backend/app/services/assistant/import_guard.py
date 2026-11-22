@@ -319,11 +319,13 @@ def install(provider: Callable[[], tuple[dict, bool]] | None = None) -> None:
 # tracked, then imported. An audit hook (``sys.addaudithook``, which can't
 # be removed once added) sees the file being opened, compiled, executed,
 # passed to a new process, renamed or linked, and refuses each one for a
-# tracked, unapproved file, with the same 409. Only in the sandbox worker,
-# where model code runs: the server itself reads unapproved files to show
-# them for review. Only tracked paths: the unreadable-state rule is applied
-# at every load and import already, and applying it to every open would
-# stop the worker reading its own files.
+# tracked, unapproved file, with the same 409. In the sandbox worker it
+# applies to everything, every thread, all the time. In the server it
+# applies only on the thread that is loading a model in-process (the
+# converter), inside ``active()``: the server itself reads unapproved files
+# to show them for review, and must go on doing so. Only tracked paths: the
+# unreadable-state rule is applied at every load and import already, and
+# applying it to every open would stop the worker reading its own files.
 
 _AUDIT_EVENTS = frozenset({
     "open", "compile", "exec", "os.rename", "os.link",
@@ -332,6 +334,7 @@ _AUDIT_EVENTS = frozenset({
 _PROCESS_EVENTS = frozenset({"subprocess.Popen", "os.system", "os.exec", "os.posix_spawn", "os.spawn", "pty.spawn"})
 _audit_local = threading.local()  # per thread: a model thread can't ride on another's check
 _audit_installed = False
+_audit_everywhere = False  # True in the worker; in the server only inside active()
 
 
 def _as_text(value) -> str | None:
@@ -417,6 +420,8 @@ def _vet_process(event: str, args: tuple) -> None:
 def _audit(event: str, args: tuple) -> None:
     if not _state.tracked or event not in _AUDIT_EVENTS or getattr(_audit_local, "busy", False):
         return
+    if not _audit_everywhere and not getattr(_audit_local, "active", 0):
+        return
     _audit_local.busy = True  # the check itself opens the file to hash it
     try:
         if event in _PROCESS_EVENTS:
@@ -437,14 +442,29 @@ def _audit(event: str, args: tuple) -> None:
         _audit_local.busy = False
 
 
-def install_audit_hook() -> None:
-    """Add the audit hook (once; it can't be removed). The sandbox worker
-    calls this when it runs as the worker, never when imported by a test or
-    the server."""
-    global _audit_installed
+def install_audit_hook(everywhere: bool = False) -> None:
+    """Add the audit hook (once; it can't be removed). ``everywhere`` is for
+    the sandbox worker running as the worker: every thread, every task. The
+    server adds it with ``everywhere`` False, so it acts only inside
+    ``active()``."""
+    global _audit_installed, _audit_everywhere
+    if everywhere:
+        _audit_everywhere = True
     if not _audit_installed:
         sys.addaudithook(_audit)
         _audit_installed = True
+
+
+class active:
+    """On this thread, for an in-process model load: the audit hook acts."""
+
+    def __enter__(self):
+        _audit_local.active = getattr(_audit_local, "active", 0) + 1
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        _audit_local.active = max(0, getattr(_audit_local, "active", 1) - 1)
+        return False
 
 
 def refresh(path: str | None = None, exempt_roots=None) -> None:
