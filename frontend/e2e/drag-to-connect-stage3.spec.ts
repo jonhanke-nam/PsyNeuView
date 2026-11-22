@@ -109,7 +109,27 @@ function structuralChanges(page: Page) {
   return seen;
 }
 
+/** The running animation on a node's halo (its ::after), or "none". */
+const haloAnimation = (page: Page, id: string) =>
+  shape(page, id).evaluate((el) => getComputedStyle(el, "::after").animationName);
+
 test.describe("drag to connect, third part: the type follows the sender (#253)", { tag: "@ci" }, () => {
+  test("valid targets pulse; the one under the pointer holds steady; Reduce Motion stops the pulse", async ({ page }) => {
+    await open(page, scratch());
+    await startDrag(page, "ctrl");
+    await moveOnto(page, "b");
+    await expect(shape(page, "b")).toHaveClass(/pnv-connect-locked/, { timeout: 30_000 });
+    // Not the selection's ring: a halo, pulsing on the others, steady here.
+    await expect(shape(page, "a")).toHaveClass(/pnv-connect-target/);
+    expect(await haloAnimation(page, "a")).toBe("pnv-connect-pulse");
+    expect(await haloAnimation(page, "b")).toBe("none");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    expect(await haloAnimation(page, "a")).toBe("none");
+    await page.mouse.up();
+    await page.keyboard.press("Escape");
+  });
+
+
   test("a control mechanism asks which parameter, draws the arrow, and Undo removes it", async ({ page }) => {
     const file = scratch();
     await open(page, file);
@@ -119,6 +139,10 @@ test.describe("drag to connect, third part: the type follows the sender (#253)",
     await startDrag(page, "ctrl");
     await moveOnto(page, "b");
     await expect(shape(page, "b")).toHaveAttribute("data-connect-target", "valid", { timeout: 30_000 });
+    // The arrow being drawn is a real arrow, in the drop-target colour.
+    await expect(page.getByTestId("connect-rubber-band").locator("polygon")).toHaveCount(1);
+    // The named learning mechanism's learning rate can be controlled too.
+    await expect(shape(page, LM)).toHaveAttribute("data-connect-target", "valid");
     await page.mouse.up();
 
     const chooser = page.getByTestId("port-chooser");

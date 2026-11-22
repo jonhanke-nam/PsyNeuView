@@ -177,7 +177,10 @@ test.describe("drag to connect, second part (#253)", { tag: "@ci" }, () => {
     await moveOnto(page, "b");
     await expect(shape("b")).toHaveAttribute("data-connect-target", "valid", { timeout: 30_000 });
     await expect(shape("ctrl")).toHaveAttribute("data-connect-target", "valid");
-    await expect(shape("b")).toHaveCSS("outline-style", "solid");
+    // A halo, held steady under the pointer; the others pulse (#253 stage 3).
+    await expect(shape("b")).toHaveClass(/pnv-connect-target.*pnv-connect-locked/);
+    await expect(shape("ctrl")).toHaveClass(/pnv-connect-target/);
+    await expect(shape("ctrl")).not.toHaveClass(/pnv-connect-locked/);
     // The node dragged from stays as it is, and a valid target gives no reason.
     await expect(shape("a")).not.toHaveAttribute("data-connect-target", /.*/);
     await expect(page.getByTestId("connect-refusal-reason")).toHaveCount(0);
