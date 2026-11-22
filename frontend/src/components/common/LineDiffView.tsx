@@ -16,7 +16,7 @@ import type { CSSProperties } from "react";
 
 import { collapseUnchanged, toSideBySide, type DiffRow } from "@/utils/lineDiff";
 
-export const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
+export const MONO = "var(--pnv-font-mono)";
 
 type Collapsed = ReturnType<typeof collapseUnchanged>;
 

@@ -80,7 +80,7 @@ function DiffView({ before, after }: { before: string; after: string }) {
         background: "var(--pnv-surface-muted)",
         maxHeight: 180,
         overflow: "auto",
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+        fontFamily: "var(--pnv-font-mono)",
         fontSize: "var(--pnv-fs-11)",
       }}
     >
@@ -415,7 +415,7 @@ export function HistoryPanel() {
                           fontSize: "var(--pnv-fs-10)",
                           color: summary.startsWith("no change") ? "var(--pnv-warning)" : "var(--pnv-text-faint)",
                           whiteSpace: "nowrap",
-                          fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                          fontFamily: "var(--pnv-font-mono)",
                         }}
                       >
                         {summary}

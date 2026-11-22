@@ -85,7 +85,7 @@ export function PromptModal({ title, message, defaultValue = "", placeholder, on
               borderRadius: 6,
               marginBottom: 16,
               boxSizing: "border-box",
-              fontFamily: "monospace",
+              fontFamily: "var(--pnv-font-mono)",
             }}
           />
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>

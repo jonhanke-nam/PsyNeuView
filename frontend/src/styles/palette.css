@@ -414,3 +414,12 @@
   --pnv-fs-16: calc(16px * var(--pnv-text-scale));
   --pnv-fs-18: calc(18px * var(--pnv-text-scale));
 }
+
+/* The code font (#109): not a colour either. The Mac's own monospaced face
+   (SF Mono, then Menlo) wherever the app shows code, a name or a value in
+   code type. The bare generic "monospace" is Courier on macOS, a typewriter
+   face that looked out of place beside the system font; a component writes
+   `var(--pnv-font-mono)`, never "monospace" (styleConventions.test.ts). */
+:root {
+  --pnv-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}

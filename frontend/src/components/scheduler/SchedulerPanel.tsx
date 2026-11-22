@@ -132,10 +132,10 @@ export function SchedulerPanel() {
               background: i % 2 === 0 ? "var(--pnv-surface-muted)" : "var(--pnv-surface)",
               borderRadius: 4,
             }}>
-              <span style={{ fontSize: s(11), fontWeight: 700, color: "var(--pnv-text-faint)", minWidth: 28, fontFamily: "monospace" }}>
+              <span style={{ fontSize: s(11), fontWeight: 700, color: "var(--pnv-text-faint)", minWidth: 28, fontFamily: "var(--pnv-font-mono)" }}>
                 {i + 1}.
               </span>
-              <span style={{ fontSize: s(12), fontFamily: "monospace", color: "var(--pnv-text-body)" }}>
+              <span style={{ fontSize: s(12), fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-text-body)" }}>
                 {step.join(", ")}
               </span>
             </div>
@@ -169,7 +169,7 @@ export function SchedulerPanel() {
                 <span style={{ fontSize: s(11), fontWeight: 600, color: "var(--pnv-text-secondary)", minWidth: 60 }}>
                   {bc.owner}
                 </span>
-                <span style={{ fontSize: s(11), fontFamily: "monospace", color: "var(--pnv-primary)" }}>
+                <span style={{ fontSize: s(11), fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-primary)" }}>
                   {conditionToString(bc.condition)}
                 </span>
               </div>
@@ -209,7 +209,7 @@ export function SchedulerPanel() {
                 title={`Click to inspect ${gsc.type}`}
               >
                 <span style={{
-                  fontSize: s(10), fontWeight: 600, fontFamily: "monospace",
+                  fontSize: s(10), fontWeight: 600, fontFamily: "var(--pnv-font-mono)",
                   color: "var(--pnv-on-primary)", background: color, padding: "0 5px",
                   borderRadius: 6, lineHeight: "16px",
                 }}>

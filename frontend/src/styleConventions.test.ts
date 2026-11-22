@@ -20,6 +20,8 @@
  * A source check, not a render: e2e/style-conventions.spec.ts checks the
  * computed styles in a browser against the tokens.
  */
+import { readFileSync } from "fs";
+import path from "path";
 import { describe, expect, it } from "vitest";
 import { ALLOWED_COLOURS, paletteTokens, scan, unallowedColours } from "../scripts/style-report.mjs";
 import { CHART_SERIES } from "./utils/paletteColor";
@@ -117,6 +119,22 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
   "components/common/Combobox.tsx": { count: 1, what: "the ▼ inside the field that opens its list" },
 };
 
+/**
+ * Files that may still write the bare generic "monospace" (#109). Everywhere
+ * else code type is `var(--pnv-font-mono)` (styles/palette.css): the generic
+ * is Courier on macOS. These are the graph canvas's own labels, left as they
+ * are while the canvas's edges and nodes are being reworked elsewhere; each
+ * moves to the token, and off this list, in its own change.
+ */
+const BARE_MONOSPACE_PENDING = new Set([
+  "components/graph/ProjectionEdge.tsx",
+  "components/graph/GSCEdge.tsx",
+  "components/graph/MechanismNode.tsx",
+  "components/graph/CIMNode.tsx",
+  "components/graph/DanglingNode.tsx",
+  "components/graph/GraphCanvas.tsx",
+]);
+
 const rows = scan();
 const byFile = new Map(rows.map((r) => [r.file, r]));
 
@@ -171,6 +189,21 @@ describe("style conventions (#1302)", () => {
       expect(defined.has(m![1]), `styles/palette.css does not define ${m![1]}`).toBe(true);
     }
     for (const t of Object.values(ROLE_TOKENS)) expect(defined.has(t), `styles/palette.css does not define ${t}`).toBe(true);
+  });
+
+  it("writes code type as the --pnv-font-mono token, never the bare generic monospace (#109)", () => {
+    const src = path.dirname(new URL(import.meta.url).pathname);
+    for (const r of rows) {
+      if (BARE_MONOSPACE_PENDING.has(r.file)) continue;
+      const text = readFileSync(path.join(src, r.file), "utf8");
+      const bare = text.match(/["'`]monospace["'`]/g) ?? [];
+      expect(bare, `${r.file} writes "monospace" (Courier on a Mac); use "var(--pnv-font-mono)"`).toEqual([]);
+    }
+    for (const f of BARE_MONOSPACE_PENDING) {
+      const text = readFileSync(path.join(src, f), "utf8");
+      expect(/["'`]monospace["'`]/.test(text), `${f} no longer writes "monospace"; take it off BARE_MONOSPACE_PENDING`).toBe(true);
+    }
+    expect(paletteTokens().has("--pnv-font-mono")).toBe(true);
   });
 
   it("defines nothing twice in palette.css", () => {

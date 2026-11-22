@@ -162,7 +162,7 @@ export function PnlVersionChoice({
                           setChosen("official");
                         }}
                         disabled={isRunning}
-                        style={{ ...selectStyle, flex: "none", fontFamily: "monospace", fontSize: "var(--pnv-fs-12)", maxWidth: "100%" }}
+                        style={{ ...selectStyle, flex: "none", fontFamily: "var(--pnv-font-mono)", fontSize: "var(--pnv-fs-12)", maxWidth: "100%" }}
                       >
                         {releases.releases.map((r) => {
                           const state = releaseOptionState(r);
