@@ -389,3 +389,90 @@ def test_a_source_checkout_is_not_purged_or_re_imported(st):
     review.mark_unreviewed(str(inside), inside.read_text())
     assert unreviewed(load(inside))
     assert not (st["tmp"] / "inside_ran.txt").exists()
+
+
+# ── 7. every task the worker runs, started directly with no review state ──
+
+
+WORKER_TASKS = [
+    "introspect", "run", "learn", "get_input_nodes", "show_graph",
+    "export_mdf", "mdf_gaps", "connection_options", "connection_targets",
+]
+
+
+def _direct_worker(payload: dict, *, env_state=None) -> dict:
+    env = {**os.environ}
+    if env_state is not None:
+        env["PSYNEUVIEW_ASSISTANT_REVIEW_FILE"] = str(env_state)
+    proc = subprocess.run([sys.executable, WORKER_PATH], input=json.dumps(payload), capture_output=True,
+                          text=True, env=env, timeout=300)
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    return json.loads(proc.stdout.split("###PSYNEUVIEW_RESULT###")[-1].strip())
+
+
+def test_the_worker_lists_exactly_these_tasks():
+    """A new task in the worker has to be added to the direct-start test below."""
+    source = Path(WORKER_PATH).read_text(encoding="utf-8")
+    block = source.split("TASKS = {", 1)[1].split("}", 1)[0]
+    assert sorted(re.findall(r'"(\w+)":', block)) == sorted(WORKER_TASKS)
+
+
+@pytest.mark.parametrize("task", WORKER_TASKS)
+def test_every_worker_task_refuses_an_unreviewed_model_when_started_directly(st, task):
+    """Whatever the task, a worker started with no review state in its payload
+    (an old or direct caller, or a new route that forgot the guard) finds the
+    state itself and refuses the model before any of it runs."""
+    params = {"file_path": str(st["agent_file"]), "composition_name": "poc", "inputs": {}, "targets": {},
+              "epochs": 1, "num_trials": 1, "source": "poc", "target": "poc"}
+    result = _direct_worker({"task": task, "params": params}, env_state=review.state_path())
+    assert result.get("unreviewed_import") == str(st["agent_file"].resolve()), result
+    assert not st["marker"].exists()
+
+
+def test_a_job_started_without_the_route_is_refused_by_the_worker(st):
+    """The job manager's own worker, started without the route's check (as
+    the original hole did): the worker refuses, the job ends in an error that
+    names the review, and the marker never appears."""
+    model = st["models"] / "learn_direct.py"
+    text = learnable_model(st["marker"])
+    model.write_text(text)
+    review.mark_unreviewed(str(model), text)
+    body = _job_body(model)
+    params = {"file_path": body["file_path"], "composition_name": "comp", "inputs": body["inputs"],
+              "targets": body["targets"], "epochs": 1, "learning_rate": None, "execution_mode": None,
+              "stream_progress": True}
+    job, active = job_service.job_manager.submit("learn", "learn", params, {}, {})
+    assert job is not None, active
+    snap = _wait_job(job.id)
+    assert snap["status"] == "error", snap
+    assert snap["result"]["unreviewed_import"] == str(model.resolve()), snap
+    assert snap["result"]["reason"] == review.REASON
+    assert not st["marker"].exists()
+
+
+def test_a_job_payload_carries_the_review_state(st, monkeypatch):
+    """What the job worker is sent names the state file and the exempt roots,
+    the same as the warm worker's tasks."""
+    sent = {}
+    real_popen = job_service.subprocess.Popen
+
+    class Recording(real_popen):
+        def __init__(self, *a, **k):
+            super().__init__(*a, **k)
+            real_write = self.stdin.write
+
+            def write(data):
+                sent["payload"] = json.loads(data)
+                return real_write(data)
+
+            self.stdin.write = write
+
+    monkeypatch.setattr(job_service.subprocess, "Popen", Recording)
+    model = st["tmp"] / "Own" / "mine.py"
+    model.parent.mkdir()
+    model.write_text(learnable_model(st["tmp"] / "mine_ran.txt"))
+    r = client.post("/api/jobs", json=_job_body(model))
+    assert r.status_code == 200, r.text
+    assert _wait_job(r.json()["id"])["status"] == "done"
+    assert sent["payload"]["review_state"] == str(review.state_path())
+    assert sent["payload"]["exempt_roots"] == review.exempt_roots()

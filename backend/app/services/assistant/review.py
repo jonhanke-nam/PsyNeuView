@@ -49,6 +49,8 @@ STATE_ENV = "PSYNEUVIEW_ASSISTANT_REVIEW_FILE"
 
 #: The reason the page recognises in a 409 from any blocked route.
 REASON = "assistant_code_unreviewed"
+#: The reason when the review state itself can't be read (every guard fails closed).
+REASON_UNREADABLE = "assistant_review_state_unreadable"
 
 _lock = threading.Lock()
 _cache: dict | None = None
