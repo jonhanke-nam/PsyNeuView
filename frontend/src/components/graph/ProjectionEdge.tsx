@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   BaseEdge,
   EdgeLabelRenderer,
+  useConnection,
   useStore,
   useReactFlow,
   ViewportPortal,
@@ -37,6 +38,7 @@ import { EDGE_LINE_HIGHLIGHT_EXTRA, EDGE_LINE_HOVER_EXTRA, edgeArrowheadScale, u
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useNodeBoxes } from "@/hooks/useNodeBoxes";
+import { targetStatus, useConnectTargets } from "@/stores/connectTargetsStore";
 
 const FAN_SPACING_PX = 18;
 // Label width estimate: monospace 10px font ≈ 6px per char, plus ~12px
@@ -199,6 +201,14 @@ export function ProjectionEdge({
   // History's name for a reshape of this arrow (#164).
   const arrowName = typeof label === "string" && label ? label : id;
   const isCursorHighlighted = !isSelected && cursorHighlightedEdgeId === id;
+  // #253 stage 3: while a learning mechanism's connection is dragged, the
+  // arrows it could train light up and the rest dim; hovered, a dimmed one
+  // says why. Arrows are in PsyNeuLink's answer only for a learning sender.
+  const arrowVar = (data as { varName?: string } | undefined)?.varName;
+  const connecting = useConnection((c) => c.inProgress);
+  const connectStatus = useConnectTargets((s) => targetStatus(s.targets, arrowVar));
+  const connectReason = useConnectTargets((s) => (s.targets && arrowVar ? s.targets[arrowVar] : undefined));
+  const dropStatus = connecting ? connectStatus : null;
   const showLabel = isSelected || hovered || alwaysVisible || isCursorHighlighted;
 
   const labelOffset = (data as any)?.labelOffset ?? 0.5;
@@ -622,7 +632,7 @@ export function ProjectionEdge({
         ? autoBends().map((p) => ({ x: p.x, y: p.y, forced: true }))
         : []);
 
-  const effectiveStroke = isSelected
+  const effectiveStroke = isSelected || dropStatus === "valid"
     ? "var(--pnv-primary)"
     : isCursorHighlighted
     ? "var(--pnv-cursor-highlight)"
@@ -660,8 +670,9 @@ export function ProjectionEdge({
           // previous order let ...style clobber them, making thickness, hover,
           // and selection-recolor inert (#319).
           ...style,
-          strokeWidth: hovered ? scaledStrokeWidth + EDGE_LINE_HOVER_EXTRA : isCursorHighlighted ? scaledStrokeWidth + EDGE_LINE_HIGHLIGHT_EXTRA : scaledStrokeWidth,
+          strokeWidth: hovered ? scaledStrokeWidth + EDGE_LINE_HOVER_EXTRA : isCursorHighlighted || dropStatus === "valid" ? scaledStrokeWidth + EDGE_LINE_HIGHLIGHT_EXTRA : scaledStrokeWidth,
           stroke: effectiveStroke,
+          opacity: dropStatus === "invalid" ? 0.4 : (style as { opacity?: number } | undefined)?.opacity,
         }}
       />
       {/* Wide invisible hit area ON TOP of BaseEdge — carries hover + the #951
@@ -688,6 +699,7 @@ export function ProjectionEdge({
         // (#975 explains why stopPropagation alone does not stop d3-zoom).
         className="projection-edge-hit nopan"
         data-layout={autoLayout ? "auto" : "custom"}
+        data-connect-target={dropStatus ?? undefined}
         style={{ pointerEvents: "stroke" }}
       >
         <title>{`${tooltip ? tooltip + "\n" : ""}${autoLayout
@@ -824,6 +836,31 @@ export function ProjectionEdge({
             );
           })}
         </ViewportPortal>
+      )}
+      {dropStatus === "invalid" && hovered && connectReason && (
+        <EdgeLabelRenderer>
+          <div
+            role="status"
+            data-testid="connect-refusal-reason"
+            style={{
+              position: "absolute",
+              transform: `translate(-50%, calc(-100% - 10px)) translate(${labelX}px,${labelY}px)`,
+              maxWidth: 260,
+              width: "max-content",
+              padding: "4px 8px",
+              borderRadius: 4,
+              background: "var(--pnv-surface)",
+              border: "1px solid var(--pnv-border-light)",
+              boxShadow: "var(--pnv-shadow-popover)",
+              color: "var(--pnv-text-body)",
+              fontSize: "var(--pnv-fs-12)",
+              pointerEvents: "none",
+              zIndex: 10,
+            }}
+          >
+            {connectReason}
+          </div>
+        </EdgeLabelRenderer>
       )}
       {label && (
         <EdgeLabelRenderer>
