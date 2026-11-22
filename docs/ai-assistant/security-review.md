@@ -90,6 +90,7 @@ One entry per review. Add the newest at the top.
 
 | Date | Phase | What was reviewed (branch, commit) | Reviewer (role) | Result | Follow-ups |
 |---|---|---|---|---|---|
+| _Pending_ | 1, 2, 3 | Re-check of the runner guard follow-up (#187), branch `feature/runner-guard-187` | _Pending: independent reviewer (adversarial, not the author)_ | **PLACEHOLDER: to be filled in by the independent reviewer, not the author.** The changes are listed under "The runner guard follow-up (#187)" below | _Pending_ |
 | 2026-11-03 | 1, 2, 3 | Re-check of the runner enforcement at `7ec8aa79` (#187) | Independent reviewer (adversarial, not the author) | **Phases 1, 2 and 3 safe to ship off by default**, subject to the outside review required before a release that lets the assistant write files. Residuals carried below | Widen the spawn tripwire (done); outside review |
 | 2026-11-03 | 1, 2, 3 | Narrow re-check at `9fb29e6a` (#187) | Independent reviewer (adversarial, not the author) | **A High everyone missed**: `POST /api/jobs` started the worker outside `run_in_sandbox`, so an unreviewed model ran through a queued Learn job. Plus: a tracked path under a `site-packages` name was exempt; a helper loaded by path wasn't caught though the docs said `importlib` was; a finder a model adds could get ahead of the guard; the in-process path served a stale helper; a PsyNeuLink checkout would be purged every task. All fixed below; **Phase 3 pending** the reviewer's re-check | The findings below |
 | 2026-11-03 | 1, 2, 3 | Re-check of the fixes at `f90f6499` | Independent reviewer (adversarial, not the author) | 13 of 14 findings closed. **Phases 1 and 2 safe to ship, off by default. Phase 3 pending**: finding 7's whole-folder rule missed a subfolder (`pkg/helper.py` imported through `sys.path`); replaced by the import-time guard below | The reviewer's check of the import guard |
@@ -136,6 +137,25 @@ fails: the marker never appears.
 | R5 | Low | In-process (`use_sandbox=False`): a helper approved, then edited, was served stale from `sys.modules` | The purge runs in the server too; the app's own modules are under the repo root, which is never purged |
 | R6 | Low | A PsyNeuLink checkout (`~/.psyneuview/sources/...` or a user's own) counted as user-land: once anything was tracked, every task would purge and re-import all of `psyneulink.*` | The active checkout travels with every task as an exempt root and is never purged; a tracked file under it is still checked, since tracked is looked up first |
 
+### The runner guard follow-up (#187)
+
+Built on the branch after the second re-check, to the issue's "Done when".
+Each attack is a test through the real route and the real worker in
+`backend/tests/test_assistant_runner_guard.py`, asserting a marker file the
+attack tries to create never appears. **Not yet re-checked by the
+independent reviewer** (placeholder row above).
+
+| # | What | Change | Proof |
+|---|---|---|---|
+| F1 | Code run from a tracked, unapproved file without an import: `exec(open(p).read())` (also inside `try/except Exception`), `Path(p).read_text()`, `exec(compile(text, p, "exec"))`, `runpy.run_path`, `python p` in a subprocess or a shell (by path, or by name after `cd`), `os.system`, a copy, rename, hard link or symlink imported or read under a new name | An audit hook in the worker refuses the open, compile, exec, process start, rename or link of a tracked, unapproved file, with the 409 naming it. Added only once something is tracked | `test_a_tracked_file_run_without_an_import_is_refused` (13 ways); 11 of them fail with the hook taken out (`runpy.run_module` was already caught by the loader). `test_a_tracked_file_run_by_exec_runs_once_approved`; `test_a_model_that_opens_files_and_starts_processes_works_while_something_is_tracked` |
+| F2 | The converter runs a model in the server's own process, where the worker's hook isn't | The same hook in the server, acting only on the thread inside `guard_imports()`, so the server still reads unapproved files to show them | `test_the_in_process_converter_refuses_a_tracked_file_run_any_way` through `/model/convert` (import, `exec(open(...))`, `runpy.run_path`, subprocess); `test_the_server_hook_acts_only_inside_an_in_process_load` |
+| F3 | `/model/convert` turned the guard's refusal into a 400 "Conversion failed": closed, but the page couldn't offer the review | It answers the review 409 | The converter test asserts 409 and the path |
+| F4 | A job the worker refused ended as a plain error | The job's result names the file and the reason (`unreviewed_import`, `reason`) | `test_a_job_started_without_the_route_is_refused_by_the_worker` (the job manager's worker with the route's check skipped, as the original hole did) |
+| F5 | Only `introspect` was tested with a worker started directly with no review state | Every task the worker runs is | `test_every_worker_task_refuses_an_unreviewed_model_when_started_directly` (9 tasks); `test_the_worker_lists_exactly_these_tasks` fails when a task is added |
+| F6 | The job payload's review state was not asserted | It is | `test_a_job_payload_carries_the_review_state` |
+| F7 | The tripwire missed `exec_module` on its own line, `load_module`, `reload`, `compile`, the interactive interpreters, `posix_spawn`, `fork`, `pty`, asyncio's subprocesses, `getoutput` and process pools, and any of them imported under another name | Counted; and a second test fails on `from subprocess import run`, `import runpy as r`, `getattr(os, ...)` and the like | `test_every_spawn_and_exec_site_is_listed`, `test_no_spawn_or_load_name_is_imported_under_another_name` |
+| F8 | The threat model listed only the model-execution sites | It lists every process start and code load in `backend/app` with its guard or why it isn't model code, and says exactly what isn't covered | `threat-model.md` section 7 |
+
 ### Verdict and residuals, 2026-11-03
 
 Phases 1, 2 and 3 are safe to ship off by default, per the independent
@@ -148,7 +168,10 @@ accepted and carried, not fixed:
   only text that was approved at the time.
 - **`exec`, `runpy` and subprocesses** aren't covered by the import guard: a
   reviewed model that runs code by those means is trusted as the user's
-  own. Approving a model means trusting what it does.
+  own. Approving a model means trusting what it does. *Narrowed by the
+  follow-up above (F1, F2): a tracked, unapproved file's own text is now
+  refused through each of them; what remains is in the threat model's
+  section 7.*
 - **No per-session credential** for the assistant routes yet; `same_site`
   is what there is.
 - **`saving: structured_without_asking`** is stored and shown but not acted

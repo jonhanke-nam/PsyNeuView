@@ -18,25 +18,38 @@ nothing else. When something is tracked, a path lookup per import from a
 ``.py`` outside the standard library and site-packages, and one file read
 for a tracked path.
 
-Two hooks, one check:
+Three hooks, one check:
 
 * the finder, for everything the path finder resolves (``import``,
-  ``importlib.import_module``, packages, subfolders, folders on ``sys.path``);
+  ``importlib.import_module``, ``runpy.run_module``, packages, subfolders,
+  folders on ``sys.path``);
 * a wrapper on ``SourceFileLoader.get_code``, for a file loaded by path
   (``spec_from_file_location`` + ``exec_module``, ``SourceFileLoader(...).load_module()``),
-  which is also how PsyNeuView loads a model, so an agent could write it.
+  which is also how PsyNeuView loads a model, so an agent could write it;
+* an audit hook (#187) for a tracked file's text reached without a loader:
+  the file opened (``exec(open(p).read())``, ``Path(p).read_text()``, a
+  copy), compiled under its own name (``runpy.run_path``,
+  ``exec(compile(text, p, "exec"))``), executed, named in a new process
+  (``python p``, a shell command, ``os.system``, ``os.exec*``,
+  ``posix_spawn``, ``pty.spawn``), renamed, hard-linked or symlinked. In
+  the worker it acts in every thread; in the server only on the thread of
+  an in-process load. It is added the first time something is tracked.
 
 The worker also checks the model's own path itself, in its loaders, so a
 task started without the server's guard (an old or direct caller) is still
 refused. A tracked path is tracked wherever it sits: the state is consulted
 before any "library path" shortcut.
 
-What it doesn't cover, said plainly: a reviewed model that runs code by
-other means, ``exec(open(...).read())``, ``runpy``, a subprocess, or that
-evaluates text it read, isn't going through a loader. Hard links, sourceless
-``.pyc`` files and zip imports need something already running as the user
-to set them up. Approving a model means trusting what it does. The guard is
-against accidental or agent-written imports and loads.
+What it doesn't cover, said plainly: a model that runs text it didn't read
+from the tracked file (written into the model itself, built up from
+pieces, fetched from the network); a child process, beyond the files its
+command names (a child Python has no guard of its own, so a script it runs
+may read or import anything); a thread a model starts during an in-process
+load in the server (the worker covers every thread); hard links, symlinks
+under another name, sourceless ``.pyc`` files and zip imports that
+something already running as the user set up beforehand. Approving a model
+means trusting what it does. The guard is against accidental or
+agent-written imports, loads and the obvious ways around them.
 """
 
 from __future__ import annotations
