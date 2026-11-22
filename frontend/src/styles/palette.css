@@ -133,39 +133,44 @@
   /* The palette's flyout, beside the compact palette. */
   --pnv-shadow-flyout: 2px 0 8px rgba(0, 0, 0, 0.08);
 
-  /* Node roles, from docs/icon-ontology.md: the colour a mechanism's role
-     has in PsyNeuLink's own show_graph, as show_graph's own PDF and PNG draw
-     it. show_graph names its colours ("green", "red", "blue", "purple"), and
-     Graphviz draws each name with its X11 value: green is #00ff00 and purple
-     #a020f0 (a browser would read the same names in an SVG as #008000 and
-     #800080, so the app's show_graph tab is made to agree with the PDF, not
-     the other way round). Red, green and purple must match show_graph exactly
-     (#190). Their own set: a button is never "INPUT green", and a role is
-     never "the primary blue". */
-  --pnv-role-input: #00ff00;
-  --pnv-role-output: #ff0000;
-  --pnv-role-control: #0000ff;
-  /* show_graph's orange (#ffa500) and pink (#ffc0cb) are too pale on white
-     for an outline (2:1 and 1.5:1), so these are the nearest named orange and
-     pink that still read. */
-  --pnv-role-learning: #ff8c00;
-  --pnv-role-probe: #ff69b4;
-  --pnv-role-internal: #000;
+  /* Node roles: show_graph's colours, EXACTLY, by design (#306). PsyNeuLink's
+     show_graph is the gold standard for what colour a role is. Its defaults
+     (ShowGraph.__init__: input_color, output_color, ...) are colour names,
+     and Graphviz draws each name with its X11 value in show_graph's PDF and
+     PNG: green is #00ff00, purple #a020f0, orange #ffa500, pink #ffc0cb. (A
+     browser reads green and purple in an SVG as #008000 and #800080, so the
+     app's show_graph tab is redrawn to agree with the PDF, not the other way
+     round.) Two tests keep these in step: backend/tests/test_show_graph_palette.py
+     reads show_graph's defaults from PsyNeuLink itself and compares them with
+     the values here, and styles/showGraphColours.test.ts checks them against
+     its own checked-in table. Change a value here only when show_graph
+     changes. docs/icon-ontology.md has the table. Their own set: a button is
+     never "INPUT green", and a role is never "the primary blue". */
+  --pnv-role-input: #00ff00;        /* show_graph input_color green */
+  --pnv-role-output: #ff0000;       /* output_color red */
+  --pnv-role-control: #0000ff;      /* control_color blue */
+  --pnv-role-learning: #ffa500;     /* learning_color orange */
+  --pnv-role-probe: #ffc0cb;        /* probe_color pink */
+  --pnv-role-internal: #000000;     /* default_node_color black */
   /* The rest of show_graph's role colours: a node that is both INPUT and
      OUTPUT (brown), the composition's controller (and its objective,
      purple), a node that sends a feedback projection (black: show_graph gives
      it a shape, not a colour), and one in a cycle (black, like any ordinary
      node: show_graph marks a cycle with a double ring). */
-  --pnv-role-singleton: #a52a2a;
-  --pnv-role-controller: #a020f0;
-  --pnv-role-feedback-sender: #000;
-  --pnv-role-cycle: #000;
-  /* The same roles as text (a node's type tag) and behind white text (its
-     role tag), where the outline colour is too light to read: a darker green
-     (#00ff00 on white is 1.4:1, unreadable; this is CSS green, 5.1:1), red,
-     orange and pink. The other roles' outline colours read as text as they
-     are (controller purple is 5.3:1 on white, either way round: purple text
-     on white, or a white role tag on purple). ROLE_TEXT_COLORS in constants/pnlTypes.ts names these. */
+  --pnv-role-singleton: #a52a2a;    /* input_and_output_color brown */
+  --pnv-role-controller: #a020f0;   /* controller_color purple */
+  --pnv-role-feedback-sender: #000000; /* default_node_color black */
+  --pnv-role-cycle: #000000;        /* default_node_color black */
+  /* THE ONE EXCEPTION: the same roles drawn as TEXT (a node's type tag) or
+     behind white text (its role tag). show_graph draws no text in a role's
+     colour, so there is nothing to match, and four of its colours are
+     unreadable as text on white: green #00ff00 is 1.4:1, orange 2:1, pink
+     1.5:1. These keep each role's hue, darker, for legibility: CSS green
+     (5.1:1), a deeper red, a deep orange, a deep pink. The other roles'
+     outline colours read as text as they are (controller purple is 5.3:1 on
+     white, either way round). ROLE_TEXT_COLORS in constants/pnlTypes.ts
+     names these. They are the only role colours allowed to differ from
+     show_graph. */
   --pnv-role-input-text: #008000;
   --pnv-role-output-text: #dd0000;
   --pnv-role-learning-text: #e65100;
@@ -237,7 +242,7 @@
   --pnv-projection-control: #1565c0;
   --pnv-projection-learning: #e65100;
   --pnv-projection-autoassociative: #7b1fa2;
-  --pnv-projection-inactive: #c62828;
+  --pnv-projection-inactive: #ff0000; /* show_graph's inactive_projection_color red, exactly (#306) */
   --pnv-projection-cim: #888;
   --pnv-projection-dangling: #c62828;
   /* The banner across the canvas while you pick a node: for a scheduling
