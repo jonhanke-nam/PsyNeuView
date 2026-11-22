@@ -109,3 +109,23 @@ def test_our_own_write_is_not_an_outside_edit(registry, tmp_path):
     time.sleep(0.05)
     a.write_text(content)
     assert not _wait_for(lambda: heard, timeout=1.0)
+
+
+# --- Two files in one folder (#308) -----------------------------------------
+#
+# Each file used to get its own observer on its parent folder. macOS's FSEvents
+# refuses a second watch on a folder already watched ("Cannot add watch ... it
+# is already scheduled"), so the second file in a folder went unwatched, with
+# nothing said. Folders are now scheduled once and shared.
+
+
+def test_two_files_in_one_folder_are_both_watched(registry, tmp_path):
+    a = _model(tmp_path, "a.py")
+    b = _model(tmp_path, "b.py")
+    heard: list[str] = []
+    registry.subscribe("window-a", str(a), lambda p: heard.append(p))
+    registry.subscribe("window-b", str(b), lambda p: heard.append(p))
+    _edit(b, "# edited elsewhere")
+    assert _wait_for(lambda: str(b) in heard), "the second file in the folder is watched"
+    _edit(a, "# edited elsewhere")
+    assert _wait_for(lambda: str(a) in heard), "the first file in the folder is watched"
