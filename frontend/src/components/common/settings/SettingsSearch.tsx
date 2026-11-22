@@ -8,6 +8,7 @@
  */
 import { forwardRef, useEffect, type RefObject } from "react";
 import { searchSettings, type SettingsSearchEntry } from "./settingsSearchIndex";
+import { REVEAL_SETTING_EVENT } from "./shared";
 
 interface Props {
   query: string;
@@ -159,6 +160,8 @@ export function revealSettingControl(
 ): () => void {
   let cancelled = false;
   const started = Date.now();
+  // A folded group that holds it unfolds first.
+  window.dispatchEvent(new CustomEvent(REVEAL_SETTING_EVENT, { detail: control }));
   const look = () => {
     if (cancelled || !root) return;
     const el = root.querySelector<HTMLElement>(`[data-testid="${control}"]`);

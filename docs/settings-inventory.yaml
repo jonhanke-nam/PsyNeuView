@@ -768,6 +768,7 @@ settings:
     section: assistant
     storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
     control: setting-assistant-agent-base-url
+    shown_when: the agent is an OpenAI-compatible server
     notes: >-
       Shown only for an OpenAI-compatible agent.
 

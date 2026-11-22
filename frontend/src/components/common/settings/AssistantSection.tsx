@@ -169,7 +169,12 @@ export function AssistantSection() {
         <Check input={<input data-testid="setting-assistant-visibility-files" type="checkbox" checked={settings.visibility.files} disabled={saving} onChange={(e) => visibility("files", e.target.checked)} style={{ marginTop: 3 }} />} title="Model files in the allowed folders (list and read, never run)" />
       </Group>
 
-      <Group id="assistant-limits" title="Limits and log" defaultFolded summary={`${settings.limits.tool_calls} tool calls, ${settings.limits.minutes} minutes per turn, ${settings.limits.max_tokens.toLocaleString()} tokens per session${settings.keep_log ? ", log kept" : ""}`}>
+      <Group
+        id="assistant-limits"
+        title="Limits and log"
+        defaultFolded
+        controls={["setting-assistant-limit-tool-calls", "setting-assistant-limit-minutes", "setting-assistant-limit-max-tokens", "setting-assistant-keep-log"]}
+        summary={`${settings.limits.tool_calls} tool calls, ${settings.limits.minutes} minutes per turn, ${settings.limits.max_tokens.toLocaleString()} tokens per session${settings.keep_log ? ", log kept" : ""}`}>
         <div style={{ display: "flex", gap: 16, alignItems: "flex-end" }}>
           <div>
             <SettingLabel title="Tool calls per turn" htmlFor="setting-assistant-limit-tool-calls" />
