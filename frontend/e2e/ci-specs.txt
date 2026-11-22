@@ -33,6 +33,7 @@ graph-click-conventions.spec.ts
 graph-fills-window.spec.ts
 graph-hit-areas.spec.ts
 graph-legend.spec.ts
+graph-menus-in-window.spec.ts
 graph-pointer-hand-size.spec.ts
 graph-pointer-precise.spec.ts
 graph-pointer.spec.ts
