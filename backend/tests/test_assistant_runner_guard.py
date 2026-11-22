@@ -476,3 +476,87 @@ def test_a_job_payload_carries_the_review_state(st, monkeypatch):
     assert _wait_job(r.json()["id"])["status"] == "done"
     assert sent["payload"]["review_state"] == str(review.state_path())
     assert sent["payload"]["exempt_roots"] == review.exempt_roots()
+
+
+# ── 8. a tracked file's text run without an import (the worker's audit hook) ─
+
+
+def _other_way(how: str, helper: Path) -> str:
+    """Model statements that run ``helper``'s text without importing it."""
+    h, d, exe = str(helper), str(helper.parent), sys.executable
+    return {
+        "exec_open": f"exec(open({h!r}).read())",
+        "exec_open_caught": f"try:\n    exec(open({h!r}).read())\nexcept Exception:\n    pass",
+        "pathlib_read": f"from pathlib import Path as _P\nexec(_P({h!r}).read_text())",
+        "exec_compile": f"exec(compile(open({h!r}).read(), {h!r}, 'exec'))",
+        "runpy_run_path": f"import runpy\nrunpy.run_path({h!r})",
+        "runpy_run_module": f"import runpy\nsys.path.insert(0, {d!r})\nrunpy.run_module({helper.stem!r})",
+        "subprocess_list": f"import subprocess\nsubprocess.run([{exe!r}, {h!r}])",
+        "subprocess_shell_by_name": f"import subprocess\nsubprocess.run('cd ' + {d!r} + ' && ' + {exe!r} + ' ' + {helper.name!r}, shell=True)",
+        "os_system": f"os.system({exe!r} + ' ' + {h!r})",
+        "copy_then_import": f"import shutil\nshutil.copy({h!r}, {str(helper.with_name('copied_' + helper.name))!r})\nimport copied_{helper.stem}",
+        "rename_then_import": f"os.rename({h!r}, {str(helper.with_name('renamed_' + helper.name))!r})\nimport renamed_{helper.stem}",
+        "link_then_import": f"os.link({h!r}, {str(helper.with_name('linked_' + helper.name))!r})\nimport linked_{helper.stem}",
+    }[how]
+
+
+OTHER_WAYS = [
+    "exec_open", "exec_open_caught", "pathlib_read", "exec_compile", "runpy_run_path", "runpy_run_module",
+    "subprocess_list", "subprocess_shell_by_name", "os_system", "copy_then_import", "rename_then_import",
+    "link_then_import",
+]
+
+
+@pytest.mark.parametrize("how", OTHER_WAYS)
+def test_a_tracked_file_run_without_an_import_is_refused(st, how):
+    """A reviewed-looking model that runs an unapproved helper's text by some
+    other means than an import, through the real load route and the real
+    worker: refused with the 409 naming the helper, and the helper's marker
+    never appears."""
+    marker2 = st["tmp"] / f"ran_{how}.txt"
+    helper = st["models"] / f"helper_{how}.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    model = st["models"] / f"other_way_{how}.py"
+    model.write_text(_model_importing(_other_way(how, helper)))
+    r = load(model)
+    assert unreviewed(r), r.text
+    assert r.json()["path"] == str(helper.resolve())
+    assert not marker2.exists()
+
+
+def test_a_tracked_file_run_by_exec_runs_once_approved(st):
+    marker2 = st["tmp"] / "ran_approved.txt"
+    helper = st["models"] / "helper_approved.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    model = st["models"] / "execs_approved.py"
+    model.write_text(_model_importing(_other_way("exec_open", helper)))
+    assert unreviewed(load(model))
+    approve(helper)
+    assert load(model).status_code == 200
+    assert marker2.exists()
+
+
+def test_a_model_that_opens_files_and_starts_processes_works_while_something_is_tracked(st):
+    """The hook refuses only tracked, unapproved files: a user's own model
+    that writes and reads its own files and starts a process runs as before."""
+    assert review.is_tracked(str(st["agent_file"]))
+    out = st["tmp"] / "own_out.txt"
+    child = st["tmp"] / "child_ran.txt"
+    own = st["tmp"] / "Own2" / "busy.py"
+    own.parent.mkdir()
+    own.write_text(
+        "import subprocess, sys, shutil, os\n"
+        f"open({str(out)!r}, 'w').write('hello')\n"
+        f"assert open({str(out)!r}).read() == 'hello'\n"
+        f"shutil.copy({str(out)!r}, {str(out) + '.copy'!r})\n"
+        f"subprocess.run([sys.executable, '-c', {f'open({str(child)!r}, chr(119)).write(chr(49))'!r}], check=True)\n"
+        f"exec(compile('x = 1', {str(own)!r}, 'exec'))\n"
+        "import psyneulink as pnl\n"
+        "comp = pnl.Composition(name='busy')\n"
+    )
+    r = load(own)
+    assert r.status_code == 200, r.text
+    assert r.json()["model"].get("error") is None, r.text[:2000]
+    assert out.exists() and child.exists()

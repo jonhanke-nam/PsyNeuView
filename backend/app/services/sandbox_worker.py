@@ -4532,6 +4532,10 @@ if __name__ == "__main__":
     # True` spins are the concern); one-shot job workers run long training that a
     # stray SIGALRM would kill (#870), and the daemon-thread watch covers them.
     _install_orphan_watchdog(use_signal_timer=persistent)
+    # Running as the worker, where model code runs: a tracked, unapproved
+    # file is also refused when it is opened, compiled, executed, handed to a
+    # new process, renamed or linked (#187). Not when a test imports this file.
+    _guard.install_audit_hook()
     if persistent:
         _run_persistent()
     else:

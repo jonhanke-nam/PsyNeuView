@@ -48,6 +48,7 @@ import json
 import os
 import sys
 import sysconfig
+import threading
 from typing import Callable
 
 #: The state file's default place; the server passes the real path with
@@ -307,6 +308,143 @@ def install(provider: Callable[[], tuple[dict, bool]] | None = None) -> None:
     _keep_first()
     if importlib.machinery.SourceFileLoader.get_code is not _vetted_get_code:
         importlib.machinery.SourceFileLoader.get_code = _vetted_get_code
+
+
+# ── The worker's audit hook: other ways a tracked file's text gets run ────
+#
+# The finder and the loader wrapper see imports and loads. A model can also
+# reach a file's text without either: ``exec(open(p).read())``,
+# ``runpy.run_path(p)``, ``exec(compile(text, p, "exec"))``, a subprocess
+# that runs ``python p``, or a copy or rename of ``p`` to a name that isn't
+# tracked, then imported. An audit hook (``sys.addaudithook``, which can't
+# be removed once added) sees the file being opened, compiled, executed,
+# passed to a new process, renamed or linked, and refuses each one for a
+# tracked, unapproved file, with the same 409. Only in the sandbox worker,
+# where model code runs: the server itself reads unapproved files to show
+# them for review. Only tracked paths: the unreadable-state rule is applied
+# at every load and import already, and applying it to every open would
+# stop the worker reading its own files.
+
+_AUDIT_EVENTS = frozenset({
+    "open", "compile", "exec", "os.rename", "os.link",
+    "subprocess.Popen", "os.system", "os.exec", "os.posix_spawn", "os.spawn", "pty.spawn",
+})
+_PROCESS_EVENTS = frozenset({"subprocess.Popen", "os.system", "os.exec", "os.posix_spawn", "os.spawn", "pty.spawn"})
+_audit_local = threading.local()  # per thread: a model thread can't ride on another's check
+_audit_installed = False
+
+
+def _as_text(value) -> str | None:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (bytes, bytearray)):
+        return os.fsdecode(bytes(value))
+    if isinstance(value, os.PathLike):
+        try:
+            return os.fsdecode(os.fspath(value))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _vet_tracked(path, cwd: str | None = None) -> None:
+    """``vet`` for a path the audit hook saw, tracked paths only."""
+    text = _as_text(path)
+    if not text or text.startswith("<") or "\0" in text:
+        return
+    if cwd and not os.path.isabs(text):
+        text = os.path.join(cwd, text)
+    try:
+        real = os.path.realpath(text)
+    except (OSError, ValueError):
+        return
+    entry = _state.tracked.get(real)
+    if entry is None:
+        return
+    approved = entry.get("approved")
+    if approved is None or approved != _content_hash_of(real):
+        raise UnreviewedImport(real)
+
+
+def _process_words(args) -> list[str]:
+    """Every word of a command, a string split as a shell would, a list as given."""
+    text = _as_text(args)
+    if text is not None:
+        import shlex
+        try:
+            return shlex.split(text)
+        except ValueError:
+            return text.split()
+    words = []
+    try:
+        for item in args or ():
+            word = _as_text(item)
+            if word is not None:
+                words.extend(_process_words(word) if " " in word and not os.path.exists(word) else [word])
+    except TypeError:
+        pass
+    return words
+
+
+def _vet_process(event: str, args: tuple) -> None:
+    """A new process that names a tracked, unapproved file anywhere in its
+    command, by path from its working folder or by the file's name alone
+    (``cd sub && python helper.py``), isn't started."""
+    if event == "subprocess.Popen":
+        executable, argv, cwd = args[0], args[1], _as_text(args[2]) if len(args) > 2 else None
+        words = _process_words(argv) + ([_as_text(executable)] if _as_text(executable) else [])
+    elif event == "os.system":
+        cwd, words = None, _process_words(args[0])
+    elif event == "pty.spawn":
+        cwd, words = None, _process_words(args[0])
+    elif event == "os.spawn":
+        cwd, words = None, [_as_text(args[1]) or ""] + _process_words(args[2])
+    else:  # os.exec, os.posix_spawn: (path, argv, env)
+        cwd, words = None, [_as_text(args[0]) or ""] + _process_words(args[1])
+    cwd = cwd or os.getcwd()
+    names = {}
+    for real in _state.tracked:
+        names.setdefault(os.path.basename(real), []).append(real)
+    for word in words:
+        for part in {word, word.split("=", 1)[-1]}:
+            if not part:
+                continue
+            _vet_tracked(part, cwd)
+            for real in names.get(os.path.basename(part), ()):
+                _vet_tracked(real)
+
+
+def _audit(event: str, args: tuple) -> None:
+    if not _state.tracked or event not in _AUDIT_EVENTS or getattr(_audit_local, "busy", False):
+        return
+    _audit_local.busy = True  # the check itself opens the file to hash it
+    try:
+        if event in _PROCESS_EVENTS:
+            _vet_process(event, args)
+        elif event == "exec":
+            _vet_tracked(getattr(args[0], "co_filename", None))
+        elif event == "compile":
+            _vet_tracked(args[1] if len(args) > 1 else None)
+        else:  # open, os.rename, os.link: the first argument is the file read
+            if not isinstance(args[0], int):
+                _vet_tracked(args[0])
+    except UnreviewedImport:
+        raise
+    except Exception:
+        # A path the hook can't make sense of is left to the operation itself.
+        return
+    finally:
+        _audit_local.busy = False
+
+
+def install_audit_hook() -> None:
+    """Add the audit hook (once; it can't be removed). The sandbox worker
+    calls this when it runs as the worker, never when imported by a test or
+    the server."""
+    global _audit_installed
+    if not _audit_installed:
+        sys.addaudithook(_audit)
+        _audit_installed = True
 
 
 def refresh(path: str | None = None, exempt_roots=None) -> None:
