@@ -155,21 +155,22 @@ test.describe("drag to connect, second part (#253)", { tag: "@ci" }, () => {
     await open(page, file);
     const shape = (id: string) => node(page, id).locator("[data-node-shape]").first();
 
-    // From a control mechanism nothing can be connected yet: all dim, and
-    // the one under the pointer says why. Dropped there: refused, nothing written.
+    // From a control mechanism (stage 3): the mechanisms beside it light up;
+    // one inside a nested composition dims and, under the pointer, says why.
+    // Dropped there: refused, nothing written.
     await startDrag(page, "ctrl");
-    await moveOnto(page, "b");
-    await expect(shape("b")).toHaveAttribute("data-connect-target", "invalid", { timeout: 30_000 });
-    await expect(shape("a")).toHaveAttribute("data-connect-target", "invalid");
-    await expect(page.getByTestId("connect-refusal-reason")).toContainText("is a control mechanism");
-    await expect(shape("b")).toHaveCSS("opacity", "0.4");
+    await moveOnto(page, "x");
+    await expect(shape("x")).toHaveAttribute("data-connect-target", "invalid", { timeout: 30_000 });
+    await expect(shape("a")).toHaveAttribute("data-connect-target", "valid");
+    await expect(page.getByTestId("connect-refusal-reason")).toContainText("aren't in the same composition");
+    await expect(shape("x")).toHaveCSS("opacity", "0.4");
     // The reason sits outside the dimmed node, so it reads at full strength.
     await expect(page.getByTestId("connect-refusal-reason")).toHaveCSS("opacity", "1");
     await page.mouse.up();
-    await expect(page.getByText(/is a control mechanism/).first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/aren't in the same composition/).first()).toBeVisible({ timeout: 30_000 });
     expect(changes).toEqual([]);
     expect(readFileSync(file, "utf8")).toBe(NESTED);
-    await expect(shape("b")).not.toHaveAttribute("data-connect-target", /.*/);
+    await expect(shape("x")).not.toHaveAttribute("data-connect-target", /.*/);
 
     // From a: the mechanisms and the compositions it could go into light up.
     await startDrag(page, "a");
