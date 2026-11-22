@@ -312,16 +312,16 @@ html.pnv-busy * {
 .pnv-connect-target::after {
   content: "";
   position: absolute;
-  inset: -5px;
+  inset: -6px;
   border-radius: inherit;
   pointer-events: none;
-  box-shadow: 0 0 0 2px var(--pnv-connect-glow), 0 0 14px 5px var(--pnv-connect-glow);
+  box-shadow: 0 0 0 3px var(--pnv-connect-glow), 0 0 20px 9px var(--pnv-connect-glow);
   animation: pnv-connect-pulse 0.7s ease-in-out infinite alternate;
 }
 .pnv-connect-target.pnv-connect-locked::after {
-  inset: -6px;
+  inset: -7px;
   background: var(--pnv-connect-tint);
-  box-shadow: 0 0 0 3px var(--pnv-connect-target), 0 0 18px 7px var(--pnv-connect-glow);
+  box-shadow: 0 0 0 4px var(--pnv-connect-target), 0 0 24px 11px var(--pnv-connect-glow);
   animation: none;
   opacity: 1;
 }
