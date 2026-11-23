@@ -45,6 +45,9 @@ Review sheets (before above, after below) were made for each.
 
 ## Proposals awaiting a decision
 
+Update: proposals 4, 8, 9, 10 and 12 needed no naming or design decision and
+are built in the second clean-look PR; the rest wait on a decision.
+
 Ranked by how visible they are and how much they would do for a first
 look. None is built; each changes what the app shows or names, so it is
 yours to decide.
@@ -70,7 +73,7 @@ yours to decide.
    word, two looks, two meanings. Proposal: drop the format tag unless the
    file is *not* standard (show only "free-form" or "converted", the cases
    that need attention), and keep the scheduler pill in the Scheduler tab.
-4. **The diagnostics bar is always there and always amber when there is a
+4. *Built in the second clean-look PR (neutral grey unless there is a warning or a view-only node; the hint is the tooltip. The Stroop reference model's version-mismatch note is filed as a warning by the backend, so it stays amber; calling it informational would be a separate decision).* **The diagnostics bar is always there and always amber when there is a
    note.** A full-width band under the toolbar with a count badge, a
    "click to expand" hint and Watching for changes. Proposal: no "click to
    expand" text (hover already says it), the neutral toolbar grey when the
@@ -88,17 +91,17 @@ yours to decide.
    anchored to the graph pane's left edge, not to its button, so it covers
    the panel and sits far from where the click was. Proposal: drop it from
    its button like the toolbar's menus.
-8. **"..." and "…" side by side.** Open from path..., Import MDF..., New
+8. *Built in the second clean-look PR ("…" everywhere; a test fails on new three dots. GraphCanvas.tsx keeps three status lines until the canvas work lands).* **"..." and "…" side by side.** Open from path..., Import MDF..., New
    Model... use three dots; Save a copy as…, Rename…, Report a Problem…
    use the ellipsis character, as macOS does. Proposal: the ellipsis
    everywhere. Mechanical, but many specs select by these labels, so it is
    a sweep of its own.
-9. **Settings is in the Layout menu.** ⚙ beside the app name, ⌘, and
+9. *Built in the second clean-look PR (⚙ and ⌘, remain).* **Settings is in the Layout menu.** ⚙ beside the app name, ⌘, and
    Layout ▸ Settings… all open it. A Mac app keeps Settings in the app menu
    only; in the browser the ⚙ is that place. Proposal: drop it from Layout
    (one obvious control); Help could carry it instead if a menu entry is
    wanted.
-10. **Always-on legends.** The Inspector shows "customized · at default ·
+10. *Built in the second clean-look PR (the legend only; the undo count stays, being debatable).* **Always-on legends.** The Inspector shows "customized · at default ·
     reset on hover" above every node's parameters; the undo pair shows a
     faint history count. Proposal: show the legend only when something is
     customized; drop the count (History says it).
@@ -106,7 +109,7 @@ yours to decide.
     the bottom left: zoom also lives in Layout ▾ and on the trackpad, and
     the lock's meaning isn't obvious. Proposal: keep Fit only, or hide them
     behind a setting.
-12. **Run panel's Backend picker and Group by segments** are a native
+12. *Built in the second clean-look PR (Group by and Backend at Run Model's height, row unchanged).* **Run panel's Backend picker and Group by segments** are a native
     select and a home-made segmented control at different heights from the
     Run Model / Reset buttons. Proposal: a native-looking segmented control
     and a select at the row's height; wants a pass over the Run row with
