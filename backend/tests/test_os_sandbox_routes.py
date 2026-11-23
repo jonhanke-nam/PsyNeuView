@@ -284,3 +284,87 @@ def test_an_approved_helper_still_runs(st):
 
 def test_the_sandbox_is_in_use_while_something_is_tracked(st):
     assert os_sandbox.status()["state"] == "on"
+
+
+# ── A model that kills its parent, so the task is retried elsewhere ────────
+
+
+def _tamper_after_killing_parent(st, note: Path) -> Path:
+    sp = str(review.state_path())
+    guard = str(SERVICES / "show_graph_guard.py")
+    model = st["tmp"] / "Own" / "killer.py"
+    model.parent.mkdir(exist_ok=True)
+    model.write_text(
+        "import os, signal\n"
+        "try:\n    os.kill(os.getppid(), signal.SIGKILL)\n    k = 'killed'\nexcept OSError as e:\n    k = 'refused'\n"
+        f"open({str(note)!r}, 'a').write(k + '\\n')\n"
+        f"for p, how in (({sp!r}, 'w'), ({guard!r}, 'a')):\n"
+        "    try:\n        open(p, how).write('\\nX_TAMPERED = 1\\n')\n    except OSError:\n        pass\n" + PSY)
+    return model
+
+
+def test_a_model_that_kills_its_parent_is_still_sandboxed_when_the_task_is_retried(st):
+    """If the fork server's parent (or the warm worker) dies mid-task, the
+    server retries the task in a one-shot worker, or a pool worker. Every
+    one of those is sandboxed too, so killing the parent is no way out: the
+    retried run can't change the review record or the app's code."""
+    sp = review.state_path()
+    guard = SERVICES / "show_graph_guard.py"
+    state_before, guard_before = sp.read_bytes(), guard.read_bytes()
+    note = st["tmp"] / "kill_note.txt"
+    model = _tamper_after_killing_parent(st, note)
+    try:
+        load(model)
+        # The retry path itself, directly: the cold one-shot worker.
+        from app.services import sandbox
+
+        sandbox._run_cold("introspect", {"file_path": str(model)}, 60)
+        assert sp.read_bytes() == state_before, "the review record was changed"
+        assert guard.read_bytes() == guard_before, "show_graph_guard.py was changed"
+        assert note.exists()
+    finally:
+        if guard.read_bytes() != guard_before:
+            guard.write_bytes(guard_before)
+
+
+def test_a_sandboxed_model_cant_kill_the_fork_servers_parent(st):
+    """On macOS a sandboxed process can't signal one outside its sandbox;
+    on Linux the same holds from Landlock ABI 6 (Linux 6.12)."""
+    from app.services import sandbox
+
+    if sandbox.isolation_mode() != "fork":
+        pytest.skip("the fork server isn't in use")
+    if sys.platform.startswith("linux") and (os_sandbox.capability().get("landlock_abi") or 0) < 6:
+        pytest.skip("signals out of the sandbox are refused only from Landlock ABI 6")
+    note = st["tmp"] / "kill_note2.txt"
+    load(_tamper_after_killing_parent(st, note))
+    assert note.read_text().splitlines()[0] == "refused"
+
+
+def test_a_model_converted_to_the_standard_format_is_sandboxed_too(st):
+    """Converting runs the model. Under the sandbox it runs in a sandboxed
+    process, not in the server: it can't read the unapproved file, change
+    the review record or rewrite the app's code."""
+    marker, helper = _mk(st, "convert")
+    sp = review.state_path()
+    guard = SERVICES / "show_graph_guard.py"
+    state_before, guard_before = sp.read_bytes(), guard.read_bytes()
+    model = st["tmp"] / "Own" / "convert_me.py"
+    model.parent.mkdir(exist_ok=True)
+    model.write_text(
+        "import ctypes\n"
+        f"fd = ctypes.CDLL(None).open({str(helper)!r}.encode(), 0)\n"
+        f"open({str(st['tmp'] / 'convert_fd.txt')!r}, 'w').write(str(fd))\n"
+        f"for p, how in (({str(sp)!r}, 'w'), ({str(guard)!r}, 'a')):\n"
+        "    try:\n        open(p, how).write('\\nX_TAMPERED = 1\\n')\n    except OSError:\n        pass\n"
+        "import psyneulink as pnl\na = pnl.TransferMechanism(name='a')\ncomp = pnl.Composition(name='c', pathways=[a])\n")
+    try:
+        r = client.post("/api/model/convert", json={"file_path": str(model), "backup": False})
+        assert r.status_code == 200, r.text[:400]
+        assert (st["tmp"] / "convert_fd.txt").read_text() == "-1", "the converted model opened the unapproved file"
+        assert sp.read_bytes() == state_before
+        assert guard.read_bytes() == guard_before
+        assert not marker.exists()
+    finally:
+        if guard.read_bytes() != guard_before:
+            guard.write_bytes(guard_before)

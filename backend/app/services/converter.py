@@ -10,6 +10,7 @@ to `import psyneulink as pnl` with all bare PNL class references prefixed.
 """
 
 import io
+import os
 import re
 import shutil
 import tokenize
@@ -213,6 +214,87 @@ def convert_to_standard_format(
         backup_path = artifact_path(path.with_suffix(".original.py"))
         shutil.copy2(path, backup_path)
 
+    # Converting runs the model. Under the operating-system sandbox (#311)
+    # it runs in a sandboxed process of its own, not in the server, so a
+    # model converted here is held to the same boundary as one loaded.
+    from app.services import os_sandbox
+
+    if os_sandbox.active() and not os.environ.get(_IN_SANDBOX_ENV):
+        new_source = _standard_source_in_sandbox(file_path)
+    else:
+        new_source = standard_source(file_path)
+    write_model_source(path, new_source)
+    return new_source
+
+
+_IN_SANDBOX_ENV = "PSYNEUVIEW_CONVERTER_IN_SANDBOX"
+_SOURCE_MARKER = "###PSYNEUVIEW_CONVERTED###"
+
+# The sandboxed converter: applies the policy before importing anything of
+# the app's or the model's, then runs the same generation as in-process.
+_SANDBOXED_CONVERT = """
+import json, os, sys
+sys.path.insert(0, sys.argv[2])
+from app.services import os_sandbox_apply
+os_sandbox_apply.apply_from_env()
+from app.services.converter import standard_source
+from app.services.assistant.review import UnreviewedAssistantCode
+from app.services.assistant.import_guard import UnreviewedImport
+try:
+    out = {"source": standard_source(sys.argv[1])}
+except UnreviewedAssistantCode as e:
+    out = {"unreviewed": e.path, "message": str(e)}
+except UnreviewedImport as e:
+    out = {"unreviewed": e.path, "message": str(e), "state_unreadable": bool(e.state_unreadable)}
+except BaseException as e:
+    out = {"error": f"{type(e).__name__}: {e}"}
+print(%r + json.dumps(out), flush=True)
+""" % _SOURCE_MARKER
+
+
+def _standard_source_in_sandbox(file_path: str) -> str:
+    import json
+    import subprocess
+    import sys
+
+    from app.services import os_sandbox
+    from app.services.assistant.review import UnreviewedAssistantCode
+
+    policy = os_sandbox.policy()
+    env = os_sandbox.launch_env(policy)
+    env[_IN_SANDBOX_ENV] = "1"
+    backend_root = str(Path(__file__).resolve().parents[2])
+    try:
+        proc = subprocess.run([sys.executable, "-c", _SANDBOXED_CONVERT, file_path, backend_root],
+                              capture_output=True, text=True, env=env, timeout=300,
+                              cwd=str(Path(file_path).parent))
+    finally:
+        os_sandbox.discard_scratch(policy["scratch"])
+    lines = [ln for ln in (proc.stdout or "").splitlines() if ln.startswith(_SOURCE_MARKER)]
+    if not lines:
+        tail = (proc.stderr or "").strip().splitlines()[-1:] or ["no output"]
+        raise RuntimeError(f"the sandboxed conversion didn't finish: {tail[0]}")
+    out = json.loads(lines[-1][len(_SOURCE_MARKER):])
+    if out.get("unreviewed"):
+        from app.services.assistant import review as _review
+        raise UnreviewedAssistantCode(out["unreviewed"], out.get("message"),
+                                      reason=_review.REASON_UNREADABLE if out.get("state_unreadable") else None)
+    if "error" in out:
+        raise RuntimeError(out["error"])
+    return out["source"]
+
+
+def standard_source(file_path: str) -> str:
+    """Run the model at ``file_path`` and generate its source in the
+    standard format from the live objects. Writes nothing."""
+    import psyneulink as pnl
+    import importlib.util
+    import sys
+
+    path = Path(file_path)
+    require_runnable(file_path)
+    original_source = path.read_text()
+
     # Execute to get live objects, with the import guard watching its imports
     # (#179). Entered before the module is registered: the guard's refresh
     # drops stale user modules from sys.modules, and this one is new.
@@ -373,9 +455,7 @@ def convert_to_standard_format(
 
         lines.append("")
 
-    new_source = "\n".join(lines)
-    write_model_source(path, new_source)
-    return new_source
+    return "\n".join(lines)
 
 
 def _uncovered_graph_nodes(top_level: dict, mechanisms: dict, compositions: dict) -> list:

@@ -195,7 +195,7 @@ def test_every_spawn_and_exec_site_is_listed():
         "services/assistant/keys.py": (3, 0),    # the Keychain's `security` tool
         "services/checkout_updates.py": (1, 0),  # git
         "services/clone_manager.py": (3, 0),     # git
-        "services/converter.py": (0, 2),         # in-process load (spec + exec_module): require_runnable + guard_imports()
+        "services/converter.py": (1, 2),         # in-process load (spec + exec_module): require_runnable + guard_imports(); under the OS sandbox, the same in a sandboxed process (#311)
         "services/executor.py": (0, 8),          # in-process run, learn, input nodes (spec + exec_module each): require_runnable + guard_imports(); one keyword compile + eval of a parameter
         "services/file_writer.py": (0, 1),       # compile of a parameter value in "eval" mode to check its syntax; never run
         "services/github_auth.py": (1, 0),       # git credential helper

@@ -144,6 +144,7 @@ def attacked(tmp_path_factory):
     tmp = tmp_path_factory.mktemp("os_sandbox").resolve()
     state = tmp / "assistant-state" / "review.json"
     old_env = os.environ.get(review.STATE_ENV)
+    old_write = os.environ.get(os_sandbox.WRITE_FOLDERS_ENV)
     os.environ[review.STATE_ENV] = str(state)
     try:
         models = tmp / "Models"
@@ -220,7 +221,10 @@ def attacked(tmp_path_factory):
             os.environ.pop(review.STATE_ENV, None)
         else:
             os.environ[review.STATE_ENV] = old_env
-        os.environ.pop(os_sandbox.WRITE_FOLDERS_ENV, None)
+        if old_write is None:
+            os.environ.pop(os_sandbox.WRITE_FOLDERS_ENV, None)
+        else:
+            os.environ[os_sandbox.WRITE_FOLDERS_ENV] = old_write
         review._cache = None
 
 
