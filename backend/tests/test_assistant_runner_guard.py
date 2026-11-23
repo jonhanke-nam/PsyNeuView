@@ -1558,15 +1558,26 @@ def test_a_noisy_leftover_process_doesnt_stall_or_steer_later_tasks(st):
               f"        os.write(1, b'noise\\n###PSYNEUVIEW_CHILD### {victim.pid}\\n###PSYNEUVIEW_CHILD_DONE### 0\\n')\n"
               "    except OSError:\n        break\n"
               "    time.sleep(0.02)\n")
+        # A control: the same kind of load (a new model folder each time)
+        # without a leftover, so the cost of starting a worker on this
+        # machine isn't blamed on the leftover (#311).
+        controls = []
+        for i in range(2):
+            model = _plain_model(st["tmp"] / f"H1ctl{i}", f"comp_name_{i} = 'c{i}'\n")
+            t0 = time.time()
+            assert _runs_normally(load(model))
+            controls.append(time.time() - t0)
+        control = max(controls)
         first = _plain_model(st["tmp"] / "H1a", f"import subprocess\nsubprocess.Popen([sys.executable, '-c', {gc!r}])\n")
         assert _runs_normally(load(first))
         for i in range(3):
             model = _plain_model(st["tmp"] / f"H1b{i}", f"comp_name_{i} = 'c{i}'\n")
             t0 = time.time()
             r = load(model)
+            took = time.time() - t0
             assert _runs_normally(r), r.text[:300]
-            print(f"[timing] task after a noisy leftover: {time.time() - t0:.2f} s")
-            assert time.time() - t0 < 10, "a task waited on the leftover process"
+            print(f"[timing] task after a noisy leftover: {took:.2f} s (control {control:.2f} s)")
+            assert took < control + 3 and took < 30, f"a task waited on the leftover process: {took:.2f} s, control {control:.2f} s"
         marker2 = st["tmp"] / "h1_ran.txt"
         helper = st["models"] / "hx_h1.py"
         helper.write_text(_helper(marker2))

@@ -248,7 +248,10 @@ from the next one.
   Linux a pool worker's rules are set when it starts and don't open any
   model's folder for writing; and a model in a folder made after the ready
   workers started (next to a file the assistant wrote) needs a fresh
-  worker, since Landlock's rules don't reach folders made later there.
+  worker, since Landlock's rules don't reach folders made later there. When
+  a task needs a fresh worker, spares still starting that couldn't fit it
+  are ended rather than waited for, so the task's own worker starts alone
+  (a load in that case went from about 2.9 s to about 1.5 s on two CPUs).
 - **Output is bounded.** Every worker's output is read with a 16 MB cap and
   no longer than a moment after the worker exits, so a leftover writing
   without end can't fill the server's memory or stall the next task.

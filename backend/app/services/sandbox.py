@@ -125,6 +125,9 @@ class WarmWorker:
                 text=True,
                 bufsize=1,  # line-buffered
             )
+            started_cb = getattr(self, "_on_popen", None)
+            if started_cb is not None:
+                started_cb(proc)
             # Drain stderr from the moment the worker starts (it writes [perf]
             # import lines to stderr during startup) so its pipe never fills.
             self._stderr_thread = threading.Thread(
@@ -651,6 +654,8 @@ class WorkerPool:
         self.size = max(1, min(size, 8))
         self._ready: list[subprocess.Popen] = []
         self._starting = 0
+        #: Spares being started: (their process once it exists, when they began).
+        self._inflight: dict[int, list] = {}
         self._cond = threading.Condition()
         self._lock = threading.Lock()
         self._fill()
@@ -666,8 +671,13 @@ class WorkerPool:
         # Linux: a pool worker's policy is set when it starts, and doesn't open
         # any model's folder, so a ready worker fits every task (a worker per
         # model folder made the next task wait on a start, #311).
-        proc = _spawn_worker_process(None)
+        token = object()
+        entry = [None, time.time()]
         with self._cond:
+            self._inflight[id(token)] = entry
+        proc = _spawn_worker_process(None, on_popen=lambda p: entry.__setitem__(0, p))
+        with self._cond:
+            self._inflight.pop(id(token), None)
             self._starting -= 1
             if proc is not None:
                 self._ready.append(proc)
@@ -691,7 +701,15 @@ class WorkerPool:
                         return proc
                     _PoolMember._kill(proc)
                     _discard_launch_scratch(proc)
-                if self._starting == 0 or time.time() > deadline:
+                # A spare still starting that can't fit this task (Linux: it
+                # began before the model's folder last changed) isn't waited
+                # for: it is ended, so it doesn't take the CPU from the
+                # task's own worker, which starts at once (#311).
+                stale = [e for e in self._inflight.values() if _started_before_model_folder(e[1], model_path)]
+                for entry in stale:
+                    if entry[0] is not None:
+                        _PoolMember._kill(entry[0])
+                if self._starting == 0 or len(stale) >= self._starting or time.time() > deadline:
                     break
                 self._cond.wait(timeout=0.5)
         return _spawn_worker_process(None)
@@ -732,7 +750,7 @@ class WorkerPool:
         self._fill()
 
 
-def _spawn_worker_process(model_path: str | None = None) -> subprocess.Popen | None:
+def _spawn_worker_process(model_path: str | None = None, on_popen=None) -> subprocess.Popen | None:
     """A persistent worker, ready, that has run no task. Under the sandbox
     (#311) it is started with the policy as it is now, and applies it
     before importing anything."""
@@ -743,6 +761,7 @@ def _spawn_worker_process(model_path: str | None = None) -> subprocess.Popen | N
     # last ran: the same model again (the live preview) finds one ready.
     policy = os_sandbox.policy(model_path=model_path) if (os_sandbox.active() and not _POOL_PER_TASK) else None
     member._launch_env = os_sandbox.launch_env(policy) if policy else None
+    member._on_popen = on_popen
     started = time.time()
     proc = WarmWorker._spawn(member)
     if proc is not None:
@@ -772,6 +791,17 @@ def _note_model_folder(result, policy: dict | None) -> None:
 
 #: macOS pool workers apply each task's policy when it comes (#311).
 _POOL_PER_TASK = sys.platform == "darwin"
+
+
+def _started_before_model_folder(started: float, model_path: str | None) -> bool:
+    if not sys.platform.startswith("linux") or not model_path or not os_sandbox.active():
+        return False
+    folder = os.path.dirname(os.path.abspath(model_path))
+    try:
+        newest = max([os.stat(folder).st_mtime] + [e.stat().st_mtime for e in os.scandir(folder)])
+    except OSError:
+        return True
+    return newest >= started
 
 
 def _older_than_model_folder(proc, model_path: str | None) -> bool:

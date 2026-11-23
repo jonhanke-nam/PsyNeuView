@@ -177,12 +177,7 @@ jobs:
         working-directory: backend
         env:
           PSYNEUVIEW_WORKER_ISOLATION: pool
-        # Two test servers, not one per core: in pool mode each keeps several
-        # PsyNeuLink workers starting, and on Linux a task in a model folder
-        # made after its spare workers started needs a fresh one (their
-        # sandbox rules are set when they start, #311); four servers doing
-        # that on four cores starve each other's worker starts.
-        run: .venv/bin/python -m pytest tests/test_assistant_runner_guard.py -q -ra -n 2
+        run: .venv/bin/python -m pytest tests/test_assistant_runner_guard.py -q -ra -n auto
 
       # The operating-system sandbox for model runs (#311): Landlock and
       # seccomp on Linux. It must be available on ubuntu-latest, so its tests
@@ -198,7 +193,7 @@ jobs:
           PSYNEUVIEW_OS_SANDBOX: "on"
         run: |
           .venv/bin/python -m pytest tests/test_assistant_runner_guard.py tests/test_os_sandbox.py tests/test_os_sandbox_routes.py -q -ra -n auto
-          PSYNEUVIEW_WORKER_ISOLATION=pool .venv/bin/python -m pytest tests/test_os_sandbox_routes.py -q -ra -n 2
+          PSYNEUVIEW_WORKER_ISOLATION=pool .venv/bin/python -m pytest tests/test_os_sandbox_routes.py -q -ra -n auto
 
   # 3.14 run (#979). Kept as its own job rather than a matrix on backend-tests:
   # a matrix would rename that check to "backend pytest (3.13)" and the
