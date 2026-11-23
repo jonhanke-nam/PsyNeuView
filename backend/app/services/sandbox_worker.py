@@ -4536,6 +4536,13 @@ def _learning_profile(comp, is_autodiff):
 
 def _run_oneshot():
     """One-shot mode (original behavior): read one task, execute, exit."""
+    # PsyNeuLink first, as the persistent worker does: the import guard's
+    # audit hook is added when the task finds something tracked, and
+    # PsyNeuLink's own import, a library's, needn't pass through it (#187).
+    try:
+        import psyneulink  # noqa: F401
+    except Exception:
+        pass  # the task reports it
     payload = sys.stdin.read()
     result_str = _handle_one_task(payload)
     print(RESULT_MARKER)
