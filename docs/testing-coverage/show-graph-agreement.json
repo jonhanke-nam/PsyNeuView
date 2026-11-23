@@ -1,0 +1,4349 @@
+{
+ "measured": "2026-11-23",
+ "commit": "44ce5d77d4",
+ "thresholds": {
+  "ci": "The `@ci` test opens four representative models: the basic Stroop reference, EGO in each of its views (nested, flattened, PyTorch) and with CIMs shown, MontagueDayanSejnowski96 (learning), and `demos/nested_compositions.py` (a composition open inside another). In every view it requires all of show_graph's nodes on the canvas, rows and order at 100%, no overlapping boxes, nothing cut off after Fit, no frame button covered, and every edge show_graph draws between two canvas nodes drawn along its course (no exceptions are listed). Measured with the full batch: all of those pass at 100%. The full batch below has no thresholds; it is run before a release and its review sheets looked at."
+ },
+ "results": [
+  {
+   "model": "Botvinick_conflict_monitoring_model.py",
+   "view": "the model",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Botvinick_conflict_monitoring_model.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Botvinick_conflict_monitoring_model.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Botvinick_conflict_monitoring_model.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Cohen_Huston1994_horse_race.py",
+   "view": "the model",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Cohen_Huston1994_horse_race.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Cohen_Huston1994_horse_race.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Cohen_Huston1994_horse_race.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Cohen_Huston1994.py",
+   "view": "the model",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Cohen_Huston1994.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Cohen_Huston1994.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Cohen_Huston1994.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Giallanza2024_ego_study2.py",
+   "view": "Flatten (all compositions)",
+   "nodes": [
+    21,
+    21
+   ],
+   "rows": [
+    210,
+    210
+   ],
+   "order": [
+    21,
+    21
+   ],
+   "courses": [
+    31,
+    31
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Giallanza2024_ego_study2.py",
+   "view": "Flatten (all compositions) · compositions folded",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    17,
+    28
+   ],
+   "order": [
+    2,
+    6
+   ],
+   "courses": [
+    0,
+    10
+   ],
+   "missing": [
+    "STATE → PREVIOUS STATE",
+    "STATE → CONTEXT",
+    "CONTEXT [NORMALIZED] → EM",
+    "PREVIOUS STATE → EM",
+    "STATE → EM",
+    "CONTEXT → CONTEXT [NORMALIZED]",
+    "CONTEXT [BIAS] → CONTEXT [NORMALIZED]",
+    "EM → PREDICTION",
+    "PREDICTION → LOSS for PREDICTION",
+    "STATE → LOSS for PREDICTION"
+   ],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Giallanza2024_ego_study2.py",
+   "view": "Flatten (all compositions) · Controller hidden",
+   "nodes": [
+    21,
+    21
+   ],
+   "rows": [
+    124,
+    210
+   ],
+   "order": [
+    9,
+    21
+   ],
+   "courses": [
+    0,
+    31
+   ],
+   "missing": [
+    "STATE → PREVIOUS STATE",
+    "STATE → CONTEXT",
+    "STATE → STATE [VALUE]",
+    "PREVIOUS STATE → PREVIOUS STATE [QUERY]",
+    "CONTEXT [NORMALIZED] → CONTEXT [QUERY]",
+    "CONTEXT → CONTEXT [NORMALIZED]",
+    "CONTEXT [BIAS] → CONTEXT [NORMALIZED]",
+    "STATE [RETRIEVED] → PREDICTION",
+    "PREDICTION → LOSS for PREDICTION",
+    "STATE → LOSS for PREDICTION",
+    "COMBINED SCORES → STATE [FIELD_MEMORY]",
+    "COMBINED SCORES → STATE [FIELD_MEMORY]",
+    "STATE [VALUE] → STATE [FIELD_MEMORY]",
+    "COMBINED SCORES → PREVIOUS STATE [FIELD_MEMORY]",
+    "COMBINED SCORES → PREVIOUS STATE [FIELD_MEMORY]",
+    "PREVIOUS STATE [QUERY] → PREVIOUS STATE [FIELD_MEMORY]",
+    "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
+    "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
+    "CONTEXT [QUERY] → CONTEXT [FIELD_MEMORY]",
+    "PREVIOUS STATE [FIELD_MEMORY] → PREVIOUS STATE [WEIGHTED SCORES]",
+    "PREVIOUS STATE [WEIGHT] → PREVIOUS STATE [WEIGHTED SCORES]",
+    "CONTEXT [FIELD_MEMORY] → CONTEXT [WEIGHTED SCORES]",
+    "CONTEXT [WEIGHT] → CONTEXT [WEIGHTED SCORES]",
+    "CONTEXT [FIELD_MEMORY] → COMBINED SCORES",
+    "CONTEXT [WEIGHTED SCORES] → COMBINED SCORES",
+    "PREVIOUS STATE [FIELD_MEMORY] → COMBINED SCORES",
+    "PREVIOUS STATE [WEIGHTED SCORES] → COMBINED SCORES",
+    "STATE [FIELD_MEMORY] → COMBINED SCORES",
+    "STATE [FIELD_MEMORY] → STATE [RETRIEVED]",
+    "PREVIOUS STATE [FIELD_MEMORY] → PREVIOUS STATE [RETRIEVED]",
+    "CONTEXT [FIELD_MEMORY] → CONTEXT [RETRIEVED]"
+   ],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Giallanza2024_ego_study2.py",
+   "view": "Flatten (all compositions) · Learning shown",
+   "nodes": [
+    21,
+    21
+   ],
+   "rows": [
+    124,
+    210
+   ],
+   "order": [
+    9,
+    21
+   ],
+   "courses": [
+    0,
+    31
+   ],
+   "missing": [
+    "STATE → PREVIOUS STATE",
+    "STATE → CONTEXT",
+    "STATE → STATE [VALUE]",
+    "PREVIOUS STATE → PREVIOUS STATE [QUERY]",
+    "CONTEXT [NORMALIZED] → CONTEXT [QUERY]",
+    "CONTEXT → CONTEXT [NORMALIZED]",
+    "CONTEXT [BIAS] → CONTEXT [NORMALIZED]",
+    "STATE [RETRIEVED] → PREDICTION",
+    "PREDICTION → LOSS for PREDICTION",
+    "STATE → LOSS for PREDICTION",
+    "COMBINED SCORES → STATE [FIELD_MEMORY]",
+    "COMBINED SCORES → STATE [FIELD_MEMORY]",
+    "STATE [VALUE] → STATE [FIELD_MEMORY]",
+    "COMBINED SCORES → PREVIOUS STATE [FIELD_MEMORY]",
+    "COMBINED SCORES → PREVIOUS STATE [FIELD_MEMORY]",
+    "PREVIOUS STATE [QUERY] → PREVIOUS STATE [FIELD_MEMORY]",
+    "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
+    "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
+    "CONTEXT [QUERY] → CONTEXT [FIELD_MEMORY]",
+    "PREVIOUS STATE [FIELD_MEMORY] → PREVIOUS STATE [WEIGHTED SCORES]",
+    "PREVIOUS STATE [WEIGHT] → PREVIOUS STATE [WEIGHTED SCORES]",
+    "CONTEXT [FIELD_MEMORY] → CONTEXT [WEIGHTED SCORES]",
+    "CONTEXT [WEIGHT] → CONTEXT [WEIGHTED SCORES]",
+    "CONTEXT [FIELD_MEMORY] → COMBINED SCORES",
+    "CONTEXT [WEIGHTED SCORES] → COMBINED SCORES",
+    "PREVIOUS STATE [FIELD_MEMORY] → COMBINED SCORES",
+    "PREVIOUS STATE [WEIGHTED SCORES] → COMBINED SCORES",
+    "STATE [FIELD_MEMORY] → COMBINED SCORES",
+    "STATE [FIELD_MEMORY] → STATE [RETRIEVED]",
+    "PREVIOUS STATE [FIELD_MEMORY] → PREVIOUS STATE [RETRIEVED]",
+    "CONTEXT [FIELD_MEMORY] → CONTEXT [RETRIEVED]"
+   ],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Giallanza2024_ego_study2.py",
+   "view": "Flatten (all compositions) · CIMs shown",
+   "nodes": [
+    21,
+    21
+   ],
+   "rows": [
+    124,
+    210
+   ],
+   "order": [
+    9,
+    21
+   ],
+   "courses": [
+    0,
+    31
+   ],
+   "missing": [
+    "STATE → PREVIOUS STATE",
+    "STATE → CONTEXT",
+    "STATE → STATE [VALUE]",
+    "PREVIOUS STATE → PREVIOUS STATE [QUERY]",
+    "CONTEXT [NORMALIZED] → CONTEXT [QUERY]",
+    "CONTEXT → CONTEXT [NORMALIZED]",
+    "CONTEXT [BIAS] → CONTEXT [NORMALIZED]",
+    "STATE [RETRIEVED] → PREDICTION",
+    "PREDICTION → LOSS for PREDICTION",
+    "STATE → LOSS for PREDICTION",
+    "COMBINED SCORES → STATE [FIELD_MEMORY]",
+    "COMBINED SCORES → STATE [FIELD_MEMORY]",
+    "STATE [VALUE] → STATE [FIELD_MEMORY]",
+    "COMBINED SCORES → PREVIOUS STATE [FIELD_MEMORY]",
+    "COMBINED SCORES → PREVIOUS STATE [FIELD_MEMORY]",
+    "PREVIOUS STATE [QUERY] → PREVIOUS STATE [FIELD_MEMORY]",
+    "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
+    "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
+    "CONTEXT [QUERY] → CONTEXT [FIELD_MEMORY]",
+    "PREVIOUS STATE [FIELD_MEMORY] → PREVIOUS STATE [WEIGHTED SCORES]",
+    "PREVIOUS STATE [WEIGHT] → PREVIOUS STATE [WEIGHTED SCORES]",
+    "CONTEXT [FIELD_MEMORY] → CONTEXT [WEIGHTED SCORES]",
+    "CONTEXT [WEIGHT] → CONTEXT [WEIGHTED SCORES]",
+    "CONTEXT [FIELD_MEMORY] → COMBINED SCORES",
+    "CONTEXT [WEIGHTED SCORES] → COMBINED SCORES",
+    "PREVIOUS STATE [FIELD_MEMORY] → COMBINED SCORES",
+    "PREVIOUS STATE [WEIGHTED SCORES] → COMBINED SCORES",
+    "STATE [FIELD_MEMORY] → COMBINED SCORES",
+    "STATE [FIELD_MEMORY] → STATE [RETRIEVED]",
+    "PREVIOUS STATE [FIELD_MEMORY] → PREVIOUS STATE [RETRIEVED]",
+    "CONTEXT [FIELD_MEMORY] → CONTEXT [RETRIEVED]"
+   ],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Giallanza2024_ego_study2.py",
+   "view": "PyTorch view",
+   "nodes": [
+    21,
+    21
+   ],
+   "rows": [
+    210,
+    210
+   ],
+   "order": [
+    21,
+    21
+   ],
+   "courses": [
+    31,
+    31
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Giallanza2024_ego_study2.py",
+   "view": "PyTorch view · compositions folded",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    17,
+    28
+   ],
+   "order": [
+    2,
+    6
+   ],
+   "courses": [
+    0,
+    10
+   ],
+   "missing": [
+    "STATE → PREVIOUS STATE",
+    "STATE → CONTEXT",
+    "CONTEXT [NORMALIZED] → EM",
+    "PREVIOUS STATE → EM",
+    "STATE → EM",
+    "CONTEXT → CONTEXT [NORMALIZED]",
+    "CONTEXT [BIAS] → CONTEXT [NORMALIZED]",
+    "EM → PREDICTION",
+    "PREDICTION → LOSS for PREDICTION",
+    "STATE → LOSS for PREDICTION"
+   ],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Giallanza2024_ego_study2.py",
+   "view": "EGO",
+   "nodes": [
+    21,
+    21
+   ],
+   "rows": [
+    210,
+    210
+   ],
+   "order": [
+    21,
+    21
+   ],
+   "courses": [
+    31,
+    31
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Giallanza2024_ego_study2.py",
+   "view": "EGO · compositions folded",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    6,
+    6
+   ],
+   "courses": [
+    10,
+    10
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "GilzenratModel.py",
+   "view": "the model",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    6,
+    6
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "GilzenratModel.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    6,
+    6
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "GilzenratModel.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    6,
+    6
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "GilzenratModel.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    6,
+    6
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Kalanthroff_PCTC_2018.py",
+   "view": "the model",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    6,
+    6
+   ],
+   "courses": [
+    12,
+    12
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Kalanthroff_PCTC_2018.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    6,
+    6
+   ],
+   "courses": [
+    12,
+    12
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Kalanthroff_PCTC_2018.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    6,
+    6
+   ],
+   "courses": [
+    12,
+    12
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Kalanthroff_PCTC_2018.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    6,
+    6
+   ],
+   "courses": [
+    12,
+    12
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "MontagueDayanSejnowski96.py",
+   "view": "the model",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    5,
+    5
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "MontagueDayanSejnowski96.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    5,
+    5
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "MontagueDayanSejnowski96.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    5,
+    5
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "MontagueDayanSejnowski96.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    5,
+    5
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Nieuwenhuis2005Model.py",
+   "view": "the model",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    6,
+    6
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Nieuwenhuis2005Model.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    6,
+    6
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Nieuwenhuis2005Model.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    6,
+    6
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "Nieuwenhuis2005Model.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    6,
+    6
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "stroop_reference_basic.py",
+   "view": "the model",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "stroop_reference_basic.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "stroop_reference_basic.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "stroop_reference_basic.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 3,
+   "error": null
+  },
+  {
+   "model": "stroop_reference_with_lc.py",
+   "view": "the model",
+   "nodes": [
+    9,
+    9
+   ],
+   "rows": [
+    36,
+    36
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    13,
+    13
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "stroop_reference_with_lc.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    9,
+    9
+   ],
+   "rows": [
+    36,
+    36
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    13,
+    13
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "stroop_reference_with_lc.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    9,
+    9
+   ],
+   "rows": [
+    36,
+    36
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    13,
+    13
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "stroop_reference_with_lc.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    9,
+    9
+   ],
+   "rows": [
+    36,
+    36
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    13,
+    13
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "autodiff_feedforward.py",
+   "view": "Flatten (all compositions)",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "autodiff_feedforward.py",
+   "view": "Flatten (all compositions) · Controller hidden",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "autodiff_feedforward.py",
+   "view": "Flatten (all compositions) · Learning shown",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "autodiff_feedforward.py",
+   "view": "Flatten (all compositions) · CIMs shown",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 2,
+   "error": null
+  },
+  {
+   "model": "autodiff_feedforward.py",
+   "view": "PyTorch view",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    4,
+    4
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "autodiff_feedforward.py",
+   "view": "autodiff_comp",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "bistable_attractor.py",
+   "view": "the model",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "bistable_attractor.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "bistable_attractor.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "bistable_attractor.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 4,
+   "error": null
+  },
+  {
+   "model": "conflict_monitoring.py",
+   "view": "the model",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "conflict_monitoring.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "conflict_monitoring.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "conflict_monitoring.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    9,
+    9
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "constructing_compositions.py",
+   "view": "the model",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "constructing_compositions.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "constructing_compositions.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "constructing_compositions.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 2,
+   "error": null
+  },
+  {
+   "model": "customization.py",
+   "view": "the model",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "customization.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "customization.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "customization.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 3,
+   "error": null
+  },
+  {
+   "model": "dynamics_of_execution.py",
+   "view": "the model",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "dynamics_of_execution.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "dynamics_of_execution.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "dynamics_of_execution.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 3,
+   "error": null
+  },
+  {
+   "model": "ego_coffee_shop.py",
+   "view": "Flatten (all compositions)",
+   "nodes": [
+    21,
+    21
+   ],
+   "rows": [
+    210,
+    210
+   ],
+   "order": [
+    21,
+    21
+   ],
+   "courses": [
+    31,
+    31
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "ego_coffee_shop.py",
+   "view": "Flatten (all compositions) · compositions folded",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    6,
+    6
+   ],
+   "courses": [
+    10,
+    10
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "ego_coffee_shop.py",
+   "view": "Flatten (all compositions) · Controller hidden",
+   "nodes": [
+    21,
+    21
+   ],
+   "rows": [
+    210,
+    210
+   ],
+   "order": [
+    21,
+    21
+   ],
+   "courses": [
+    31,
+    31
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "ego_coffee_shop.py",
+   "view": "Flatten (all compositions) · Learning shown",
+   "nodes": [
+    21,
+    21
+   ],
+   "rows": [
+    210,
+    210
+   ],
+   "order": [
+    21,
+    21
+   ],
+   "courses": [
+    31,
+    31
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "ego_coffee_shop.py",
+   "view": "Flatten (all compositions) · CIMs shown",
+   "nodes": [
+    21,
+    21
+   ],
+   "rows": [
+    210,
+    210
+   ],
+   "order": [
+    21,
+    21
+   ],
+   "courses": [
+    31,
+    31
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "ego_coffee_shop.py",
+   "view": "PyTorch view",
+   "nodes": [
+    21,
+    21
+   ],
+   "rows": [
+    210,
+    210
+   ],
+   "order": [
+    21,
+    21
+   ],
+   "courses": [
+    31,
+    31
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "ego_coffee_shop.py",
+   "view": "PyTorch view · compositions folded",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    6,
+    6
+   ],
+   "courses": [
+    10,
+    10
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "ego_coffee_shop.py",
+   "view": "EGO",
+   "nodes": [
+    21,
+    21
+   ],
+   "rows": [
+    210,
+    210
+   ],
+   "order": [
+    21,
+    21
+   ],
+   "courses": [
+    31,
+    31
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "ego_coffee_shop.py",
+   "view": "EGO · compositions folded",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    6,
+    6
+   ],
+   "courses": [
+    10,
+    10
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "ego_coffee_shop.py",
+   "view": "↳ EM",
+   "nodes": [
+    14,
+    14
+   ],
+   "rows": [
+    91,
+    91
+   ],
+   "order": [
+    17,
+    17
+   ],
+   "courses": [
+    21,
+    21
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "elaborate_configurations.py",
+   "view": "the model",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "elaborate_configurations.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "elaborate_configurations.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "elaborate_configurations.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 3,
+   "error": null
+  },
+  {
+   "model": "episodic_memory.py",
+   "view": "Flatten (all compositions)",
+   "nodes": [
+    16,
+    16
+   ],
+   "rows": [
+    120,
+    120
+   ],
+   "order": [
+    24,
+    24
+   ],
+   "courses": [
+    24,
+    24
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "episodic_memory.py",
+   "view": "Flatten (all compositions) · Controller hidden",
+   "nodes": [
+    16,
+    16
+   ],
+   "rows": [
+    120,
+    120
+   ],
+   "order": [
+    24,
+    24
+   ],
+   "courses": [
+    24,
+    24
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "episodic_memory.py",
+   "view": "Flatten (all compositions) · Learning shown",
+   "nodes": [
+    16,
+    16
+   ],
+   "rows": [
+    120,
+    120
+   ],
+   "order": [
+    24,
+    24
+   ],
+   "courses": [
+    24,
+    24
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "episodic_memory.py",
+   "view": "Flatten (all compositions) · CIMs shown",
+   "nodes": [
+    16,
+    16
+   ],
+   "rows": [
+    120,
+    120
+   ],
+   "order": [
+    24,
+    24
+   ],
+   "courses": [
+    24,
+    24
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "episodic_memory.py",
+   "view": "PyTorch view",
+   "nodes": [
+    16,
+    16
+   ],
+   "rows": [
+    120,
+    120
+   ],
+   "order": [
+    24,
+    24
+   ],
+   "courses": [
+    24,
+    24
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "episodic_memory.py",
+   "view": "episodic_memory",
+   "nodes": [
+    16,
+    16
+   ],
+   "rows": [
+    120,
+    120
+   ],
+   "order": [
+    24,
+    24
+   ],
+   "courses": [
+    24,
+    24
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "feedforward_network.py",
+   "view": "the model",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "feedforward_network.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "feedforward_network.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "feedforward_network.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 2,
+   "error": null
+  },
+  {
+   "model": "hebbian_learning.py",
+   "view": "the model",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "hebbian_learning.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "hebbian_learning.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "hebbian_learning.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 1,
+   "error": null
+  },
+  {
+   "model": "hopfield_network.py",
+   "view": "the model",
+   "nodes": [
+    1,
+    1
+   ],
+   "rows": [
+    0,
+    0
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    0,
+    0
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "hopfield_network.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    1,
+    1
+   ],
+   "rows": [
+    0,
+    0
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    0,
+    0
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "hopfield_network.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    1,
+    1
+   ],
+   "rows": [
+    0,
+    0
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    0,
+    0
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "hopfield_network.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    1,
+    1
+   ],
+   "rows": [
+    0,
+    0
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    0,
+    0
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 2,
+   "error": null
+  },
+  {
+   "model": "iscci_model.py",
+   "view": "Flatten (all compositions)",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "iscci_model.py",
+   "view": "Flatten (all compositions) · Controller hidden",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "iscci_model.py",
+   "view": "Flatten (all compositions) · Learning shown",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "iscci_model.py",
+   "view": "Flatten (all compositions) · CIMs shown",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 3,
+   "error": null
+  },
+  {
+   "model": "iscci_model.py",
+   "view": "PyTorch view",
+   "nodes": [
+    12,
+    12
+   ],
+   "rows": [
+    66,
+    66
+   ],
+   "order": [
+    12,
+    12
+   ],
+   "courses": [
+    11,
+    11
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "iscci_model.py",
+   "view": "embedding",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "logic_gate_network.py",
+   "view": "Flatten (all compositions)",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "logic_gate_network.py",
+   "view": "Flatten (all compositions) · Controller hidden",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "logic_gate_network.py",
+   "view": "Flatten (all compositions) · Learning shown",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "logic_gate_network.py",
+   "view": "Flatten (all compositions) · CIMs shown",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 2,
+   "error": null
+  },
+  {
+   "model": "logic_gate_network.py",
+   "view": "PyTorch view",
+   "nodes": [
+    4,
+    4
+   ],
+   "rows": [
+    6,
+    6
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    3,
+    3
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "logic_gate_network.py",
+   "view": "logic_gate_network",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "nested_compositions.py",
+   "view": "Flatten (all compositions)",
+   "nodes": [
+    4,
+    4
+   ],
+   "rows": [
+    6,
+    6
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    3,
+    3
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "nested_compositions.py",
+   "view": "Flatten (all compositions) · compositions folded",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "nested_compositions.py",
+   "view": "Flatten (all compositions) · Controller hidden",
+   "nodes": [
+    4,
+    4
+   ],
+   "rows": [
+    6,
+    6
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    3,
+    3
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "nested_compositions.py",
+   "view": "Flatten (all compositions) · Learning shown",
+   "nodes": [
+    4,
+    4
+   ],
+   "rows": [
+    6,
+    6
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    3,
+    3
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "nested_compositions.py",
+   "view": "Flatten (all compositions) · CIMs shown",
+   "nodes": [
+    4,
+    4
+   ],
+   "rows": [
+    6,
+    6
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    3,
+    3
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "nested_compositions.py",
+   "view": "outer_comp",
+   "nodes": [
+    4,
+    4
+   ],
+   "rows": [
+    6,
+    6
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    3,
+    3
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "nested_compositions.py",
+   "view": "outer_comp · compositions folded",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "nested_compositions.py",
+   "view": "↳ inner_comp",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "neural_network_with_ddm.py",
+   "view": "the model",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "neural_network_with_ddm.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "neural_network_with_ddm.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "neural_network_with_ddm.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 3,
+   "error": null
+  },
+  {
+   "model": "pretrained_stroop.py",
+   "view": "the model",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    4,
+    4
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "pretrained_stroop.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    4,
+    4
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "pretrained_stroop.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    4,
+    4
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "pretrained_stroop.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    4,
+    4
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 4,
+   "error": null
+  },
+  {
+   "model": "rumelhart_semantic_network.py",
+   "view": "Flatten (all compositions)",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    7,
+    7
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "rumelhart_semantic_network.py",
+   "view": "Flatten (all compositions) · Controller hidden",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    7,
+    7
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "rumelhart_semantic_network.py",
+   "view": "Flatten (all compositions) · Learning shown",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    7,
+    7
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "rumelhart_semantic_network.py",
+   "view": "Flatten (all compositions) · CIMs shown",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    7,
+    7
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 2,
+   "error": null
+  },
+  {
+   "model": "rumelhart_semantic_network.py",
+   "view": "PyTorch view",
+   "nodes": [
+    16,
+    16
+   ],
+   "rows": [
+    120,
+    120
+   ],
+   "order": [
+    27,
+    27
+   ],
+   "courses": [
+    15,
+    15
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "rumelhart_semantic_network.py",
+   "view": "rumelhart_semantic_network",
+   "nodes": [
+    8,
+    8
+   ],
+   "rows": [
+    28,
+    28
+   ],
+   "order": [
+    7,
+    7
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "scheduling_demo.py",
+   "view": "the model",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "scheduling_demo.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "scheduling_demo.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "scheduling_demo.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 3,
+   "error": null
+  },
+  {
+   "model": "simple_configurations.py",
+   "view": "the model",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "simple_configurations.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "simple_configurations.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "simple_configurations.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 2,
+   "error": null
+  },
+  {
+   "model": "simple_stroop_learn.py",
+   "view": "Flatten (all compositions)",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "simple_stroop_learn.py",
+   "view": "Flatten (all compositions) · Controller hidden",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "simple_stroop_learn.py",
+   "view": "Flatten (all compositions) · Learning shown",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "simple_stroop_learn.py",
+   "view": "Flatten (all compositions) · CIMs shown",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 3,
+   "error": null
+  },
+  {
+   "model": "simple_stroop_learn.py",
+   "view": "PyTorch view",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    4,
+    4
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "simple_stroop_learn.py",
+   "view": "stroop_learn_model",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "simple_stroop.py",
+   "view": "the model",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "simple_stroop.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "simple_stroop.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "simple_stroop.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    3,
+    3
+   ],
+   "rows": [
+    3,
+    3
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    2,
+    2
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 3,
+   "error": null
+  },
+  {
+   "model": "stroop_basic.py",
+   "view": "the model",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "stroop_basic.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "stroop_basic.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "stroop_basic.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    4,
+    4
+   ],
+   "courses": [
+    7,
+    7
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 3,
+   "error": null
+  },
+  {
+   "model": "stroop_with_control.py",
+   "view": "the model",
+   "nodes": [
+    10,
+    10
+   ],
+   "rows": [
+    45,
+    45
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    8,
+    11
+   ],
+   "missing": [
+    "CONTROL → TASK",
+    "Conflict Monitor → CONTROL",
+    "OUTPUT → Conflict Monitor"
+   ],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "stroop_with_control.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    9,
+    9
+   ],
+   "rows": [
+    29,
+    36
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    8,
+    9
+   ],
+   "missing": [
+    "OUTPUT → Conflict Monitor"
+   ],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "stroop_with_control.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    10,
+    10
+   ],
+   "rows": [
+    45,
+    45
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    8,
+    11
+   ],
+   "missing": [
+    "CONTROL → TASK",
+    "Conflict Monitor → CONTROL",
+    "OUTPUT → Conflict Monitor"
+   ],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "stroop_with_control.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    10,
+    10
+   ],
+   "rows": [
+    45,
+    45
+   ],
+   "order": [
+    3,
+    3
+   ],
+   "courses": [
+    8,
+    11
+   ],
+   "missing": [
+    "CONTROL → TASK",
+    "Conflict Monitor → CONTROL",
+    "OUTPUT → Conflict Monitor"
+   ],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "td_learning.py",
+   "view": "the model",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    5,
+    5
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 1,
+   "error": null
+  },
+  {
+   "model": "td_learning.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    5,
+    5
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 1,
+   "error": null
+  },
+  {
+   "model": "td_learning.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    5,
+    5
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 1,
+   "error": null
+  },
+  {
+   "model": "td_learning.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    5,
+    5
+   ],
+   "rows": [
+    10,
+    10
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    5,
+    5
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 3,
+   "error": null
+  },
+  {
+   "model": "vectors_and_matrices.py",
+   "view": "the model",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 1,
+   "error": null
+  },
+  {
+   "model": "vectors_and_matrices.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 1,
+   "error": null
+  },
+  {
+   "model": "vectors_and_matrices.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 1,
+   "error": null
+  },
+  {
+   "model": "vectors_and_matrices.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    2,
+    2
+   ],
+   "rows": [
+    1,
+    1
+   ],
+   "order": [
+    0,
+    0
+   ],
+   "courses": [
+    1,
+    1
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 3,
+   "error": null
+  },
+  {
+   "model": "xor_learning.py",
+   "view": "the model",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    8,
+    8
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "xor_learning.py",
+   "view": "the model · Controller hidden",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    8,
+    8
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "xor_learning.py",
+   "view": "the model · Learning shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    8,
+    8
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  },
+  {
+   "model": "xor_learning.py",
+   "view": "the model · CIMs shown",
+   "nodes": [
+    7,
+    7
+   ],
+   "rows": [
+    21,
+    21
+   ],
+   "order": [
+    1,
+    1
+   ],
+   "courses": [
+    8,
+    8
+   ],
+   "missing": [],
+   "overlaps": 0,
+   "cut_off": 0,
+   "error": null
+  }
+ ],
+ "why": {
+  "Giallanza2024_ego_study2.py — Flatten (all compositions) · compositions folded": "Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed.",
+  "Giallanza2024_ego_study2.py — PyTorch view · compositions folded": "Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed.",
+  "Giallanza2024_ego_study2.py — Flatten (all compositions) · Controller hidden": "Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed.",
+  "Giallanza2024_ego_study2.py — Flatten (all compositions) · Learning shown": "Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed.",
+  "Giallanza2024_ego_study2.py — Flatten (all compositions) · CIMs shown": "Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed.",
+  "stroop_with_control.py — the model · Controller hidden": "Probably a measurement taken too early: the review sheet shows the canvas still busy (its spinner at 8 s) with the controller already hidden, while the show_graph picture the batch compared it with still draws CONTROL. With the controller shown, the same model agrees 100%. Not yet confirmed."
+ }
+}
