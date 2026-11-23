@@ -235,6 +235,9 @@ class WarmWorker:
         """A step before the task is written; an error dict stops the task."""
         return None
 
+    def _is_result_marker(self, line: str) -> bool:
+        return line == RESULT_MARKER
+
     def _on_timeout(self) -> None:
         self._restart()
 
@@ -284,7 +287,7 @@ class WarmWorker:
                         return {"error": "Worker closed connection"}
 
                     line = line.rstrip("\n")
-                    if line == RESULT_MARKER:
+                    if self._is_result_marker(line):
                         result_line = self._proc.stdout.readline().rstrip("\n")
                         elapsed = time.time() - t0
                         logger.info(f"[perf] warm worker {task}: {elapsed:.2f}s")
@@ -327,7 +330,13 @@ class ForkServer(WarmWorker):
 
     def __init__(self):
         self._child_pid: int | None = None
+        self._token = ""
         super().__init__()
+
+    def _is_result_marker(self, line: str) -> bool:
+        # Only the answer that carries this task's token: a line anything
+        # else wrote, with or without an old token, is not an answer.
+        return bool(self._token) and line == f"{RESULT_MARKER} {self._token}"
 
     def send_task(self, task: str, params: dict, timeout: int) -> dict:
         with self._lock:
@@ -341,8 +350,14 @@ class ForkServer(WarmWorker):
                 self._child_pid = None
 
     def _before_payload(self, deadline: float) -> dict | None:
-        """Ask for a child and wait for its pid; the payload goes to it."""
-        self._proc.stdin.write("FORK\n")
+        """Ask for a child and wait for its pid; the payload goes to it.
+
+        The pid comes from the parent, which runs no model code, before the
+        child has read its task; it is the one a timeout ends."""
+        import secrets
+        self._token = secrets.token_hex(16)
+        self._child_pid = None
+        self._proc.stdin.write(f"FORK {self._token}\n")
         self._proc.stdin.flush()
         sel = selectors.DefaultSelector()
         sel.register(self._proc.stdout, selectors.EVENT_READ)
