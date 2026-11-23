@@ -1,0 +1,13 @@
+Found while building this page (#319). Each is a gap in what the tests check, not a known bug in the app, except where it says so.
+
+- **A model built in the UI against the same model typed as code.** No test builds one model both ways and checks that PsyNeuLink ends up with the same composition, or that the two run to the same results. The drag-to-connect specs check the code the UI writes, line by line, and that it loads; nothing compares it with hand-written code for the same model. Tracked under #319, stage 2.
+- **Round trips for each kind of edit.** Most edits have a test one way (graph to code, or code to graph), few have both, and fewer reload afterwards to check the graph comes back the same. Tracked under #319, stage 2.
+- **Seventeen browser specs pass but never run in CI** (the "should be added" rows above): together about four and a half minutes locally. Nothing in CI would notice if they broke, as `style-conventions.spec.ts` already has.
+- **`style-conventions.spec.ts` is broken on devel.** Its two tests expect 13px buttons; the default Text size (1.1, since #111) draws them at 14.3px. It isn't in CI, so nothing failed.
+- **The React components have no unit tests.** Frontend line coverage is about a quarter, because `components/` is tested only in the browser, which coverage can't see. The feature map is the measure for those.
+- **Frontend logic modules with little unit coverage:** `utils/labels.ts`, `utils/nodeActions.ts`, `hooks/useFileWatcher.ts` and `stores/edgeAttachStore.ts` are each a quarter covered or less, and `stores/modelStore.ts`, the biggest store, about half.
+- **The AI assistant's tests are not on devel.** Its runner-guard and OS-sandbox suites live on the assistant branch, so this page shows that area empty.
+- **The Mac app's side of its bridges.** The browser tests stand in for the Mac app by answering its messages; the native side is tested in the Mac app's own repository, not here.
+- **Test counts are test functions.** A parametrized backend test, or a browser test written in a loop, counts once here; pytest itself reports about 2,100 backend tests.
+- **Do the tests check what they claim?** A sample of deliberate breakages, to see which tests notice, is planned under #319, stage 3.
+- **show_graph agreement, outside the representative models.** The full batch (above) finds EGO's flattened and PyTorch views falling back from Like show_graph after their compositions are folded, and 28 views with something cut off after Fit; the `@ci` test covers neither. It also scores the canvas against a picture laid out by the same `placementFromGraphviz` the canvas uses, so a mistake in that function would move both sides and go unseen; `showGraphLayout.test.ts` is what guards it.
