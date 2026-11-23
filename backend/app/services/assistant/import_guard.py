@@ -14,9 +14,10 @@ doesn't resolve) can load it by path. The server installs it in its own
 process too, for the in-process importers.
 
 What it costs: when nothing is tracked, one attribute check per import and
-nothing else. When something is tracked, a path lookup per import from a
-``.py`` outside the standard library and site-packages, and one file read
-for a tracked path.
+nothing else, plus reading the (small) state file once per task. When
+something is tracked, a path lookup per import, one ``stat`` per tracked
+file per task, a folded-name check per file opened or run, and one file
+read for a tracked path.
 
 Three hooks, one check:
 
@@ -29,26 +30,35 @@ Three hooks, one check:
 * an audit hook (#187) for a tracked file's text reached without a loader:
   the file opened (``exec(open(p).read())``, ``Path(p).read_text()``, a
   copy), compiled under its own name (``runpy.run_path``,
-  ``exec(compile(text, p, "exec"))``), executed, named in a new process
-  (``python p``, a shell command, ``os.system``, ``os.exec*``,
-  ``posix_spawn``, ``pty.spawn``), renamed, hard-linked or symlinked. In
-  the worker it acts in every thread; in the server only on the thread of
-  an in-process load. It is added the first time something is tracked.
+  ``exec(compile(text, p, "exec"))``), executed, renamed, hard-linked or
+  symlinked; or a new process whose command names it, or whose shell or
+  interpreter text (``sh -c``, ``python -c``, ``os.system``) or environment
+  mentions its name, its module name or a shell pattern matching it. In
+  the worker it acts on every thread; in the server only on the thread of
+  an in-process load and threads started from it. It is added the first
+  time something is tracked.
 
-The worker also checks the model's own path itself, in its loaders, so a
-task started without the server's guard (an old or direct caller) is still
-refused. A tracked path is tracked wherever it sits: the state is consulted
-before any "library path" shortcut.
+A file is matched by its real path with accents composed and case folded,
+or by the file it is on disk (device and inode), so a case variant, a
+decomposed accent or a hard link names the same tracked file. The worker
+also checks the model's own path itself, in its loaders, so a task started
+without the server's guard (an old or direct caller) is still refused. A
+tracked path is tracked wherever it sits: the state is consulted before any
+"library path" shortcut. Before each task the worker puts the guard's
+state back and reads the review state again (the one the task names and
+the default one), and exits after a task in which a model replaced the
+guard's functions.
 
-What it doesn't cover, said plainly: a model that runs text it didn't read
-from the tracked file (written into the model itself, built up from
-pieces, fetched from the network); a child process, beyond the files its
-command names (a child Python has no guard of its own, so a script it runs
-may read or import anything); a thread a model starts during an in-process
-load in the server (the worker covers every thread); hard links, symlinks
-under another name, sourceless ``.pyc`` files and zip imports that
-something already running as the user set up beforehand. Approving a model
-means trusting what it does. The guard is against accidental or
+What it doesn't cover, said plainly (the threat model's section 7 has the
+full list): text a model didn't read from the tracked file; a child
+process beyond what its command, its shell or interpreter text and its
+environment say (a child Python, ``multiprocessing`` included, has no
+guard of its own; a name passed on stdin or built inside the child gets
+through); code that reads files without Python's audit events (``ctypes``,
+C extensions); a model that tampers with the guard during its own task;
+links under another name made beforehand and then read as text (imported,
+they are caught); sourceless ``.pyc`` files and zip imports. Approving a
+model means trusting what it does. The guard is against accidental or
 agent-written imports, loads and the obvious ways around them.
 """
 

@@ -221,17 +221,23 @@ the default path. The standard library, site-packages and the active
 PsyNeuLink checkout are never vetted or purged (a tracked path is checked
 first, wherever it sits), and with nothing tracked the finder does one
 check per import and nothing else. A model beside an unapproved file runs
-unless it imports it. An audit hook in the worker (and, on the loading
-thread, in the server's in-process converter) also refuses a tracked,
-unapproved file opened, compiled under its own name, executed, named in a
-new process, renamed or linked, which covers `exec(open(...).read())`,
-`runpy.run_path` and `python helper.py` in a subprocess (#187). What this
-doesn't cover: text a model didn't read from the tracked file, and what a
-child process does beyond the files its command names; the threat model's
-section 7 lists exactly what isn't covered. Approving a model means
-trusting what it does. Every place code is started or executed in
-`backend/app` is listed in the threat model with its guard, and a test
-fails if a new one appears unlisted. A route that would execute unreviewed content answers 409
+unless it imports it. Every layer, and the review lookups here, match a
+path to a tracked file by its real path with accents composed and case
+folded, or by the file it is on disk, so a case variant, a decomposed
+accent or a hard link names the same entry. An audit hook in the worker
+(and, on the loading thread and threads it starts, in the server's
+in-process converter) also refuses a tracked, unapproved file opened,
+compiled under its own name, executed, renamed or linked, or mentioned in
+a new process's command, shell or interpreter text or environment, which
+covers `exec(open(...).read())`, `runpy.run_path`, `python helper.py`,
+`sh -c 'cat helper.py'` and `python -c` (#187). What this doesn't cover:
+text a model didn't read from the tracked file, a child process beyond
+what its command, text and environment say, `ctypes`, and a model that
+tampers with the guard during its own task; the threat model's section 7
+lists exactly what isn't covered. Approving a model means trusting what
+it does. Every place code is started or executed in `backend/app` is
+listed in the threat model with its guard, and a test fails if a new one
+appears unlisted. A route that would execute unreviewed content answers 409
 with `{"detail": <message>, "reason": "assistant_code_unreviewed", "path",
 "approve": {...}}` (top level, from the app's exception handler; the page
 reads `reason` from either the top level or under `detail`).
