@@ -926,7 +926,14 @@ def test_a_process_whose_text_mentions_an_unreviewed_file_is_refused(st, how):
     assert not marker2.exists()
 
 
-def test_an_open_relative_to_another_folder_is_refused_by_name(st):
+def test_an_open_relative_to_another_folder_is_not_covered(st):
+    """Round 3 (F4, F5): checking a relative name against every tracked file
+    of that name refused ordinary models (a new file of the same name being
+    written), and a decoy in the working folder defeated it anyway. Only a
+    path that leads to the tracked file is checked now, so an
+    ``os.open(name, dir_fd=d)`` relative to another folder isn't covered,
+    as the threat model says. This test records that, so a change to it is
+    noticed."""
     marker2 = st["tmp"] / "dirfd_ran.txt"
     helper = st["models"] / "hx_dirfd.py"
     helper.write_text(_helper(marker2))
@@ -936,8 +943,8 @@ def test_an_open_relative_to_another_folder_is_refused_by_name(st):
     model.write_text(_model_importing(
         f"os.chdir('/')\nd = os.open({str(helper.parent)!r}, os.O_RDONLY)\n"
         f"fd = os.open({helper.name!r}, os.O_RDONLY, dir_fd=d)\nexec(os.read(fd, 1 << 20).decode())"))
-    assert unreviewed(load(model))
-    assert not marker2.exists()
+    load(model)
+    assert marker2.exists()
 
 
 # ── 13. a task naming a state file that doesn't exist ───────────────────
@@ -1066,6 +1073,7 @@ def _plain_model(folder: Path, body: str) -> Path:
 
 def _tracked_unapproved(st, name: str) -> Path:
     p = st["models"] / name
+    p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(_helper(st["tmp"] / "never.txt"))
     review.mark_unreviewed(str(p), p.read_text())
     return p
@@ -1243,3 +1251,146 @@ def test_nothing_tracked_keeps_the_warm_worker(st):
     load(model)
     load(model)
     assert len(set(out.read_text().split())) == 1
+
+
+# ── 17. the third round of review of PR #310 ────────────────────────────
+
+
+@pytest.mark.parametrize("how", ["approve_in_record", "delete_record", "delete_backup", "replace_record", "rewrite_guard"])
+def test_a_model_cannot_change_the_review_record_or_the_guard(st, how):
+    """F1: the next task, in a fresh process, reads the record from disk; a
+    model may not change it (or the guard's own files) while something is
+    tracked. The change is refused, and the next model's exec(open(...))
+    of the unapproved helper is refused too."""
+    marker2 = st["tmp"] / f"rec_ran_{how}.txt"
+    helper = st["models"] / f"hx_rec_{how}.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    sp = str(review.state_path())
+    guard_src = str(APP_DIR / "services" / "assistant" / "import_guard.py")
+    stmt = {
+        # The model knows the text it wants approved; it needn't read the file.
+        "approve_in_record": (f"import json\ns = json.load(open({sp!r}))\n"
+                              f"for k, e in s['files'].items():\n    e['approved'] = {review.content_hash(helper.read_text())!r}\n"
+                              f"json.dump(s, open({sp!r}, 'w'))\n"),
+        "delete_record": f"os.remove({sp!r})\n",
+        "delete_backup": f"os.unlink({sp + '.bak'!r})\n",
+        "replace_record": f"open({sp + '.new'!r}, 'w').write('{{\"files\": {{}}}}')\nos.replace({sp + '.new'!r}, {sp!r})\n",
+        "rewrite_guard": f"open({guard_src!r}, 'a').write('# changed')\n",
+    }[how]
+    before = Path(guard_src).read_text()
+    first = _plain_model(st["tmp"] / f"Rec_{how}", stmt)
+    r1 = load(first)
+    assert unreviewed(r1), r1.text[:300]
+    assert "review record" in r1.json()["detail"]
+    assert Path(guard_src).read_text() == before
+    second = _plain_model(st["tmp"] / f"Rec2_{how}", f"exec(open({str(helper)!r}).read())\n")
+    assert unreviewed(load(second))
+    assert not marker2.exists()
+
+
+def test_a_symlink_to_a_folder_holding_a_tracked_file_runs(st):
+    _tracked_unapproved(st, "deep/er/still/helper2.py")
+    model = _plain_model(st["tmp"] / "L_f", f"os.symlink({str(st['tmp'])!r}, {str(st['tmp'] / 'link_to_parent')!r})\n")
+    assert _runs_normally(load(model))
+
+
+def test_a_symlink_to_the_users_own_same_named_file_runs(st):
+    _tracked_unapproved(st, "results.py")
+    mine = st["tmp"] / "MineR"
+    mine.mkdir()
+    (mine / "results.py").write_text("X = 1\n")
+    model = _plain_model(st["tmp"] / "L_g", f"os.symlink({str(mine / 'results.py')!r}, {str(st['tmp'] / 'r_link.py')!r})\n"
+                                               f"open({str(st['tmp'] / 'r_link.py')!r}).read()\n")
+    assert _runs_normally(load(model))
+
+
+def test_a_script_writing_a_same_named_output_runs(st):
+    _tracked_unapproved(st, "report.py")
+    script = st["tmp"] / "gen.py"
+    script.write_text("import sys\nopen(sys.argv[2], 'w').write('# generated')\n")
+    out = st["tmp"] / "outR"
+    out.mkdir()
+    model = _plain_model(st["tmp"] / "L_h", f"import subprocess\nsubprocess.run([sys.executable, {str(script)!r}, '--out', {str(out / 'report.py')!r}], check=True)\n")
+    assert _runs_normally(load(model))
+    assert (out / "report.py").exists()
+
+
+def test_writing_a_new_same_named_file_relatively_runs(st):
+    _tracked_unapproved(st, "summary.py")
+    out = st["tmp"] / "outS"
+    out.mkdir()
+    model = _plain_model(st["tmp"] / "L_i", f"os.chdir({str(out)!r})\nopen('summary.py', 'w').write('# mine')\n")
+    assert _runs_normally(load(model))
+
+
+def test_a_name_as_a_pattern_for_another_command_runs(st):
+    _tracked_unapproved(st, "notes.py")
+    lg = st["tmp"] / "log.txt"
+    lg.write_text("notes.py ok\n")
+    model = _plain_model(st["tmp"] / "L_j", f"import subprocess\nsubprocess.run(['grep', '-E', 'notes.py', {str(lg)!r}], check=True)\n")
+    assert _runs_normally(load(model))
+
+
+def test_the_refusal_names_the_path_the_model_used(st):
+    marker2 = st["tmp"] / "named_ran.txt"
+    helper = st["models"] / "hx_named.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    link = st["tmp"] / "other_name.py"
+    model = _plain_model(st["tmp"] / "Named", f"os.symlink({str(st['models'])!r}, {str(st['tmp'] / 'mlink')!r})\n"
+                                               f"exec(open({str(st['tmp'] / 'mlink' / helper.name)!r}).read())\n")
+    r = load(model)
+    assert unreviewed(r)
+    assert r.json()["path"] == str(helper.resolve())
+    assert "mlink" in r.json()["detail"]
+    assert not marker2.exists()
+
+
+def test_an_interpreter_behind_env_is_read(st):
+    import shutil
+    if not shutil.which("awk"):
+        pytest.skip("awk not installed")
+    marker2 = st["tmp"] / "envawk_ran.txt"
+    helper = st["models"] / "hx_envawk.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    argv = ["env", "LC_ALL=C", "awk", f'BEGIN {{ while ((getline l < "{helper}") > 0) print l }}']
+    model = _plain_model(st["tmp"] / "EnvAwk", f"import subprocess\nexec(subprocess.run({argv!r}, capture_output=True, text=True).stdout)\n")
+    assert unreviewed(load(model))
+    assert not marker2.exists()
+
+
+@pytest.mark.parametrize("something_tracked", [False, True])
+def test_a_helper_the_assistant_writes_while_a_model_loads_is_refused(tmp_path, monkeypatch, something_tracked):
+    """The review state is read again during a task when it changed on
+    disk, so a file the assistant writes while a model is running is
+    checked like any other, in the warm worker and in a forked child."""
+    import threading
+    monkeypatch.setenv("PSYNEUVIEW_PREVIEW_ROOT", str(tmp_path / "previews"))
+    folder = tmp_path / "RW"
+    folder.mkdir()
+    files.set_folders_provider(lambda: [{"path": str(folder), "access": "read_write"}])
+    try:
+        if something_tracked:
+            files.write_model_file(str(folder / "other_model.py"), marker_model(tmp_path / "never.txt"), base_hash=None)
+        marker2 = tmp_path / "midload_ran.txt"
+        own = tmp_path / "Own" / "slow.py"
+        own.parent.mkdir()
+        own.write_text(f"import sys, time\nsys.path.insert(0, {str(folder)!r})\ntime.sleep(3)\nimport mid_helper\n"
+                       "import psyneulink as pnl\ncomp = pnl.Composition(name='c')\n")
+
+        def writer():
+            time.sleep(1.0)
+            files.write_model_file(str(folder.resolve() / "mid_helper.py"),
+                                   f"from pathlib import Path\nPath({str(marker2)!r}).write_text('ran')\nimport psyneulink as pnl\n",
+                                   base_hash=None)
+
+        t = threading.Thread(target=writer)
+        t.start()
+        r = load(own)
+        t.join()
+        assert unreviewed(r), r.text[:300]
+        assert not marker2.exists()
+    finally:
+        files.set_folders_provider(files._folders_from_settings)
