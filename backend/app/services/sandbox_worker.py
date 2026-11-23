@@ -4384,7 +4384,10 @@ def _handle_one_task(payload_str: str) -> str:
                     if mod_name.startswith("user_model"):
                         del sys.modules[mod_name]
                 # The review state as it is now, for this task's imports (#179);
-                # a tracked file cached by an earlier task is dropped here.
+                # a tracked file cached by an earlier task is dropped here. The
+                # guard's own state is put back first, so nothing an earlier
+                # model set on it carries over to this one (#187).
+                _guard.reset_for_task()
                 _guard.refresh(payload.get("review_state"), payload.get("exempt_roots"))
                 result = handler(params)
             except _guard.UnreviewedImport as e:
@@ -4410,6 +4413,15 @@ def _handle_one_task(payload_str: str) -> str:
             ]
 
     return json.dumps(result, default=str)
+
+
+def _guard_was_replaced() -> bool:
+    """True when a model replaced part of the guard (its functions, the
+    loader wrapper) during the task just run (#187)."""
+    try:
+        return _guard.fingerprint() != _GUARD_FINGERPRINT
+    except BaseException:
+        return True
 
 
 def _install_orphan_watchdog(interval: float = 1.0, use_signal_timer: bool = False) -> None:
@@ -4504,6 +4516,12 @@ def _run_persistent():
         result_str = _handle_one_task(line)
         print(RESULT_MARKER, flush=True)
         print(result_str, flush=True)
+        if _guard_was_replaced():
+            # The next task starts in a fresh worker, with a guard nobody
+            # has touched; the server restarts a worker that has exited.
+            sys.stderr.write("[guard] the import guard was changed by a model; restarting the worker\n")
+            sys.stderr.flush()
+            _os._exit(0)
 
 
 def _learning_profile(comp, is_autodiff):
@@ -4536,6 +4554,7 @@ if __name__ == "__main__":
     # file is also refused when it is opened, compiled, executed, handed to a
     # new process, renamed or linked (#187). Not when a test imports this file.
     _guard.install_audit_hook(everywhere=True)
+    _GUARD_FINGERPRINT = _guard.fingerprint()
     if persistent:
         _run_persistent()
     else:
