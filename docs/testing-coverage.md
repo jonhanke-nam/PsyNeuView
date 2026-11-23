@@ -9,10 +9,10 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 156 | 420 | 370 tests in 135 files |
+| Browser (Playwright) | 158 | 430 | 380 tests in 137 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 134 | 1203 | 1203 tests in 134 files |
-| Backend (pytest) | 187 | 1745 | 1745 tests in 187 files |
+| Backend (pytest) | 188 | 1747 | 1747 tests in 188 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
 
@@ -26,7 +26,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Dragging and pointer interaction](#pointer) | 17 files, 53 tests | – | 6 files, 37 tests | – | 88 of 90 |
 | [Building models in the UI](#building) | 3 files, 6 tests | – | 1 files, 9 tests | 13 files, 145 tests | 160 of 160 |
 | [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 357 of 362 |
-| [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 1 files, 2 tests | – | – | 16 files, 68 tests | 70 of 70 |
+| [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
 | [Running, learning and debugging](#running) | 9 files, 26 tests | – | 8 files, 84 tests | 51 files, 252 tests | 362 of 362 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 286 of 304 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 166 of 168 |
@@ -34,7 +34,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Look and style conventions](#style) | 13 files, 31 tests | – | 8 files, 47 tests | – | 76 of 78 |
 | [Layout, views and compositions](#layout) | 21 files, 47 tests | – | 21 files, 151 tests | 5 files, 56 tests | 253 of 254 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 180 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 8 files, 14 tests | – | 13 files, 78 tests | 18 files, 194 tests | 282 of 286 |
+| [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 13 files, 78 tests | 18 files, 194 tests | 287 of 291 |
 
 <a id="tutorials"></a>
 
@@ -547,6 +547,7 @@ No tests yet.
 | File | Layer | Tests | In CI | Issues | What it checks |
 |---|---|---|---|---|---|
 | `mdf-gap-warnings.spec.ts` | Browser | 2 | yes | #83, #85 | Save a copy as… MDF warns about the known round-trip gaps (#83, #85). |
+| `ui-text-equivalence.spec.ts` | Browser | 5 | yes | #319 | A model built in the graph is the model typed as code (#319). |
 | `test_condition_round_trip.py` | Backend | 1 | yes | #85 | Which scheduler Conditions survive an MDF round-trip (#85) — measured. |
 | `test_known_gaps.py` | Backend | 4 | yes | #82, #87 | Pins the *current* behavior of known MDF round-trip gaps (#82-#87). |
 | `test_mdf_gap_detection.py` | Backend | 11 | yes | #83, #84, #85, #87 | Warnings for the known MDF round-trip gaps (#83, #84, #85, #87). |
@@ -558,6 +559,7 @@ No tests yet.
 | `test_format_version.py` | Backend | 5 | yes |  | Tests for format versioning — header parsing and version warnings. |
 | `test_lc_models_reference_equivalence.py` | Backend | 2 | yes | #800 | Regression fixtures for two vendored LC (locus coeruleus) reference models (#800): |
 | `test_mdf_gaps_api.py` | Backend | 2 | yes | #83, #87 | POST /api/model/mdf-gaps: the export dialog's MDF gap warnings (#83-#87). |
+| `test_model_equivalence.py` | Backend | 2 | yes | #319 | The model-equivalence helper sees what differs, and only that (#319). |
 | `test_montague_reference_equivalence.py` | Backend | 4 | yes | #800 | Regression fixtures for the vendored MontagueDayanSejnowski96 reference model (#800). |
 | `test_reference_equivalence_matrix.py` | Backend | 3 | yes | #653 | Reference-model execute-path equivalence — one parametrized matrix (#653). |
 | `test_stroop_basic_reference_equivalence.py` | Backend | 4 | yes | #579 | Runnability + baseline-match for the basic Stroop reference model (#579). |
@@ -570,6 +572,11 @@ No tests yet.
 |---|---|---|---|---|
 | MDF export warns about known round-trip gaps › a shared mechanism and a WhenFinishedAny condition are named, with their upstream issues | `mdf-gap-warnings.spec.ts` | Browser | yes | #83 |
 | MDF export warns about known round-trip gaps › a plain model gets no gap warnings | `mdf-gap-warnings.spec.ts` | Browser | yes | #83 |
+| built in the graph, typed as code: the same model (#319) › MappingProjection: two mechanisms placed and connected by dragging | `ui-text-equivalence.spec.ts` | Browser | yes | #319 |
+| built in the graph, typed as code: the same model (#319) › ControlProjection: a control mechanism placed, dragged onto a mechanism, gain chosen | `ui-text-equivalence.spec.ts` | Browser | yes | #319 |
+| built in the graph, typed as code: the same model (#319) › GatingProjection: a gating mechanism placed, dragged onto a mechanism, its input chosen | `ui-text-equivalence.spec.ts` | Browser | yes | #319 |
+| built in the graph, typed as code: the same model (#319) › LearningProjection: a pathway's learning mechanism dropped on another arrow | `ui-text-equivalence.spec.ts` | Browser | yes | #319 |
+| built in the graph, typed as code: the same model (#319) › into a nested composition: a mechanism dragged onto the folded composition | `ui-text-equivalence.spec.ts` | Browser | yes | #319 |
 
 </details>
 
@@ -1197,6 +1204,7 @@ No tests yet.
 | `notification-dwell.spec.ts` | Browser | 1 | no | #879 | #879: info/success toasts dwell long enough to read. |
 | `pycharm-live.local.spec.ts` | Browser | 1 | no |  | LOCAL ONLY — the full two-headed loop with a real PyCharm. |
 | `read-only-badge-note.spec.ts` | Browser | 1 | yes | #50 | Clicking the "PsyNeuLink from … · read only" tag explains it (#50). |
+| `round-trips.spec.ts` | Browser | 5 | yes | #319 | Round trips: an edit in the graph reaches the code and survives a reload; an edit in the code reaches the graph (#319). |
 | `ciSpecs.test.ts` | Frontend unit | 3 | yes |  | The CI e2e set is the specs tagged `@ci`; e2e/ci-specs.txt names their files. |
 | `DiagnosticPanel.test.ts` | Frontend unit | 4 | yes | #109 | The diagnostics bar (#109): amber only when there is something to act on, the toolbar's neutral grey otherwise, and no "click to expand" line — the bar's tooltip says it expands. |
 | `StatusBar.test.ts` | Frontend unit | 1 | yes | #222 | The status bar has no spinner of its own (#222 follow-up): the busy wheel is the one spinner on screen. |
@@ -1247,6 +1255,11 @@ No tests yet.
 | success toast dwells past the old 2s window | `notification-dwell.spec.ts` | Browser | no | #879 |
 | a real PyCharm save updates the PsyNeuView canvas | `pycharm-live.local.spec.ts` | Browser | no |  |
 | the read-only tag explains itself and offers Save a copy as… (#50) | `read-only-badge-note.spec.ts` | Browser | yes | #50 |
+| round trips between the graph and the code (#319) › add a node: placed in the graph, written to the code, there after reopening | `round-trips.spec.ts` | Browser | yes | #319 |
+| round trips between the graph and the code (#319) › delete a node: from the graph to the code and back; and from the code to the graph | `round-trips.spec.ts` | Browser | yes | #319 |
+| round trips between the graph and the code (#319) › rename a node: in the Inspector, to the code and back; and in the code, to the graph | `round-trips.spec.ts` | Browser | yes | #319 |
+| round trips between the graph and the code (#319) › connect: dragged in the graph, to the code and back; and typed in the code, to the graph | `round-trips.spec.ts` | Browser | yes | #319 |
+| round trips between the graph and the code (#319) › a parameter: changed in the Inspector, to the code and back; and in the code, to the Inspector | `round-trips.spec.ts` | Browser | yes | #319 |
 
 </details>
 
@@ -1254,101 +1267,7 @@ Every unit and backend test, one by one, is in [the full list](testing-coverage-
 
 ## Coverage
 
-Measured 2026-11-23 at commit `cafdb905f1`. Browser tests don't measure code coverage; the feature map above is their measure.
-
-| | Lines | Branches | Statements |
-|---|---|---|---|
-| Backend (`app/`, pytest) | 88.0% | 82.3% | 13233 |
-| Frontend (`src/`, vitest) | 26.3% | 84.3% | 40531 |
-
-The frontend's branch figure counts only branches in files the unit tests load, so it reads high; its line figure is the honest one. The React components are tested in the browser, which this number doesn't see.
-
-<details><summary>Backend by folder</summary>
-
-| Folder | Lines | Branches | Statements |
-|---|---|---|---|
-| `app` | 93.7% | 86.1% | 175 |
-| `app/api` | 85.4% | 68.2% | 1957 |
-| `app/models` | 0.0% | – | 38 |
-| `app/services` | 88.7% | 83.7% | 11063 |
-
-</details>
-
-<details><summary>Frontend by folder</summary>
-
-| Folder | Lines | Branches | Statements |
-|---|---|---|---|
-| `components` | 0.0% | 0.0% | 59 |
-| `components/common` | 6.0% | 67.0% | 9294 |
-| `components/editor` | 0.0% | 0.0% | 1680 |
-| `components/graph` | 2.0% | 72.6% | 6167 |
-| `components/inspector` | 1.8% | 71.8% | 6474 |
-| `components/layout` | 0.4% | 66.7% | 3232 |
-| `components/scheduler` | 0.0% | 0.0% | 178 |
-| `config` | 41.2% | – | 17 |
-| `constants` | 93.5% | 100.0% | 383 |
-| `hooks` | 19.3% | 69.0% | 762 |
-| `shortcuts` | 85.8% | 92.6% | 642 |
-| `src (top level)` | 10.2% | 86.7% | 305 |
-| `stores` | 67.7% | 79.1% | 3815 |
-| `utils` | 82.1% | 87.1% | 7523 |
-
-</details>
-
-### Least covered, of the larger modules
-
-The 20 modules with the lowest line coverage among the larger ones: backend modules of 150 statements or more, and frontend logic (stores, utils, hooks, shortcuts) of 100 or more. The React components under `components/` are left out: the browser tests exercise them, which this measure can't see, so nearly all of them read 0%.
-
-**Backend**
-
-| Module | Lines | Branches | Statements |
-|---|---|---|---|
-| `backend/app/services/pnl_updates.py` | 74.3% | 64.1% | 253 |
-| `backend/app/services/clone_manager.py` | 78.5% | 72.2% | 181 |
-| `backend/app/services/jobs.py` | 79.9% | 62.5% | 174 |
-| `backend/app/services/test_extractor.py` | 84.5% | 78.8% | 207 |
-| `backend/app/services/sandbox.py` | 84.6% | 80.0% | 221 |
-| `backend/app/services/sandbox_worker.py` | 85.1% | 81.8% | 2407 |
-| `backend/app/services/settings_info.py` | 85.6% | 79.2% | 174 |
-| `backend/app/services/working_copies.py` | 86.0% | 88.6% | 236 |
-| `backend/app/api/routes.py` | 86.5% | 68.5% | 1738 |
-| `backend/app/services/managed_layouts.py` | 86.8% | 84.7% | 310 |
-| `backend/app/services/pathway_learning.py` | 87.1% | 78.0% | 202 |
-| `backend/app/services/executor.py` | 87.5% | 78.2% | 361 |
-| `backend/app/services/introspector.py` | 87.8% | 82.1% | 491 |
-| `backend/app/services/checkout_updates.py` | 87.9% | 86.1% | 239 |
-| `backend/app/services/install_manager.py` | 89.5% | 89.3% | 531 |
-| `backend/app/services/pnl_releases.py` | 89.7% | 85.0% | 156 |
-| `backend/app/services/project_folder.py` | 89.8% | 87.5% | 167 |
-| `backend/app/services/watcher.py` | 91.3% | 81.8% | 241 |
-| `backend/app/services/file_writer.py` | 91.4% | 84.1% | 752 |
-| `backend/app/services/converter.py` | 92.0% | 85.4% | 287 |
-
-**Frontend**
-
-| Module | Lines | Branches | Statements |
-|---|---|---|---|
-| `frontend/src/utils/labels.ts` | 5.7% | – | 159 |
-| `frontend/src/utils/nodeActions.ts` | 6.0% | 94.1% | 249 |
-| `frontend/src/hooks/useFileWatcher.ts` | 10.5% | 83.3% | 200 |
-| `frontend/src/stores/edgeAttachStore.ts` | 25.0% | 37.5% | 104 |
-| `frontend/src/stores/modelStore.ts` | 51.5% | 58.8% | 1329 |
-| `frontend/src/hooks/useUndoRedo.ts` | 55.1% | 68.1% | 136 |
-| `frontend/src/stores/uiStore.ts` | 64.4% | 63.6% | 101 |
-| `frontend/src/stores/graphSettingsStore.ts` | 70.5% | 89.5% | 149 |
-| `frontend/src/utils/diagnostics.ts` | 77.7% | 62.3% | 287 |
-| `frontend/src/utils/edgeRouter.ts` | 82.3% | 86.2% | 249 |
-| `frontend/src/utils/edgeLanes.ts` | 85.3% | 78.9% | 170 |
-| `frontend/src/utils/activitySaver.ts` | 86.5% | 88.5% | 111 |
-| `frontend/src/stores/openMenuOrder.ts` | 88.3% | 81.8% | 111 |
-| `frontend/src/utils/importModelFiles.ts` | 88.4% | 78.9% | 146 |
-| `frontend/src/utils/tutorialGuard.ts` | 88.8% | 83.2% | 241 |
-| `frontend/src/utils/showGraphLayout.ts` | 92.5% | 83.6% | 507 |
-| `frontend/src/utils/lineDiff.ts` | 92.9% | 94.7% | 113 |
-| `frontend/src/stores/layoutStore.ts` | 93.0% | 94.9% | 229 |
-| `frontend/src/utils/activityLog.ts` | 93.5% | 96.9% | 138 |
-| `frontend/src/utils/runningFrom.ts` | 93.9% | 77.4% | 229 |
-
+Not measured yet.
 ## Agreement with show_graph
 
 `e2e/show-graph-agreement.spec.ts` opens every bundled model in every view, lays it out Like show_graph, and scores the canvas against show_graph's own picture. Full batch measured 2026-11-23 at commit `44ce5d77d4`: **169 of 175** views agree fully on nodes, rows and order.
@@ -1613,8 +1532,8 @@ python3 scripts/test_map.py --agreement frontend/test-results/show-graph-agreeme
 
 Found while building this page (#319). Each is a gap in what the tests check, not a known bug in the app, except where it says so.
 
-- **A model built in the UI against the same model typed as code.** No test builds one model both ways and checks that PsyNeuLink ends up with the same composition, or that the two run to the same results. The drag-to-connect specs check the code the UI writes, line by line, and that it loads; nothing compares it with hand-written code for the same model. Tracked under #319, stage 2.
-- **Round trips for each kind of edit.** Most edits have a test one way (graph to code, or code to graph), few have both, and fewer reload afterwards to check the graph comes back the same. Tracked under #319, stage 2.
+- **A model built in the UI against the same model typed as code: now covered** for Mapping, Control, Gating and Learning projections and one into a nested composition (`ui-text-equivalence.spec.ts`, with `backend/tests/model_equivalence.py`). Not yet covered: projections between nested compositions, control of a nested node's parameter, and models whose nodes the UI builds with non-default parameters.
+- **Round trips: now covered** for adding, deleting, renaming and connecting nodes and changing a parameter (`round-trips.spec.ts`); shaping an arrow was already covered by `edge-curve-handles.spec.ts`. Renaming or deleting an arrow is covered one way only (`graph-arrow-menus.spec.ts`).
 - **Seventeen browser specs pass but never run in CI** (the "should be added" rows above): together about four and a half minutes locally. Nothing in CI would notice if they broke, as `style-conventions.spec.ts` already has.
 - **`style-conventions.spec.ts` is broken on devel.** Its two tests expect 13px buttons; the default Text size (1.1, since #111) draws them at 14.3px. It isn't in CI, so nothing failed.
 - **The React components have no unit tests.** Frontend line coverage is about a quarter, because `components/` is tested only in the browser, which coverage can't see. The feature map is the measure for those.
@@ -1622,7 +1541,7 @@ Found while building this page (#319). Each is a gap in what the tests check, no
 - **The AI assistant's tests are not on devel.** Its runner-guard and OS-sandbox suites live on the assistant branch, so this page shows that area empty.
 - **The Mac app's side of its bridges.** The browser tests stand in for the Mac app by answering its messages; the native side is tested in the Mac app's own repository, not here.
 - **Test counts are test functions.** A parametrized backend test, or a browser test written in a loop, counts once here; pytest itself reports about 2,100 backend tests.
-- **Do the tests check what they claim?** A sample of deliberate breakages, to see which tests notice, is planned under #319, stage 3.
+- **Do the tests check what they claim?** In a sample of five deliberate breakages (#319: the drag-to-connect type rule, the role colours, writing a projection, show_graph's left-to-right order, the click-never-connects threshold), each was caught by at least one CI test.
 - **show_graph agreement, outside the representative models.** The full batch (above) finds EGO's flattened and PyTorch views falling back from Like show_graph after their compositions are folded, and 28 views with something cut off after Fit; the `@ci` test covers neither. It also scores the canvas against a picture laid out by the same `placementFromGraphviz` the canvas uses, so a mistake in that function would move both sides and go unseen; `showGraphLayout.test.ts` is what guards it.
 
 Areas with no tests on this branch: AI assistant.
