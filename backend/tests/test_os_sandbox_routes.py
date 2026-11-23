@@ -605,14 +605,22 @@ def test_s3_a_deep_chain_of_survivors_is_ended_and_cant_run_a_later_file(st):
     # A chain 12 deep, each in a session of its own; the deepest waits for
     # a file the assistant writes after the task, then tries to run it.
     chain = st["tmp"] / "chain.py"
+    # Each level forks the next (no new interpreter to start, so the chain is
+    # built in milliseconds even on a loaded two-CPU runner, where starting
+    # thirteen Pythons one after another didn't finish inside the task).
     chain.write_text(
-        "import os, subprocess, sys, time\n"
-        "depth = int(sys.argv[1])\nos.setsid()\n"
-        f"open({str(pids)!r}, 'a').write(str(os.getpid()) + chr(10))\n"
-        "if depth:\n    subprocess.Popen([sys.executable, __file__, str(depth - 1)]).wait()\n"
-        "else:\n    t = time.time()\n    while time.time() - t < 15:\n"
-        f"        try:\n            exec(open({str(later)!r}).read()); break\n"
-        "        except OSError:\n            time.sleep(0.2)\n")
+        "import os, sys, time\n"
+        "depth = int(sys.argv[1])\n"
+        "while True:\n"
+        "    os.setsid()\n"
+        f"    open({str(pids)!r}, 'a').write(str(os.getpid()) + chr(10))\n"
+        "    if depth == 0:\n        break\n"
+        "    child = os.fork()\n"
+        "    if child:\n        os.waitpid(child, 0)\n        os._exit(0)\n"
+        "    depth -= 1\n"
+        "t = time.time()\nwhile time.time() - t < 15:\n"
+        f"    try:\n        exec(open({str(later)!r}).read()); break\n"
+        "    except OSError:\n        time.sleep(0.2)\n")
     model = _guard_off_model(st["tmp"] / "S3", (
         "import subprocess, time\n"
         f"subprocess.Popen([sys.executable, {str(chain)!r}, '12'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n"
