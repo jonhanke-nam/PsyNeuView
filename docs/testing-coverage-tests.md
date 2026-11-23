@@ -1136,9 +1136,9 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/editor-drag-select.spec.ts`** (Browser (Playwright))
 
-- drag-selecting text, forwards and backwards, raises nothing (#1094) · CI · #1094
-- dragging a selection to move it raises nothing (#1094) · CI · #1094
-- dragging a selection out onto the canvas raises nothing (#1094) · CI · #1094
+- drag-selecting text, forwards and backwards, raises nothing (#1094) · not in CI · #1094
+- dragging a selection to move it raises nothing (#1094) · not in CI · #1094
+- dragging a selection out onto the canvas raises nothing (#1094) · not in CI · #1094
 
 **`frontend/e2e/external-edit-sync.spec.ts`** (Browser (Playwright))
 

@@ -9,7 +9,7 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 158 | 430 | 421 tests in 153 files |
+| Browser (Playwright) | 158 | 430 | 418 tests in 152 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 134 | 1203 | 1203 tests in 134 files |
 | Backend (pytest) | 188 | 1747 | 1747 tests in 188 files |
@@ -25,7 +25,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Matching show_graph](#showgraph) | 8 files, 19 tests | – | 8 files, 66 tests | 5 files, 34 tests | 118 of 119 |
 | [Dragging and pointer interaction](#pointer) | 17 files, 53 tests | – | 6 files, 37 tests | – | 90 of 90 |
 | [Building models in the UI](#building) | 3 files, 6 tests | – | 1 files, 9 tests | 13 files, 145 tests | 160 of 160 |
-| [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 362 of 362 |
+| [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 359 of 362 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
 | [Running, learning and debugging](#running) | 9 files, 26 tests | – | 8 files, 84 tests | 51 files, 252 tests | 362 of 362 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
@@ -444,7 +444,7 @@ No tests yet.
 | File | Layer | Tests | In CI | Issues | What it checks |
 |---|---|---|---|---|---|
 | `apply-only-when-needed.spec.ts` | Browser | 2 | yes | #1303 | Apply & restart appears only when there is something to apply (#1303). |
-| `editor-drag-select.spec.ts` | Browser | 3 | yes | #1094 | Dragging the mouse in the code editor must not raise an error (#1094). |
+| `editor-drag-select.spec.ts` | Browser | 3 | no | #1094 | Dragging the mouse in the code editor must not raise an error (#1094). |
 | `external-edit-sync.spec.ts` | Browser | 2 | yes | #926 | The two-headed workflow: PsyNeuView open beside an external editor (#926). |
 | `inspector-condition-undo.spec.ts` | Browser | 3 | yes | #1369 | Removing a condition in the Inspector is its own undo step (#1369). |
 | `inspector-legend.spec.ts` | Browser | 1 | yes | #109 | The Inspector's legend shows only while something is customized (#109). |
@@ -501,9 +501,9 @@ No tests yet.
 |---|---|---|---|---|
 | Developer: no button until a valid choice differs from what's installed; gone again after applying | `apply-only-when-needed.spec.ts` | Browser | yes | #1303 |
 | Developer: picking the installed release is nothing to apply; another release is | `apply-only-when-needed.spec.ts` | Browser | yes | #1303 |
-| drag-selecting text, forwards and backwards, raises nothing (#1094) | `editor-drag-select.spec.ts` | Browser | yes | #1094 |
-| dragging a selection to move it raises nothing (#1094) | `editor-drag-select.spec.ts` | Browser | yes | #1094 |
-| dragging a selection out onto the canvas raises nothing (#1094) | `editor-drag-select.spec.ts` | Browser | yes | #1094 |
+| drag-selecting text, forwards and backwards, raises nothing (#1094) | `editor-drag-select.spec.ts` | Browser | no | #1094 |
+| dragging a selection to move it raises nothing (#1094) | `editor-drag-select.spec.ts` | Browser | no | #1094 |
+| dragging a selection out onto the canvas raises nothing (#1094) | `editor-drag-select.spec.ts` | Browser | no | #1094 |
 | an external edit lands on the canvas when nothing here is unsaved (#926) | `external-edit-sync.spec.ts` | Browser | yes | #926 |
 | an external edit on top of unsaved edits blocks and asks (#926) | `external-edit-sync.spec.ts` | Browser | yes | #926 |
 | Inspector condition removes record their own undo step (#1369) › remove a graph-structure condition, undo: it is back, the file is not rewritten | `inspector-condition-undo.spec.ts` | Browser | yes | #1369 |
@@ -1565,13 +1565,14 @@ Nodes: show_graph's nodes the canvas draws. Rows: pairs of nodes whose above, le
 
 ## Browser tests CI doesn't run
 
-5 browser spec files aren't in CI at all. Each says why in a `Not in CI:` line in its header; this table is read from those lines. (Every tutorial runs, in the tutorials job.)
+6 browser spec files aren't in CI at all. Each says why in a `Not in CI:` line in its header; this table is read from those lines. (Every tutorial runs, in the tutorials job.)
 
 | Spec | Why | Detail |
 |---|---|---|
 | `_measure-load-latency.spec.ts` | measurement | it only logs load timings, with no assertions; run it with PERF_MEASURE=1 when measuring |
 | `_measure-undo-memory.spec.ts` | measurement | it only logs heap use, with no assertions; run it with PERF_MEASURE=1 when measuring |
 | `docs-shots-saving.spec.ts` | pictures only | it retakes the docs' pictures; the behaviour is tested by saves-in-history and changes-since-save |
+| `editor-drag-select.spec.ts` | broken | on the Linux runners the forwards-and-backwards test finds |
 | `pycharm-live.local.spec.ts` | local only | it drives a real PyCharm on macOS, which the runners don't have; external-edit-sync.spec.ts is the CI version |
 | `style-conventions.spec.ts` | broken | two tests fail on devel, expecting 13px buttons that the default Text size (1.1, since #111) draws at 14.3px; tracked in #322. Fix, then add |
 
@@ -1612,7 +1613,7 @@ Found while building this page (#319). Each is a gap in what the tests check, no
 
 - **A model built in the UI against the same model typed as code: now covered** for Mapping, Control, Gating and Learning projections and one into a nested composition (`ui-text-equivalence.spec.ts`, with `backend/tests/model_equivalence.py`). Not yet covered: projections between nested compositions, control of a nested node's parameter, and models whose nodes the UI builds with non-default parameters.
 - **Round trips: now covered** for adding, deleting, renaming and connecting nodes and changing a parameter (`round-trips.spec.ts`); shaping an arrow was already covered by `edge-curve-handles.spec.ts`. Renaming or deleting an arrow is covered one way only (`graph-arrow-menus.spec.ts`).
-- **`style-conventions.spec.ts` is broken on devel** (#322). Its two tests expect 13px buttons; the default Text size (1.1, since #111) draws them at 14.3px. It isn't in CI, so nothing failed. The sixteen other specs CI used to skip now run in it.
+- **`style-conventions.spec.ts` is broken on devel** (#322). Its two tests expect 13px buttons; the default Text size (1.1, since #111) draws them at 14.3px. It isn't in CI, so nothing failed. Fifteen other specs CI used to skip now run in it; `editor-drag-select.spec.ts` stays out until its selection check works on the Linux runners.
 - **The React components have no unit tests.** Frontend line coverage is about a quarter, because `components/` is tested only in the browser, which coverage can't see. The feature map is the measure for those.
 - **Frontend logic modules with little unit coverage:** `utils/labels.ts`, `utils/nodeActions.ts`, `hooks/useFileWatcher.ts` and `stores/edgeAttachStore.ts` are each a quarter covered or less, and `stores/modelStore.ts`, the biggest store, about half.
 - **The AI assistant's tests are not on devel.** Its runner-guard and OS-sandbox suites live on the assistant branch, so this page shows that area empty.
