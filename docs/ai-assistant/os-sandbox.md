@@ -47,6 +47,12 @@ inside an assistant folder, say) is allowed piece by piece around it: its
 files and other subfolders can be written, but no new file can be made
 directly in it. macOS has no such limit.
 
+An unapproved file inside a writable folder: on macOS it can't be read,
+written, renamed or linked. On Linux it can't be read, moved or linked
+anywhere readable, but it can be overwritten or removed, which leaves the
+model's own text there, still unapproved by its hash (denying that too
+would leave no new file possible in the assistant's own folder).
+
 "Declared output folders" are the assistant's read-write folders plus
 `PSYNEUVIEW_OS_SANDBOX_WRITE_FOLDERS`. A model that writes next to itself
 (`open("results.csv", "w")` in the model's own folder) is refused unless
