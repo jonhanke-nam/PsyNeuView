@@ -4388,7 +4388,7 @@ def _handle_one_task(payload_str: str) -> str:
                 # guard's own state is put back first, so nothing an earlier
                 # model set on it carries over to this one (#187).
                 _guard.reset_for_task()
-                _guard.refresh(payload.get("review_state"), payload.get("exempt_roots"))
+                _guard.refresh(payload.get("review_state"), payload.get("exempt_roots"), payload.get("settings_files"))
                 result = handler(params)
             except _guard.UnreviewedImport as e:
                 result = {"error": str(e), "unreviewed_import": e.path, "unreviewed_state": e.state_unreadable}
