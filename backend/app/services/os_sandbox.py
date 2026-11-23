@@ -44,6 +44,10 @@ logger = logging.getLogger(__name__)
 FORCE_ENV = "PSYNEUVIEW_OS_SANDBOX"
 _FORCED = os.environ.get(FORCE_ENV, "").strip().lower()
 
+#: Further folders a model may write in, besides the assistant's read-write
+#: folders: ``os.pathsep``-separated. The "declared output folders".
+WRITE_FOLDERS_ENV = "PSYNEUVIEW_OS_SANDBOX_WRITE_FOLDERS"
+
 APPLY_PATH = str(Path(_apply.__file__).resolve())
 
 #: Places nothing a model runs may read: keys, tokens, the Keychain,
@@ -220,6 +224,16 @@ def _designated_folders() -> list[dict]:
         return []
 
 
+def output_folders() -> list[str]:
+    """Where a sandboxed model may write besides its own task folder: the
+    assistant's read-write folders and any declared in
+    ``PSYNEUVIEW_OS_SANDBOX_WRITE_FOLDERS``. The protected places
+    (:func:`_protected_from_writes`) stay unwritable even inside them."""
+    out = [_real(f["path"]) for f in _designated_folders() if f.get("access") == "read_write"]
+    out += [_real(p) for p in os.environ.get(WRITE_FOLDERS_ENV, "").split(os.pathsep) if p.strip()]
+    return sorted(set(out))
+
+
 def _protected_from_writes() -> list[str]:
     """Never written by a model: the review record and app settings, the
     app itself, PsyNeuLink, and the Python install with its packages."""
@@ -227,6 +241,9 @@ def _protected_from_writes() -> list[str]:
     out = [str(review.state_path().parent), str(review.state_path()), str(review.backup_path()),
            str(Path.home() / ".psyneuview.json"), str(Path(__file__).resolve().parents[3]),
            sys.prefix, sys.base_prefix, sys.exec_prefix]
+    for var in ("PSYNEUVIEW_ASSISTANT_STATE_DIR", "PSYNEUVIEW_ASSISTANT_LOG", "PSYNEUVIEW_CONFIG_FILE"):
+        if os.environ.get(var, "").strip():
+            out.append(os.environ[var].strip())
     try:
         import site
         out += site.getsitepackages() + [site.getusersitepackages()]
@@ -308,7 +325,7 @@ def policy(scratch: str | None = None) -> dict:
         # the assistant's folders may be read (the import guard refuses
         # everything outside the standard library then too).
         read_deny += [_real(f["path"]) for f in _designated_folders()]
-    write_allow = [_real(f["path"]) for f in _designated_folders() if f.get("access") == "read_write"]
+    write_allow = output_folders()
     p = {
         "version": _apply.POLICY_VERSION,
         "home": home,

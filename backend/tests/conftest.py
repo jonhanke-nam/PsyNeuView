@@ -101,6 +101,17 @@ def _guard_real_preferences_file(request):
     )
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _sandboxed_models_may_write_in_test_folders(tmp_path_factory):
+    """Under the operating-system sandbox (#311) a model may write only in
+    its task folder and the declared output folders. Tests' models write
+    markers in their temporary folders, so those are declared; the review
+    state inside them stays unwritable (it is protected by name)."""
+    from app.services import os_sandbox
+
+    os.environ[os_sandbox.WRITE_FOLDERS_ENV] = str(tmp_path_factory.getbasetemp().resolve())
+
+
 @pytest.fixture(autouse=True)
 def _isolate_assistant_state(tmp_path, monkeypatch):
     """The AI assistant's state (#179) lives under ``~/.psyneuview`` by default:
