@@ -166,6 +166,11 @@ def read_state(path: str) -> tuple[dict, bool]:
         if os.path.exists(path + ".bak"):
             files = _parse(path + ".bak")
             return (files, False) if files is not None else ({}, True)
+        # The assistant has written files (it leaves this beside the record
+        # when it first does): a record gone with its backup is unknown,
+        # not empty (#311, U5).
+        if os.path.exists(path + ".written"):
+            return {}, True
         return {}, False
     # There but not readable: under the OS sandbox on Linux, a record the
     # app replaced during the task (a new file the task's rules don't

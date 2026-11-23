@@ -270,9 +270,9 @@ def _standard_source_in_sandbox(file_path: str) -> str:
     env[_IN_SANDBOX_ENV] = "1"
     backend_root = str(Path(__file__).resolve().parents[2])
     try:
-        proc = subprocess.run([sys.executable, "-c", _SANDBOXED_CONVERT, file_path, backend_root],
-                              capture_output=True, text=True, env=env, timeout=300,
-                              cwd=str(Path(file_path).parent))
+        from app.services import bounded_run
+        proc = bounded_run.run([sys.executable, "-c", _SANDBOXED_CONVERT, file_path, backend_root],
+                               env=env, timeout=300, cwd=str(Path(file_path).parent))
     finally:
         os_sandbox.discard_scratch(policy["scratch"])
         os_sandbox.sweep_survivors()

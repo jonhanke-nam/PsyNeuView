@@ -310,7 +310,8 @@ class WarmWorker:
                         # The task's own process ended without an answer.
                         return {"error": "Worker process died during execution"}
                     else:
-                        output_lines.append(line)
+                        if len(output_lines) < 10000:  # bounded (#311, U4)
+                            output_lines.append(line)
             finally:
                 sel.close()
 
@@ -399,6 +400,9 @@ class ForkServer(WarmWorker):
                 [sys.executable, WORKER_PATH, self.MODE, "--control-fd", str(control_w)],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 pass_fds=(control_w,), bufsize=0,
+                # Its own session: a task's processes can't join one of the
+                # user's process groups (#311, U1).
+                start_new_session=True,
             )
         except Exception as e:
             logger.error(f"Failed to start the fork server: {e}")
@@ -456,6 +460,7 @@ class ForkServer(WarmWorker):
                 self._child_pid = None
                 if self._task_policy:
                     os_sandbox.discard_scratch(self._task_policy.get("scratch"))
+                    os_sandbox.sweep_survivors()
                 self._task_policy = None
             return result
 
@@ -691,9 +696,10 @@ class WorkerPool:
                 _PoolMember._kill(member._proc if member._proc is not None else proc)
                 if task_policy:
                     os_sandbox.discard_scratch(task_policy.get("scratch"))
-                if task_policy or getattr(proc, "_os_sandbox_policy", None):
+                launched = getattr(proc, "_os_sandbox_policy", None)
+                _discard_launch_scratch(proc)  # no longer a running task's, before the sweep looks
+                if task_policy or launched:
                     os_sandbox.sweep_survivors()
-                _discard_launch_scratch(proc)
 
     def is_alive(self) -> bool:
         return True
@@ -993,15 +999,13 @@ def _run_cold(task: str, params: dict, timeout: int) -> dict:
 
     try:
         try:
-            result = subprocess.run(
-                [sys.executable, WORKER_PATH],
-                input=payload,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                cwd=str(Path(params.get("file_path", ".")).parent),
-                env=os_sandbox.launch_env(policy) if policy else None,
-            )
+            # Output read with a cap, and not past the worker's own exit (#311, U4).
+            from app.services import bounded_run
+            result = bounded_run.run([sys.executable, WORKER_PATH], input=payload, timeout=timeout,
+                                     cwd=str(Path(params.get("file_path", ".")).parent),
+                                     env=os_sandbox.launch_env(policy) if policy else None)
+            if result.timed_out:
+                raise subprocess.TimeoutExpired([WORKER_PATH], timeout)
         finally:
             if policy:
                 os_sandbox.discard_scratch(policy["scratch"])

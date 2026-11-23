@@ -865,3 +865,180 @@ def test_t6_runnable_files_are_refused_and_pickles_still_work(st):
     assert (folder / "out.pkl").exists()
     for name in names:
         assert not (folder / name).exists(), name
+
+
+# ── The third independent review of #312 (U1–U7) ───────────────────────────
+
+
+def _alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
+def test_u1_a_model_cant_join_the_users_process_group_and_get_it_killed(st):
+    import subprocess
+
+    # A job of the user's, in its own process group in this (the server's) session.
+    user_job = subprocess.Popen(["sleep", "60"], process_group=0)
+    try:
+        model = _guard_off_model(st["tmp"] / "U1", (
+            "import subprocess\n"
+            f"code = 'import os, time\\ntry:\\n    os.setpgid(0, {user_job.pid})\\nexcept OSError:\\n    pass\\n"
+            "if os.fork():\\n    os._exit(0)\\ntime.sleep(30)\\n'\n"
+            "subprocess.Popen([sys.executable, '-c', code])\n"))
+        load(model)
+        from app.services import os_sandbox
+        os_sandbox.sweep_survivors(wait=True)
+        assert _alive(user_job.pid), "the user's job was killed"
+    finally:
+        user_job.kill()
+
+
+def test_u2_an_unrelated_sandboxed_python_orphan_is_left_alone(st):
+    import subprocess
+
+    from app.services import os_sandbox
+    if sys.platform == "darwin":
+        # Someone else's Python under sandbox-exec, orphaned.
+        cmd = ["sandbox-exec", "-p", "(version 1)(allow default)", sys.executable, "-c", "import time; time.sleep(30)"]
+    else:
+        # A hardened service of the user's: no_new_privs and seccomp, a forged
+        # mark of its own (a guess at the token), not started by PsyNeuView.
+        code = ("import json, os, sys, time; sys.path.insert(0, %r); import os_sandbox_apply as a; "
+                "a.apply({'version': 1, 'read_deny': [], 'write_allow': [], 'write_deny': [], 'exec_allow': [], "
+                "'scratch': %r, 'network': False}); time.sleep(30)") % (str(SERVICES), str(st["tmp"] / "svc"))
+        cmd = [sys.executable, "-c", code]
+    env = dict(os.environ, PSYNEUVIEW_TASK_MARK="0" * 32 + ":forged")
+    holder = subprocess.Popen([sys.executable, "-c",
+                               "import subprocess, sys; p = subprocess.Popen(sys.argv[1:], start_new_session=True); print(p.pid, flush=True)"]
+                              + cmd, stdout=subprocess.PIPE, text=True, env=env)
+    pid = int(holder.stdout.readline())
+    holder.wait()  # now an orphan
+    try:
+        threading.Event().wait(0.5)
+        os_sandbox.sweep_survivors(wait=True)
+        assert _alive(pid), "a process that isn't PsyNeuView's was killed"
+    finally:
+        try:
+            os.kill(pid, 9)
+        except OSError:
+            pass
+
+
+def _racer_run(st, name: str) -> tuple[bool, bool]:
+    """A racer that makes a new session at every fork; then the assistant
+    writes later.py. Returns (later ran, racer still running)."""
+    later = st["models"] / f"later_{name}.py"
+    marker = st["tmp"] / f"ran_{name}.txt"
+    beat = st["tmp"] / f"beat_{name}.txt"
+    racer = ("import os, time\nend = time.time() + 20\nn = 0\n"
+             "while time.time() < end:\n    os.setsid()\n"
+             f"    try:\n        exec(open({str(later)!r}).read()); break\n    except OSError:\n        pass\n"
+             "    if os.fork():\n        os._exit(0)\n    n += 1\n"
+             f"    if n % 50 == 0:\n        open({str(beat)!r}, 'w').write(str(n))\n    time.sleep(0.002)\n")
+    model = _guard_off_model(st["tmp"] / f"U3_{name}", (
+        "import subprocess, time\n"
+        f"subprocess.Popen([sys.executable, '-c', {racer!r}], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n"
+        f"t = time.time()\nwhile time.time() - t < 5 and not os.path.exists({str(beat)!r}):\n    time.sleep(0.05)\n"))
+    load(model)
+    files_mod().write_model_file(str(later), _helper(marker), base_hash=None)
+    stamp = beat.stat().st_mtime if beat.exists() else 0
+    deadline = time.time() + 2
+    while time.time() < deadline and not marker.exists():
+        threading.Event().wait(0.1)
+    return marker.exists(), beat.exists() and beat.stat().st_mtime != stamp
+
+
+def test_u3_a_racer_that_makes_a_new_session_at_every_fork_is_ended(st):
+    st["monkeypatch"].setattr(files_mod(), "folders_provider", lambda: [{"path": str(st["models"]), "access": "read_write"}])
+    ran, running = _racer_run(st, "u3")
+    assert not ran
+    assert not running
+
+
+FLOOD = ("import os, sys\nos.setsid()\nchunk = b'x' * 65536 + b'\\n'\n"
+         "while True:\n    try:\n        os.write(1, chunk)\n    except OSError:\n        break\n")
+
+
+def _flooding_model(st, name: str) -> Path:
+    return _guard_off_model(st["tmp"] / name, (
+        "import subprocess\n"
+        f"subprocess.Popen([sys.executable, '-c', {FLOOD!r}])\n"))
+
+
+def test_u4_a_flooding_leftover_cant_fill_the_servers_memory_on_a_cold_run(st):
+    import resource
+
+    from app.services import sandbox
+    before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    t0 = time.time()
+    result = sandbox._run_cold("introspect", {"file_path": str(_flooding_model(st, "U4cold"))}, 60)
+    took = time.time() - t0
+    grown = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - before
+    grown_mb = grown / (1024 * 1024) if sys.platform == "darwin" else grown / 1024
+    assert took < 30, took
+    assert grown_mb < 200, f"the server grew by {grown_mb:.0f} MB"
+    assert isinstance(result, dict)
+
+
+def test_u4_a_flooding_leftover_cant_stall_a_learn_job(st):
+    from tests.test_assistant_runner_guard import learnable_model
+
+    model = st["tmp"] / "U4job" / "learn_flood.py"
+    model.parent.mkdir()
+    model.write_text(GUARD_OFF + "import subprocess, sys\n"
+                     f"subprocess.Popen([sys.executable, '-c', {FLOOD!r}])\n" + learnable_model(st["tmp"] / "never.txt"))
+    t0 = time.time()
+    r = client.post("/api/jobs", json=_job_body(model))
+    assert r.status_code in (200, 201, 202), r.text
+    snap = _wait_job(r.json()["job"]["id"] if "job" in r.json() else r.json()["id"], 90)
+    assert time.time() - t0 < 90
+    assert snap["status"] in ("done", "error")
+
+
+def test_u4_a_flooding_leftover_cant_stall_a_conversion(st):
+    model = _flooding_model(st, "U4conv")
+    t0 = time.time()
+    client.post("/api/model/convert", json={"file_path": str(model), "backup": False})
+    assert time.time() - t0 < 60
+
+
+def test_u5_a_deleted_record_and_backup_fail_closed_when_the_assistant_has_written(st):
+    marker, helper = _mk(st, "u5")
+    sp = review.state_path()
+    for p in (sp, Path(str(sp) + ".bak")):
+        if p.exists():
+            p.unlink()
+    review._cache = None
+    assert review.state_broken(), "the record and its backup are gone, yet it reads as nothing tracked"
+    plain = st["tmp"] / "Own" / "u5_plain.py"
+    plain.parent.mkdir(exist_ok=True)
+    plain.write_text(_model_importing(f"exec(open({str(helper)!r}).read())"))
+    r = load(plain)
+    assert r.status_code == 409, r.text[:300]
+    assert not marker.exists()
+
+
+def test_u6_no_extensionless_files_or_link_files_in_writable_folders(st):
+    if sys.platform != "darwin":
+        pytest.skip("refusing files by name needs Seatbelt's path rules (macOS)")
+    _no_declared_folders(st)
+    folder = Path(os.path.realpath(st["tmp"])) / "U6"
+    names = ["runme", "sub/runme", "x.terminal", "y.fileloc", "z.webloc", "w.inetloc", "v.desktop"]
+    model = _guard_off_model(folder, (
+        "import shutil\nhere = os.path.dirname(os.path.abspath(__file__))\nos.makedirs(os.path.join(here, 'sub'), exist_ok=True)\n"
+        f"for name in {names!r}:\n"
+        "    try:\n        open(os.path.join(here, name), 'w').write('x')\n    except OSError:\n        pass\n"
+        "open(os.path.join(here, 'a.csv'), 'w').write('1')\n"
+        "shutil.copy(os.path.join(here, 'a.csv'), os.path.join(here, 'b.csv'))\n"
+        "shutil.copy2(os.path.join(here, 'a.csv'), os.path.join(here, 'c.csv'))\n"))
+    load(model)
+    for name in ("a.csv", "b.csv", "c.csv"):
+        assert (folder / name).exists(), name
+    for name in names:
+        assert not (folder / name).exists(), name

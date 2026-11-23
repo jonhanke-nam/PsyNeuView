@@ -40,6 +40,7 @@ import ctypes.util
 import json
 import os
 import platform
+import signal
 import sys
 
 POLICY_VERSION = 1
@@ -148,7 +149,10 @@ def render_sbpl(policy: dict) -> str:
         lines += [";; No hidden files or folders, nor files tools run by themselves.",
                   f"(deny file-write* (regex {_sb_str(base + '(.*/)?[.][^/]*(/.*)?$')}))",
                   f"(deny file-write* (regex {_sb_str(base + '(.*/)?(' + names + ')$')}))",
-                  f"(deny file-write* (regex {_sb_str(base + '.*[.](' + '|'.join(AUTORUN_SUFFIXES) + ')$')}))"]
+                  f"(deny file-write* (regex {_sb_str(base + '.*[.](' + '|'.join(AUTORUN_SUFFIXES) + ')$')}))",
+                  ";; No new file without an extension: Finder runs such a file if it is executable.",
+                  f"(deny file-write-create (require-all (subpath {_sb_str(folder)}) (regex {_sb_str('/[^/.]+$')}) "
+                  "(vnode-type REGULAR-FILE)))"]
     for folder in policy.get("no_code_in") or []:
         base = "^" + _re_escape(folder.rstrip("/")) + "/"
         lines += [";; No new code beside the model: a later Python could run it unreviewed.",
@@ -189,7 +193,8 @@ AUTORUN_NAMES = ("Makefile", "makefile", "GNUmakefile", "justfile", "Justfile", 
 #: imported (case is folded by the file system's matching on macOS volumes
 #: that ignore case; listed lower-case and upper-case here too).
 AUTORUN_SUFFIXES = ("pth", "command", "sh", "bash", "zsh", "csh", "fish", "tool", "zip", "pyz", "egg", "whl",
-                    "app", "workflow", "scpt", "applescript", "PTH", "COMMAND", "SH", "ZIP", "PYZ")
+                    "app", "workflow", "scpt", "applescript", "terminal", "fileloc", "webloc", "inetloc",
+                    "desktop", "PTH", "COMMAND", "SH", "ZIP", "PYZ", "TERMINAL")
 
 
 def _re_escape(s: str) -> str:
@@ -572,214 +577,158 @@ class _ProcBsdInfo(ctypes.Structure):
                 ("pbi_start_tvusec", ctypes.c_uint64)]
 
 
-#: The process group each process was in when the table was last read,
-#: so a group can be ended after the process that showed it has gone.
-_PGID: dict[int, int] = {}
-#: Processes that adopt orphans in place of init (a user's ``systemd``).
-_ADOPTERS: set[int] = set()
+#: The variable that marks every process of a task on Linux (and the
+#: workers the server starts on both platforms): ``<run token>:<task id>``.
+#: The run token is random per server, so it can't be guessed, and a model
+#: can't put it into another process's environment.
+MARK_ENV = "PSYNEUVIEW_TASK_MARK"
+_NO_REPORT = 0x40000000
+_FILTER_PATH = 1
 
 
-def _process_table(programs: list[str]) -> dict[int, tuple[int, bool]]:
-    """``pid -> (ppid, ours)`` for every process: ``ours`` when it is
-    sandboxed, the user's own, and running one of the only programs a task
-    may start (Python or Graphviz)."""
-    real = [os.path.realpath(p) for p in programs]
-
-    def is_program(exe: str) -> bool:
-        exe = os.path.realpath(exe)
-        return any(exe == r or exe.startswith(r.rstrip("/") + "/") for r in real)
-
-    uid, table = os.getuid(), {}
-    if sys.platform == "darwin":
-        try:
-            libproc = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
-        except OSError:
-            return {}
-        sb = _libsandbox()
-        if sb is None:
-            return {}
+def _sandbox_lib():
+    sb = _libsandbox()
+    if sb is not None:
         sb.sandbox_check.restype = ctypes.c_int
-        n = libproc.proc_listallpids(None, 0)
-        if n <= 0:
-            return {}
-        arr = (ctypes.c_int * (n * 2))()
-        n = libproc.proc_listallpids(arr, ctypes.sizeof(arr))
-        buf = ctypes.create_string_buffer(4096)
-        for pid in arr[:max(0, n)]:
-            if pid <= 0:
-                continue
-            info = _ProcBsdInfo()
-            if libproc.proc_pidinfo(pid, 3, ctypes.c_uint64(0), ctypes.byref(info), ctypes.sizeof(info)) != ctypes.sizeof(info):
-                continue
-            ours = False
-            if info.pbi_uid == uid and sb.sandbox_check(pid, None, 0) == 1 and libproc.proc_pidpath(pid, buf, 4096) > 0:
-                ours = is_program(buf.value.decode("utf-8", "replace"))
-            table[pid] = (int(info.pbi_ppid), ours)
-            _PGID[pid] = int(info.pbi_pgid)
-        return table
+        sb.sandbox_check.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int]
+    return sb
+
+
+def _denies(sb, pid: int, path: str) -> bool:
+    return sb.sandbox_check(pid, b"file-read-data", _FILTER_PATH | _NO_REPORT, ctypes.c_char_p(path.encode())) == 1
+
+
+def _macos_marked(run_mark: str, control: str, live_marks: list[str]) -> list[int]:
+    """Processes under one of this server's task profiles (macOS): their
+    sandbox refuses reading the run's own random mark file, and allows
+    reading a control file next to it (so a deny-everything profile isn't
+    taken for ours). The profile is inherited through fork, exec and
+    setsid, and can't be removed or put onto another process. A process
+    still refusing a live task's mark belongs to a task running now."""
     try:
-        names = os.listdir("/proc")
+        libproc = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
     except OSError:
-        return {}
-    for name in names:
-        if not name.isdigit():
+        return []
+    sb = _sandbox_lib()
+    if sb is None:
+        return []
+    n = libproc.proc_listallpids(None, 0)
+    if n <= 0:
+        return []
+    arr = (ctypes.c_int * (n * 2))()
+    n = libproc.proc_listallpids(arr, ctypes.sizeof(arr))
+    uid, me, out = os.getuid(), os.getpid(), []
+    for pid in arr[:max(0, n)]:
+        if pid <= 1 or pid == me:
             continue
+        info = _ProcBsdInfo()
+        if libproc.proc_pidinfo(pid, 3, ctypes.c_uint64(0), ctypes.byref(info), ctypes.sizeof(info)) != ctypes.sizeof(info):
+            continue
+        if info.pbi_uid != uid or sb.sandbox_check(pid, None, 0) != 1:
+            continue
+        if not _denies(sb, pid, run_mark) or _denies(sb, pid, control):
+            continue
+        if any(_denies(sb, pid, m) for m in live_marks):
+            continue
+        # Stopped the moment it is found: a process that forks and exits
+        # every few milliseconds would be gone by the end of the scan.
         try:
-            with open(f"/proc/{name}/status") as f:
-                st = dict(line.rstrip("\n").split(":\t", 1) for line in f if ":\t" in line)
-            if st.get("State", "").startswith("Z"):
-                continue
-            ppid = int(st.get("PPid", "0").strip())
-            try:
-                with open(f"/proc/{name}/stat", "rb") as f:
-                    _PGID[int(name)] = int(f.read().rsplit(b")", 1)[1].split()[2])
-            except (OSError, IndexError, ValueError):
-                pass
-            same_user = int(st.get("Uid", "-1").split()[0]) == uid
-            ours = (same_user and st.get("NoNewPrivs", "").strip() == "1"
-                    and st.get("Seccomp", "").strip() == "2" and is_program(f"/proc/{name}/exe"))
-            if same_user and st.get("Name", "").strip() == "systemd":
-                _ADOPTERS.add(int(name))  # a user's systemd adopts orphans in a desktop session
-            table[int(name)] = (ppid, ours)
-        except (OSError, ValueError):
-            continue
-    return table
-
-
-def survivors(programs: list[str], keep: set[int] = frozenset(), adopter: bool = True) -> list[int]:
-    """The sandboxed processes no live task owns: following parents up from
-    each sandboxed Python or Graphviz of this user, the chain reaches init
-    (an orphan) or this process (a child it adopted, or one it no longer
-    runs a task in) before reaching a process in ``keep`` (a worker running
-    a task now) or any other process. How deep the chain is, how fast its
-    processes come and go, or which task started it doesn't matter."""
-    table = _process_table(programs)
-    me, out = os.getpid(), []
-    if sys.platform.startswith("linux"):
-        # A process that forks and exits every few milliseconds is gone
-        # before a full scan reaches it. The adopters' own child lists are
-        # one read each, so look there too, at once (#311, T3).
-        out.extend(_adopted_now(programs))
-    for pid, (ppid, ours) in table.items():
-        if not ours or pid in keep:
-            continue
-        p, seen = ppid, 0
-        while seen < 4096:
-            seen += 1
-            if p in keep:
-                break
-            if p in (0, 1) or p in _ADOPTERS or (adopter and p == me):
-                out.append(pid)
-                break
-            if p == me:
-                break  # a worker this process started and runs a task in now
-            parent = table.get(p)
-            if parent is None or not parent[1]:
-                break  # a process that isn't a sandboxed task's: not ours to end
-            p = parent[0]
+            os.kill(pid, signal.SIGSTOP)
+        except OSError:
+            pass
+        out.append(pid)
     return out
 
 
-def end_survivors(since: float = 0.0, programs: list[str] | None = None, *, own_children: bool = True,
-                  time_limit: float = 10.0, keep: set[int] = frozenset()) -> int:
-    """End every process tasks left running (#311): ``setsid`` grandchildren,
-    deep chains, processes that fork and exit as fast as they can. Each
-    round stops them all first (SIGSTOP: a stopped process can't fork),
-    then kills them, and rounds go on until a round finds none, within
-    ``time_limit`` seconds. ``own_children`` (Linux, the fork server's
-    parent, a subreaper): reap what it adopted. Returns how many were ended."""
-    import signal
-    import time
-
-    if not (sys.platform == "darwin" or sys.platform.startswith("linux")):
-        return 0
-    ended = 0
-    empty = 0
-    groups: set[int] = set()
-    deadline = time.monotonic() + time_limit
-    # Rounds go on until three in a row find nothing: a process that forks
-    # and exits every few milliseconds may be between pids when one round
-    # looks.
-    while time.monotonic() < deadline and empty < 3:
-        pids = survivors(programs or [], keep, adopter=own_children)
-        if sys.platform.startswith("linux") and own_children:
-            # The fork server's parent runs no task now, so every child it
-            # has (adopted orphans included, zombies too) is a leftover; a
-            # zombie still names the group its live descendants are in.
-            pids = sorted(set(pids) | set(_linux_children()))
-        if not pids:
-            empty += 1
-            continue
-        empty = 0
-        mine = os.getpgid(0)
-        groups.update(g for g in (_PGID.get(pid) for pid in pids) if g and g > 1 and g != mine)
-        # Stop first (a stopped process can't fork), the whole group or
-        # session at once, then kill.
-        for sig in (signal.SIGSTOP, signal.SIGKILL):
-            for g in groups:
-                try:
-                    os.killpg(g, sig)
-                except OSError:
-                    pass
-            for pid in pids:
-                try:
-                    os.kill(pid, sig)
-                except OSError:
-                    pass
-        ended += len(pids)
-        if sys.platform.startswith("linux") and own_children:
-            _reap_children()
-    if time.monotonic() >= deadline:
-        sys.stderr.write("[sandbox] processes a task left kept coming back until the sweep's time limit\n")
-    if sys.platform.startswith("linux") and own_children:
-        _reap_children()
-    return ended
-
-
-def _adopted_now(programs: list[str]) -> list[int]:
-    real = [os.path.realpath(p) for p in programs]
-    uid, out = os.getuid(), []
-    for adopter in {1, *_ADOPTERS}:
-        try:
-            with open(f"/proc/{adopter}/task/{adopter}/children") as f:
-                kids = [int(x) for x in f.read().split()]
-        except (OSError, ValueError):
-            continue
-        for pid in kids:
-            try:
-                with open(f"/proc/{pid}/stat", "rb") as f:
-                    pgid = int(f.read().rsplit(b")", 1)[1].split()[2])
-                with open(f"/proc/{pid}/status") as f:
-                    st = dict(line.rstrip("\n").split(":\t", 1) for line in f if ":\t" in line)
-                if (int(st.get("Uid", "-1").split()[0]) == uid and st.get("Seccomp", "").strip() == "2"
-                        and st.get("NoNewPrivs", "").strip() == "1"):
-                    exe = os.path.realpath(f"/proc/{pid}/exe")
-                    if any(exe == r or exe.startswith(r.rstrip("/") + "/") for r in real):
-                        _PGID[pid] = pgid
-                        out.append(pid)
-            except (OSError, ValueError, IndexError):
-                continue
-    return out
-
-
-def _linux_children() -> list[int]:
-    me, out = os.getpid(), []
+def _linux_marked(token: str, live_ids: set[str]) -> list[int]:
+    """Processes carrying this server's mark in the environment they
+    started with (Linux): ``MARK_ENV=<token>:<task id>`` for a task not
+    running now."""
+    want = f"{MARK_ENV}={token}:".encode()
+    uid, me, out = os.getuid(), os.getpid(), []
     try:
         names = os.listdir("/proc")
     except OSError:
         return []
     for name in names:
-        if not name.isdigit():
+        if not name.isdigit() or int(name) == me:
             continue
         try:
-            with open(f"/proc/{name}/stat", "rb") as f:
-                fields = f.read().rsplit(b")", 1)[1].split()
-            if int(fields[1]) == me:
-                out.append(int(name))
-                _PGID[int(name)] = int(fields[2])
-        except (OSError, IndexError, ValueError):
+            if os.stat(f"/proc/{name}").st_uid != uid:
+                continue
+            with open(f"/proc/{name}/environ", "rb") as f:
+                env = f.read()
+        except OSError:
             continue
+        i = env.find(want)
+        if i < 0:
+            continue
+        task = env[i + len(want):].split(b"\0", 1)[0].decode("ascii", "replace")
+        if task not in live_ids:
+            try:
+                os.kill(int(name), signal.SIGSTOP)  # at once (see _macos_marked)
+            except OSError:
+                pass
+            out.append(int(name))
     return out
+
+
+def _linux_children() -> list[int]:
+    """This process's children (the fork server's parent: a subreaper, so
+    every orphan of its tasks, whatever session it moved to)."""
+    me, out = os.getpid(), []
+    for path in (f"/proc/{me}/task/{me}/children",):
+        try:
+            with open(path) as f:
+                out.extend(int(x) for x in f.read().split())
+        except (OSError, ValueError):
+            pass
+    return out
+
+
+def end_processes(find, time_limit: float = 10.0, reap: bool = False) -> int:
+    """End every process ``find()`` returns, by pid only, never by process
+    group or session (#311, U1): each found process is stopped at once (a
+    stopped process can't fork), then killed; rounds go on until three in
+    a row find nothing, within ``time_limit`` seconds. Returns how many
+    were ended."""
+    import signal
+    import time
+
+    ended, empty = 0, 0
+    deadline = time.monotonic() + time_limit
+    while time.monotonic() < deadline and empty < 3:
+        pids = find()
+        if not pids:
+            empty += 1
+            continue
+        empty = 0
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGSTOP)
+            except OSError:
+                pass
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGKILL)
+                ended += 1
+            except OSError:
+                pass
+        if reap:
+            _reap_children()
+    if time.monotonic() >= deadline:
+        sys.stderr.write("[sandbox] processes a task left kept coming back until the sweep's time limit\n")
+    if reap:
+        _reap_children()
+    return ended
+
+
+def end_own_children(time_limit: float = 1.0) -> int:
+    """Linux, the fork server's parent after a task: every child it still
+    has is a leftover of its tasks (it runs none now)."""
+    if not sys.platform.startswith("linux"):
+        return 0
+    return end_processes(_linux_children, time_limit=time_limit, reap=True)
 
 
 def _reap_children() -> None:

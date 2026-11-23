@@ -203,31 +203,41 @@ from the next one.
   sandbox" is off or the server was started with
   `PSYNEUVIEW_OS_SANDBOX_ALLOW_UNSANDBOXED=1`. A failed check is retried
   after a minute; a success holds for the server's life.
-- **Survivors are ended.** After each task the fork server's parent ends
-  what is left; the server does the same after Learn jobs, pool and
-  one-shot tasks and conversions, before every task, and before every file
-  the assistant writes. A survivor is a sandboxed Python or Graphviz of this
-  user (on macOS found by its sandbox, on Linux by its seccomp and
-  no_new_privs state) whose parents lead to init or to the fork server's
-  parent rather than to a worker running a task now. Each round stops, then
-  kills, whole process groups, and rounds go on until three in a row find
-  nothing, within ten seconds. **Not guaranteed:** a process that makes a
-  new session at every fork may slip between rounds, and on a Linux desktop
-  an orphan that `systemd --user` adopts is ended only by the fork server's
-  own sweep.
-- **No task waits on a sweep.** Sweeps after and before tasks run in the
-  background; only the one before the assistant writes a file runs at once
-  (it must finish before the file exists). The fork server's parent spends
-  at most a second on its own after each task. Measured, the task after a
-  noisy `setsid` leftover: 0.3 s (fork) and 0.2 to 1.6 s (pool) on macOS;
-  0.3 s (fork) and 2.9 s (pool, which starts a worker per model folder on
-  Linux) on Linux.
-- **macOS pool workers take each task's own policy** when the task comes
-  (Seatbelt binds the whole process), so any ready worker will do; on Linux
-  a pool worker's policy is set when it starts (Landlock binds threads).
-- **On Linux, orphans** go to init or a user's `systemd`; their child lists
-  are read directly, so a process that forks every few milliseconds is
-  still seen.
+- **Survivors are ended, and only PsyNeuView's own.** A survivor is found
+  only by its task's mark, never by its program, parent, process group or
+  session, so a process that isn't PsyNeuView's is never touched:
+  - **macOS:** every task's profile refuses reading two random files (one
+    per server run, one per task) and allows a control file next to them.
+    The sandbox is inherited through fork, exec and `setsid` and can't be
+    removed or put on another process, so `sandbox_check` against those
+    files names exactly this server's task processes. A process still
+    refusing a running task's file is left alone.
+  - **Linux:** the fork server's parent is a subreaper, so every orphan of
+    its tasks, whatever session it moved to, becomes its child, and after
+    each task it ends all its children. Workers the server starts (pool,
+    Learn jobs, one-shot runs, conversions) carry
+    `PSYNEUVIEW_TASK_MARK=<random run token>:<task id>` in the environment
+    they start with, read from `/proc/<pid>/environ`; a model can't put it
+    into another process's environment, and can't guess the token.
+  - Every process found is stopped at once (it can't fork while stopped),
+    then killed, **by pid only**. Rounds go on until three in a row find
+    nothing, within ten seconds.
+  - The fork server, the pool workers, Learn jobs, one-shot runs and
+    conversions each start in a session of their own, so a model can't
+    join one of the user's process groups.
+  - Sweeps run in the background after and before tasks; the one before
+    the assistant writes a file runs at once.
+  - **Not guaranteed on Linux:** outside the fork server, a process a model
+    started that execs a new program with its mark removed from the
+    environment isn't found. On macOS the mark can't be removed.
+- **Output is bounded.** Every worker's output is read with a 16 MB cap and
+  no longer than a moment after the worker exits, so a leftover writing
+  without end can't fill the server's memory or stall the next task.
+- **No new file without an extension (macOS)** in writable folders other
+  than the task's own: Finder runs such a file if it is executable. Link
+  and launcher files (`.terminal`, `.fileloc`, `.webloc`, `.inetloc`,
+  `.desktop`) are refused too. Changing a file's mode is allowed:
+  `shutil.copy` needs it, and creating a file can set any mode anyway.
 - **The proof is defence in depth, not the barrier.** Model code can read
   the policy's key, so it could forge an answer; the barrier is the
   worker's own refusal to run a task whose policy it hasn't applied. The

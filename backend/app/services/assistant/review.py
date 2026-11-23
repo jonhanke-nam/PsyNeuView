@@ -165,13 +165,13 @@ def _load() -> dict:
     files: dict = {}
     broken = False
     if key[1] is None:
-        # No record. Its backup, or earlier versions the assistant kept, say
-        # one existed: read the backup, or fail closed (#311, T4).
+        # No record. Its backup, or the marker the assistant leaves once it
+        # has written files, say one existed: read the backup, or fail closed
+        # (#311, T4, U5).
         files, broken = import_guard.read_state(str(p))
-        if not files and not broken and _kept_versions_exist():
+        if broken:
             logger.error("assistant review state missing (%s) though the assistant has written files; refusing to "
                          "run models until it is restored from its backup or reset", p)
-            broken = True
     if key[1] is not None:
         # The same reader the sandbox worker uses, so both see one state.
         files, broken = import_guard.read_state(str(p))
@@ -221,6 +221,21 @@ def _save(state: dict) -> None:
     _cache, _cache_key = None, None
 
 
+def written_marker_path() -> Path:
+    """Left beside the record the first time the assistant writes a file
+    (#311, U5): with it there, a record missing along with its backup
+    reads as unknown (every guard refuses), not as nothing tracked."""
+    p = state_path()
+    return p.with_name(p.name + ".written")
+
+
+def _note_written() -> None:
+    m = written_marker_path()
+    if not m.exists():
+        m.parent.mkdir(parents=True, exist_ok=True)
+        m.write_text("The AI assistant has written files; see assistant-review.json.\n", encoding="utf-8")
+
+
 def mark_unreviewed(path: str, text: str) -> tuple[str, dict | None]:
     """Record that the assistant wrote ``text`` to ``path``. Nothing at that
     path runs until ``mark_reviewed`` is called with the content as it then is.
@@ -234,6 +249,10 @@ def mark_unreviewed(path: str, text: str) -> tuple[str, dict | None]:
         previous = files.get(key)
         files[key] = {"approved": None, "written": content_hash(text), "written_norm": normalised_hash(text)}
         _save({"files": files})
+        try:
+            _note_written()
+        except OSError:
+            logger.warning("couldn't leave the marker that the assistant has written files beside %s", state_path())
         return key, previous
 
 

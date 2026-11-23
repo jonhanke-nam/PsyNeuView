@@ -23,7 +23,9 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from app.services import os_sandbox
+import os
+
+from app.services import bounded_run, os_sandbox
 from app.services.assistant import review as assistant_review
 from app.services.sandbox import WORKER_PATH, RESULT_MARKER
 
@@ -204,6 +206,9 @@ class JobManager:
                 bufsize=1,
                 cwd=str(Path(task_params.get("file_path", ".")).parent),
                 env=os_sandbox.launch_env(policy) if policy else None,
+                # Its own session: nothing a model starts can join one of the
+                # user's process groups (#311, U1).
+                start_new_session=True,
             )
         except Exception as e:
             if policy:
@@ -236,7 +241,8 @@ class JobManager:
             proc.stdin.close()
 
             result_str = None
-            for line in proc.stdout:
+            lines = _lines_until_exit(proc)
+            for line in lines:
                 stripped = line.rstrip("\n")
                 if stripped.startswith(PROGRESS_MARKER):
                     try:
@@ -245,7 +251,15 @@ class JobManager:
                         continue
                     job.add_progress(ev)
                 elif stripped.strip() == RESULT_MARKER:
-                    result_str = proc.stdout.read()
+                    # The rest from the same reader (it may hold the answer
+                    # already), capped (#311, U4).
+                    rest, size = [], 0
+                    for more in lines:
+                        size += len(more)
+                        if size > bounded_run.OUTPUT_CAP:
+                            break
+                        rest.append(more)
+                    result_str = "".join(rest)
                     break
 
             returncode = proc.wait()
@@ -260,7 +274,7 @@ class JobManager:
             job.finish("canceled")
             return
         if returncode != 0 or result_str is None:
-            stderr = proc.stderr.read() if proc.stderr else ""
+            stderr = _available(proc.stderr)
             tail = "\n".join(
                 l for l in stderr.strip().splitlines() if "Warning" not in l
             )[-2000:]
@@ -288,6 +302,65 @@ class JobManager:
             if isinstance(result, dict) and result.get("executionMode"):
                 job.provenance["effectiveExecutionMode"] = result["executionMode"]
             job.finish("done", result=result)
+
+
+def _available(stream) -> str:
+    """What a stream has now, up to the cap, without waiting for a process a
+    model left holding it (#311, U4)."""
+    if stream is None:
+        return ""
+    fd, out = stream.fileno(), bytearray()
+    os.set_blocking(fd, False)
+    while len(out) < bounded_run.OUTPUT_CAP:
+        try:
+            data = os.read(fd, 65536)
+        except (BlockingIOError, OSError):
+            break
+        if not data:
+            break
+        out += data
+    return out[:bounded_run.OUTPUT_CAP].decode("utf-8", "replace")
+
+
+def _lines_until_exit(proc: subprocess.Popen, limit: int | None = None):
+    """The worker's output lines, as they come, until the worker has exited
+    and a moment after; never waiting for a process it left holding the
+    pipe, and never keeping more than ``limit`` characters (#311, U4)."""
+    import selectors
+    import time as _time
+
+    fd = proc.stdout.fileno()
+    os.set_blocking(fd, False)
+    sel = selectors.DefaultSelector()
+    sel.register(fd, selectors.EVENT_READ)
+    pending, total, stop_at = b"", 0, None
+    try:
+        while True:
+            if stop_at is None and proc.poll() is not None:
+                stop_at = _time.monotonic() + bounded_run.GRACE
+            if stop_at is not None and _time.monotonic() > stop_at:
+                break
+            if not sel.select(timeout=0.05):
+                continue
+            try:
+                data = os.read(fd, 65536)
+            except BlockingIOError:
+                continue
+            if not data:
+                break
+            pending += data
+            while b"\n" in pending:
+                line, pending = pending.split(b"\n", 1)
+                total += len(line) + 1
+                if limit is not None and total > limit:
+                    return
+                yield line.decode("utf-8", "replace") + "\n"
+            if len(pending) > bounded_run.OUTPUT_CAP:
+                pending = b""
+    finally:
+        sel.close()
+    if pending and (limit is None or total + len(pending) <= limit):
+        yield pending.decode("utf-8", "replace")
 
 
 def build_provenance(file_path: str, config: dict) -> dict:

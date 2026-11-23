@@ -4910,7 +4910,7 @@ def _run_fork_server():
         try:
             # Bounded, since the next task waits for this parent; what's still
             # there after is ended by the server's own sweep.
-            _os_sandbox.end_survivors(started, programs, time_limit=1.0)
+            _os_sandbox.end_own_children(time_limit=1.0)
         except Exception:  # noqa: BLE001 - never stop serving tasks over it
             pass
         _say(control, f"###PSYNEUVIEW_CHILD_DONE### {status}")

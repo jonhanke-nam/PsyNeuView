@@ -191,6 +191,29 @@ def check_applied(result, policy: dict | None) -> dict:
                      "isn't used.", "os_sandbox_refused": True}
 
 
+#: Random per server: the processes of this server's tasks carry it (#311).
+_RUN_TOKEN = uuid.uuid4().hex
+#: Task ids whose task is running now; their processes are left alone.
+_live_ids: set[str] = set()
+_live_lock = threading.Lock()
+
+
+def _mark_paths() -> tuple[str, str]:
+    """The run's mark file (every task's profile refuses reading it) and a
+    control file next to it (every task's profile allows reading it)."""
+    root = scratch_root()
+    run, control = os.path.join(root, ".run-mark"), os.path.join(root, ".control")
+    for path in (run, control):
+        if not os.path.exists(path):
+            with open(path, "w") as f:
+                f.write("psyneuview\n")
+    return run, control
+
+
+def _task_mark_path(task_id: str) -> str:
+    return os.path.join(scratch_root(), f".mark-{task_id}")
+
+
 _sweep_lock = threading.Lock()
 _sweep_again = False
 
@@ -228,8 +251,18 @@ def sweep_survivors(wait: bool = False) -> None:
 
 
 def _sweep_now() -> None:
+    """End this server's finished tasks' processes, found only by the
+    task's own mark (never by program, parent, group or session), so a
+    process that isn't PsyNeuView's is never touched (#311, U1, U2)."""
     try:
-        _apply.end_survivors(0.0, _programs(), own_children=False, time_limit=10.0)
+        with _live_lock:
+            live = set(_live_ids)
+        if sys.platform == "darwin":
+            run, control = _mark_paths()
+            live_paths = [_task_mark_path(t) for t in live]
+            _apply.end_processes(lambda: _apply._macos_marked(run, control, live_paths), time_limit=10.0)
+        elif sys.platform.startswith("linux"):
+            _apply.end_processes(lambda: _apply._linux_marked(_RUN_TOKEN, live), time_limit=10.0)
     except Exception:  # noqa: BLE001 - never fail a task over it
         logger.exception("Couldn't sweep processes left by a sandboxed task")
 
@@ -455,8 +488,17 @@ def new_scratch() -> str:
 
 
 def discard_scratch(path: str | None) -> None:
+    """The task is over: its folder goes, and its processes are no longer
+    a running task's (the next sweep ends any left)."""
     if path and _real(path).startswith(scratch_root() + os.sep):
         shutil.rmtree(path, ignore_errors=True)
+        task_id = os.path.basename(path)[len("task-"):]
+        with _live_lock:
+            _live_ids.discard(task_id)
+        try:
+            os.remove(_task_mark_path(task_id))
+        except OSError:
+            pass
 
 
 #: Files a model may not make or change in its own folder (macOS): code a
@@ -565,9 +607,23 @@ def policy(scratch: str | None = None, model_path: str | None = None) -> dict:
                                    p["read_deny"] + p["write_deny"] + p["write_deny_files"]],
                                   [canonical(r) if os.path.exists(r) else r for r in p["write_allow"]])
     p["key"] = hashlib.sha256(json.dumps(p, sort_keys=True).encode()).hexdigest()[:16]
+    if scratch == "-":
+        return p  # the key only
     scratch = scratch or new_scratch()
     p["scratch"] = scratch
     p["write_allow"] = sorted(set(p["write_allow"]) | {scratch})
+    # The task's marks (#311, U2): its profile refuses reading the run's and
+    # the task's own mark files (macOS), and its workers carry
+    # ``<run token>:<task id>`` in their environment (Linux).
+    task_id = os.path.basename(scratch)[len("task-"):]
+    run_mark, _ = _mark_paths()
+    task_mark = _task_mark_path(task_id)
+    with open(task_mark, "w") as f:
+        f.write("psyneuview\n")
+    p["read_deny"] = sorted(set(p["read_deny"]) | {run_mark, task_mark})
+    p["mark"] = f"{_RUN_TOKEN}:{task_id}"
+    with _live_lock:
+        _live_ids.add(task_id)
     return p
 
 
@@ -597,6 +653,8 @@ def launch_env(p: dict) -> dict:
     it applies the policy first thing (``apply_from_env``)."""
     env = dict(os.environ)
     env[_apply.POLICY_ENV] = json.dumps(p)
+    if p.get("mark"):
+        env[_apply.MARK_ENV] = p["mark"]
     return env
 
 
