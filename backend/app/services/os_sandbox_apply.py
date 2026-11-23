@@ -129,6 +129,14 @@ def render_sbpl(policy: dict) -> str:
     if policy.get("write_deny"):
         lines += [";; Never written: the review record, the app, PsyNeuLink, the Python install.",
                   f"(deny file-write* {_sb_filters(policy['write_deny'])})"]
+    if policy.get("write_deny_files"):
+        lines += [";; Files the assistant wrote, approved or not: not changed by a model.",
+                  f"(deny file-write* {_sb_filters(policy['write_deny_files'])})"]
+    for folder in policy.get("no_code_in") or []:
+        base = "^" + _re_escape(folder.rstrip("/")) + "/"
+        lines += [";; No new code beside the model: a later Python could run it unreviewed.",
+                  f"(deny file-write* (regex {_sb_str(base + '.*[.](py|pyc|pyo|pyw|pth|so|dylib|pyd)$')}))",
+                  f"(deny file-write* (regex {_sb_str(base + '(.*/)?(sitecustomize|usercustomize)([.].*)?$')}))"]
     if policy.get("read_deny"):
         lines += [";; Last, so no allow above can give them back: not read, written, renamed or linked.",
                   f"(deny file-read-data file-read-xattr file-write* {_sb_filters(policy['read_deny'])})"]

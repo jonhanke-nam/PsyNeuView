@@ -343,9 +343,46 @@ def discard_scratch(path: str | None) -> None:
         shutil.rmtree(path, ignore_errors=True)
 
 
-def policy(scratch: str | None = None) -> dict:
+#: Files a model may not make or change in its own folder (macOS): code a
+#: later Python could run without anyone reviewing it.
+CODE_SUFFIXES = (".py", ".pyc", ".pyo", ".pyw", ".pth", ".so", ".dylib", ".pyd")
+CODE_NAMES = ("sitecustomize", "usercustomize")
+
+
+def tracked_files() -> list[str]:
+    """Every file the assistant wrote that is on disk, approved or not."""
+    from app.services.assistant import review
+    out = []
+    for key in (review._load()["files"] or {}):
+        if os.path.exists(key):
+            out.extend(_spellings(key))
+    return sorted(set(out))
+
+
+def model_folder(model_path: str | None) -> tuple[str | None, str | None]:
+    """The model's own folder, if writes may be allowed there, and why not
+    otherwise. Refused when the folder is, holds or sits inside a protected
+    place (the app, PsyNeuLink, the Python install, the review record), or
+    is the home folder or a root: the task then writes only in its own
+    scratch folder and the declared output folders."""
+    if not model_path:
+        return None, None
+    folder = _real(os.path.dirname(os.path.abspath(model_path)))
+    home = _real(_own_home())
+    if folder in ("/", home) or folder.count(os.sep) < 2:
+        return None, f"the model's folder ({folder}) is too broad to open for writing"
+    for root in _protected_from_writes():
+        if folder == root or folder.startswith(root.rstrip(os.sep) + os.sep) or root.startswith(folder.rstrip(os.sep) + os.sep):
+            return None, (f"the model's folder ({folder}) is or holds part of the app, PsyNeuLink, the Python "
+                          f"install or the review record ({root}), so it isn't opened for writing")
+    return folder, None
+
+
+def policy(scratch: str | None = None, model_path: str | None = None) -> dict:
     """The policy for one task. ``key`` names everything but the scratch
-    folder, so two tasks with the same key are sandboxed alike."""
+    folder, so two tasks with the same key are sandboxed alike.
+    ``model_path`` is the model the task runs: its folder is writable,
+    except the protected places in it (see :func:`model_folder`)."""
     from app.services.assistant import review
     home = _real(_own_home())
     read_deny = _secrets(home) + unapproved_files()
@@ -357,6 +394,9 @@ def policy(scratch: str | None = None) -> dict:
         # everything outside the standard library then too).
         read_deny += [_real(f["path"]) for f in _designated_folders()]
     write_allow = output_folders()
+    folder, note = model_folder(model_path)
+    if folder:
+        write_allow.append(folder)
     p = {
         "version": _apply.POLICY_VERSION,
         "home": home,
@@ -364,6 +404,15 @@ def policy(scratch: str | None = None) -> dict:
         "read_deny": sorted(set(read_deny)),
         "write_allow": sorted(set(write_allow)),
         "write_deny": _protected_from_writes(),
+        # Every file the assistant wrote, approved ones too, can't be changed
+        # by a model (macOS; on Linux an approved file a model changes is
+        # unapproved by its hash at the next task).
+        "write_deny_files": tracked_files(),
+        # No new code beside the model (macOS): a .py, .pth or
+        # sitecustomize there would run in a later Python unreviewed.
+        "no_code_in": [folder] if folder else [],
+        "model_dir": folder,
+        "model_dir_note": note,
         # Python, PsyNeuLink and the app stay readable wherever they are,
         # another account's folder included.
         "read_allow": _protected_from_writes(),
@@ -377,9 +426,9 @@ def policy(scratch: str | None = None) -> dict:
     return p
 
 
-def policy_key() -> str:
+def policy_key(model_path: str | None = None) -> str:
     """The key the next task's policy would have (its scratch folder aside)."""
-    return policy(scratch="-")["key"]
+    return policy(scratch="-", model_path=model_path)["key"]
 
 
 def launch_env(p: dict) -> dict:

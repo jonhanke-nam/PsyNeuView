@@ -185,7 +185,7 @@ class JobManager:
         # Under the operating-system sandbox (#311) the job's worker applies
         # the policy before anything else; the task names it, so a worker
         # without it refuses the job.
-        policy = os_sandbox.policy() if os_sandbox.active() else None
+        policy = os_sandbox.policy(model_path=task_params.get("file_path")) if os_sandbox.active() else None
         extras = {"os_sandbox_key": policy["key"]} if policy else {}
         payload = json.dumps({"task": task, "params": task_params, **assistant_review.worker_payload_extras(), **extras})
         try:

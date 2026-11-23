@@ -416,3 +416,107 @@ def test_a_model_converted_to_the_standard_format_is_sandboxed_too(st):
     finally:
         if guard.read_bytes() != guard_before:
             guard.write_bytes(guard_before)
+
+
+# ── Writing in the model's own folder (the user's decision on #312) ────────
+
+
+def _model_in(folder: Path, body: str) -> Path:
+    folder.mkdir(parents=True, exist_ok=True)
+    model = folder / "saves_results.py"
+    model.write_text(body + PSY)
+    return model
+
+
+def _no_declared_folders(st):
+    """Only the model's own folder and the task's own may be written here."""
+    st["monkeypatch"].setenv(os_sandbox.WRITE_FOLDERS_ENV, "")
+
+
+def test_a_model_saves_a_figure_and_a_csv_beside_itself_and_in_a_subfolder(st):
+    _no_declared_folders(st)
+    folder = Path(os.path.realpath(st["tmp"])) / "Beside"
+    model = _model_in(folder, (
+        "import os, csv, numpy as np\n"
+        "here = os.path.dirname(os.path.abspath(__file__))\n"
+        # The runner turns matplotlib's own saving off during a load (its
+        # graphics patches), so the figure's bytes are written directly.
+        "open(os.path.join(here, 'figure.png'), 'wb').write(bytes([0x89]) + b'PNG fake')\n"
+        "with open(os.path.join(here, 'results.csv'), 'w', newline='') as f:\n    csv.writer(f).writerow([1, 2])\n"
+        "os.makedirs(os.path.join(here, 'out', 'run1'), exist_ok=True)\n"
+        "np.save(os.path.join(here, 'out', 'run1', 'w.npy'), np.zeros(3))\n"
+        "open(os.path.join(here, 'out', 'notes.json'), 'w').write('{}')\n"
+        "os.remove(os.path.join(here, 'out', 'notes.json'))\n"))
+    r = load(model)
+    assert r.status_code == 200, r.text[:300]
+    assert not (r.json().get("model") or {}).get("skippedStatements"), r.json()["model"]["skippedStatements"]
+    assert (folder / "figure.png").exists() and (folder / "results.csv").read_text().strip() == "1,2"
+    assert (folder / "out" / "run1" / "w.npy").exists()
+    assert not (folder / "out" / "notes.json").exists()
+
+
+def test_a_model_cant_overwrite_an_unapproved_file_beside_it(st):
+    _no_declared_folders(st)
+    folder = Path(os.path.realpath(st["tmp"])) / "BesideU"
+    folder.mkdir()
+    helper = folder / "hx_beside.py"
+    helper.write_text("X = 1\n")
+    review.mark_unreviewed(str(helper), helper.read_text())
+    model = _model_in(folder, f"try:\n    open({str(helper)!r}, 'w').write('X = 2\\n')\nexcept OSError:\n    pass\n")
+    load(model)
+    assert helper.read_text() == "X = 1\n"
+
+
+def test_a_model_cant_write_the_review_state_in_its_folder(st):
+    _no_declared_folders(st)
+    folder = Path(os.path.realpath(st["tmp"])) / "BesideS"
+    folder.mkdir()
+    state = folder / "review.json"
+    st["monkeypatch"].setenv(review.STATE_ENV, str(state))
+    review._cache = None
+    helper = folder / "hx_state.py"
+    helper.write_text("X = 1\n")
+    review.mark_unreviewed(str(helper), helper.read_text())
+    before = state.read_bytes()
+    model = _model_in(folder, f"try:\n    open({str(state)!r}, 'w').write('{{}}')\nexcept OSError:\n    pass\n")
+    load(model)
+    assert state.read_bytes() == before
+
+
+def test_a_model_cant_add_code_beside_itself(st):
+    if sys.platform != "darwin":
+        pytest.skip("refusing new code by its name needs Seatbelt's path rules (macOS); Landlock can't tell files apart by name")
+    _no_declared_folders(st)
+    folder = Path(os.path.realpath(st["tmp"])) / "BesideC"
+    model = _model_in(folder, (
+        "import os\nhere = os.path.dirname(os.path.abspath(__file__))\n"
+        "for name in ('later.py', 'x.pth', 'sitecustomize.py', os.path.join('pkg', 'mod.py')):\n"
+        "    os.makedirs(os.path.join(here, 'pkg'), exist_ok=True)\n"
+        "    try:\n        open(os.path.join(here, name), 'w').write('X = 1\\n')\n    except OSError:\n        pass\n"
+        "open(os.path.join(here, 'data.txt'), 'w').write('ok')\n"))
+    load(model)
+    assert (folder / "data.txt").read_text() == "ok"
+    for name in ("later.py", "x.pth", "sitecustomize.py", "pkg/mod.py"):
+        assert not (folder / name).exists(), name
+
+
+def test_a_model_inside_psyneulink_writes_only_its_scratch_and_is_told(st):
+    import psyneulink
+
+    pnl_dir = Path(os.path.realpath(os.path.dirname(psyneulink.__file__)))
+    folder, note = os_sandbox.model_folder(str(pnl_dir / "library" / "models" / "x.py"))
+    assert folder is None and "PsyNeuLink" in note
+    folder, note = os_sandbox.model_folder(str(Path(os_sandbox._own_home()) / "x.py"))
+    assert folder is None and "too broad" in note
+    p = os_sandbox.policy(model_path=str(pnl_dir / "x.py"))
+    assert p["model_dir"] is None and p["model_dir_note"]
+    assert not any(w.startswith(str(pnl_dir)) for w in p["write_allow"])
+
+
+def test_the_notice_says_why_the_models_folder_wasnt_opened(st, monkeypatch):
+    from app.services import sandbox
+
+    result = {"model": {"notices": []}}
+    sandbox._note_model_folder(result, {"model_dir_note": "the model's folder (/x) is or holds part of PsyNeuLink"})
+    assert "PsyNeuLink" in result["model"]["notices"][0]
+    assert "task folder" in result["os_sandbox_notice"]

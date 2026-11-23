@@ -448,9 +448,10 @@ class ForkServer(WarmWorker):
                 return {"error": f"{self.NAME} failed to start"}
             # The child applies this task's own policy before reading the
             # model (#311): the unapproved files as they are now, its own folder.
-            self._task_policy = os_sandbox.policy() if os_sandbox.active() else None
+            self._task_policy = os_sandbox.policy(model_path=params.get("file_path")) if os_sandbox.active() else None
             try:
                 result = self._send(task, params, timeout)
+                _note_model_folder(result, self._task_policy)
             finally:
                 self._child_pid = None
                 if self._task_policy:
@@ -638,7 +639,7 @@ class WorkerPool:
             threading.Thread(target=self._start_one, daemon=True, name="worker-pool").start()
 
     def _start_one(self) -> None:
-        proc = _spawn_worker_process()
+        proc = _spawn_worker_process(getattr(self, "_model_path", None))
         with self._cond:
             self._starting -= 1
             if proc is not None:
@@ -650,7 +651,8 @@ class WorkerPool:
         # A worker started under another sandbox policy (or none, or one when
         # none is wanted) can't take this task: its policy was applied when
         # it started (#311). It is ended unused.
-        want = os_sandbox.policy_key() if os_sandbox.active() else None
+        model_path = getattr(self, "_model_path", None)
+        want = os_sandbox.policy_key(model_path) if os_sandbox.active() else None
         with self._cond:
             while True:
                 while self._ready:
@@ -663,10 +665,11 @@ class WorkerPool:
                 if self._starting == 0 or time.time() > deadline:
                     break
                 self._cond.wait(timeout=0.5)
-        return _spawn_worker_process()
+        return _spawn_worker_process(model_path)
 
     def send_task(self, task: str, params: dict, timeout: int) -> dict:
         with self._lock:
+            self._model_path = params.get("file_path")
             proc = self._take()
             self._fill()
             if proc is None:
@@ -691,14 +694,16 @@ class WorkerPool:
         self._fill()
 
 
-def _spawn_worker_process() -> subprocess.Popen | None:
+def _spawn_worker_process(model_path: str | None = None) -> subprocess.Popen | None:
     """A persistent worker, ready, that has run no task. Under the sandbox
     (#311) it is started with the policy as it is now, and applies it
     before importing anything."""
     member = _PoolMember.__new__(_PoolMember)
     member._on_ready = None
     member._stderr_thread = None
-    policy = os_sandbox.policy() if os_sandbox.active() else None
+    # Its policy is set when it starts, so it is made for the model the pool
+    # last ran: the same model again (the live preview) finds one ready.
+    policy = os_sandbox.policy(model_path=model_path) if os_sandbox.active() else None
     member._launch_env = os_sandbox.launch_env(policy) if policy else None
     proc = WarmWorker._spawn(member)
     if proc is not None:
@@ -706,6 +711,23 @@ def _spawn_worker_process() -> subprocess.Popen | None:
     elif policy:
         os_sandbox.discard_scratch(policy["scratch"])
     return proc
+
+
+def _note_model_folder(result, policy: dict | None) -> None:
+    """Say so when the model's own folder couldn't be opened for writing
+    (#311): it is, holds or sits in a protected place."""
+    note = (policy or {}).get("model_dir_note")
+    if not note or not isinstance(result, dict):
+        return
+    message = f"Sandbox: {note}; the model can write only in its task folder and the declared output folders."
+    result["os_sandbox_notice"] = message
+    model = result.get("model") if isinstance(result.get("model"), dict) else result
+    notices = model.get("notices")
+    if isinstance(notices, list):
+        notices.append(message)
+    else:
+        model["notices"] = [message]
+    logger.info(message)
 
 
 def _discard_launch_scratch(proc: subprocess.Popen | None) -> None:
@@ -923,7 +945,7 @@ def _raise_if_unreviewed_import(result: dict) -> None:
 def _run_cold(task: str, params: dict, timeout: int) -> dict:
     """Cold-start fallback: spawn a fresh subprocess (slow but reliable)."""
     # Under the sandbox (#311) the one-shot worker applies the policy first thing.
-    policy = os_sandbox.policy() if os_sandbox.active() else None
+    policy = os_sandbox.policy(model_path=params.get("file_path")) if os_sandbox.active() else None
     extras = {"os_sandbox_key": policy["key"]} if policy else {}
     payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras(), **extras})
     t0 = time.time()

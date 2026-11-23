@@ -260,7 +260,7 @@ def _standard_source_in_sandbox(file_path: str) -> str:
     from app.services import os_sandbox
     from app.services.assistant.review import UnreviewedAssistantCode
 
-    policy = os_sandbox.policy()
+    policy = os_sandbox.policy(model_path=file_path)
     env = os_sandbox.launch_env(policy)
     env[_IN_SANDBOX_ENV] = "1"
     backend_root = str(Path(__file__).resolve().parents[2])
