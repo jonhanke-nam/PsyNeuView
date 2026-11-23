@@ -227,14 +227,16 @@ folded, or by the file it is on disk, so a case variant, a decomposed
 accent or a hard link names the same entry. An audit hook in the worker
 (and, on the loading thread and threads it starts, in the server's
 in-process converter) also refuses a tracked, unapproved file opened,
-compiled under its own name, executed, renamed or linked, or mentioned in
-a new process's command, shell or interpreter text or environment, which
-covers `exec(open(...).read())`, `runpy.run_path`, `python helper.py`,
-`sh -c 'cat helper.py'` and `python -c` (#187). What this doesn't cover:
-text a model didn't read from the tracked file, a child process beyond
-what its command, text and environment say, `ctypes`, and a model that
-tampers with the guard during its own task; the threat model's section 7
-lists exactly what isn't covered. Approving a model means trusting what
+compiled under its own name, executed, renamed, linked or symlinked, or
+whose full name is in a new process's command, program text or
+environment, which covers `exec(open(...).read())`, `runpy.run_path`,
+`python helper.py`, `sh -c 'cat helper.py'` and `python -c` naming the file
+(#187). While anything is tracked, each task runs in a worker process that
+has run no other, so nothing one model does to the worker reaches the
+next. What this doesn't cover: text a model didn't read from the tracked
+file, a child process beyond what its command, text and environment spell
+out, `ctypes`, and a model that tampers with the guard during its own
+task; the threat model's section 7 lists exactly what isn't covered. Approving a model means trusting what
 it does. Every place code is started or executed in `backend/app` is
 listed in the threat model with its guard, and a test fails if a new one
 appears unlisted. A route that would execute unreviewed content answers 409

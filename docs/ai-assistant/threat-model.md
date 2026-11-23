@@ -243,11 +243,18 @@ only refuse more: there, `HX.py` is still taken for `hx.py`.
    default one (or the one the environment names), so a task naming a file
    that doesn't exist can't make tracked files untracked. A state file
    that can't be parsed (nor its `.bak`) fails closed: nothing outside the
-   standard library loads. Before each task the worker puts the guard's
-   own state back and reads the review state again, so what one model set
-   on the guard doesn't reach the next model; after a task in which a
-   model replaced the guard's functions, the worker exits and the next
-   task starts in a fresh one.
+   standard library loads.
+   **Later tasks are protected by a fresh process.** Everything in the
+   worker, the guard included, is reachable from the model code it runs,
+   so a model can switch the guard off; a check inside the worker can't
+   prevent that from carrying over. So while anything the assistant wrote
+   is tracked (or the state can't be read), the server sends each task to
+   a worker process that has run no other task, and ends that process
+   afterwards; a spare is started ahead so the next task usually finds one
+   ready. The server decides this from the state it reads itself. The
+   worker's own per-task reset and its check that the guard's functions
+   are unchanged remain as cheap extras for when nothing was tracked.
+   **Tampering within a model's own task is not defended.**
 3. **Imports and loads** (`import_guard.py`): a finder first on
    `sys.meta_path` (put back first before every task, so a finder a model
    adds can't get ahead of it) for `import`, `importlib.import_module`,
@@ -264,12 +271,26 @@ only refuse more: there, `HX.py` is still taken for `hx.py`.
      (`os.open(name, dir_fd=d)`, whose folder the event doesn't give);
    - compiles it under its own name (`runpy.run_path`,
      `exec(compile(text, p, "exec"))`) or executes code compiled from it;
-   - renames, hard-links or symlinks it;
+   - renames or hard-links it;
    - starts a process whose command names it (by path, or by file name
-     alone, as after a `cd`), or whose shell or interpreter text (`sh -c`,
-     `shell=True`, `os.system`, `python -c`, `-e`) or environment
-     (`env=`, `os.environ[...] =`) contains its name, its module name as a
-     word, or a shell pattern that matches its name (`cat dir/hx_*`).
+     alone, as after a `cd`), or whose program text or environment
+     contains its full name (folded; a full path contains it) or a shell
+     pattern anchored in its folder that matches its name
+     (`cat models/hx_*`, not `rm -f outdir/*`). Program text is the text
+     after `-c`, `-e` or `-E` in any case, every argument of a known
+     interpreter (`python`, `perl`, `ruby`, `node`, `sh`, `bash`, `zsh`,
+     `awk` and the like), and the command of `os.system` or `shell=True`;
+     the environment is `env=` and `os.environ[...] =`. A module name
+     alone (`data` for `data.py`) doesn't count: it is an ordinary word
+     too often, and refusing it refused ordinary models;
+   - makes a symlink whose target is the file, whose target's own name is
+     the file's name (even if the target doesn't exist yet: a link made
+     ahead of the folder link that completes it), or whose target is a
+     folder holding the file, at any depth.
+
+   A relative open counts by name alone only when no file of that name is
+   in the working folder: a user's own `utils.py` opened there runs, even
+   while an assistant-written `utils.py` elsewhere is unapproved.
 
    In the worker the hook acts on every thread of every task. In the
    server it acts only on the thread of an in-process load (the converter)
@@ -285,22 +306,31 @@ only refuse more: there, `HX.py` is still taken for `hx.py`.
   written into itself, built from pieces, or fetched from the network.
   That is the model's own code, which the user reviewed if the assistant
   wrote the model.
-- **What a child process does**, beyond what its command, its shell or
-  interpreter text and its environment say. A child Python has no guard of
-  its own, `multiprocessing` included: a `spawn` child that is handed
-  `runpy.run_path` and a path through its pipe runs it. A name passed on
-  stdin (`xargs cat`), through a file, or built inside the child or the
-  shell (`cat h''x.py`, `$(printf ...)`) gets through. Starting processes
-  isn't blocked, since PsyNeuLink's own `show_graph` runs Graphviz.
+- **What a child process does**, beyond what its command, program text and
+  environment say. A child Python has no guard of its own, `multiprocessing`
+  included: a `spawn` child that is handed `runpy.run_path` and a path
+  through its pipe runs it. Text that doesn't spell the full file name gets
+  through: a module name alone (`python -c "import helper"`), a name on
+  stdin (`xargs cat`), in a script file the model wrote, or built with
+  shell escapes (`$'\x68x.py'`), variables, `printf`, `base64`, brace
+  expansion or a regular expression (`find -regex`); so does a relative
+  glob after a `cd` in the same shell text. (Quotes and backslashes inside
+  a name, as in `cat h''x.py`, are taken out before the check, so those
+  are refused.) Starting processes isn't blocked, since PsyNeuLink's own
+  `show_graph` runs Graphviz.
+- **An open relative to another folder** (`os.open(name, dir_fd=d)`) of a
+  tracked file's name, when a file of the same name is in the working
+  folder: the event doesn't give the folder, and the working folder's file
+  is taken to be the one opened.
 - **Reading a file without Python's audit events**: `ctypes` calling the C
   library's `open` and `read`, or a C extension doing the same.
 - **A model that tampers with the guard during its own task**: everything
   in the worker is reachable from model code (`__main__._guard`), so a
-  model can switch the guard off for the rest of its own task. Across
-  tasks, the state is put back and a replaced function restarts the
-  worker; a model that also forges the worker's record of the guard's
-  functions, or replaces the worker's own task loop, isn't defended
-  either. Such a model is already running code as the user.
+  model can switch the guard off for the rest of its own task. Later tasks
+  are protected only by running in a fresh process while anything is
+  tracked (above). A model loaded in the server's own process (the
+  converter) can likewise change the server; the worker's checks for later
+  tasks don't depend on the server's.
 - **In the server's in-process load**: a thread started with `_thread`
   directly rather than `threading.Thread`, or by C code. The worker covers
   every thread, and only the converter loads in-process.
@@ -331,7 +361,7 @@ reviewers, not boundaries.
 
 | Where | What runs | Reached from | Guard |
 |---|---|---|---|
-| `sandbox.py` warm worker (`--persistent`) | `sandbox_worker.py`, every task | `run_in_sandbox`: `/model/load`, open, preview, save and reload, undo and redo, `/model/run`, `/model/learn`, show graph, input nodes, MDF export and gaps, connection options and targets, the file watcher's reload (`ws.py`), the bundled-examples check | `require_runnable` in `run_in_sandbox`; the task carries `review_state` and the exempt roots; layers 2 to 4 in the worker |
+| `sandbox.py` warm worker (`--persistent`) | `sandbox_worker.py`, every task | `run_in_sandbox`: `/model/load`, open, preview, save and reload, undo and redo, `/model/run`, `/model/learn`, show graph, input nodes, MDF export and gaps, connection options and targets, the file watcher's reload (`ws.py`), the bundled-examples check | `require_runnable` in `run_in_sandbox`; the task carries `review_state` and the exempt roots; layers 2 to 4 in the worker; while anything is tracked, one task per process |
 | `sandbox.py` cold fallback (`_run_cold`) | `sandbox_worker.py`, one task | The warm worker failing | The same |
 | `jobs.py` | `sandbox_worker.py`, one Learn job | `POST /api/jobs` | `create_job` → `require_runnable` (409 at once, no job); the payload carries the same; layers 2 to 4 in the worker. A job the worker refuses ends in an error naming the file (`result.unreviewed_import`) |
 | `sandbox_worker.py` tasks: `introspect`, `run`, `learn`, `get_input_nodes`, `show_graph`, `export_mdf`, `mdf_gaps`, `connection_options`, `connection_targets` | The model, through `load_module` (and `load_module_resilient` after a failed load) | The three above | Layers 2 to 4, with the guard reset before each task; each task is tested started directly with no review state |

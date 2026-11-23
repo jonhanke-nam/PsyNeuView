@@ -30,13 +30,15 @@ Three hooks, one check:
 * an audit hook (#187) for a tracked file's text reached without a loader:
   the file opened (``exec(open(p).read())``, ``Path(p).read_text()``, a
   copy), compiled under its own name (``runpy.run_path``,
-  ``exec(compile(text, p, "exec"))``), executed, renamed, hard-linked or
-  symlinked; or a new process whose command names it, or whose shell or
-  interpreter text (``sh -c``, ``python -c``, ``os.system``) or environment
-  mentions its name, its module name or a shell pattern matching it. In
-  the worker it acts on every thread; in the server only on the thread of
-  an in-process load and threads started from it. It is added the first
-  time something is tracked.
+  ``exec(compile(text, p, "exec"))``), executed, renamed, hard-linked, or
+  symlinked (a link whose target's name is a tracked file's, even before
+  the target exists, or whose target is a folder holding one); or a new
+  process whose command names it, or whose program text (after ``-c``,
+  ``-e``, ``-E``, any argument of a known interpreter, ``os.system``) or
+  environment contains its full name, or a shell pattern anchored in its
+  folder that matches it. In the worker it acts on every thread; in the
+  server only on the thread of an in-process load and threads started from
+  it. It is added the first time something is tracked.
 
 A file is matched by its real path with accents composed and case folded,
 or by the file it is on disk (device and inode), so a case variant, a
@@ -44,18 +46,25 @@ decomposed accent or a hard link names the same tracked file. The worker
 also checks the model's own path itself, in its loaders, so a task started
 without the server's guard (an old or direct caller) is still refused. A
 tracked path is tracked wherever it sits: the state is consulted before any
-"library path" shortcut. Before each task the worker puts the guard's
-state back and reads the review state again (the one the task names and
-the default one), and exits after a task in which a model replaced the
-guard's functions.
+"library path" shortcut.
+
+Later tasks are protected by a fresh process, not by anything in this
+module: everything here is reachable from the model code it guards, so
+while anything is tracked the server sends each task to a worker process
+that has run no other, and ends it afterwards (``sandbox.WarmWorker``).
+Within one task, a model that tampers with this module can switch it off
+for the rest of that task; that is not defended. The per-task reset and
+the fingerprint below are cheap extras for when nothing was tracked when
+a task began.
 
 What it doesn't cover, said plainly (the threat model's section 7 has the
 full list): text a model didn't read from the tracked file; a child
-process beyond what its command, its shell or interpreter text and its
-environment say (a child Python, ``multiprocessing`` included, has no
-guard of its own; a name passed on stdin or built inside the child gets
-through); code that reads files without Python's audit events (``ctypes``,
-C extensions); a model that tampers with the guard during its own task;
+process beyond what its command, program text and environment say (a
+child Python, ``multiprocessing`` included, has no guard of its own; a
+module name alone, a name on stdin, in a script file, or built with
+escapes, variables, ``printf``, ``base64``, brace expansion or a regular
+expression gets through); code that reads files without Python's audit
+events (``ctypes``, C extensions); tampering within a model's own task;
 links under another name made beforehand and then read as text (imported,
 they are caught); sourceless ``.pyc`` files and zip imports. Approving a
 model means trusting what it does. The guard is against accidental or
