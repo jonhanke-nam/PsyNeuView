@@ -388,11 +388,14 @@ def exempt_roots() -> list[str]:
 
 
 def worker_must_be_fresh() -> bool:
-    """Whether each task must run in a worker process that has run no other
-    (#187): while anything the assistant wrote is tracked, or the state
-    can't be read. Decided here, from the state the server reads itself."""
-    state = _load()
-    return bool(state["files"]) or _broken
+    """Whether each task must run in a process no earlier model touched
+    (#187): while anything the assistant wrote is tracked, approved or not,
+    or the state can't be read. Such tasks go to the fork server, whose
+    children start in milliseconds from a parent that has run no model
+    code, so this costs nothing over the warm worker (it is faster: a fresh
+    child has no cached modules to purge). Decided here, from the state the
+    server reads itself."""
+    return bool(_load()["files"]) or _broken
 
 
 def worker_payload_extras() -> dict:

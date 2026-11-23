@@ -57,13 +57,6 @@ class WarmWorker:
         self._stderr_thread: threading.Thread | None = None
         self._lock = threading.Lock()
         self._on_ready = on_ready
-        #: Whether the current process has been sent a task (#187).
-        self._used = False
-        #: A fresh process started ahead, for the next task while something
-        #: the assistant wrote is tracked (see ``send_task``).
-        self._spare: subprocess.Popen | None = None
-        self._spare_thread: threading.Thread | None = None
-        self._spare_lock = threading.Lock()
         self._start()
 
     def _notify_ready(self, ok: bool, elapsed: float) -> None:
@@ -99,10 +92,16 @@ class WarmWorker:
         except Exception:
             pass
 
+    #: How the worker script is started: a persistent worker that runs task
+    #: after task in one process.
+    MODE = "--persistent"
+    NAME = "Warm worker"
+    #: A line that says the task's process ended (the fork server's child).
+    DONE_MARKER: str | None = None
+
     def _start(self):
-        """Spawn the worker process in persistent mode and make it current."""
+        """Spawn the worker process and make it current."""
         self._proc = self._spawn()
-        self._used = False
 
     def _spawn(self) -> subprocess.Popen | None:
         """Start a worker process in persistent mode and wait until it is
@@ -110,7 +109,7 @@ class WarmWorker:
         t0 = time.time()
         try:
             proc = subprocess.Popen(
-                [sys.executable, WORKER_PATH, "--persistent"],
+                [sys.executable, WORKER_PATH, self.MODE],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -180,17 +179,6 @@ class WarmWorker:
             self._notify_ready(False, time.time() - t0)
             return None
 
-    # ── One task per process while assistant-written files are tracked ──
-    #
-    # Everything in the worker, the import guard included, is reachable from
-    # the model code it runs, so a model could switch the guard off for the
-    # tasks that follow it. While anything the assistant wrote is tracked
-    # (or the review state can't be read), each task therefore runs in a
-    # process that has run no other task, and the process is ended after
-    # it (#187). The server decides this from the state it reads itself,
-    # never from anything in the worker. A spare is started ahead, so the
-    # next task usually finds one ready.
-
     @staticmethod
     def _kill(proc: subprocess.Popen | None) -> None:
         if proc is None:
@@ -200,45 +188,6 @@ class WarmWorker:
             proc.wait(timeout=2)
         except Exception:
             pass
-
-    def _take_spare(self) -> subprocess.Popen | None:
-        thread = self._spare_thread
-        if thread is not None:
-            thread.join(WORKER_READY_TIMEOUT + 5)
-        with self._spare_lock:
-            spare, self._spare = self._spare, None
-            self._spare_thread = None
-        if spare is not None and spare.poll() is None:
-            return spare
-        self._kill(spare)
-        return None
-
-    def _start_spare(self) -> None:
-        def start():
-            proc = self._spawn()
-            with self._spare_lock:
-                old, self._spare = self._spare, proc
-            self._kill(old)
-
-        with self._spare_lock:
-            if self._spare_thread is not None or self._spare is not None:
-                return
-            self._spare_thread = threading.Thread(target=start, daemon=True, name="worker-spare")
-            self._spare_thread.start()
-
-    def _use_fresh(self) -> None:
-        """Make current a process that has run no task. Caller holds `self._lock`."""
-        self._kill(self._proc)
-        self._proc = self._take_spare() or self._spawn()
-        self._used = False
-
-    def _end_after_task(self) -> None:
-        """End the process that just ran a task, and start the next one
-        ahead. Caller holds `self._lock`."""
-        self._kill(self._proc)
-        self._proc = None
-        self._used = False
-        self._start_spare()
 
     def restart(self):
         """Kill and restart the worker, after any in-flight task finishes.
@@ -253,37 +202,46 @@ class WarmWorker:
 
     def _restart(self):
         """Kill and restart the worker. Caller must hold `self._lock`."""
-        logger.info("Restarting warm worker...")
+        logger.info(f"Restarting {self.NAME.lower()}...")
         self._kill(self._proc)
         self._proc = None
-        # A spare started before this restart may run an earlier PsyNeuLink.
-        self._kill(self._take_spare())
         self._start()
 
     def is_alive(self) -> bool:
         return self._proc is not None and self._proc.poll() is None
 
     def send_task(self, task: str, params: dict, timeout: int) -> dict:
-        """Send a task to the warm worker and wait for the result."""
+        """Send a task to the warm worker and wait for the result.
+
+        While anything the assistant wrote is tracked (or the review state
+        can't be read), the task goes to the fork server instead, so it runs
+        in a process no earlier model touched (#187). Decided here, from the
+        state the server reads itself, never from anything in a worker."""
+        if assistant_review.worker_must_be_fresh():
+            return _get_fork_server().send_task(task, params, timeout)
         with self._lock:
-            single_use = assistant_review.worker_must_be_fresh()
-            if not self.is_alive() or (single_use and self._used):
-                self._use_fresh()
             if not self.is_alive():
-                return {"error": "Warm worker failed to start"}
-            try:
-                return self._send(task, params, timeout)
-            finally:
-                if single_use or assistant_review.worker_must_be_fresh():
-                    self._end_after_task()
+                self._restart()
+            if not self.is_alive():
+                return {"error": f"{self.NAME} failed to start"}
+            return self._send(task, params, timeout)
+
+    def _before_payload(self, deadline: float) -> dict | None:
+        """A step before the task is written; an error dict stops the task."""
+        return None
+
+    def _on_timeout(self) -> None:
+        self._restart()
 
     def _send(self, task: str, params: dict, timeout: int) -> dict:
         """Send one task to the current process. Caller holds `self._lock`."""
         payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras()})
-        self._used = True
         t0 = time.time()
 
         try:
+            stopped = self._before_payload(time.time() + timeout)
+            if stopped is not None:
+                return stopped
             # Send the task
             self._proc.stdin.write(payload + "\n")
             self._proc.stdin.flush()
@@ -301,10 +259,8 @@ class WarmWorker:
                 while True:
                     remaining = deadline - time.time()
                     if remaining <= 0:
-                        logger.warning(
-                            f"Warm worker timed out after {timeout}s, restarting..."
-                        )
-                        self._restart()
+                        logger.warning(f"{self.NAME} timed out after {timeout}s")
+                        self._on_timeout()
                         return {
                             "error": f"Script execution timed out after {timeout} seconds. "
                             f"This may indicate an infinite loop or a very long computation."
@@ -331,6 +287,9 @@ class WarmWorker:
                             return json.loads(result_line)
                         except json.JSONDecodeError as e:
                             return {"error": f"Failed to parse worker output: {e}"}
+                    elif self.DONE_MARKER and line.startswith(self.DONE_MARKER):
+                        # The task's own process ended without an answer.
+                        return {"error": "Worker process died during execution"}
                     else:
                         output_lines.append(line)
             finally:
@@ -342,9 +301,96 @@ class WarmWorker:
             return {"error": f"Worker communication error: {e}"}
 
 
+class ForkServer(WarmWorker):
+    """A clean parent that forks one child per task (#187).
+
+    While anything the assistant wrote is tracked, no task may run in a
+    process an earlier model touched: everything in a worker, the import
+    guard included, is reachable from the model code it runs. Starting a
+    new worker per task costs PsyNeuLink's import (seconds). Instead this
+    parent imports PsyNeuLink and the guard once and runs no model code at
+    all; it reads nothing from the server but the word ``FORK``. For each
+    task it forks a child, which tells us its pid, reads the task itself,
+    runs it, answers and exits. A fork takes milliseconds, and nothing a
+    child does reaches the parent or the next child.
+    """
+
+    MODE = "--fork-server"
+    NAME = "Fork server"
+    CHILD_MARKER = "###PSYNEUVIEW_CHILD###"
+    DONE_MARKER = "###PSYNEUVIEW_CHILD_DONE###"
+
+    def __init__(self):
+        self._child_pid: int | None = None
+        super().__init__()
+
+    def send_task(self, task: str, params: dict, timeout: int) -> dict:
+        with self._lock:
+            if not self.is_alive():
+                self._restart()
+            if not self.is_alive():
+                return {"error": f"{self.NAME} failed to start"}
+            try:
+                return self._send(task, params, timeout)
+            finally:
+                self._child_pid = None
+
+    def _before_payload(self, deadline: float) -> dict | None:
+        """Ask for a child and wait for its pid; the payload goes to it."""
+        self._proc.stdin.write("FORK\n")
+        self._proc.stdin.flush()
+        sel = selectors.DefaultSelector()
+        sel.register(self._proc.stdout, selectors.EVENT_READ)
+        try:
+            limit = min(deadline, time.time() + 30)
+            while time.time() < limit:
+                if self._proc.poll() is not None:
+                    self._restart()
+                    return {"error": "Worker process died before the task started"}
+                if not sel.select(timeout=0.5):
+                    continue
+                line = self._proc.stdout.readline()
+                if not line:
+                    self._restart()
+                    return {"error": "Worker closed connection"}
+                if line.startswith(self.CHILD_MARKER):
+                    try:
+                        self._child_pid = int(line.split()[1])
+                    except (IndexError, ValueError):
+                        self._child_pid = None
+                    return None
+            self._restart()
+            return {"error": "Worker did not start the task"}
+        finally:
+            sel.close()
+
+    def _on_timeout(self) -> None:
+        """The child ran too long: end it (and what it started); the parent stays."""
+        import os
+        import signal
+        pid = self._child_pid
+        if pid:
+            for kill in (lambda: os.killpg(pid, signal.SIGKILL), lambda: os.kill(pid, signal.SIGKILL)):
+                try:
+                    kill()
+                except OSError:
+                    pass
+
+
 # Global warm worker instance — started on first use
 _warm_worker: WarmWorker | None = None
 _warm_worker_lock = threading.Lock()
+_fork_server: ForkServer | None = None
+_fork_server_lock = threading.Lock()
+
+
+def _get_fork_server() -> ForkServer:
+    """The fork server, started on first use while something is tracked."""
+    global _fork_server
+    with _fork_server_lock:
+        if _fork_server is None:
+            _fork_server = ForkServer()
+        return _fork_server
 
 
 def _get_warm_worker(on_ready: Optional[Callable[[bool, float], None]] = None) -> WarmWorker:
@@ -371,6 +417,11 @@ def restart_warm_worker() -> bool:
     from app.services import show_graph_cache
     show_graph_cache.clear()
 
+    with _fork_server_lock:
+        forks = _fork_server
+    if forks is not None:
+        # Its parent imported the PsyNeuLink that is being replaced.
+        forks.restart()
     with _warm_worker_lock:
         worker = _warm_worker
     if worker is None:
