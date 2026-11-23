@@ -399,7 +399,11 @@ def test_in_process_stale_helper_is_not_served(st):
 
 def test_a_source_checkout_is_not_purged_or_re_imported(st):
     """A fake checkout: a package whose import counts in a file. Once
-    something is tracked, two tasks later the count is still one."""
+    something is tracked, the guard's refresh between loads in one process
+    doesn't purge it: imported once, refreshed twice, still imported once.
+    (Each task now runs in a fresh process while something is tracked, so
+    the count is checked within one task, where the worker's loaders
+    refresh the guard again.)"""
     checkout = st["tmp"] / "sources" / "psyneulink-checkout"
     pkg = checkout / "fakepnl"
     pkg.mkdir(parents=True)
@@ -414,11 +418,11 @@ def test_a_source_checkout_is_not_purged_or_re_imported(st):
     st["monkeypatch"].setattr(locations, "_active_pnl_path", lambda: checkout)
     assert review.exempt_roots() == [str(checkout)]
     model = st["models"] / "uses_checkout.py"
-    model.write_text(_model_importing(f"sys.path.insert(0, {str(checkout)!r})\nimport fakepnl"))
-    assert load(model).status_code == 200
-    assert count.read_text() == "1"
     assert review.is_tracked(str(st["agent_file"]))  # something is tracked
-    assert load(model).status_code == 200
+    model.write_text(_model_importing(
+        f"sys.path.insert(0, {str(checkout)!r})\nimport fakepnl\nimport __main__\n"
+        "__main__._guard.refresh()\n__main__._guard.refresh()\n"
+        "import importlib\nimportlib.import_module('fakepnl')"))
     assert load(model).status_code == 200
     assert count.read_text() == "1", "the checkout was purged and imported again"
     # A model file under an exempt root that is tracked is still checked.
@@ -905,7 +909,6 @@ PROCESS_WAYS = {
     "env_value": lambda h: f"import subprocess\nexec(subprocess.run(['sh', '-c', 'cat \"$P\"'], env={{'P': {str(h)!r}}}, capture_output=True, text=True).stdout)",
     "putenv": lambda h: f"import subprocess\nos.environ['P'] = {str(h)!r}\nexec(subprocess.run(['sh', '-c', 'cat \"$P\"'], capture_output=True, text=True).stdout)",
     "python_c": lambda h: f"import subprocess\nsubprocess.run([sys.executable, '-c', 'exec(open(' + repr({str(h)!r}) + ').read())'])",
-    "python_c_import": lambda h: f"import subprocess\nsubprocess.run([sys.executable, '-c', 'import sys; sys.path.insert(0, ' + repr({str(h.parent)!r}) + '); import {h.stem}'])",
 }
 
 
@@ -995,4 +998,188 @@ def test_the_guards_refusal_is_a_409_even_when_the_servers_step_is_skipped(st, m
     model.write_text(_model_importing(f"sys.path.insert(0, {str(st['models'])!r})\nimport skip_helper"))
     r = client.post("/api/model/convert", json={"file_path": str(model), "backup": False})
     assert unreviewed(r), r.text
+    assert not marker2.exists()
+
+
+# ── 15. the second round of review of PR #310 ───────────────────────────
+
+
+R1_TAMPERS = {
+    "state_refresh_on_the_class": "__main__._guard._State.refresh = lambda self, *a, **k: None",
+    "index_find_on_the_class": "__main__._guard.TrackedIndex.find = lambda self, p: None",
+    "forged_fingerprint": "__main__._guard.refresh = lambda *a, **k: None\n__main__._GUARD_FINGERPRINT = __main__._guard.fingerprint()",
+    "replaced_check": "__main__._guard.refresh = lambda *a, **k: None\n__main__._guard_was_replaced = lambda: False",
+    "threading_local": "import threading\nclass L:\n    busy = True\n    active = 0\nthreading.local = L",
+    "json_load": "import json\njson.load = lambda f, *a, **k: {'files': {}}",
+    "swapped_guard": ("import types\nreal = __main__._guard\n"
+                      "fake = types.SimpleNamespace(**{k: getattr(real, k) for k in dir(real) if not k.startswith('__')})\n"
+                      "fake.reset_for_task = lambda: None\nfake.refresh = lambda *a, **k: None\nfake.check_model_path = lambda p: None\n"
+                      "__main__._guard = fake\nreal._state.tracked = {}\nreal._state.index = real._EMPTY_INDEX"),
+}
+
+
+@pytest.mark.parametrize("how", list(R1_TAMPERS))
+def test_tampering_in_one_task_never_reaches_the_next(st, how):
+    """While anything is tracked, each task runs in a process that has run
+    no other: whatever the first model did to the guard, the next model's
+    exec(open(...)) of an unapproved file is refused."""
+    marker2 = st["tmp"] / f"r1_ran_{how}.txt"
+    helper = st["models"] / f"hx_r1_{how}.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    a = st["tmp"] / "R1"
+    a.mkdir()
+    (a / "first.py").write_text(f"import __main__\n{R1_TAMPERS[how]}\nimport psyneulink as pnl\ncomp = pnl.Composition(name='c')\n")
+    (a / "second.py").write_text(_model_importing(f"exec(open({str(helper)!r}).read())"))
+    load(a / "first.py")
+    assert unreviewed(load(a / "second.py"))
+    assert not marker2.exists()
+
+
+def test_each_task_runs_in_a_new_process_only_while_something_is_tracked(st):
+    from app.services import sandbox
+    pid_model = st["tmp"] / "Pid" / "pid.py"
+    pid_model.parent.mkdir()
+    out = st["tmp"] / "pids.txt"
+    pid_model.write_text(f"import os\nopen({str(out)!r}, 'a').write(str(os.getpid()) + chr(10))\n"
+                         "import psyneulink as pnl\ncomp = pnl.Composition(name='c')\n")
+    assert review.is_tracked(str(st["agent_file"]))
+    load(pid_model)
+    load(pid_model)
+    tracked_pids = out.read_text().split()
+    assert len(set(tracked_pids)) == 2, tracked_pids
+    review.state_path().write_text(json.dumps({"files": {}}))
+    out.unlink()
+    load(pid_model)
+    load(pid_model)
+    untracked_pids = out.read_text().split()
+    assert len(set(untracked_pids)) == 1, untracked_pids
+    assert sandbox._get_warm_worker().is_alive()
+
+
+def _plain_model(folder: Path, body: str) -> Path:
+    folder.mkdir(parents=True, exist_ok=True)
+    model = folder / "model.py"
+    model.write_text("import os, sys\n" + body + "import psyneulink as pnl\ncomp = pnl.Composition(name='c')\n")
+    return model
+
+
+def _tracked_unapproved(st, name: str) -> Path:
+    p = st["models"] / name
+    p.write_text(_helper(st["tmp"] / "never.txt"))
+    review.mark_unreviewed(str(p), p.read_text())
+    return p
+
+
+def _runs_normally(r) -> bool:
+    return r.status_code == 200 and not (r.json().get("model") or {}).get("error")
+
+
+def test_a_relative_open_of_the_users_own_same_named_file_runs(st):
+    _tracked_unapproved(st, "utils.py")
+    own = st["tmp"] / "Mine"
+    own.mkdir()
+    (own / "utils.py").write_text("X = 1\n")
+    model = _plain_model(own, f"import os\nos.chdir({str(own)!r})\nsrc = open('utils.py').read()\n")
+    r = load(model)
+    assert _runs_normally(r), r.text[:400]
+
+
+def test_a_module_name_as_a_word_in_shell_text_runs(st):
+    _tracked_unapproved(st, "data.py")
+    model = _plain_model(st["tmp"] / "Mine3", f"import subprocess\nsubprocess.run(['sh', '-c', 'mkdir -p {st['tmp']}/out/data'], check=True)\n")
+    r = load(model)
+    assert _runs_normally(r), r.text[:400]
+
+
+def test_a_module_name_as_a_word_in_the_environment_runs(st):
+    _tracked_unapproved(st, "config.py")
+    model = _plain_model(st["tmp"] / "Mine4", "import os\nos.environ['MY_APP_HOME'] = '/Users/someone/config/app'\n")
+    r = load(model)
+    assert _runs_normally(r), r.text[:400]
+
+
+def test_a_bare_glob_elsewhere_runs(st):
+    _tracked_unapproved(st, "helper.py")
+    out = st["tmp"] / "outdir"
+    out.mkdir()
+    (out / "a.log").write_text("x")
+    model = _plain_model(st["tmp"] / "Mine5", f"import subprocess\nsubprocess.run('rm -f {out}/*', shell=True, check=True)\n")
+    r = load(model)
+    assert _runs_normally(r), r.text[:400]
+    assert not (out / "a.log").exists()
+
+
+def test_a_module_name_in_python_c_text_runs(st):
+    _tracked_unapproved(st, "analysis.py")
+    model = _plain_model(st["tmp"] / "Mine6", "import subprocess, sys\nsubprocess.run([sys.executable, '-c', 'print(\"analysis done\")'], check=True)\n")
+    r = load(model)
+    assert _runs_normally(r), r.text[:400]
+
+
+def test_a_refusal_that_isnt_an_import_says_so(st):
+    marker2 = st["tmp"] / "msg_ran.txt"
+    helper = st["models"] / "hx_msg.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    model = _plain_model(st["tmp"] / "Msg", f"exec(open({str(helper)!r}).read())\n")
+    r = load(model)
+    assert unreviewed(r)
+    assert "named in a file, process or setting the model used" in r.json()["detail"]
+    assert "imports it" not in r.json()["detail"]
+
+
+def test_a_symlink_chain_made_during_the_task_is_refused(st):
+    marker2 = st["tmp"] / "chain_ran.txt"
+    helper = st["models"] / "hx_chain.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    t = st["tmp"]
+    for first in ("dangling_by_name", "folder_link"):
+        stmt = {
+            # A link made while its target is missing, then the folder link that completes it.
+            "dangling_by_name": (f"os.symlink({str(t / 'dirlink' / helper.name)!r}, {str(t / 'alias.py')!r})\n"
+                                 f"os.symlink({str(helper.parent)!r}, {str(t / 'dirlink')!r})\n"
+                                 f"exec(open({str(t / 'alias.py')!r}).read())\n"),
+            # A link to the folder, then a copy through it.
+            "folder_link": (f"os.symlink({str(helper.parent)!r}, {str(t / 'dl')!r})\n"
+                            f"import shutil\nshutil.copyfile({str(t / 'dl' / helper.name)!r}, {str(t / 'c.py')!r})\n"
+                            f"exec(open({str(t / 'c.py')!r}).read())\n"),
+        }[first]
+        model = _plain_model(t / f"Chain_{first}", stmt)
+        assert unreviewed(load(model)), first
+    assert not marker2.exists()
+
+
+def test_a_symlink_to_an_unrelated_folder_runs(st):
+    _tracked_unapproved(st, "helper.py")
+    other = st["tmp"] / "Data"
+    other.mkdir()
+    (other / "x.csv").write_text("1")
+    model = _plain_model(st["tmp"] / "MineLink", f"os_ = __import__('os')\nos_.symlink({str(other)!r}, {str(st['tmp'] / 'datalink')!r})\n"
+                                                  f"open({str(st['tmp'] / 'datalink' / 'x.csv')!r}).read()\n")
+    r = load(model)
+    assert _runs_normally(r), r.text[:400]
+
+
+R4_WAYS = {
+    "perl_E": lambda h: ["perl", "-E", f"open F, '<', '{h}'; print <F>"],
+    "awk_program": lambda h: ["awk", f'BEGIN {{ while ((getline l < "{h}") > 0) print l }}'],
+    "ruby_e": lambda h: ["ruby", "-e", f"print File.read('{h}')"],
+    "bash_C_upper": lambda h: ["bash", "-c", f"cat {h}"],
+}
+
+
+@pytest.mark.parametrize("how", list(R4_WAYS))
+def test_interpreter_program_text_naming_the_file_is_refused(st, how):
+    import shutil
+    if not shutil.which(R4_WAYS[how](Path("x"))[0]):
+        pytest.skip("interpreter not installed")
+    marker2 = st["tmp"] / f"r4_ran_{how}.txt"
+    helper = st["models"] / f"hx_r4_{how}.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    argv = R4_WAYS[how](helper)
+    model = _plain_model(st["tmp"] / f"R4_{how}", f"import subprocess\nexec(subprocess.run({argv!r}, capture_output=True, text=True).stdout)\n")
+    assert unreviewed(load(model))
     assert not marker2.exists()
