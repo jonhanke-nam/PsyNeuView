@@ -112,7 +112,7 @@ function ShortcutRows({ deployment }: { deployment: "macApp" | "browser" }) {
                   }}
                   title="Click, then press the keys you want"
                   style={{
-                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                    fontFamily: "var(--pnv-font-mono)",
                     fontSize: "var(--pnv-fs-12)",
                     color: capturing === shortcut.id ? "var(--pnv-primary)" : "var(--pnv-text-body)",
                     background: capturing === shortcut.id ? "var(--pnv-primary-tint)" : "var(--pnv-surface-sunken)",

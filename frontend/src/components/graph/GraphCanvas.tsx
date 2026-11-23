@@ -7,6 +7,7 @@
 import { CanvasContextMenu, EdgeContextMenu } from "./GraphMenus";
 import { arrowShaped, reshapeDescription, startShapingArrow } from "@/utils/arrowShapes";
 import { PortChooser, type ConnectionOption } from "./PortChooser";
+import { ConnectionLine } from "./ConnectionLine";
 import { CONNECT_HANDLE, NODE_TARGET_HANDLE } from "./connectHandles";
 import { useConnectTargets } from "@/stores/connectTargetsStore";
 import { registerVisibleCentre } from "@/utils/graphViewport";
@@ -21,6 +22,7 @@ import {
   useReactFlow,
   type OnConnect,
   type OnConnectStart,
+  type FinalConnectionState,
   type OnNodeDrag,
   type Connection,
   type NodeChange,
@@ -144,6 +146,20 @@ function saveLayoutDebounced(filePath: string, nodes: any[]) {
   }, 500);
 }
 
+/** The arrow (a projection the file declares) under a screen point, if any
+ * (#253 stage 3): where a dragged connection from a learning mechanism was
+ * let go. Its wide hit path is what the pointer is over. */
+export function arrowAt(x: number, y: number): { varName: string; label: string } | null {
+  for (const el of document.elementsFromPoint(x, y)) {
+    if (!el.classList.contains("projection-edge-hit")) continue;
+    const id = el.closest(".react-flow__edge")?.getAttribute("data-id");
+    const edge = id ? useModelStore.getState().edges.find((ed) => ed.id === id) : undefined;
+    const d = (edge?.data ?? {}) as { varName?: string; label?: string };
+    if (edge?.type === "projectionEdge" && d.varName) return { varName: d.varName, label: d.label || d.varName };
+  }
+  return null;
+}
+
 async function createProjectionOnServer(
   filePath: string,
   sourceNode: string,
@@ -153,10 +169,13 @@ async function createProjectionOnServer(
   loadModel: (m: any, l?: any) => void,
   senderPort?: string,
   receiverPort?: string,
-  projType?: string
+  projType?: string,
+  // #253 stage 3: a control, gating or learning projection names the kind of
+  // port it goes into and, from PsyNeuLink's answer, its own variable.
+  extra?: { receiverPortKind?: string; varName?: string },
 ) {
   const { setStatus, clearStatus } = useStatusStore.getState();
-  const projName = `${sourceNode}_to_${targetNode}`.replace(/-\d+/g, "");
+  const projName = extra?.varName || `${sourceNode}_to_${targetNode}`.replace(/-\d+/g, "");
   recordAction(`Added projection ${sourceNode} → ${targetNode}`);
   setStatus(`Adding projection: ${projName}...`);
   try {
@@ -170,6 +189,7 @@ async function createProjectionOnServer(
     if (senderPort) changes.sender_port = senderPort;
     if (receiverPort) changes.receiver_port = receiverPort;
     if (projType) changes.type = projType;
+    if (extra?.receiverPortKind) changes.receiver_port_kind = extra.receiverPortKind;
 
     const resp = await fetch("/api/model/structural-change", {
       method: "POST",
@@ -452,13 +472,15 @@ export function GraphCanvas() {
   // another node. What it connects is PsyNeuLink's answer, not a guess:
   // one option is made at once, several ask which input, a refusal says why.
   const [portChooser, setPortChooser] = useState<{
-    x: number; y: number; sender: string; receiver: string; receiverLabel: string; options: ConnectionOption[];
+    x: number; y: number; sender: string; receiver: string; receiverLabel: string; ask?: string; options: ConnectionOption[];
   } | null>(null);
-  const connectFromDrag = useCallback(async (sourceId: string, targetId: string) => {
+  // `onArrow`: dropped on an arrow (#253 stage 3, a learning mechanism trains
+  // its matrix); `targetId` is then the arrow's variable, not a node id.
+  const connectFromDrag = useCallback(async (sourceId: string, targetId: string, onArrow?: { x: number; y: number; label: string }) => {
     if (!filePath) return;
     const node = (id: string) => nodesRef.current.find((n) => n.id === id);
     const varOf = (id: string) => ((node(id)?.data as any)?.varName as string) || id;
-    const sender = varOf(sourceId), receiver = varOf(targetId);
+    const sender = varOf(sourceId), receiver = onArrow ? targetId : varOf(targetId);
     const resp = await fetch("/api/model/connection-options", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -475,14 +497,16 @@ export function GraphCanvas() {
     }
     const options: ConnectionOption[] = data.options || [];
     if (options.length === 1) {
-      void makeDraggedConnection(sender, options[0].receiver || receiver, options[0]);
+      void makeDraggedConnection(options[0].sender || sender, options[0].receiver || receiver, options[0]);
       return;
     }
-    const el = document.querySelector(`.react-flow__node[data-id="${CSS.escape(targetId)}"]`);
+    const el = onArrow ? null : document.querySelector(`.react-flow__node[data-id="${CSS.escape(targetId)}"]`);
     const box = el?.getBoundingClientRect();
     setPortChooser({
-      x: box ? box.left + box.width / 2 : 200, y: box ? box.bottom + 6 : 200,
-      sender, receiver, receiverLabel: ((node(targetId)?.data as any)?.label as string) || receiver, options,
+      x: onArrow ? onArrow.x : box ? box.left + box.width / 2 : 200,
+      y: onArrow ? onArrow.y + 6 : box ? box.bottom + 6 : 200,
+      sender, receiver, ask: data.ask, options,
+      receiverLabel: onArrow ? onArrow.label : ((node(targetId)?.data as any)?.label as string) || receiver,
     });
   }, [filePath, addNotification]);
   const makeDraggedConnection = useCallback(async (sender: string, receiver: string, o: ConnectionOption) => {
@@ -500,6 +524,7 @@ export function GraphCanvas() {
     createProjectionOnServer(
       filePath, sender, receiver, compVarName, setSource, loadModelFromServer,
       o.sender_port, o.receiver_port, o.type,
+      { receiverPortKind: o.receiver_port_kind, varName: o.var_name },
     );
   }, [filePath, setSource, loadModelFromServer]);
 
@@ -519,7 +544,19 @@ export function GraphCanvas() {
       .then((data) => { if (data?.targets) useConnectTargets.getState().answer(sender, data.targets); })
       .catch(() => {});
   }, [filePath]);
-  const onConnectEnd = useCallback(() => useConnectTargets.getState().clear(), []);
+  // #253 stage 3: a drag from a node's connector let go on an arrow rather
+  // than a node: a learning mechanism trains that arrow's matrix (anything
+  // else is refused, with PsyNeuLink's reason). Arrows aren't React Flow
+  // drop targets, so the arrow is the one under the pointer.
+  const onConnectEnd = useCallback((e: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+    useConnectTargets.getState().clear();
+    if (state.toNode || state.fromHandle?.id !== CONNECT_HANDLE || !state.fromNode) return;
+    const pt = "changedTouches" in e ? e.changedTouches[0] : e;
+    if (!pt) return;
+    const arrow = arrowAt(pt.clientX, pt.clientY);
+    if (!arrow) return;
+    void connectFromDrag(state.fromNode.id, arrow.varName, { x: pt.clientX, y: pt.clientY, label: arrow.label });
+  }, [connectFromDrag]);
 
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
@@ -1115,8 +1152,9 @@ export function GraphCanvas() {
               x={portChooser.x}
               y={portChooser.y}
               receiver={portChooser.receiverLabel}
+              ask={portChooser.ask}
               options={portChooser.options}
-              onPick={(o) => { void makeDraggedConnection(portChooser.sender, o.receiver || portChooser.receiver, o); setPortChooser(null); }}
+              onPick={(o) => { void makeDraggedConnection(o.sender || portChooser.sender, o.receiver || portChooser.receiver, o); setPortChooser(null); }}
               onClose={() => setPortChooser(null)}
             />
           )}
@@ -1156,6 +1194,7 @@ export function GraphCanvas() {
               onConnect={onConnect}
               onConnectStart={onConnectStart}
               onConnectEnd={onConnectEnd}
+              connectionLineComponent={ConnectionLine}
               onNodeClick={(e, n) => (isMacSecondaryClick(e) ? onNodeContextMenu(e, n) : onNodeClick(e, n))}
               onNodeContextMenu={onNodeContextMenu}
               onEdgeContextMenu={onEdgeContextMenu}

@@ -33,6 +33,16 @@ body,
   background: var(--pnv-text-faint);
 }
 
+/* Code type (#109): the code editor and every <code>, <pre> and <kbd> use the
+   app's code font, not the browser's generic monospace (Courier on macOS). */
+code,
+pre,
+kbd,
+samp,
+.cm-editor .cm-scroller {
+  font-family: var(--pnv-font-mono);
+}
+
 /* Button reset */
 button {
   font-family: inherit;
@@ -308,6 +318,55 @@ html.pnv-busy * {
 .react-flow__handle.pnv-connector.connectingfrom {
   opacity: 1;
 }
+/* #253: drop targets while a connection is dragged. A halo, not a ring
+   (a solid blue ring is the selection): each valid target pulses slowly,
+   opacity only, so nothing moves or resizes under the pointer; the one under
+   the pointer holds a strong, steady "will connect here". A CSS animation,
+   so a big graph stays smooth. Reduce Motion: steady, no pulse. */
+@keyframes pnv-connect-pulse {
+  from { opacity: 0.25; }
+  to { opacity: 1; }
+}
+.pnv-connect-target::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 0 0 3px var(--pnv-connect-glow), 0 0 20px 9px var(--pnv-connect-glow);
+  animation: pnv-connect-pulse 0.7s ease-in-out infinite alternate;
+}
+.pnv-connect-target.pnv-connect-locked::after {
+  inset: -7px;
+  background: var(--pnv-connect-tint);
+  box-shadow: 0 0 0 4px var(--pnv-connect-target), 0 0 24px 11px var(--pnv-connect-glow);
+  animation: none;
+  opacity: 1;
+}
+/* The same for an arrow a learning mechanism could train: a halo line
+   under the arrow, pulsing; steady and stronger under the pointer. */
+.pnv-connect-arrow-halo {
+  stroke: var(--pnv-connect-glow);
+  fill: none;
+  pointer-events: none;
+  animation: pnv-connect-pulse 0.7s ease-in-out infinite alternate;
+}
+.pnv-connect-arrow-halo.pnv-connect-locked {
+  stroke: var(--pnv-connect-target);
+  opacity: 0.6;
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pnv-connect-target::after,
+  .pnv-connect-arrow-halo {
+    animation: none;
+    opacity: 1;
+  }
+  .pnv-connect-arrow-halo.pnv-connect-locked {
+    opacity: 0.6;
+  }
+}
+
 /* Settings search (#271): the control a search result took you to. */
 @keyframes pnv-setting-flash {
   0%, 40% { background: var(--pnv-primary-tint); box-shadow: 0 0 0 3px var(--pnv-primary-tint); }

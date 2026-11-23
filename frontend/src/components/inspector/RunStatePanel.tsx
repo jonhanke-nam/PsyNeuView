@@ -192,11 +192,11 @@ export function RunStatePanel() {
 
       {/* Step + trial position */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontFamily: "monospace", color: "var(--pnv-text-body)" }}>
+        <div style={{ fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-text-body)" }}>
           Step <b>{traceStep + 1}</b> of {totalSteps}
         </div>
         {hasTrialNav && currentTrial !== null && stepInTrial !== null && (
-          <div style={{ fontFamily: "monospace", color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-12)" }}>
+          <div style={{ fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-12)" }}>
             Trial <b>{currentTrial + 1}</b> of {trialBoundaries.length}
             {" · "}step {stepInTrial + 1} of {stepsThisTrial}
           </div>
@@ -208,7 +208,7 @@ export function RunStatePanel() {
         <span style={{ color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-11)", textTransform: "uppercase", letterSpacing: 0.3 }}>
           Category
         </span>
-        <div style={{ fontFamily: "monospace", color: "var(--pnv-primary)", fontWeight: 600 }}>
+        <div style={{ fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-primary)", fontWeight: 600 }}>
           {setSnap ? setSnap.category : nodeExecSnaps.length > 0 ? "NODE_EXECUTION" : "—"}
         </div>
       </div>
@@ -218,7 +218,7 @@ export function RunStatePanel() {
         <span style={{ color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-11)", textTransform: "uppercase", letterSpacing: 0.3 }}>
           Active nodes
         </span>
-        <div style={{ fontFamily: "monospace", color: "var(--pnv-text-body)" }}>
+        <div style={{ fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-text-body)" }}>
           {activeNodes.length > 0 ? activeNodes.join(", ") : "—"}
         </div>
       </div>
@@ -232,7 +232,7 @@ export function RunStatePanel() {
           <table
             style={{
               width: "100%",
-              fontFamily: "monospace",
+              fontFamily: "var(--pnv-font-mono)",
               fontSize: "var(--pnv-fs-12)",
               borderCollapse: "collapse",
               marginTop: 4,
@@ -334,7 +334,7 @@ export function RunStatePanel() {
               <div key={phaseIdx} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                 <span
                   style={{
-                    fontFamily: "monospace",
+                    fontFamily: "var(--pnv-font-mono)",
                     fontSize: "var(--pnv-fs-11)",
                     color: "var(--pnv-text-faint)",
                     flexShrink: 0,
@@ -356,7 +356,7 @@ export function RunStatePanel() {
                         ? "fired"
                         : "pending";
                     const style: CSSProperties = {
-                      fontFamily: "monospace",
+                      fontFamily: "var(--pnv-font-mono)",
                       fontSize: "var(--pnv-fs-11)",
                       padding: "1px 6px",
                       borderRadius: 3,
@@ -397,7 +397,7 @@ export function RunStatePanel() {
           <pre
             style={{
               fontSize: "var(--pnv-fs-11)",
-              fontFamily: "monospace",
+              fontFamily: "var(--pnv-font-mono)",
               background: "var(--pnv-surface-muted)",
               border: "1px solid var(--pnv-border-faint)",
               borderRadius: 3,

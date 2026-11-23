@@ -4,19 +4,28 @@ Uses watchdog to detect when the user edits the file in another editor.
 Notifies connected WebSocket clients after a debounce period.
 """
 
-import asyncio
 import hashlib
+import logging
 import threading
 from pathlib import Path
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, FileModifiedEvent
+from watchdog.events import FileSystemEventHandler
+
+logger = logging.getLogger(__name__)
+
+
+class WatchUnavailable(RuntimeError):
+    """A folder could not be watched, so edits to files in it won't be seen."""
 
 
 class ModelFileWatcher:
     """Watches a single .py file and calls a callback on changes."""
 
-    def __init__(self, debounce_ms: int = 500):
-        self._observer: Observer | None = None
+    def __init__(self, debounce_ms: int = 500, folders: "_FolderWatches | None" = None):
+        # Shared with every other watcher in the process (#308): a folder is
+        # scheduled once, however many watched files it holds.
+        self._folders = folders if folders is not None else folder_watches
+        self._folder: str | None = None
         self._watched_path: str | None = None
         self._debounce_ms = debounce_ms
         self._callback = None
@@ -29,25 +38,32 @@ class ModelFileWatcher:
         self._last_content_hash: str | None = None
 
     def watch(self, file_path: str, callback) -> None:
-        """Start watching a file. callback(file_path) is called on external changes."""
+        """Start watching a file. callback(file_path) is called on external changes.
+
+        Raises WatchUnavailable if the file's folder can't be watched.
+        """
         self.stop()
         self._watched_path = file_path
         self._callback = callback
         self._last_known_mtime = Path(file_path).stat().st_mtime
         self._last_content_hash = _hash_file(file_path)
 
-        handler = _Handler(self)
-        self._observer = Observer()
-        # Watch the parent directory (watchdog requires directories)
-        self._observer.schedule(handler, str(Path(file_path).parent), recursive=False)
-        self._observer.daemon = True
-        self._observer.start()
+        # Watch the parent directory (watchdog requires directories).
+        folder = _resolved(str(Path(file_path).parent))
+        try:
+            self._folders.add(folder, self)
+        except WatchUnavailable:
+            self._watched_path = None
+            self._callback = None
+            self._last_content_hash = None
+            raise
+        self._folder = folder
 
     def stop(self) -> None:
         """Stop watching."""
-        if self._observer:
-            self._observer.stop()
-            self._observer = None
+        if self._folder is not None:
+            self._folders.remove(self._folder, self)
+            self._folder = None
         if self._timer:
             self._timer.cancel()
             self._timer = None
@@ -113,7 +129,7 @@ class ModelFileWatcher:
             self._callback(path)
 
 
-class _Handler(FileSystemEventHandler):
+class _FolderHandler(FileSystemEventHandler):
     """Reacts to any event that can mean "the model file now has new content".
 
     Editors do not agree on how to save. Writing in place is only one way;
@@ -129,35 +145,32 @@ class _Handler(FileSystemEventHandler):
 
     Cheap to be broad here — the watcher re-checks mtime and content hash
     before reporting anything, so a spurious event costs a stat and a hash.
+
+    One handler per watched folder (#308), shared by every watched file in it:
+    each event goes to each of those files' watchers, and a watcher acts only
+    on events that touch its own file.
     """
 
-    def __init__(self, watcher: ModelFileWatcher):
-        self._watcher = watcher
-
-    def _touches_watched_file(self, event) -> bool:
-        if event.is_directory:
-            return False
-        watched = self._watcher._watched_path
-        if not watched:
-            return False
-        try:
-            target = Path(watched).resolve()
-        except OSError:
-            return False
-        for attr in ("src_path", "dest_path"):
-            raw = getattr(event, attr, None)
-            if not raw:
-                continue
-            try:
-                if Path(raw).resolve() == target:
-                    return True
-            except OSError:
-                continue
-        return False
+    def __init__(self):
+        # Replaced whole (never mutated) under _FolderWatches' lock, so this
+        # thread can read it without taking that lock. The observer holds its
+        # own lock while dispatching to us, and _FolderWatches holds its lock
+        # while (un)scheduling, which takes the observer's: taking ours here
+        # would deadlock the two.
+        self.watchers: tuple[ModelFileWatcher, ...] = ()
 
     def _handle(self, event):
-        if self._touches_watched_file(event):
-            self._watcher._on_file_changed()
+        if event.is_directory:
+            return
+        touched = set()
+        for attr in ("src_path", "dest_path"):
+            raw = getattr(event, attr, None)
+            if raw:
+                touched.add(_resolved(raw))
+        for watcher in self.watchers:
+            watched = watcher._watched_path
+            if watched and _resolved(watched) in touched:
+                watcher._on_file_changed()
 
     # Save in place.
     on_modified = _handle
@@ -165,6 +178,102 @@ class _Handler(FileSystemEventHandler):
     on_moved = _handle
     # Save by replacing the file outright.
     on_created = _handle
+
+
+def _resolved(path: str) -> str:
+    try:
+        return str(Path(path).resolve())
+    except OSError:
+        return path
+
+
+class _FolderWatches:
+    """Every watched folder, each scheduled once on one shared observer (#308).
+
+    Each watched file used to bring its own observer on its own parent folder.
+    macOS's FSEvents allows one watch per folder in the whole process, so a
+    second file in a folder already watched failed to schedule ("Cannot add
+    watch ... it is already scheduled"), on the observer's own thread, where
+    nobody saw it: that file was simply never watched. Now a folder is
+    scheduled with its first watched file, shared by any others, and
+    unscheduled when the last one leaves.
+    """
+
+    # How long to wait for a freshly scheduled folder's watch to fail. On
+    # macOS the watch is added on the emitter's own thread, which on success
+    # never returns; a failure ends that thread at once.
+    _START_CHECK_S = 0.05
+
+    def __init__(self, observer_factory=Observer):
+        self._observer_factory = observer_factory
+        self._lock = threading.Lock()
+        self._observer = None
+        self._folders: dict[str, tuple[object, _FolderHandler]] = {}
+
+    def _running_observer(self):
+        if self._observer is None or not self._observer.is_alive():
+            self._observer = self._observer_factory()
+            self._observer.daemon = True
+            self._observer.start()
+        return self._observer
+
+    def add(self, folder: str, watcher: "ModelFileWatcher") -> None:
+        with self._lock:
+            entry = self._folders.get(folder)
+            if entry is not None:
+                handler = entry[1]
+                if watcher not in handler.watchers:
+                    handler.watchers = handler.watchers + (watcher,)
+                return
+            handler = _FolderHandler()
+            handler.watchers = (watcher,)
+            try:
+                observer = self._running_observer()
+                watch = observer.schedule(handler, folder, recursive=False)
+            except Exception as e:
+                logger.warning("Can't watch %s for outside edits: %s", folder, e)
+                raise WatchUnavailable(f"Can't watch {folder}: {e}") from e
+            if not self._started(observer, watch):
+                logger.warning(
+                    "Can't watch %s for outside edits: the watch stopped as it started", folder)
+                self._unschedule(observer, watch)
+                raise WatchUnavailable(f"Can't watch {folder}")
+            self._folders[folder] = (watch, handler)
+
+    def _started(self, observer, watch) -> bool:
+        emitter = getattr(observer, "_emitter_for_watch", {}).get(watch)
+        if emitter is None:
+            return True  # nothing to check against: assume it is running
+        emitter.join(self._START_CHECK_S)
+        return emitter.is_alive()
+
+    @staticmethod
+    def _unschedule(observer, watch) -> None:
+        try:
+            observer.unschedule(watch)
+        except Exception as e:  # already gone; nothing more to stop
+            logger.debug("Unscheduling %s: %s", watch, e)
+
+    def remove(self, folder: str, watcher: "ModelFileWatcher") -> None:
+        with self._lock:
+            entry = self._folders.get(folder)
+            if entry is None:
+                return
+            watch, handler = entry
+            handler.watchers = tuple(w for w in handler.watchers if w is not watcher)
+            if handler.watchers:
+                return
+            del self._folders[folder]
+            if self._observer is not None:
+                self._unschedule(self._observer, watch)
+
+    def scheduled_folders(self) -> list[str]:
+        with self._lock:
+            return list(self._folders)
+
+
+# The process's watched folders: FSEvents allows each to be watched once (#308).
+folder_watches = _FolderWatches()
 
 
 def _hash_text(content: str) -> str:
@@ -207,7 +316,8 @@ class WatchRegistry:
     def subscribe(self, subscriber, file_path: str, callback) -> None:
         """``subscriber`` follows ``file_path``; ``callback(file_path)`` runs on
         an outside change. A subscriber follows one file: subscribing again
-        moves it."""
+        moves it. Raises WatchUnavailable, following nothing, if the file's
+        folder can't be watched."""
         key = self._key(file_path)
         stop = None
         with self._lock:
@@ -219,12 +329,22 @@ class WatchRegistry:
             self._file_of[subscriber] = key
             self._subscribers.setdefault(key, set()).add(subscriber)
             watcher = self._watchers.get(key)
+            failed = None
             if watcher is None:
                 watcher = ModelFileWatcher(debounce_ms=self._debounce_ms)
-                self._watchers[key] = watcher
-                watcher.watch(file_path, callback)
+                try:
+                    watcher.watch(file_path, callback)
+                except WatchUnavailable as e:
+                    # Not watched, so not followed: say so rather than look
+                    # as if it were (#308).
+                    self._leave(subscriber, key)
+                    failed = e
+                else:
+                    self._watchers[key] = watcher
         if stop is not None:
             stop.stop()
+        if failed is not None:
+            raise failed
 
     def unsubscribe(self, subscriber) -> None:
         """``subscriber`` follows nothing now (it paused, or it went away)."""

@@ -174,7 +174,7 @@ export function SidecarVariantPicker({ kind }: { kind: SidecarKind }) {
         onClick={() => setOpen((o) => !o)}
         style={{
           fontSize: "var(--pnv-fs-11)",
-          fontFamily: "monospace",
+          fontFamily: "var(--pnv-font-mono)",
           padding: "2px 8px",
           border: "1px solid var(--pnv-border)",
           borderRadius: 3,
@@ -253,7 +253,7 @@ export function SidecarVariantPicker({ kind }: { kind: SidecarKind }) {
                       background: "none",
                       cursor: v.missing ? "not-allowed" : "pointer",
                       fontSize: "var(--pnv-fs-12)",
-                      fontFamily: "monospace",
+                      fontFamily: "var(--pnv-font-mono)",
                       color: v.missing ? "var(--pnv-danger)" : "var(--pnv-text-body)",
                     }}
                   >

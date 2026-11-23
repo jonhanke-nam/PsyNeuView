@@ -9,7 +9,7 @@ from fastapi import WebSocket
 
 from app.services.introspector import load_and_introspect
 from app.services.file_writer import apply_parameter_change, apply_structural_change
-from app.services.watcher import file_watcher
+from app.services.watcher import WatchUnavailable, file_watcher
 from app.services.pnl_code_watcher import pnl_code_watcher
 from app.services import presence
 
@@ -117,7 +117,9 @@ async def _broadcast_presence() -> None:
     include the recipient's own other tabs (#1082).
     """
     dead = set()
-    for ws in _connected_clients:
+    # Snapshot: we await per client, so a window connecting or leaving
+    # mid-broadcast would otherwise change the set under the loop (#305).
+    for ws in list(_connected_clients):
         try:
             await ws.send_json(presence.snapshot_for(ws))
         except Exception:
@@ -154,7 +156,15 @@ async def handle_websocket(websocket: WebSocket):
                 file_path = message["filePath"]
                 global _loop
                 _loop = asyncio.get_running_loop()
-                file_watcher.subscribe(websocket, file_path, _on_file_changed)
+                try:
+                    file_watcher.subscribe(websocket, file_path, _on_file_changed)
+                except WatchUnavailable as e:
+                    # Already logged. Don't confirm a watch that isn't there:
+                    # the sync indicator then shows this window isn't watching
+                    # (#308, #1028).
+                    await websocket.send_json(
+                        {"type": "stopped_watching", "filePath": file_path, "reason": str(e)})
+                    continue
                 # Also follow PsyNeuLink's own code, if it's a local checkout.
                 # Checked on each open, so a source switch re-points it.
                 pnl_code_watcher.ensure(_on_psyneulink_changed, _is_open_model)

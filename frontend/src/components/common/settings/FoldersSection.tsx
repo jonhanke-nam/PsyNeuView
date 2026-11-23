@@ -516,7 +516,7 @@ function MoveProjectFolderDialog({
     onMoved(result.record);
   };
 
-  const field: React.CSSProperties = { ...fieldStyle, flex: 1, padding: "4px 6px", border: "1px solid var(--pnv-border)", borderRadius: 4, fontFamily: "monospace" };
+  const field: React.CSSProperties = { ...fieldStyle, flex: 1, padding: "4px 6px", border: "1px solid var(--pnv-border)", borderRadius: 4, fontFamily: "var(--pnv-font-mono)" };
   return (
     <div
       style={{ position: "fixed", inset: 0, bottom: DIALOG_SCRIM_BOTTOM, background: "var(--pnv-scrim)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10001 }}

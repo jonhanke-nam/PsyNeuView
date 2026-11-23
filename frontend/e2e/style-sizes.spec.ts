@@ -42,7 +42,7 @@ const BASELINE = {
   moveButtons: 30,
   orientationButtons: 30,
   fileBrowserOpen: 30, // was 28 at 12px text; now 30, level with the path field
-  appToolbarButton: 26, // Open ▾, Save, Layout ▾, Tutorials ▾
+  appToolbarButton: 26, // Open ▾, Save, Layout ▾, Tutorials ▾; since #109 also ⚙, ↩ ↪ and History (were 21 and 17)
   graphToolbarButton: 21, // Layout: Auto/Custom, Advanced Graph View Options ▾ (were Roles, More ▾)
   portHeaderButton: 13, // the Inspector's Inputs + / Outputs +
   portHeaderRow: 13,
@@ -166,6 +166,28 @@ test("the Inspector and the toolbars keep their row heights", { tag: "@ci" }, as
   await expectHeight(page.getByTestId("toolbar-save"), BASELINE.appToolbarButton, "Save");
   await expectHeight(page.getByTestId("layout-menu-button"), BASELINE.appToolbarButton, "Layout ▾");
   await expect(toolbar).toBeVisible();
+  // #109: ⚙, ↩ ↪ and History stand as tall as Layout ▾ and Open ▾ beside
+  // them (they were 21 and 17px), and every button on the bar is level.
+  for (const [id, what] of [
+    ["settings-button", "⚙"],
+    ["undo-button", "↩"],
+    ["redo-button", "↪"],
+    ["history-button", "History"],
+  ] as const) {
+    await expectHeight(page.getByTestId(id), BASELINE.appToolbarButton, what);
+  }
+  const bar = await toolbar.boundingBox();
+  const tops = await toolbar.locator("button").evaluateAll((els) =>
+    els.filter((e) => e.getBoundingClientRect().height > 0).map((e) => {
+      const r = e.getBoundingClientRect();
+      return { what: (e.textContent || "").trim() || e.getAttribute("aria-label"), top: r.top, h: r.height };
+    }),
+  );
+  const firstRow = tops.filter((t) => t.top < bar!.y + 20 && t.h > 20);
+  expect(firstRow.length, "the toolbar's buttons").toBeGreaterThan(6);
+  for (const t of firstRow) {
+    expect.soft(Math.abs(t.top - firstRow[0].top), `${t.what} sits level with the rest of the toolbar`).toBeLessThanOrEqual(1);
+  }
   // The view toggles moved into Advanced Graph View Options (#123); its
   // button and Layout: Auto/Custom keep the toggles' height.
   await expectHeight(page.getByTestId("graph-view-options-button"), BASELINE.graphToolbarButton, "Advanced Graph View Options ▾");

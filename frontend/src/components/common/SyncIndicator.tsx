@@ -159,7 +159,7 @@ export function SyncIndicator() {
                 <div
                   data-testid="sync-popover-path"
                   style={{
-                    fontFamily: "monospace", fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-body)",
+                    fontFamily: "var(--pnv-font-mono)", fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-body)",
                     background: "var(--pnv-surface-sunken)", borderRadius: 4,
                     padding: "3px 6px", wordBreak: "break-all", userSelect: "text",
                   }}

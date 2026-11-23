@@ -34,7 +34,7 @@ import { Button } from "./Button";
 import { DialogHeader } from "./dialog/DialogHeader";
 import { useDismiss } from "./dialog/useDismiss";
 
-const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
+const MONO = "var(--pnv-font-mono)";
 
 /** Drawn by App; renders nothing until something asks for it. */
 export function KeyboardShortcutsReference() {
