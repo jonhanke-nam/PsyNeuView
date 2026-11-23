@@ -206,7 +206,7 @@ def test_every_spawn_and_exec_site_is_listed():
         "services/quick_check.py": (0, 2),       # not a load: the "exec(" and "eval(" it looks for in the text (#256), and a compile that is never run
         "services/running_from.py": (1, 0),      # which process runs the app
         "services/sandbox.py": (4, 0),           # warm worker + cold fallback: run_in_sandbox → require_runnable; payload carries the state
-        "services/sandbox_worker.py": (0, 12),   # the guard's own load (spec + exec_module); load_module (spec + exec_module) and load_module_resilient (spec, compile + exec): check_model_path + hooks; introspect's syntax compile; two keyword compile + eval
+        "services/sandbox_worker.py": (1, 12),   # the fork server's fork of a clean child per task (#187); the guard's own load (spec + exec_module); load_module (spec + exec_module) and load_module_resilient (spec, compile + exec): check_model_path + hooks; introspect's syntax compile; two keyword compile + eval
         "services/settings_info.py": (2, 0),     # git
         "services/working_copies.py": (2, 0),    # which files are open
     }
@@ -1183,3 +1183,63 @@ def test_interpreter_program_text_naming_the_file_is_refused(st, how):
     model = _plain_model(st["tmp"] / f"R4_{how}", f"import subprocess\nexec(subprocess.run({argv!r}, capture_output=True, text=True).stdout)\n")
     assert unreviewed(load(model))
     assert not marker2.exists()
+
+
+# ── 16. the fork server: a clean parent, one child per task ──────────────
+
+
+def test_tasks_run_in_children_of_one_clean_parent_while_something_is_tracked(st):
+    """While anything is tracked, each task runs in a new child of the fork
+    server, whose parent stays the same and runs no model code."""
+    from app.services import sandbox
+    out = st["tmp"] / "parents.txt"
+    model = _plain_model(st["tmp"] / "Fork", f"open({str(out)!r}, 'a').write(f'{{os.getpid()}} {{os.getppid()}}' + chr(10))\n")
+    for _ in range(3):
+        assert _runs_normally(load(model))
+    rows = [line.split() for line in out.read_text().splitlines()]
+    assert len({pid for pid, _ in rows}) == 3
+    assert len({ppid for _, ppid in rows}) == 1
+    assert int(rows[0][1]) == sandbox._get_fork_server()._proc.pid
+
+
+def test_a_child_that_kills_its_parent_doesnt_reach_the_next_task(st):
+    """A model that ends the fork server's parent (or tampers with anything
+    in its own process) leaves the next task to a freshly started parent:
+    the next model's exec(open(...)) of an unapproved file is refused."""
+    marker2 = st["tmp"] / "parent_ran.txt"
+    helper = st["models"] / "hx_parent.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    first = _plain_model(st["tmp"] / "KillParent", "import __main__, signal\n__main__._guard._state.tracked = {}\nos.kill(os.getppid(), signal.SIGKILL)\n")
+    load(first)
+    second = _plain_model(st["tmp"] / "After", f"exec(open({str(helper)!r}).read())\n")
+    assert unreviewed(load(second))
+    assert not marker2.exists()
+
+
+def test_a_process_a_model_starts_doesnt_outlive_its_task(st):
+    pid_file = st["tmp"] / "bg.pid"
+    model = _plain_model(st["tmp"] / "Bg", "import subprocess\n"
+                         f"p = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])\n"
+                         f"open({str(pid_file)!r}, 'w').write(str(p.pid))\n")
+    assert _runs_normally(load(model))
+    pid = int(pid_file.read_text())
+    deadline = time.time() + 5
+    alive = True
+    while time.time() < deadline:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            alive = False
+            break
+        time.sleep(0.1)
+    assert not alive, "a process the model started outlived its task"
+
+
+def test_nothing_tracked_keeps_the_warm_worker(st):
+    review.state_path().write_text(json.dumps({"files": {}}))
+    out = st["tmp"] / "warm.txt"
+    model = _plain_model(st["tmp"] / "Warm", f"open({str(out)!r}, 'a').write(str(os.getpid()) + chr(10))\n")
+    load(model)
+    load(model)
+    assert len(set(out.read_text().split())) == 1
