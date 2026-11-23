@@ -81,6 +81,7 @@ import os
 import sys
 import sysconfig
 import threading
+import time
 import unicodedata
 from typing import Callable
 
@@ -98,10 +99,13 @@ class UnreviewedImport(BaseException):
     to reach the task boundary, where it becomes the 409.
     """
 
-    def __init__(self, path: str, *, state_unreadable: bool = False, imported: bool = True):
+    def __init__(self, path: str, *, state_unreadable: bool = False, imported: bool = True,
+                 reached_as: str | None = None, message: str | None = None):
         self.path = path
         self.state_unreadable = state_unreadable
-        if state_unreadable:
+        if message:
+            pass
+        elif state_unreadable:
             message = (
                 f"The AI assistant's review state can't be read, so it isn't known whether {os.path.basename(path)} "
                 f"was written by the assistant; nothing outside the standard library is imported until it is repaired."
@@ -116,6 +120,8 @@ class UnreviewedImport(BaseException):
                 f"{os.path.basename(path)} was written by the AI assistant and hasn't been reviewed yet, and it is "
                 f"named in a file, process or setting the model used. Review and approve it before running the model."
             )
+        if reached_as and reached_as != path and not state_unreadable:
+            message += f" (The model reached it as {reached_as}.)"
         super().__init__(message)
 
 
@@ -254,6 +260,7 @@ def vet(path: str) -> None:
     isn't the approved content, or if the state is unreadable and the path
     isn't a library's. The one check both hooks and the worker's loaders use."""
     state = _state
+    state.catch_up()
     if not state.tracked and not state.broken:
         return
     key = state.index.find(path)
@@ -275,7 +282,7 @@ def _check(key: str, path, *, imported: bool = True) -> None:
     entry = _state.tracked.get(key) or {}
     approved = entry.get("approved")
     if approved is None or approved != _content_hash_of(path):
-        raise UnreviewedImport(key, imported=imported)
+        raise UnreviewedImport(key, imported=imported, reached_as=_as_text(path))
 
 
 check_model_path = vet
@@ -314,6 +321,11 @@ class _State:
         self._path: str | None = None
         #: Roots a task names as never vetted (the active PsyNeuLink checkout).
         self.extra_roots: tuple[str, ...] = ()
+        #: Set once the model made a symlink in this task (see ``_vet_existing``).
+        self.links_made = False
+        #: What the state files looked like when last read, and when last looked at.
+        self._seen: tuple | None = None
+        self._looked = 0.0
 
     def refresh(self, path: str | None = None, exempt_roots=None) -> None:
         if exempt_roots is not None:
@@ -335,11 +347,7 @@ class _State:
             # file that doesn't exist can't make the tracked files untracked.
             path = path or self._path or default_state_path()
             self._path = path
-            states = [read_state(path)]
-            default = default_state_path()
-            if os.path.realpath(default) != os.path.realpath(path):
-                states.append(read_state(default))
-            self.tracked, self.broken = _merge_states(*states)
+            self._read_files()
         self.index = TrackedIndex(self.tracked) if self.tracked else _EMPTY_INDEX
         # Every task, not only when the state file changed: a tracked file's
         # content can change without the state changing, and the cache must
@@ -347,6 +355,50 @@ class _State:
         # modules are under the repo root, which is never purged, but a helper
         # a model imported stays in sys.modules there like anywhere else.
         self._purge_cached()
+
+    def _state_paths(self) -> list[str]:
+        path = self._path or default_state_path()
+        paths = [path]
+        default = default_state_path()
+        if os.path.realpath(default) != os.path.realpath(path):
+            paths.append(default)
+        return paths
+
+    def _look(self) -> tuple:
+        seen = []
+        for path in self._state_paths():
+            try:
+                st = os.stat(path)
+                seen.append((path, st.st_mtime_ns, st.st_size, st.st_ino))
+            except OSError:
+                seen.append((path, None, None, None))
+        return tuple(seen)
+
+    def _read_files(self) -> None:
+        self._seen = self._look()
+        self._looked = time.monotonic()
+        self.tracked, self.broken = _merge_states(*(read_state(p) for p in self._state_paths()))
+
+    def catch_up(self, every: float = 0.0) -> None:
+        """During a task: if the review state changed on disk since it was
+        read (the assistant wrote a file while this model runs), read it
+        again, so a file written mid-task is checked like any other. At most
+        once per ``every`` seconds."""
+        now = time.monotonic()
+        if every and now - self._looked < every:
+            return
+        self._looked = now
+        if self.provider is not None:
+            tracked, broken = self.provider()
+            if tracked is self.tracked and broken == self.broken:
+                return
+            self.tracked, self.broken = tracked, broken
+        else:
+            if self._look() == self._seen:
+                return
+            self._read_files()
+        self.index = TrackedIndex(self.tracked) if self.tracked else _EMPTY_INDEX
+        _add_audit_hook_if_needed()
 
     def _purge_cached(self) -> None:
         """Drop every module loaded from outside the library paths from
@@ -381,6 +433,7 @@ class ReviewFinder(importlib.abc.MetaPathFinder):
 
     def find_spec(self, fullname, path=None, target=None):
         state = _state
+        state.catch_up()
         if not state.tracked and not state.broken:
             return None
         spec = importlib.machinery.PathFinder.find_spec(fullname, path, target)
@@ -450,7 +503,8 @@ def install(provider: Callable[[], tuple[dict, bool]] | None = None) -> None:
 def _audit_event_names():
     return (
         frozenset({
-            "open", "compile", "exec", "os.rename", "os.link", "os.symlink", "os.putenv",
+            "open", "compile", "exec", "os.rename", "os.link", "os.symlink", "os.putenv", "os.remove",
+            "os.truncate", "os.rmdir", "shutil.rmtree", "shutil.move",
             "subprocess.Popen", "os.system", "os.exec", "os.posix_spawn", "os.spawn", "pty.spawn",
             "_thread.start_new_thread", "_thread.start_joinable_thread",
         }),
@@ -482,44 +536,38 @@ def _as_text(value) -> str | None:
     return None
 
 
-def _check_by_name(name: str) -> None:
-    """Every tracked file with this folded file name, checked as itself."""
-    for key in _state.index.by_name.get(name, ()):
-        _check(key, key, imported=False)
+def _vet_existing(path, cwd: str | None = None, *, by_name: bool = True) -> None:
+    """The one rule the audit hook applies to a path: if it leads to an
+    existing file that is a tracked file (by identity, under any spelling)
+    and that file isn't approved as it is now, refuse. A path that leads
+    nowhere, or to another file, is left alone: the user's own same-named
+    file, a new file being written, a word that merely looks like a name.
 
-
-def _vet_tracked(path, cwd: str | None = None, *, by_name: bool = True) -> None:
-    """``vet`` for a path the audit hook saw, tracked files only. With
-    ``by_name``, a path whose folded file name no tracked file has is passed
-    without resolving it: most of what a model opens and runs is PsyNeuLink's
-    own. A relative path whose name is a tracked file's but which doesn't
-    lead to that file from the working folder (``os.open(name,
-    dir_fd=...)``, whose folder the event doesn't say) is checked as that
-    tracked file."""
+    With ``by_name``, a path whose folded file name no tracked file has is
+    passed without resolving it (most of what a model opens is PsyNeuLink's
+    own); once the model has made a symlink in this task, every path is
+    resolved, since a link can give a tracked file another name."""
     text = _as_text(path)
     if not text or text.startswith("<") or "\0" in text:
         return
-    base = text.rsplit(os.sep, 1)[-1]
-    # ASCII names (nearly every file a model opens) fold by lowering, which
-    # is what NFC and casefold do to them; only others pay for the full fold.
-    name = base.lower() if base.isascii() else fold(base)
-    if by_name and name not in _state.index.by_name:
-        return
+    if by_name and not _state.links_made:
+        base = text.rsplit(os.sep, 1)[-1]
+        # ASCII names (nearly every file a model opens) fold by lowering,
+        # which is what NFC and casefold do to them.
+        name = base.lower() if base.isascii() else fold(base)
+        if name not in _state.index.by_name:
+            return
     if not os.path.isabs(text):
-        joined = os.path.join(cwd or os.getcwd(), text)
-        key = _state.index.find(joined)
-        if key is not None:
-            _check(key, joined, imported=False)
-        elif not os.path.lexists(joined):
-            # Not a file from the working folder, so the name may be relative
-            # to another folder (``dir_fd``, which the event doesn't give):
-            # checked as the tracked file of that name. A file of that name
-            # that is there is the one opened, and the user's own.
-            _check_by_name(name)
+        text = os.path.join(cwd or os.getcwd(), text)
+    if not os.path.exists(text):
         return
     key = _state.index.find(text)
     if key is not None:
         _check(key, text, imported=False)
+
+
+# Kept for the name the earlier hook used.
+_vet_tracked = _vet_existing
 
 
 def _process_words(args) -> list[str]:
@@ -544,22 +592,41 @@ def _process_words(args) -> list[str]:
 
 _GLOB_CHARS = ("*", "?", "[")
 
-#: Interpreters whose arguments are program text: every argument is read
-#: for a tracked file's full name or path, and ``-c``, ``-e`` or ``-E`` in
-#: any case marks the text that follows.
-_INTERPRETERS = frozenset({"python", "perl", "ruby", "node", "sh", "bash", "zsh", "dash", "ksh", "awk", "gawk", "mawk", "nawk"})
+#: Interpreters whose arguments are program text.
+_INTERPRETERS = frozenset({
+    "python", "perl", "ruby", "node", "sh", "bash", "zsh", "dash", "ksh", "awk", "gawk", "mawk", "nawk",
+})
+#: Commands that run the command after them (``env awk ...``).
+_WRAPPERS = frozenset({"env", "nice", "xargs", "sudo", "time", "nohup", "command", "exec", "timeout", "stdbuf"})
 
 
-def _interpreter(word: str | None) -> bool:
+def _program_name(word: str | None) -> str:
     import re
-    base = os.path.basename(word or "").lower()
-    return re.sub(r"[\d.]+$", "", base) in _INTERPRETERS
+    return re.sub(r"[\d.]+$", "", os.path.basename(word or "").lower())
+
+
+def _interpreter_at(words: list[str]) -> int | None:
+    """The index of the interpreter a command runs, past wrappers such as
+    ``env`` (and their options and ``NAME=value`` settings), or None."""
+    i = 0
+    while i < len(words):
+        name = _program_name(words[i])
+        if name in _INTERPRETERS:
+            return i
+        if name not in _WRAPPERS:
+            return None
+        i += 1
+        while i < len(words) and (words[i].startswith("-") or "=" in words[i].split("/", 1)[0]):
+            i += 1
+        if i < len(words) and _program_name(words[i - 1]) == "timeout" and words[i][:1].isdigit():
+            i += 1
+    return None
 
 
 def _vet_glob(word: str, cwd: str) -> None:
     """A shell pattern counts only where it is anchored in a tracked file's
-    folder and matches that file's name: ``cat models/hx_*`` does,
-    ``rm -f outdir/*`` doesn't."""
+    folder and matches that (existing) file's name: ``cat models/hx_*``
+    does, ``rm -f outdir/*`` doesn't."""
     import fnmatch
     folder, pattern = os.path.split(word)
     if not pattern or not any(c in pattern for c in _GLOB_CHARS) or any(c in folder for c in _GLOB_CHARS):
@@ -571,66 +638,68 @@ def _vet_glob(word: str, cwd: str) -> None:
     for key in _state.tracked:
         if fold(os.path.dirname(os.path.realpath(key))) != where and fold(os.path.dirname(key)) != where:
             continue
-        name = fold(os.path.basename(key))
-        if fnmatch.fnmatchcase(name, fold(pattern)):
+        if fnmatch.fnmatchcase(fold(os.path.basename(key)), fold(pattern)) and os.path.exists(key):
             _check(key, key, imported=False)
 
 
 def _vet_text(text: str | None, cwd: str | None = None) -> None:
-    """Text a shell or an interpreter will run, or a value handed to a
-    process in its environment: it mustn't contain a tracked, unapproved
-    file's full name (folded; a full path contains it), or a shell pattern
-    anchored in its folder that matches it. A module name alone (``data``
-    for ``data.py``) doesn't count: it is an ordinary word too often."""
+    """Program text (``-c``, a shell command) or an environment value: every
+    path-like token in it that leads to an existing tracked, unapproved file
+    is refused, and so is a shell pattern anchored in its folder that matches
+    it. A name that doesn't lead to the file from the working folder, a new
+    file, a module name: left alone."""
     if not text:
         return
     import re
-    folded = fold(text)
-    for name in _state.index.by_name:
-        if name in folded:
-            _check_by_name(name)
-    if any(c in text for c in _GLOB_CHARS):
-        base = cwd or os.getcwd()
-        for word in re.split(r"[\s<>|;&()'\"`]+", text):
-            if any(c in word for c in _GLOB_CHARS):
-                _vet_glob(word, base)
+    base = cwd or os.getcwd()
+    previous = ""
+    for token in re.split(r"[\s<>|;&()'\"`,=\[\]{}]+", text):
+        if not token:
+            continue
+        if previous == "cd":
+            # Later names in shell text are relative to where it went.
+            base = os.path.join(base, os.path.expanduser(token))
+        elif any(c in token for c in _GLOB_CHARS):
+            _vet_glob(token, base)
+        else:
+            _vet_existing(token, base)
+        previous = token
 
 
 def _code_texts(words: list[str]) -> list[str]:
-    """The program text a command runs: after ``-c``, ``-e`` or ``-E`` (in
-    any case, however spelled: ``-c``, ``-ccode``, ``-Bc``), and, for a
-    known interpreter, every argument (``awk 'BEGIN {...}'``)."""
-    texts = []
-    if words and _interpreter(words[0]):
-        texts.extend(words[1:])
-    for i, word in enumerate(words):
+    """The program text a command runs, for a known interpreter (past
+    wrappers such as ``env``): every argument after it, and the text after
+    ``-c``, ``-e`` or ``-E`` in any case, however spelled (``-c``,
+    ``-ccode``, ``-Bc``). Other commands' options are theirs: ``grep -E``
+    is a pattern, not a program."""
+    at = _interpreter_at(words)
+    if at is None:
+        return []
+    rest = words[at + 1:]
+    texts = list(rest)
+    for i, word in enumerate(rest):
         if word.startswith("-") and not word.startswith("--") and len(word) > 1:
             flags = word[1:]
-            at = min((flags.find(f) for f in "cCeE" if f in flags), default=-1)
-            if at >= 0:
-                rest = flags[at + 1:]
-                if rest:
-                    texts.append(rest)
-                elif i + 1 < len(words):
-                    texts.append(words[i + 1])
+            pos = min((flags.find(f) for f in "cCeE" if f in flags), default=-1)
+            if pos >= 0 and flags[pos + 1:]:
+                texts.append(flags[pos + 1:])
     return texts
 
 
 def _vet_process(event: str, args: tuple) -> None:
-    """A new process that names a tracked, unapproved file anywhere in its
-    command, by path from its working folder or by the file's name alone
-    (``cd sub && python helper.py``), or whose shell or interpreter text or
-    environment mentions one (see ``_vet_text``), isn't started."""
+    """A new process whose command, program text or environment leads to an
+    existing tracked, unapproved file (by path from its working folder, by
+    identity), or holds a shell pattern anchored in its folder that matches
+    it, isn't started."""
     env = None
     texts: list[str] = []
     if event == "subprocess.Popen":
         executable, argv, cwd = args[0], args[1], _as_text(args[2]) if len(args) > 2 else None
         env = args[3] if len(args) > 3 else None
-        raw = [_as_text(a) for a in argv] if isinstance(argv, (list, tuple)) else [_as_text(argv)]
+        raw = [_as_text(a) for a in argv] if isinstance(argv, (list, tuple)) else _process_words(argv)
+        raw = [w for w in raw if w is not None]
         words = _process_words(argv) + ([_as_text(executable)] if _as_text(executable) else [])
-        texts = _code_texts([w for w in raw if w is not None])
-        if _as_text(executable) and _interpreter(_as_text(executable)):
-            texts.extend(w for w in raw[1:] if w is not None)
+        texts = _code_texts(raw)
         if isinstance(argv, (str, bytes)):
             texts.append(_as_text(argv))
     elif event == "os.system":
@@ -642,22 +711,20 @@ def _vet_process(event: str, args: tuple) -> None:
     elif event == "os.spawn":
         cwd, words = None, [_as_text(args[1]) or ""] + _process_words(args[2])
         env = args[3] if len(args) > 3 else None
-        texts = _code_texts(words)
+        texts = _code_texts(words[1:])
     else:  # os.exec, os.posix_spawn: (path, argv, env)
         cwd, words = None, [_as_text(args[0]) or ""] + _process_words(args[1])
         env = args[2] if len(args) > 2 else None
-        texts = _code_texts(words)
+        texts = _code_texts(words[1:])
     cwd = cwd or os.getcwd()
     for word in words:
         for part in {word, word.split("=", 1)[-1]}:
             if not part:
                 continue
-            _vet_tracked(part, cwd)
-            name = fold(os.path.basename(part))
-            if name in _state.index.by_name:
-                _check_by_name(name)
             if any(c in part for c in _GLOB_CHARS):
                 _vet_glob(part, cwd)
+            else:
+                _vet_existing(part, cwd, by_name=False)
     for text in texts:
         _vet_text(text, cwd)
     if isinstance(env, dict):
@@ -665,29 +732,98 @@ def _vet_process(event: str, args: tuple) -> None:
             _vet_text(_as_text(value), cwd)
 
 
+# ── What a model in the worker may not change on disk (#187) ────────────
+#
+# The review record and the guard's own files: a model that approved its
+# helper in the record, or deleted the record, or rewrote the guard, would
+# have the next task, in a fresh process, run what the record says.
+
+
+def _protected_files() -> tuple[list[str], list[tuple[str, str]]]:
+    """The files a model may not change (exact paths), and the compiled
+    copies of the guard and the worker (a folder and a name prefix)."""
+    paths = []
+    for state in {_state._path, default_state_path()}:
+        if state:
+            paths += [state, state + ".bak", state + ".tmp"]
+    sources = [os.path.abspath(__file__)]
+    main = getattr(sys.modules.get("__main__"), "__file__", None)
+    if main and os.path.basename(main) == "sandbox_worker.py":
+        sources.append(os.path.abspath(main))
+    paths += sources
+    compiled = [(os.path.join(os.path.dirname(src), "__pycache__"), os.path.splitext(os.path.basename(src))[0] + ".")
+                for src in sources]
+    return paths, compiled
+
+
+def _guard_protected(path, event: str) -> None:
+    text = _as_text(path)
+    if not text or "\0" in text:
+        return
+    try:
+        target = fold(os.path.realpath(text))
+    except (OSError, ValueError):
+        return
+    paths, compiled = _protected_files()
+    hit = False
+    for protected in paths:
+        try:
+            spelled = fold(os.path.realpath(protected))
+        except (OSError, ValueError):
+            continue
+        # The file itself, or a folder that holds it (removing or moving it).
+        if target == spelled or spelled.startswith(target.rstrip(os.sep) + os.sep):
+            hit = True
+            break
+    if not hit:
+        for folder, prefix in compiled:
+            try:
+                where = fold(os.path.realpath(folder))
+            except (OSError, ValueError):
+                continue
+            if fold(os.path.dirname(target)) == where and os.path.basename(target).startswith(fold(prefix)):
+                hit = True
+                break
+    if hit:
+        raise UnreviewedImport(
+            text, message=(
+                f"The model tried to change {os.path.basename(text)}, which is the AI assistant's review record "
+                f"or part of the guard that keeps unreviewed code from running ({event}). That isn't allowed while "
+                f"assistant-written files are tracked."
+            ))
+
+
+def _write_intent(args: tuple) -> bool:
+    mode = args[1] if len(args) > 1 else None
+    flags = args[2] if len(args) > 2 else None
+    if isinstance(mode, str):
+        return any(c in mode for c in "wax+")
+    if isinstance(flags, int):
+        return (flags & os.O_ACCMODE) != os.O_RDONLY or bool(flags & (os.O_TRUNC | os.O_CREAT))
+    return False
+
+
+def _read_intent(args: tuple) -> bool:
+    mode = args[1] if len(args) > 1 else None
+    flags = args[2] if len(args) > 2 else None
+    if isinstance(mode, str):
+        return "r" in mode or "+" in mode
+    if isinstance(flags, int):
+        return (flags & os.O_ACCMODE) != os.O_WRONLY
+    return True
+
+
 def _vet_symlink(src: str | None, dst: str | None) -> None:
-    """A link made during a task (src, the target; dst, the link). Refused,
-    for a tracked, unapproved file, when the target is that file, when the
-    target's own name is that file's name, whether or not the target exists
-    yet (a link made ahead of a folder link that completes it), or when the
-    target is a folder holding that file, at any depth."""
+    """A link made during a task: refused only when its target is, right
+    now, a tracked, unapproved file. Every later path in the task is
+    resolved (see ``_vet_existing``), so a link made ahead of its target,
+    or a link to a folder, is caught when the file is opened through it."""
+    _state.links_made = True
     if not src:
         return
     if dst and not os.path.isabs(src):
         src = os.path.join(os.path.dirname(os.path.abspath(dst)), src)
-    _vet_tracked(src, by_name=False)
-    name = fold(os.path.basename(src.rstrip(os.sep)))
-    if name in _state.index.by_name:
-        _check_by_name(name)
-    try:
-        target = fold(os.path.realpath(src)).rstrip(os.sep) + os.sep
-    except (OSError, ValueError):
-        return
-    for key in _state.tracked:
-        for spelled in (fold(key), fold(os.path.realpath(key))):
-            if spelled.startswith(target):
-                _check(key, key, imported=False)
-                break
+    _vet_existing(src, by_name=False)
 
 
 def _on_this_thread() -> bool:
@@ -700,12 +836,29 @@ def _on_this_thread() -> bool:
 
 
 def _audit(event: str, args: tuple) -> None:
-    if not _state.tracked or event not in _AUDIT_EVENTS or getattr(_audit_local, "busy", False):
+    if event not in _AUDIT_EVENTS or getattr(_audit_local, "busy", False):
+        return
+    _audit_local.busy = True
+    try:
+        _state.catch_up(every=0.02)
+    except Exception:
+        pass
+    finally:
+        _audit_local.busy = False
+    if not _state.tracked:
         return
     if not _on_this_thread():
         return
     _audit_local.busy = True  # the check itself opens the file to hash it
     try:
+        if _worker_mode:
+            if event == "open" and args and not isinstance(args[0], int) and _write_intent(args):
+                _guard_protected(args[0], "writing it")
+            elif event in ("os.remove", "os.truncate", "os.rmdir", "shutil.rmtree") and args:
+                _guard_protected(args[0], "removing it")
+            elif event in ("os.rename", "shutil.move") and len(args) > 1:
+                _guard_protected(args[0], "moving it")
+                _guard_protected(args[1], "replacing it")
         if event in _THREAD_EVENTS:
             # A thread started from an in-process load carries the hook with
             # it (the worker's hook covers every thread already).
@@ -717,14 +870,16 @@ def _audit(event: str, args: tuple) -> None:
         elif event == "os.putenv":
             _vet_text(_as_text(args[1]) if len(args) > 1 else None)
         elif event == "exec":
-            _vet_tracked(getattr(args[0], "co_filename", None))
+            _vet_existing(getattr(args[0], "co_filename", None))
         elif event == "compile":
-            _vet_tracked(args[1] if len(args) > 1 else None)
+            _vet_existing(args[1] if len(args) > 1 else None)
         elif event == "os.symlink":
             _vet_symlink(_as_text(args[0]), _as_text(args[1]))
-        else:  # open, os.rename, os.link: the first argument is the file read
-            if not isinstance(args[0], int):
-                _vet_tracked(args[0])
+        elif event == "open":
+            if not isinstance(args[0], int) and _read_intent(args):
+                _vet_existing(args[0])
+        elif event in ("os.rename", "os.link", "shutil.move"):
+            _vet_existing(args[0])
     except UnreviewedImport:
         raise
     except Exception:
@@ -790,9 +945,10 @@ def reset_for_task() -> None:
 _FINGERPRINTED = (
     "vet", "_check", "check_model_path", "_content_hash_of", "TrackedIndex", "_State", "ReviewFinder",
     "_finder", "_keep_first", "_vetted_get_code", "_original_get_code", "install", "_audit", "_vet_tracked",
-    "_vet_process", "_vet_text", "_vet_glob", "_vet_symlink", "_interpreter", "_code_texts", "_process_words",
-    "_check_by_name", "_on_this_thread",
-    "refresh", "reset_for_task", "fingerprint", "read_state", "_parse", "default_state_path", "fold", "_identity",
+    "_vet_process", "_vet_text", "_vet_glob", "_vet_symlink", "_code_texts", "_process_words",
+    "_on_this_thread",
+    "refresh", "reset_for_task", "fingerprint", "_vet_existing", "_guard_protected", "_protected_files",
+    "_write_intent", "_read_intent", "_interpreter_at", "_program_name", "read_state", "_parse", "default_state_path", "fold", "_identity",
     "_merge_states", "is_library_path", "_add_audit_hook_if_needed", "_audit_event_names",
 )
 
