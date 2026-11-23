@@ -20,6 +20,15 @@ npm run tutorials:capture
 Reuses a running backend + frontend (ports 8000 / 5173) if present; otherwise
 starts them.
 
+The pictures under `docs/assets/` come from two other specs, which only take
+pictures when asked:
+
+```bash
+cd frontend
+DOCS_SHOTS=1 DOCS_SHOTS_DIR=../docs/assets/what-you-can-edit \
+  npx playwright test e2e/model-lock.spec.ts e2e/docs-shots-saving.spec.ts
+```
+
 ## Tutorials
 
 | # | Workflow | Tracking |
