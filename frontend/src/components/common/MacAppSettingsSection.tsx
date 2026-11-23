@@ -271,7 +271,7 @@ export function MacAppInstallSwitcher() {
                     disabled={switching}
                     style={{
                       flex: 1, minWidth: 0, fontSize: "var(--pnv-fs-12)", padding: "3px 6px",
-                      border: "1px solid var(--pnv-border)", borderRadius: 4, fontFamily: "monospace",
+                      border: "1px solid var(--pnv-border)", borderRadius: 4, fontFamily: "var(--pnv-font-mono)",
                     }}
                   />
                   {hasFileBridge() && (
@@ -291,7 +291,7 @@ export function MacAppInstallSwitcher() {
                         data-testid="mac-install-recent"
                         title={p}
                         disabled={switching}
-                        kind="link" style={{ fontWeight: p === path ? 600 : 400, fontFamily: "monospace" }}
+                        kind="link" style={{ fontWeight: p === path ? 600 : 400, fontFamily: "var(--pnv-font-mono)" }}
                       >
                         {abbreviateHome(p)}
                       </Button>

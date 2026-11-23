@@ -92,7 +92,7 @@ export function SidecarPlacementPicker() {
         title="Where this model's sidecar files (layouts, labels) are stored on disk"
         style={{
           fontSize: "var(--pnv-fs-11)",
-          fontFamily: "monospace",
+          fontFamily: "var(--pnv-font-mono)",
           padding: "2px 8px",
           border: "1px solid var(--pnv-border)",
           borderRadius: 3,

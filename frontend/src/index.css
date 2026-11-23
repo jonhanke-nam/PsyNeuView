@@ -33,6 +33,16 @@ body,
   background: var(--pnv-text-faint);
 }
 
+/* Code type (#109): the code editor and every <code>, <pre> and <kbd> use the
+   app's code font, not the browser's generic monospace (Courier on macOS). */
+code,
+pre,
+kbd,
+samp,
+.cm-editor .cm-scroller {
+  font-family: var(--pnv-font-mono);
+}
+
 /* Button reset */
 button {
   font-family: inherit;

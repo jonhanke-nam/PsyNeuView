@@ -274,7 +274,7 @@ export function TraceControls() {
           width: 64,
           flexShrink: 0,
           fontSize: "var(--pnv-fs-12)",
-          fontFamily: "monospace",
+          fontFamily: "var(--pnv-font-mono)",
           fontWeight: 600,
           color: "var(--pnv-text-body)",
         }}
@@ -296,7 +296,7 @@ export function TraceControls() {
             style={{
               width: 30,
               fontSize: "var(--pnv-fs-12)",
-              fontFamily: "monospace",
+              fontFamily: "var(--pnv-font-mono)",
               fontWeight: 600,
               textAlign: "center",
               padding: "0 2px",
@@ -344,7 +344,7 @@ export function TraceControls() {
       )}
 
       {hasTrialNav && (
-        <span style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)", fontFamily: "monospace", width: 64, flexShrink: 0, textAlign: "center" }}
+        <span style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)", fontFamily: "var(--pnv-font-mono)", width: 64, flexShrink: 0, textAlign: "center" }}
           title={`Currently on trial ${currentTrial !== null ? currentTrial + 1 : "—"} of ${totalTrials}`}
         >
           Trial {currentTrial !== null ? currentTrial + 1 : "—"}/{totalTrials}
@@ -355,7 +355,7 @@ export function TraceControls() {
           'trial' counts steps within the current trial. Hidden on no-hook
           builds (no trial info to count within). */}
       {hasTrialNav && (
-        <span style={{ display: "inline-flex", border: "1px solid var(--pnv-border)", borderRadius: 4, overflow: "hidden", fontSize: "var(--pnv-fs-10)", fontFamily: "monospace" }}>
+        <span style={{ display: "inline-flex", border: "1px solid var(--pnv-border)", borderRadius: 4, overflow: "hidden", fontSize: "var(--pnv-fs-10)", fontFamily: "var(--pnv-font-mono)" }}>
           <button
             onClick={() => setViewMode("run")}
             style={{
@@ -413,7 +413,7 @@ export function TraceControls() {
         title="Autoplay speed (relative to 400 ms/step)"
         style={{
           fontSize: "var(--pnv-fs-11)",
-          fontFamily: "monospace",
+          fontFamily: "var(--pnv-font-mono)",
           padding: "2px 4px",
           border: "1px solid var(--pnv-border)",
           borderRadius: 4,

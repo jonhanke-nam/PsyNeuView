@@ -72,6 +72,18 @@ which start from the role and projection tokens), both in
 `frontend/src/utils/paletteColor.ts`. A colour the user picks there is
 theirs, kept as they chose it; it is data, not a colour the code writes.
 
+**The code font.** Code type — the code editor, a model or element name
+shown as code, a path, a key — is `var(--pnv-font-mono)` (SF Mono, then
+Menlo), never the bare generic `monospace`, which is Courier on macOS
+(#109). `index.css` gives it to the code editor and to `code`, `pre` and
+`kbd`; `styleConventions.test.ts` fails on a new bare `"monospace"` (the
+graph canvas's labels are listed there until they move over).
+
+**Context menus stay in the window.** A menu opened at the pointer (the
+graph's node, arrow and canvas menus) places itself with
+`useMenuInWindow`: upward from the pointer near the bottom edge, to its
+left near the right edge, as macOS menus do (#109).
+
 **Adding a colour.** First look for the token that means the same thing; a
 new grey between two existing greys is not a new meaning. If there is a
 new meaning, add the token to `palette.css` with a comment saying what it is
@@ -170,6 +182,10 @@ in both toolbars and their menus, while each control keeps the size it had:
 The toolbar's plain buttons (⚙, Open ▾, Save, Save a copy as…, Reset
 Custom Layout) are toolbar-sized, smaller than `secondary`, and are not a
 kind for the same reason: a kind would change the toolbar's height.
+Every button on the main toolbar stands level, at one height (#109): the
+icon buttons (⚙, the ↩ ↪ pair) stretch to it with their glyphs unchanged,
+and History is a menu trigger drawn like Layout ▾ (`toggleColours`).
+`style-sizes.spec.ts` checks it.
 
 **The ×.** The icon-only close is `DialogCloseButton` in
 `dialog/DialogHeader.tsx`, the one icon button, and every dialog gets it

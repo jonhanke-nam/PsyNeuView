@@ -74,7 +74,7 @@ export function GraphStylePanel() {
             onChange={(e) => setRoleColors((prev) => ({ ...prev, [role]: e.target.value }))}
             style={{ width: 24, height: 20, border: "1px solid var(--pnv-border-light)", borderRadius: 3, cursor: "pointer" }}
           />
-          <span style={{ fontFamily: "monospace", fontSize: "var(--pnv-fs-11)", minWidth: 100 }}>{role}</span>
+          <span style={{ fontFamily: "var(--pnv-font-mono)", fontSize: "var(--pnv-fs-11)", minWidth: 100 }}>{role}</span>
         </div>
       ))}
 
@@ -89,7 +89,7 @@ export function GraphStylePanel() {
             onChange={(e) => setEdgeColors((prev) => ({ ...prev, [type]: e.target.value }))}
             style={{ width: 24, height: 20, border: "1px solid var(--pnv-border-light)", borderRadius: 3, cursor: "pointer" }}
           />
-          <span style={{ fontFamily: "monospace", fontSize: "var(--pnv-fs-11)", minWidth: 140 }}>{type.replace("Projection", "")}</span>
+          <span style={{ fontFamily: "var(--pnv-font-mono)", fontSize: "var(--pnv-fs-11)", minWidth: 140 }}>{type.replace("Projection", "")}</span>
         </div>
       ))}
 
@@ -113,7 +113,7 @@ export function GraphStylePanel() {
           onChange={(e) => useGraphSettings.getState().setArrowheadSize(Number(e.target.value))}
           style={{ flex: 1 }}
         />
-        <span style={{ fontFamily: "monospace", minWidth: 28, textAlign: "right" }}>{arrowheadSize}</span>
+        <span style={{ fontFamily: "var(--pnv-font-mono)", minWidth: 28, textAlign: "right" }}>{arrowheadSize}</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
         <span style={{ minWidth: 110 }}>Arrowhead placement</span>
@@ -142,7 +142,7 @@ export function GraphStylePanel() {
           onChange={(e) => useGraphSettings.getState().setEdgeLaneGap(Number(e.target.value))}
           style={{ flex: 1 }}
         />
-        <span style={{ fontFamily: "monospace", minWidth: 28, textAlign: "right" }}>{edgeLaneGap}</span>
+        <span style={{ fontFamily: "var(--pnv-font-mono)", minWidth: 28, textAlign: "right" }}>{edgeLaneGap}</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
         <span style={{ minWidth: 110 }}>Edge ↔ node clearance</span>
@@ -155,7 +155,7 @@ export function GraphStylePanel() {
           onChange={(e) => useGraphSettings.getState().setEdgeNodeClearance(Number(e.target.value))}
           style={{ flex: 1 }}
         />
-        <span style={{ fontFamily: "monospace", minWidth: 28, textAlign: "right" }}>{edgeNodeClearance}</span>
+        <span style={{ fontFamily: "var(--pnv-font-mono)", minWidth: 28, textAlign: "right" }}>{edgeNodeClearance}</span>
       </div>
 
       <div style={{ fontWeight: 600, color: "var(--pnv-text-body)", marginBottom: 8, marginTop: 12, borderBottom: "1px solid var(--pnv-border-faint)", paddingBottom: 4 }}>
