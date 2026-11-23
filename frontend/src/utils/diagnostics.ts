@@ -126,6 +126,8 @@ export type ServerPart =
       features: unknown;
       githubAuth: { source: string; hasRepoScope: boolean } | null;
       updates: unknown;
+      /** Whether model runs are sandboxed by the operating system (#311). */
+      osSandbox: unknown;
     }
   | { error: string };
 
@@ -383,6 +385,7 @@ export function serverPartFrom(info: SettingsInfo): ServerPart {
     features: info.features ?? null,
     githubAuth: info.github_auth ? { source: info.github_auth.source, hasRepoScope: !!info.github_auth.has_repo_scope } : null,
     updates: info.updates ?? null,
+    osSandbox: info.os_sandbox ?? null,
   };
 }
 
