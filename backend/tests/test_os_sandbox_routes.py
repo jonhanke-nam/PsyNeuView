@@ -1050,3 +1050,56 @@ def test_u6_no_extensionless_files_or_link_files_in_writable_folders(st):
         assert (folder / name).exists(), name
     for name in names:
         assert not (folder / name).exists(), name
+
+
+# ── The fourth independent review of #312 (V1–V3) ──────────────────────────
+
+NO_NEWLINE_FLOOD = "import os\nos.setsid()\nwhile True:\n    try:\n        os.write(1, b'x' * 65536)\n    except OSError:\n        break\n"
+
+
+def test_v1_a_leftover_writing_without_newlines_doesnt_hold_the_server(st):
+    model = _guard_off_model(st["tmp"] / "V1", (
+        "import subprocess\n"
+        f"subprocess.Popen([sys.executable, '-c', {NO_NEWLINE_FLOOD!r}])\n"))
+    t0 = time.time()
+    try:
+        load(model)  # this task may fail: its own answer is mixed with the flood
+    except RuntimeError:
+        pass
+    first = time.time() - t0
+    ok = st["tmp"] / "V1ok" / "plain.py"
+    ok.parent.mkdir()
+    ok.write_text(PSY)
+    t1 = time.time()
+    r = load(ok)
+    second = time.time() - t1
+    print(f"[timing] V1 flooded task {first:.2f} s, next task {second:.2f} s")
+    assert first < 40, first
+    assert r.status_code == 200, r.text[:300]
+    assert second < 10, second
+
+
+def test_v2_no_executable_files_are_left_in_writable_folders(st):
+    import stat as _stat
+
+    _no_declared_folders(st)
+    folder = Path(os.path.realpath(st["tmp"])) / "V2"
+    folder.mkdir()
+    lic = folder / "LICENSE"
+    lic.write_text("MIT\n")
+    names = ["Run.", "Run. ", "x.jar", "y.ksh", "z.tcsh", "w.action", "v.osax"]
+    model = _guard_off_model(folder, (
+        "import shutil\nhere = os.path.dirname(os.path.abspath(__file__))\n"
+        "try:\n    os.chmod(os.path.join(here, 'LICENSE'), 0o755)\nexcept OSError:\n    pass\n"
+        f"for name in {names!r}:\n"
+        "    try:\n        open(os.path.join(here, name), 'w').write('x')\n    except OSError:\n        pass\n"
+        "open(os.path.join(here, 'a.csv'), 'w').write('1')\n"
+        "shutil.copy(os.path.join(here, 'a.csv'), os.path.join(here, 'b.csv'))\n"))
+    load(model)
+    from app.services import os_sandbox
+    os_sandbox.sweep_survivors(wait=True)
+    assert not lic.stat().st_mode & (_stat.S_IXUSR | _stat.S_IXGRP | _stat.S_IXOTH), oct(lic.stat().st_mode)
+    assert (folder / "b.csv").exists()
+    if sys.platform == "darwin":
+        for name in names:
+            assert not (folder / name).exists(), name

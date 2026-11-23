@@ -239,7 +239,8 @@ _SANDBOXED_CONVERT = """
 import json, os, sys
 sys.path.insert(0, sys.argv[2])
 from app.services import os_sandbox_apply
-os_sandbox_apply.apply_from_env()
+if os_sandbox_apply.apply_from_env() is not None:
+    os_sandbox_apply.become_subreaper()
 from app.services.converter import standard_source
 from app.services.assistant.review import UnreviewedAssistantCode
 from app.services.assistant.import_guard import UnreviewedImport
@@ -253,6 +254,7 @@ except UnreviewedImport as e:
 except BaseException as e:
     out = {"error": str(e), "type": type(e).__name__}
 out["os_sandbox_applied"] = applied
+os_sandbox_apply.end_own_children(time_limit=1.0)
 print(%r + json.dumps(out), flush=True)
 """ % _SOURCE_MARKER
 

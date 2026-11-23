@@ -227,17 +227,23 @@ from the next one.
     join one of the user's process groups.
   - Sweeps run in the background after and before tasks; the one before
     the assistant writes a file runs at once.
-  - **Not guaranteed on Linux:** outside the fork server, a process a model
-    started that execs a new program with its mark removed from the
-    environment isn't found. On macOS the mark can't be removed.
+  - On Linux every worker the server starts is a subreaper too, and ends
+    every child it has when its task is over, so a process that execs with
+    its mark removed from the environment is still ended (as long as it is
+    a descendant of the worker when the task ends). Per-task cgroups aren't
+    used.
+- **No executable files are left behind.** After every task, the execute
+  bits are taken off regular files in its writable folders whose status
+  changed during the task (at most 50,000 files a check). Names ending in a
+  dot are refused (macOS).
 - **Output is bounded.** Every worker's output is read with a 16 MB cap and
   no longer than a moment after the worker exits, so a leftover writing
   without end can't fill the server's memory or stall the next task.
 - **No new file without an extension (macOS)** in writable folders other
   than the task's own: Finder runs such a file if it is executable. Link
   and launcher files (`.terminal`, `.fileloc`, `.webloc`, `.inetloc`,
-  `.desktop`) are refused too. Changing a file's mode is allowed:
-  `shutil.copy` needs it, and creating a file can set any mode anyway.
+  `.desktop`) are refused too. Changing a file's mode is allowed, since
+  `shutil.copy` needs it; execute bits are taken off after the task.
 - **The proof is defence in depth, not the barrier.** Model code can read
   the policy's key, so it could forge an answer; the barrier is the
   worker's own refusal to run a task whose policy it hasn't applied. The

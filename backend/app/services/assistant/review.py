@@ -52,7 +52,8 @@ REASON = "assistant_code_unreviewed"
 #: The reason when the review state itself can't be read (every guard fails closed).
 REASON_UNREADABLE = "assistant_review_state_unreadable"
 
-_lock = threading.Lock()
+# Re-entrant: _load takes it too, and is called from inside it (#311).
+_lock = threading.RLock()
 _cache: dict | None = None
 _cache_key: tuple | None = None
 #: Set when the state file exists but can't be read, and nor can its backup.
@@ -154,12 +155,20 @@ def _load() -> dict:
     fails too the state is unknown (``state_broken()``), which every
     execution guard treats as "refuse"."""
     global _cache, _cache_key, _broken
+    with _lock:
+        return _load_locked()
+
+
+def _load_locked() -> dict:
+    global _cache, _cache_key, _broken
     p = state_path()
     try:
         st = p.stat()
-        key = (str(p), st.st_mtime_ns, st.st_size)
+        # The inode too: every save replaces the file, so a rewrite of the
+        # same size within a coarse timestamp still reads as changed (#311).
+        key = (str(p), st.st_mtime_ns, st.st_size, st.st_ino, st.st_ctime_ns)
     except OSError:
-        key = (str(p), None, None)
+        key = (str(p), None, None, None, None)
     if _cache is not None and key == _cache_key:
         return _cache
     files: dict = {}

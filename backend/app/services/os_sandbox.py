@@ -195,6 +195,10 @@ def check_applied(result, policy: dict | None) -> dict:
 _RUN_TOKEN = uuid.uuid4().hex
 #: Task ids whose task is running now; their processes are left alone.
 _live_ids: set[str] = set()
+#: A running task's writable folders and when it started; when it ends, the
+#: folders are checked for execute bits it set (#311, V2).
+_task_roots: dict[str, tuple[list[str], float]] = {}
+_exec_checks: list[tuple[list[str], float]] = []
 _live_lock = threading.Lock()
 
 
@@ -250,6 +254,47 @@ def sweep_survivors(wait: bool = False) -> None:
     threading.Thread(target=run, daemon=True, name="sandbox-sweep").start()
 
 
+#: The most files looked at in one check, so a huge folder can't stall it.
+EXEC_CHECK_LIMIT = 50_000
+
+
+def clear_exec_bits() -> int:
+    """Take the execute bits off regular files that finished tasks made or
+    changed in their writable folders (#311, V2): a file made executable
+    there could be run outside the sandbox (a double-click in Finder).
+    A file counts if its status changed after the task began (chmod
+    changes it). Returns how many were changed."""
+    with _live_lock:
+        checks, _exec_checks[:] = list(_exec_checks), []
+    changed = 0
+    for roots, since in checks:
+        seen = 0
+        for root in roots:
+            for dirpath, dirnames, filenames in os.walk(root):
+                dirnames[:] = [d for d in dirnames if not os.path.islink(os.path.join(dirpath, d))]
+                for name in filenames:
+                    seen += 1
+                    if seen > EXEC_CHECK_LIMIT:
+                        break
+                    path = os.path.join(dirpath, name)
+                    try:
+                        st = os.lstat(path)
+                    except OSError:
+                        continue
+                    import stat as _stat
+                    if not _stat.S_ISREG(st.st_mode) or not st.st_mode & 0o111 or st.st_ctime < since - 1:
+                        continue
+                    try:
+                        os.chmod(path, st.st_mode & 0o7666)
+                        changed += 1
+                    except OSError:
+                        pass
+                if seen > EXEC_CHECK_LIMIT:
+                    logger.warning("stopped checking %s for execute bits after %d files", root, EXEC_CHECK_LIMIT)
+                    break
+    return changed
+
+
 def _sweep_now() -> None:
     """End this server's finished tasks' processes, found only by the
     task's own mark (never by program, parent, group or session), so a
@@ -265,6 +310,11 @@ def _sweep_now() -> None:
             _apply.end_processes(lambda: _apply._linux_marked(_RUN_TOKEN, live), time_limit=10.0)
     except Exception:  # noqa: BLE001 - never fail a task over it
         logger.exception("Couldn't sweep processes left by a sandboxed task")
+    # After the survivors are gone, so none can set the bit again.
+    try:
+        clear_exec_bits()
+    except Exception:  # noqa: BLE001
+        logger.exception("Couldn't check for execute bits a task set")
 
 
 def active() -> bool:
@@ -327,23 +377,15 @@ def canonical(path: str) -> str:
 
 
 def _approved_hash_of(path: str) -> str | None:
-    """The content hash of ``path`` now (cached by size and mtime), or None
-    if it can't be read as text."""
-    try:
-        st = os.stat(path)
-    except OSError:
-        return None
-    sig = (st.st_size, st.st_mtime_ns, st.st_ino)
-    cached = _hash_cache.get(path)
-    if cached and cached[0] == sig:
-        return cached[1]
+    """The content hash of ``path`` now, or None if it can't be read as text.
+    Not cached: a rewrite of the same size within a coarse timestamp would
+    serve a stale hash (#311); tracked files are few and small."""
     try:
         with open(path, "rb") as f:
             text = f.read().decode("utf-8")
         h = hashlib.sha256(text.encode("utf-8")).hexdigest()
     except (OSError, UnicodeDecodeError):
         h = None
-    _hash_cache[path] = (sig, h)
     return h
 
 
@@ -495,6 +537,9 @@ def discard_scratch(path: str | None) -> None:
         task_id = os.path.basename(path)[len("task-"):]
         with _live_lock:
             _live_ids.discard(task_id)
+            roots = _task_roots.pop(task_id, None)
+            if roots and roots[0]:
+                _exec_checks.append(roots)
         try:
             os.remove(_task_mark_path(task_id))
         except OSError:
@@ -598,6 +643,9 @@ def policy(scratch: str | None = None, model_path: str | None = None) -> dict:
         "read_allow": _protected_from_writes(),
         "exec_allow": _programs(),
         "network": False,
+        # The record this policy was built from: a pool worker started under
+        # another (an earlier test's) doesn't match (#311).
+        "state": str(review.state_path()),
     }
     # The folders that hold a protected file can't be renamed or removed
     # either (macOS matches paths, so moving the folder would move the file
@@ -624,6 +672,7 @@ def policy(scratch: str | None = None, model_path: str | None = None) -> dict:
     p["mark"] = f"{_RUN_TOKEN}:{task_id}"
     with _live_lock:
         _live_ids.add(task_id)
+        _task_roots[task_id] = ([r for r in p["write_allow"] if r != scratch], time.time())
     return p
 
 

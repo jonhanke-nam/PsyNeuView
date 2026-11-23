@@ -28,7 +28,11 @@ if __name__ == "__main__":
     # applies it and the threads it starts). If it can't be applied, the
     # task is refused, never run unsandboxed.
     try:
-        _os_sandbox.apply_from_env()
+        if _os_sandbox.apply_from_env() is not None:
+            # Linux: every orphan of this task's processes, whatever session
+            # or environment it has, becomes this worker's child, and is
+            # ended when the task is (#311, V3).
+            _os_sandbox.become_subreaper()
     except _os_sandbox.SandboxUnavailable as _e:
         print("###PSYNEUVIEW_RESULT###", flush=True)
         print(json.dumps({"error": f"The model sandbox couldn't be applied, so nothing was run: {_e}",
@@ -4797,6 +4801,8 @@ def _run_persistent():
             continue
 
         result_str = _handle_one_task(line)
+        if _os_sandbox.applied() is not None:
+            _os_sandbox.end_own_children(time_limit=1.0)  # a sandboxed worker's task is over (#311, V3)
         print(RESULT_MARKER, flush=True)
         print(result_str, flush=True)
         if _guard_was_replaced():
@@ -5027,6 +5033,8 @@ def _run_oneshot():
         pass  # the task reports it
     payload = sys.stdin.read()
     result_str = _handle_one_task(payload)
+    if _os_sandbox.applied() is not None:
+        _os_sandbox.end_own_children(time_limit=1.0)  # the task is over (#311, V3)
     print(RESULT_MARKER)
     print(result_str)
 

@@ -152,7 +152,9 @@ def render_sbpl(policy: dict) -> str:
                   f"(deny file-write* (regex {_sb_str(base + '.*[.](' + '|'.join(AUTORUN_SUFFIXES) + ')$')}))",
                   ";; No new file without an extension: Finder runs such a file if it is executable.",
                   f"(deny file-write-create (require-all (subpath {_sb_str(folder)}) (regex {_sb_str('/[^/.]+$')}) "
-                  "(vnode-type REGULAR-FILE)))"]
+                  "(vnode-type REGULAR-FILE)))",
+                  ";; Nor a name ending in a dot (Finder treats it as having no extension).",
+                  f"(deny file-write* (require-all (subpath {_sb_str(folder)}) (regex {_sb_str('[.][ ]*$')})))"]
     for folder in policy.get("no_code_in") or []:
         base = "^" + _re_escape(folder.rstrip("/")) + "/"
         lines += [";; No new code beside the model: a later Python could run it unreviewed.",
@@ -194,7 +196,8 @@ AUTORUN_NAMES = ("Makefile", "makefile", "GNUmakefile", "justfile", "Justfile", 
 #: that ignore case; listed lower-case and upper-case here too).
 AUTORUN_SUFFIXES = ("pth", "command", "sh", "bash", "zsh", "csh", "fish", "tool", "zip", "pyz", "egg", "whl",
                     "app", "workflow", "scpt", "applescript", "terminal", "fileloc", "webloc", "inetloc",
-                    "desktop", "PTH", "COMMAND", "SH", "ZIP", "PYZ", "TERMINAL")
+                    "desktop", "ksh", "tcsh", "jar", "action", "osax", "PTH", "COMMAND", "SH", "ZIP", "PYZ",
+                    "TERMINAL", "JAR")
 
 
 def _re_escape(s: str) -> str:

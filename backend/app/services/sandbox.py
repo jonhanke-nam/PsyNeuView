@@ -242,7 +242,9 @@ class WarmWorker:
         return None
 
     def _is_result_marker(self, line: str) -> bool:
-        return line == RESULT_MARKER
+        # At the end of a line: what a leftover wrote without a newline may
+        # sit in front of it (#311, V1).
+        return line.endswith(RESULT_MARKER)
 
     def _on_timeout(self) -> None:
         self._restart()
@@ -250,6 +252,13 @@ class WarmWorker:
     def _sandbox_extras(self) -> dict:
         """What the task carries for the operating-system sandbox (#311)."""
         return {}
+
+    def _raw_lines(self) -> "_Lines":
+        """A raw line reader for the current process's output, kept with it."""
+        if getattr(self, "_raw", None) is None or self._raw_for is not self._proc:
+            self._raw = _Lines(self._proc.stdout.fileno())
+            self._raw_for = self._proc
+        return self._raw
 
     def _send(self, task: str, params: dict, timeout: int) -> dict:
         """Send one task to the current process. Caller holds `self._lock`."""
@@ -265,62 +274,63 @@ class WarmWorker:
             self._proc.stdin.write(payload + "\n")
             self._proc.stdin.flush()
 
-            # Poll stdout with a short inner timeout so the deadline check
-            # actually fires when the worker is stuck and producing no output.
-            # Plain readline() is blocking, so the previous loop never
-            # re-checked the deadline once the worker stopped writing.
-            sel = selectors.DefaultSelector()
-            sel.register(self._proc.stdout, selectors.EVENT_READ)
-
+            # Raw bytes from the fd, lines built here with caps, the deadline
+            # and the process checked on every pass: a leftover holding the
+            # pipe and writing without newlines can't hold this thread (and
+            # the pool's lock) in a readline (#311, V1).
+            lines = self._raw_lines()
             output_lines = []
             kept = 0
             deadline = time.time() + timeout
-            try:
-                while True:
-                    remaining = deadline - time.time()
-                    if remaining <= 0:
-                        logger.warning(f"{self.NAME} timed out after {timeout}s")
-                        self._on_timeout()
-                        return {
-                            "error": f"Script execution timed out after {timeout} seconds. "
-                            f"This may indicate an infinite loop or a very long computation."
-                        }
-
+            while True:
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    logger.warning(f"{self.NAME} timed out after {timeout}s")
+                    self._on_timeout()
+                    return {
+                        "error": f"Script execution timed out after {timeout} seconds. "
+                        f"This may indicate an infinite loop or a very long computation."
+                    }
+                try:
+                    line = lines.next(min(deadline, time.time() + 0.5))
+                except EOFError:
+                    self._restart()
+                    return {"error": "Worker closed connection"}
+                if line is None:
                     if self._proc.poll() is not None:
                         self._restart()
                         return {"error": "Worker process died during execution"}
-
-                    if not sel.select(timeout=min(0.5, remaining)):
-                        continue
-
-                    line = self._proc.stdout.readline(1 << 20)  # bounded (#311, U4)
-                    if not line:
+                    continue
+                if self._is_result_marker(line):
+                    try:
+                        result_line = lines.next(deadline)
+                    except EOFError:
+                        result_line = None
+                    if result_line is None:
                         self._restart()
                         return {"error": "Worker closed connection"}
-
-                    line = line.rstrip("\n")
-                    if self._is_result_marker(line):
-                        result_line = self._proc.stdout.readline().rstrip("\n")
-                        elapsed = time.time() - t0
-                        logger.info(f"[perf] warm worker {task}: {elapsed:.2f}s")
-                        try:
-                            return json.loads(result_line)
-                        except json.JSONDecodeError as e:
-                            return {"error": f"Failed to parse worker output: {e}"}
-                    elif self.DONE_MARKER and line.startswith(self.DONE_MARKER):
-                        # The task's own process ended without an answer.
-                        return {"error": "Worker process died during execution"}
-                    else:
-                        kept += len(line)
-                        if kept < 16 * 1024 * 1024:  # bounded by size (#311, U4)
-                            output_lines.append(line)
-            finally:
-                sel.close()
+                    elapsed = time.time() - t0
+                    logger.info(f"[perf] warm worker {task}: {elapsed:.2f}s")
+                    try:
+                        return json.loads(result_line)
+                    except json.JSONDecodeError as e:
+                        return {"error": f"Failed to parse worker output: {e}"}
+                elif self.DONE_MARKER and line.startswith(self.DONE_MARKER):
+                    # The task's own process ended without an answer.
+                    return {"error": "Worker process died during execution"}
+                else:
+                    kept += len(line)
+                    if kept < 16 * 1024 * 1024:  # bounded by size (#311, U4)
+                        output_lines.append(line)
 
         except (BrokenPipeError, OSError) as e:
             logger.warning(f"Warm worker pipe error: {e}, restarting...")
             self._restart()
             return {"error": f"Worker communication error: {e}"}
+
+
+#: The longest line read from a worker; an answer is one line of JSON.
+_MAX_LINE = 64 * 1024 * 1024
 
 
 class _Lines:
@@ -336,6 +346,10 @@ class _Lines:
         import os
         import select
         while b"\n" not in self.buf:
+            if len(self.buf) > _MAX_LINE:
+                # A line longer than any answer: what a leftover writes.
+                # Dropped, so it can't grow without end (#311, V1).
+                self.buf = b""
             remaining = deadline - time.time()
             if remaining <= 0:
                 return None
