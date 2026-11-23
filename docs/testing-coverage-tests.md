@@ -1651,6 +1651,14 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - MDF export warns about known round-trip gaps › a shared mechanism and a WhenFinishedAny condition are named, with their upstream issues · CI · #83
 - MDF export warns about known round-trip gaps › a plain model gets no gap warnings · CI · #83
 
+**`frontend/e2e/ui-text-equivalence.spec.ts`** (Browser (Playwright))
+
+- built in the graph, typed as code: the same model (#319) › MappingProjection: two mechanisms placed and connected by dragging · CI · #319
+- built in the graph, typed as code: the same model (#319) › ControlProjection: a control mechanism placed, dragged onto a mechanism, gain chosen · CI · #319
+- built in the graph, typed as code: the same model (#319) › GatingProjection: a gating mechanism placed, dragged onto a mechanism, its input chosen · CI · #319
+- built in the graph, typed as code: the same model (#319) › LearningProjection: a pathway's learning mechanism dropped on another arrow · CI · #319
+- built in the graph, typed as code: the same model (#319) › into a nested composition: a mechanism dragged onto the folded composition · CI · #319
+
 **`backend/tests/mdf/test_condition_round_trip.py`** (Backend (pytest))
 
 - test_the_warning_matches_what_the_round_trip_does · CI · #85
@@ -1732,6 +1740,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - test_a_shared_component_comes_back_as_a_warning · CI · #83
 - test_a_plain_model_has_no_gaps_and_a_missing_file_is_404 · CI · #83
+
+**`backend/tests/test_model_equivalence.py`** (Backend (pytest))
+
+- test_what_the_graph_writes_is_what_a_modeller_types · CI · #319
+- test_a_model_that_differs_is_reported · CI · #319
 
 **`backend/tests/test_montague_reference_equivalence.py`** (Backend (pytest))
 
@@ -4650,6 +4663,14 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 **`frontend/e2e/read-only-badge-note.spec.ts`** (Browser (Playwright))
 
 - the read-only tag explains itself and offers Save a copy as… (#50) · CI · #50
+
+**`frontend/e2e/round-trips.spec.ts`** (Browser (Playwright))
+
+- round trips between the graph and the code (#319) › add a node: placed in the graph, written to the code, there after reopening · CI · #319
+- round trips between the graph and the code (#319) › delete a node: from the graph to the code and back; and from the code to the graph · CI · #319
+- round trips between the graph and the code (#319) › rename a node: in the Inspector, to the code and back; and in the code, to the graph · CI · #319
+- round trips between the graph and the code (#319) › connect: dragged in the graph, to the code and back; and typed in the code, to the graph · CI · #319
+- round trips between the graph and the code (#319) › a parameter: changed in the Inspector, to the code and back; and in the code, to the Inspector · CI · #319
 
 **`frontend/src/ciSpecs.test.ts`** (Frontend unit (vitest))
 
