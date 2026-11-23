@@ -1706,7 +1706,8 @@ export function Toolbar() {
 
       {/* Settings (gear icon) — opens sectioned settings panel (#119). Next to
           the name, where nothing a model adds to the toolbar can push it off
-          the edge; Layout ▸ Settings… and the Mac app's ⌘, open it too (#1279). */}
+          the edge; the Mac app's ⌘, opens it too (#1279). Not in the Layout menu
+          as well: one obvious way in (#109). */}
       <button
         onClick={() => openSettingsAt(null)}
         data-testid="settings-button"
@@ -1733,7 +1734,7 @@ export function Toolbar() {
       {/* Developer mode, visible whenever it is on (#1291). */}
       <DeveloperModeIndicator />
 
-      <LayoutMenu onOpenSettings={() => openSettingsAt(null)} />
+      <LayoutMenu />
 
       <WalkthroughMenu />
 
@@ -3643,7 +3644,7 @@ function WalkthroughMenu() {
   );
 }
 
-function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
+function LayoutMenu() {
   const codeVisible = useLayoutStore((s) => s.codeVisible);
   const graphVisible = useLayoutStore((s) => s.graphVisible);
   const bottomVisible = useLayoutStore((s) => s.bottomVisible);
@@ -3826,19 +3827,8 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
           <span style={{ display: "block", height: 1, background: "var(--pnv-border-faint)", margin: "4px 4px" }} />
           <TidyIoRowsMenuItem onDone={() => setOpen(false)} />
           <LockModelMenuItem onDone={() => setOpen(false)} />
-          <button
-            onClick={() => {
-              setOpen(false);
-              onOpenSettings();
-            }}
-            data-testid="layout-menu-settings"
-            title="Open Settings (also the ⚙ button)"
-            style={menuRowStyle(false)}
-            onMouseEnter={(e) => (e.currentTarget.style.background = MENU_ROW_HOVER)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-          >
-            Settings…
-          </button>
+          {/* #109: no Settings… here. One obvious way in: the ⚙ beside the
+              app name (and ⌘, in the Mac app). */}
         </div>
       )}
     </div>

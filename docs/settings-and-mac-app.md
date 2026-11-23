@@ -27,8 +27,8 @@ come to show different things. These rules keep that from happening again
 ## Settings
 
 1. **One Settings surface:** PsyNeuView's Settings. The ⚙ button (next to the
-   app name), **Layout ▸ Settings…** and, in the Mac app, **Settings… ⌘,** all
-   open it. The Mac app has no settings UI of its own.
+   app name) and, in the Mac app, **Settings… ⌘,** open it (#109: not the
+   Layout menu as well, one obvious way in). The Mac app has no settings UI of its own.
 2. **One control per setting.** A setting has exactly one home and one
    control. A second way to change it is a bug. The one allowed exception is
    a *simple view* of a Developer setting, which edits the same value

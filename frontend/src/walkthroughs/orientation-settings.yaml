@@ -18,10 +18,10 @@ steps:
     anchor:
       testid: settings-button
     instruct: >-
-      Open Settings with the gear. Layout ▸ Settings… and, in the Mac app, ⌘,
-      open the same window; there is only one.
+      Open Settings with the gear. In the Mac app, ⌘, opens the same window;
+      there is only one.
     say: >-
-      There is one Settings window, and three ways to open it.
+      There is one Settings window, and the gear opens it.
     done:
       visible: settings-panel
     act:
