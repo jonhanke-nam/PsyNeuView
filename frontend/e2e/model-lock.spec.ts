@@ -196,7 +196,7 @@ readOnlyTest("the lock items are hidden for a protected PsyNeuLink file (#1309)"
     await expect(lockTag(page)).toHaveCount(0);
     await docsShot(page, "managed-read-only", 190);
     await layoutButton(page).click();
-    await expect(page.getByTestId("layout-menu-settings")).toBeVisible();
+    await expect(page.getByTestId("layout-menu-list")).toBeVisible();
     await expect(lockMenuItem(page)).toHaveCount(0);
     await expect(page.getByText("This model", { exact: true })).toHaveCount(0);
     await shot(page, "04-protected-file-no-lock-items");

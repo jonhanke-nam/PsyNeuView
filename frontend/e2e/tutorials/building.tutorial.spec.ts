@@ -80,7 +80,7 @@ test.describe("Tutorial: Building a model", () => {
     // their nesting is a presentation choice that may well change, while
     // "type the name, click the result" is what a user does anyway.
     const palette = page.getByTestId("palette-sidebar");
-    await palette.getByPlaceholder("Search components...").fill("TransferMechanism");
+    await palette.getByPlaceholder("Search components…").fill("TransferMechanism");
     // Target the tooltip, not the visible text. The palette shows a short
     // display label ("Transfer"), while the tooltip is built from the actual
     // PsyNeuLink type — so this stays correct if the labels are reworded, and

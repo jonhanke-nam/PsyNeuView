@@ -126,7 +126,7 @@ test.describe("a layer's values as a grid (#1387)", { tag: "@ci" }, () => {
 
     // Reopen the working copy: the grid is remembered from its layout file.
     await page.getByTestId("open-menu").click();
-    await page.getByRole("button", { name: "Open from path..." }).click();
+    await page.getByRole("button", { name: "Open from path…" }).click();
     const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
     await prompt.fill(workingPath);
     const load = page.waitForResponse((r) => r.url().includes("/api/model/load") && r.ok());

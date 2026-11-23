@@ -47,7 +47,7 @@ await page.evaluate(([openPath, savePath]) => {
 // Open from path… goes straight to the native panel (no typed-path prompt).
 await page.getByRole("button", { name: /Open/ }).first().click();
 await page.waitForTimeout(200);
-await page.getByText("Open from path...", { exact: true }).click();
+await page.getByText("Open from path…", { exact: true }).click();
 await page.waitForFunction(
   (p) => window.__modelStore.getState().filePath === p,
   OPEN_TARGET,
@@ -101,7 +101,7 @@ await page.waitForTimeout(200);
 
 await page.getByRole("button", { name: /Open/ }).first().click();
 await page.waitForTimeout(200);
-await page.getByText("Open from path...", { exact: true }).click();
+await page.getByText("Open from path…", { exact: true }).click();
 await page.waitForTimeout(300);
 assert(await page.locator("input[placeholder='/path/to/model.py']").count() === 1,
   "fallback open: typed-path prompt appears without the bridge");

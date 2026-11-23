@@ -41,7 +41,7 @@ function scratchModel(): string {
 async function openModel(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(scratchModel());
   await prompt.press("Enter");
@@ -171,7 +171,7 @@ test("⇧1 does not fire while typing in a text field (#289)", { tag: "@ci" }, a
   // The Open-from-path box is an ordinary text field: ⇧1 types "!" there and
   // leaves the view alone.
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill("");
   await prompt.press("Shift+Digit1");

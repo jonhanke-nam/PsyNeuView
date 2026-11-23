@@ -46,6 +46,7 @@ gsc-row-selects-edge.spec.ts
 harness.spec.ts
 help-keyboard-shortcuts.spec.ts
 inspector-condition-undo.spec.ts
+inspector-legend.spec.ts
 io-role-rows.spec.ts
 layered-wide-boxes.spec.ts
 layout-default-fresh-profile.spec.ts

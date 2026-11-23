@@ -165,8 +165,19 @@ test.describe("graph hit areas (#250)", { tag: "@ci" }, () => {
       await openModel(page, file);
       await page.getByTestId("graph-view-options-button").click();
       const cims = page.getByTestId(VIEW_OPTION_IDS.CIMs);
-      if (!(await cims.isChecked())) await cims.click();
+      if (!(await cims.isChecked())) {
+        // Showing interface nodes reloads the model (POST /api/model/load),
+        // about 3 s on a CI runner. Sweep only once that has landed and the
+        // graph has settled: a sweep that overlaps it samples nodes React Flow
+        // has just remounted, hidden until measured, and every point falls
+        // through to the pane.
+        const reloaded = page.waitForResponse((r) => r.url().includes("/api/model/load") && r.request().method() === "POST", { timeout: 60_000 });
+        await cims.click();
+        await reloaded;
+      }
       await page.keyboard.press("Escape");
+      await expect(page.locator(".react-flow__node-cimNode").first()).toBeVisible({ timeout: 30_000 });
+      await expect(page.locator("html.pnv-busy")).toHaveCount(0, { timeout: 30_000 });
       await page.waitForTimeout(800);
       const problems: string[] = [];
       for (const zoom of ["fit", "out", "in"] as const) {

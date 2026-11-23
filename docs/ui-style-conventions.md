@@ -79,6 +79,11 @@ Menlo), never the bare generic `monospace`, which is Courier on macOS
 `kbd`; `styleConventions.test.ts` fails on a new bare `"monospace"` (the
 graph canvas's labels are listed there until they move over).
 
+**The ellipsis.** A label that opens something more (Open from path…,
+Rename…) and a status line in progress (Saving…) end in "…", the one
+character, as macOS writes it; never three dots (#109,
+`styleConventions.test.ts`).
+
 **Context menus stay in the window.** A menu opened at the pointer (the
 graph's node, arrow and canvas menus) places itself with
 `useMenuInWindow`: upward from the pointer near the bottom edge, to its

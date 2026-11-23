@@ -48,6 +48,16 @@ interface Diagnostics {
   notices?: string[];
 }
 
+/**
+ * The diagnostics bar's ground and edge (#109): amber when there is something
+ * to act on, the toolbar's neutral grey when there is not.
+ */
+export function diagnosticsBarColours(hasIssues: boolean): { background: string; borderBottom: string } {
+  return hasIssues
+    ? { background: "var(--pnv-warning-tint)", borderBottom: "1px solid var(--pnv-warning-border)" }
+    : { background: "var(--pnv-surface-muted)", borderBottom: "1px solid var(--pnv-border-faint)" };
+}
+
 export function DiagnosticPanel() {
   const diagnostics = useModelStore((s) => s.diagnostics) as Diagnostics | null;
   const filePath = useModelStore((s) => s.filePath);
@@ -71,16 +81,22 @@ export function DiagnosticPanel() {
   // the yellow "issues" state — that wrongly reads as an error (#423 follow-up).
   const notices = diagnostics.notices ?? [];
   const hasIssues = diagnostics.warnings.length > 0 || diagnostics.readOnlyVars.length > 0;
+  // #109: amber only for something to act on (a warning, a view-only node);
+  // otherwise the bar is the toolbar's neutral grey — a model that loaded
+  // cleanly, or one with only informational notices, needs no colour.
+  const barColours = diagnosticsBarColours(hasIssues);
 
   if (collapsed) {
     return (
       <div
         className="diagnostics-collapsed-bar"
         onClick={() => setCollapsed(false)}
+        data-tone={hasIssues ? "attention" : "neutral"}
+        // #109: the bar says it expands on hover, not in a line of text.
+        title="Model Diagnostics: click to expand"
         style={{
           padding: "3px 12px",
-          background: hasIssues ? "var(--pnv-warning-tint)" : "var(--pnv-success-tint)",
-          borderBottom: `1px solid ${hasIssues ? "var(--pnv-warning-border)" : "var(--pnv-success-border)"}`,
+          ...barColours,
           fontSize: "var(--pnv-fs-11)",
           color: "var(--pnv-text-muted)",
           cursor: "pointer",
@@ -111,9 +127,11 @@ export function DiagnosticPanel() {
             {diagnostics.warnings.length}
           </span>
         )}
-        <span style={{ marginLeft: "auto", color: "var(--pnv-text-faint)" }}>click to expand</span>
-        {/* #103: the file-watch status lives here, not in a row of its own. */}
-        <SyncIndicator />
+        {/* #103: the file-watch status lives here, not in a row of its own,
+            at the right end of the bar. */}
+        <span style={{ marginLeft: "auto", display: "flex" }}>
+          <SyncIndicator />
+        </span>
       </div>
     );
   }
@@ -122,8 +140,7 @@ export function DiagnosticPanel() {
     <div
       style={{
         padding: "8px 12px",
-        background: hasIssues ? "var(--pnv-warning-tint)" : "var(--pnv-success-tint)",
-        borderBottom: `1px solid ${hasIssues ? "var(--pnv-warning-border)" : "var(--pnv-success-border)"}`,
+        ...barColours,
         fontSize: "var(--pnv-fs-12)",
       }}
     >
@@ -380,7 +397,7 @@ function ConvertButton({ filePath }: { filePath: string }) {
         disabled={converting}
         style={{ marginTop: 6 }}
       >
-        {converting ? "Converting..." : "Convert to Standard Format"}
+        {converting ? "Converting…" : "Convert to Standard Format"}
       </Button>
 
       {/* Confirmation modal */}

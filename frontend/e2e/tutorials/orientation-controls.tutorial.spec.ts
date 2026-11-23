@@ -83,7 +83,7 @@ test.describe("The first-launch offer", () => {
     await expect(offer).toHaveCount(0);
     expect(await page.evaluate((k) => localStorage.getItem(k), ORIENTATION_OFFER_KEY)).toBe("later");
 
-    // Not again on the next launch...
+    // Not again on the next launch…
     await page.reload();
     await expect(page.getByTestId("app-toolbar")).toBeVisible();
     await page.waitForTimeout(2500);

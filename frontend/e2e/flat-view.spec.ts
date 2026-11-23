@@ -13,7 +13,7 @@ import { fixturePath } from "./fixtures";
 async function openNested(page: any, file = fixturePath("nested_minimal"), label = "nested_minimal.py") {
   await page.goto("/");
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(file);
   await prompt.press("Enter");

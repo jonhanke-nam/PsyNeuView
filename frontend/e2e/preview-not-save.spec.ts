@@ -35,7 +35,7 @@ function scratchModel() {
 async function openModel(page: any, model: string) {
   await page.goto("/");
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(model);
   await prompt.press("Enter");
@@ -95,7 +95,7 @@ test("an inspector edit commits the buffer first, not stale source (#1029)", { t
   const model = scratchModel();
   await openModel(page, model);
 
-  // An unsaved code edit sitting in the buffer...
+  // An unsaved code edit sitting in the buffer…
   await typeIntoEditor(page, `${BASE}\n${ADDED_NODE}\n`);
   await expect(page.locator('.react-flow__node[data-id^="extra_mech"]')).toBeVisible({
     timeout: 60_000,

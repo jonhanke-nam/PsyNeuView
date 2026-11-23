@@ -50,7 +50,7 @@ test("placement toggle migrates sidecars on disk (#933)", { tag: "@ci" }, async 
 
   await page.goto("/");
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(model);
   await prompt.press("Enter");
@@ -144,7 +144,7 @@ test("global placement default is followed, and stays out of the real prefs file
     await expect(select).toBeHidden();
 
     await page.getByRole("button", { name: /Open/ }).first().click();
-    await page.getByRole("button", { name: "Open from path..." }).click();
+    await page.getByRole("button", { name: "Open from path…" }).click();
     const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
     await prompt.fill(model);
     await prompt.press("Enter");
@@ -220,7 +220,7 @@ for (const { label, width, height } of [
     try {
       await page.goto("/");
       await page.getByRole("button", { name: /Open/ }).first().click();
-      await page.getByRole("button", { name: "Open from path..." }).click();
+      await page.getByRole("button", { name: "Open from path…" }).click();
       const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
       await prompt.fill(model);
       await prompt.press("Enter");

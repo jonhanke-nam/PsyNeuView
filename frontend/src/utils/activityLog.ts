@@ -267,7 +267,7 @@ export function scrub(value: unknown, depth = 0): unknown {
  * Record a menu item being chosen, from a click anywhere in a menu's list:
  * `onClickCapture={(e) => recordMenuClick("Open", e)}` on the list is the one
  * wiring a menu needs. The entry is the item's label ("Open › Open from
- * path..."), which for a model is its name — allowed; its contents are not.
+ * path…"), which for a model is its name — allowed; its contents are not.
  */
 export function recordMenuClick(menu: string, e: { target: EventTarget | null }): void {
   const target = e.target as Element | null;

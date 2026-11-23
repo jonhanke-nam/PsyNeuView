@@ -171,7 +171,7 @@ export function PaletteSidebar() {
         <div style={{ padding: "8px 12px 4px", flexShrink: 0 }}>
           <input
             type="text"
-            placeholder="Search components..."
+            placeholder="Search components…"
             value={searchQuery}
             onChange={(e) => usePaletteStore.getState().setSearchQuery(e.target.value)}
             style={{
