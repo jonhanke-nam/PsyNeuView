@@ -9,7 +9,7 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 158 | 430 | 380 tests in 137 files |
+| Browser (Playwright) | 158 | 430 | 421 tests in 153 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 134 | 1203 | 1203 tests in 134 files |
 | Backend (pytest) | 188 | 1747 | 1747 tests in 188 files |
@@ -23,18 +23,18 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Tutorials and guided walkthroughs](#tutorials) | 13 files, 57 tests | 35 files, 80 tests | 13 files, 219 tests | 2 files, 18 tests | 374 of 374 |
 | AI assistant | – | – | – | – | **no tests** |
 | [Matching show_graph](#showgraph) | 8 files, 19 tests | – | 8 files, 66 tests | 5 files, 34 tests | 118 of 119 |
-| [Dragging and pointer interaction](#pointer) | 17 files, 53 tests | – | 6 files, 37 tests | – | 88 of 90 |
+| [Dragging and pointer interaction](#pointer) | 17 files, 53 tests | – | 6 files, 37 tests | – | 90 of 90 |
 | [Building models in the UI](#building) | 3 files, 6 tests | – | 1 files, 9 tests | 13 files, 145 tests | 160 of 160 |
-| [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 357 of 362 |
+| [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 362 of 362 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
 | [Running, learning and debugging](#running) | 9 files, 26 tests | – | 8 files, 84 tests | 51 files, 252 tests | 362 of 362 |
-| [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 286 of 304 |
-| [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 166 of 168 |
-| [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 54 tests | – | 28 files, 262 tests | 19 files, 322 tests | 626 of 638 |
+| [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
+| [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
+| [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 54 tests | – | 28 files, 262 tests | 19 files, 322 tests | 638 of 638 |
 | [Look and style conventions](#style) | 13 files, 31 tests | – | 8 files, 47 tests | – | 76 of 78 |
 | [Layout, views and compositions](#layout) | 21 files, 47 tests | – | 21 files, 151 tests | 5 files, 56 tests | 253 of 254 |
-| [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 180 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 13 files, 78 tests | 18 files, 194 tests | 287 of 291 |
+| [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
+| [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 13 files, 78 tests | 18 files, 194 tests | 288 of 291 |
 
 <a id="tutorials"></a>
 
@@ -321,7 +321,7 @@ No tests yet.
 | `drag-to-connect-stage2.spec.ts` | Browser | 5 | yes | #253 | Drag to connect, second part (#253). |
 | `drag-to-connect-stage3.spec.ts` | Browser | 4 | yes | #253 | Drag to connect, third part (#253): the type follows the sender. |
 | `drag-to-connect.spec.ts` | Browser | 4 | yes | #253 | Draw a projection by dragging from one node to another (#253, stage 1). |
-| `edge-bend-drag.spec.ts` | Browser | 2 | no | #975, #951, #957 | Edge shaping must not pan the canvas (#975, #951, #957). |
+| `edge-bend-drag.spec.ts` | Browser | 2 | yes | #975, #951, #957 | Edge shaping must not pan the canvas (#975, #951, #957). |
 | `edge-curve-handles.spec.ts` | Browser | 1 | yes | #39 | Shaping a Smooth arrow with tangent handles (#39). |
 | `edge-shaping-auto-layout.spec.ts` | Browser | 1 | yes | #41, #164 | Shaping an arrow in Layout: Auto (#41, #164). |
 | `graph-arrow-menus.spec.ts` | Browser | 4 | yes | #261 | The rest of #261's menus: an arrow (a projection) can be renamed and deleted from its menu, and a scheduling arrow's menu, opened from the arrow or its label, edits or deletes its condition. |
@@ -360,8 +360,8 @@ No tests yet.
 | drag from one node to another to connect them (#253) › into a node with several inputs: it asks which | `drag-to-connect.spec.ts` | Browser | yes | #253 |
 | drag from one node to another to connect them (#253) › from a control mechanism: it asks which parameter, and Escape writes nothing | `drag-to-connect.spec.ts` | Browser | yes | #253 |
 | drag from one node to another to connect them (#253) › a plain click on a node still selects it | `drag-to-connect.spec.ts` | Browser | yes | #253 |
-| edge shaping does not pan the canvas (#975) › dragging an unselected edge bends it and leaves the viewport put | `edge-bend-drag.spec.ts` | Browser | no | #975 |
-| edge shaping does not pan the canvas (#975) › dragging a bend handle on a selected edge does not pan | `edge-bend-drag.spec.ts` | Browser | no | #975 |
+| edge shaping does not pan the canvas (#975) › dragging an unselected edge bends it and leaves the viewport put | `edge-bend-drag.spec.ts` | Browser | yes | #975 |
+| edge shaping does not pan the canvas (#975) › dragging a bend handle on a selected edge does not pan | `edge-bend-drag.spec.ts` | Browser | yes | #975 |
 | a selected Smooth arrow shows handles; dragging one shapes the curve, saved and one Undo (#39) | `edge-curve-handles.spec.ts` | Browser | yes | #39 |
 | a drag on an arrow in Auto makes the layout Custom and bends it; saved, and one Undo (#164) | `edge-shaping-auto-layout.spec.ts` | Browser | yes | #164 |
 | arrow menus (#261) › Rename… renames the projection in the file | `graph-arrow-menus.spec.ts` | Browser | yes | #261 |
@@ -443,8 +443,8 @@ No tests yet.
 
 | File | Layer | Tests | In CI | Issues | What it checks |
 |---|---|---|---|---|---|
-| `apply-only-when-needed.spec.ts` | Browser | 2 | no | #1303 | Apply & restart appears only when there is something to apply (#1303). |
-| `editor-drag-select.spec.ts` | Browser | 3 | no | #1094 | Dragging the mouse in the code editor must not raise an error (#1094). |
+| `apply-only-when-needed.spec.ts` | Browser | 2 | yes | #1303 | Apply & restart appears only when there is something to apply (#1303). |
+| `editor-drag-select.spec.ts` | Browser | 3 | yes | #1094 | Dragging the mouse in the code editor must not raise an error (#1094). |
 | `external-edit-sync.spec.ts` | Browser | 2 | yes | #926 | The two-headed workflow: PsyNeuView open beside an external editor (#926). |
 | `inspector-condition-undo.spec.ts` | Browser | 3 | yes | #1369 | Removing a condition in the Inspector is its own undo step (#1369). |
 | `inspector-legend.spec.ts` | Browser | 1 | yes | #109 | The Inspector's legend shows only while something is customized (#109). |
@@ -499,11 +499,11 @@ No tests yet.
 
 | Test | File | Layer | In CI | Issue |
 |---|---|---|---|---|
-| Developer: no button until a valid choice differs from what's installed; gone again after applying | `apply-only-when-needed.spec.ts` | Browser | no | #1303 |
-| Developer: picking the installed release is nothing to apply; another release is | `apply-only-when-needed.spec.ts` | Browser | no | #1303 |
-| drag-selecting text, forwards and backwards, raises nothing (#1094) | `editor-drag-select.spec.ts` | Browser | no | #1094 |
-| dragging a selection to move it raises nothing (#1094) | `editor-drag-select.spec.ts` | Browser | no | #1094 |
-| dragging a selection out onto the canvas raises nothing (#1094) | `editor-drag-select.spec.ts` | Browser | no | #1094 |
+| Developer: no button until a valid choice differs from what's installed; gone again after applying | `apply-only-when-needed.spec.ts` | Browser | yes | #1303 |
+| Developer: picking the installed release is nothing to apply; another release is | `apply-only-when-needed.spec.ts` | Browser | yes | #1303 |
+| drag-selecting text, forwards and backwards, raises nothing (#1094) | `editor-drag-select.spec.ts` | Browser | yes | #1094 |
+| dragging a selection to move it raises nothing (#1094) | `editor-drag-select.spec.ts` | Browser | yes | #1094 |
+| dragging a selection out onto the canvas raises nothing (#1094) | `editor-drag-select.spec.ts` | Browser | yes | #1094 |
 | an external edit lands on the canvas when nothing here is unsaved (#926) | `external-edit-sync.spec.ts` | Browser | yes | #926 |
 | an external edit on top of unsaved edits blocks and asks (#926) | `external-edit-sync.spec.ts` | Browser | yes | #926 |
 | Inspector condition removes record their own undo step (#1369) › remove a graph-structure condition, undo: it is back, the file is not rewritten | `inspector-condition-undo.spec.ts` | Browser | yes | #1369 |
@@ -695,14 +695,14 @@ No tests yet.
 | File | Layer | Tests | In CI | Issues | What it checks |
 |---|---|---|---|---|---|
 | `_measure-undo-memory.spec.ts` | Browser | 1 | no | #558 | Manual measurement harness (#558): how much heap one History step holds on a large model, whole and compact, against the store's own estimate. |
-| `autosave-delay-commit.spec.ts` | Browser | 1 | no | #37 | #37: the delay typed in Settings must take effect however Settings is closed, not only after Enter. |
-| `autosave.spec.ts` | Browser | 5 | no | #1347 | Autosave as a setting (#1347). |
-| `changes-since-save.spec.ts` | Browser | 3 | no | #1348 | Changes since save (#1348): what the unsaved changes are, against the file on disk now. |
+| `autosave-delay-commit.spec.ts` | Browser | 1 | yes | #37 | #37: the delay typed in Settings must take effect however Settings is closed, not only after Enter. |
+| `autosave.spec.ts` | Browser | 5 | yes | #1347 | Autosave as a setting (#1347). |
+| `changes-since-save.spec.ts` | Browser | 3 | yes | #1348 | Changes since save (#1348): what the unsaved changes are, against the file on disk now. |
 | `composition-frame-undo.spec.ts` | Browser | 3 | yes | #194 | Undo after a composition frame button (#194): Enter, Inset and Collapse. |
-| `protection-line.spec.ts` | Browser | 3 | no | #1346 | A protection line in the model's own .py (#1346, part 2). |
+| `protection-line.spec.ts` | Browser | 3 | yes | #1346 | A protection line in the model's own .py (#1346, part 2). |
 | `restore-saved-layout.spec.ts` | Browser | 2 | yes | #614 | A saved custom layout is restored on open (#614). |
-| `save-copy-sidecars.spec.ts` | Browser | 2 | no | #1244 | Save a copy as .py carries the layout and label files along (#1244). |
-| `saves-in-history.spec.ts` | Browser | 3 | no | #1349 | Saves in History, and reverting to one (#1349). |
+| `save-copy-sidecars.spec.ts` | Browser | 2 | yes | #1244 | Save a copy as .py carries the layout and label files along (#1244). |
+| `saves-in-history.spec.ts` | Browser | 3 | yes | #1349 | Saves in History, and reverting to one (#1349). |
 | `sidecar-placement.spec.ts` | Browser | 3 | yes | #933 | Sidecar placement toggle actually moves files (#933). |
 | `undo-depth.spec.ts` | Browser | 1 | yes | #558 | Undo as far back as the session goes (#558). |
 | `undo-notices.spec.ts` | Browser | 2 | yes | #1377 | Undo and redo: one notice for a burst, not one per step (#1377). |
@@ -732,28 +732,28 @@ No tests yet.
 | Test | File | Layer | In CI | Issue |
 |---|---|---|---|---|
 | measure History memory per step: ${tag} | `_measure-undo-memory.spec.ts` | Browser | no | #558 |
-| autosave delay typed in Settings is kept when Settings closes with Escape | `autosave-delay-commit.spec.ts` | Browser | no | #37 |
-| autosave (#1347) › off by default: an edit is not written, however long you wait | `autosave.spec.ts` | Browser | no | #1347 |
-| autosave (#1347) › on, after N idle seconds the file is saved, and the status says so | `autosave.spec.ts` | Browser | no | #1347 |
-| autosave (#1347) › on, code with an error waits instead of being written | `autosave.spec.ts` | Browser | no | #1347 |
-| autosave (#1347) › a locked model is not autosaved | `autosave.spec.ts` | Browser | no | #1347 |
-| autosave (#1347) › a change on disk is never overwritten: paused while asked, and after Keep my changes | `autosave.spec.ts` | Browser | no | #1347 |
-| Changes since save (#1348) › edit, then the orange dot shows the change and its counts | `changes-since-save.spec.ts` | Browser | no | #1348 |
-| Changes since save (#1348) › save, then History's Changes since save says No changes | `changes-since-save.spec.ts` | Browser | no | #1348 |
-| Changes since save (#1348) › a change made outside PsyNeuView is called out at the top | `changes-since-save.spec.ts` | Browser | no | #1348 |
+| autosave delay typed in Settings is kept when Settings closes with Escape | `autosave-delay-commit.spec.ts` | Browser | yes | #37 |
+| autosave (#1347) › off by default: an edit is not written, however long you wait | `autosave.spec.ts` | Browser | yes | #1347 |
+| autosave (#1347) › on, after N idle seconds the file is saved, and the status says so | `autosave.spec.ts` | Browser | yes | #1347 |
+| autosave (#1347) › on, code with an error waits instead of being written | `autosave.spec.ts` | Browser | yes | #1347 |
+| autosave (#1347) › a locked model is not autosaved | `autosave.spec.ts` | Browser | yes | #1347 |
+| autosave (#1347) › a change on disk is never overwritten: paused while asked, and after Keep my changes | `autosave.spec.ts` | Browser | yes | #1347 |
+| Changes since save (#1348) › edit, then the orange dot shows the change and its counts | `changes-since-save.spec.ts` | Browser | yes | #1348 |
+| Changes since save (#1348) › save, then History's Changes since save says No changes | `changes-since-save.spec.ts` | Browser | yes | #1348 |
+| Changes since save (#1348) › a change made outside PsyNeuView is called out at the top | `changes-since-save.spec.ts` | Browser | yes | #1348 |
 | undo after a composition frame button (#194) › Enter, then Undo: the flattened view again, with EM's frame; Redo enters again | `composition-frame-undo.spec.ts` | Browser | yes | #194 |
 | undo after a composition frame button (#194) › Collapse, then Undo: EM open in the flattened view again; Redo folds it | `composition-frame-undo.spec.ts` | Browser | yes | #194 |
 | undo after a composition frame button (#194) › Inset, then Undo: EM nested and open again; Redo insets it | `composition-frame-undo.spec.ts` | Browser | yes | #194 |
-| a protected file opens read only, unlocks from the tag, and stays unlocked after reopening (#1346) | `protection-line.spec.ts` | Browser | no | #1346 |
-| a permanently protected file offers no unlock, refuses a save, and becomes editable when the line is removed on disk (#1346) | `protection-line.spec.ts` | Browser | no | #1346 |
-| Save a copy as… from a permanently protected file: the copy starts unprotected (#1346) | `protection-line.spec.ts` | Browser | no | #1346 |
+| a protected file opens read only, unlocks from the tag, and stays unlocked after reopening (#1346) | `protection-line.spec.ts` | Browser | yes | #1346 |
+| a permanently protected file offers no unlock, refuses a save, and becomes editable when the line is removed on disk (#1346) | `protection-line.spec.ts` | Browser | yes | #1346 |
+| Save a copy as… from a permanently protected file: the copy starts unprotected (#1346) | `protection-line.spec.ts` | Browser | yes | #1346 |
 | restore saved layout on open (#614) › a model with a saved sidecar opens in Custom layout | `restore-saved-layout.spec.ts` | Browser | yes | #614 |
 | restore saved layout on open (#614) › re-opening the same model re-picks Custom after a manual switch to Auto (#906) | `restore-saved-layout.spec.ts` | Browser | yes | #614 |
-| the copy gets the layout and labels, named to match, and starts unlocked (#1244) | `save-copy-sidecars.spec.ts` | Browser | no | #1244 |
-| a layout file already at the destination gets the same overwrite question as the .py (#1244) | `save-copy-sidecars.spec.ts` | Browser | no | #1244 |
-| Saves in History (#1349) › two saves, undo past the latest, revert to the earlier one | `saves-in-history.spec.ts` | Browser | no | #1349 |
-| Saves in History (#1349) › pick an earlier save in History and revert to it | `saves-in-history.spec.ts` | Browser | no | #1349 |
-| Saves in History (#1349) › with autosave on, its saves are marked automatic | `saves-in-history.spec.ts` | Browser | no | #1349 |
+| the copy gets the layout and labels, named to match, and starts unlocked (#1244) | `save-copy-sidecars.spec.ts` | Browser | yes | #1244 |
+| a layout file already at the destination gets the same overwrite question as the .py (#1244) | `save-copy-sidecars.spec.ts` | Browser | yes | #1244 |
+| Saves in History (#1349) › two saves, undo past the latest, revert to the earlier one | `saves-in-history.spec.ts` | Browser | yes | #1349 |
+| Saves in History (#1349) › pick an earlier save in History and revert to it | `saves-in-history.spec.ts` | Browser | yes | #1349 |
+| Saves in History (#1349) › with autosave on, its saves are marked automatic | `saves-in-history.spec.ts` | Browser | yes | #1349 |
 | placement toggle migrates sidecars on disk (#933) | `sidecar-placement.spec.ts` | Browser | yes | #933 |
 | global placement default is followed, and stays out of the real prefs file (#1025) | `sidecar-placement.spec.ts` | Browser | yes | #1025 |
 | the placement picker is clickable in ${label} (#1211) | `sidecar-placement.spec.ts` | Browser | yes | #1211 |
@@ -773,7 +773,7 @@ No tests yet.
 | `app-update-notice.spec.ts` | Browser | 6 | yes |  | An app update is waiting (PsyNeuView-MacApp#6). |
 | `mac-app-settings-section.spec.ts` | Browser | 6 | yes | #1279, #1290 | One Settings: the Mac app's parts (PsyNeuView-MacApp#200, #1279, #1290). |
 | `project-folder-move.spec.ts` | Browser | 1 | yes | #1295 | Move… moves My Project Folder, and the Open menu follows (#1295). |
-| `whats-running.spec.ts` | Browser | 2 | no | #1356 | Settings ▸ About says what PsyNeuView is running and from where (#1356). |
+| `whats-running.spec.ts` | Browser | 2 | yes | #1356 | Settings ▸ About says what PsyNeuView is running and from where (#1356). |
 | `PresenceIndicator.test.ts` | Frontend unit | 4 | yes |  |  |
 | `appUpdateNotice.test.ts` | Frontend unit | 13 | yes |  |  |
 | `macAppSettings.test.ts` | Frontend unit | 7 | yes |  | The suite runs on node (vitest.config.ts): `window` is an EventTarget, with the Mac app's message handler stubbed onto it where a test needs one. |
@@ -807,8 +807,8 @@ No tests yet.
 | the Mac app's Settings… (⌘,) opens this Settings, even before the page is ready | `mac-app-settings-section.spec.ts` | Browser | yes | #1279 |
 | inside the Mac app, Problem reports' two settings go through the bridge | `mac-app-settings-section.spec.ts` | Browser | yes | #1279 |
 | Move… carries the models and sidecars, and lists them from the new place | `project-folder-move.spec.ts` | Browser | yes | #1295 |
-| Settings ▸ About: what's running › names the version, the checkout it runs from, its branch and commit, and the page's build | `whats-running.spec.ts` | Browser | no | #1356 |
-| Settings ▸ About: what's running › the Mac app's included copy, and a page older than the server | `whats-running.spec.ts` | Browser | no | #1356 |
+| Settings ▸ About: what's running › names the version, the checkout it runs from, its branch and commit, and the page's build | `whats-running.spec.ts` | Browser | yes | #1356 |
+| Settings ▸ About: what's running › the Mac app's included copy, and a page older than the server | `whats-running.spec.ts` | Browser | yes | #1356 |
 
 </details>
 
@@ -821,14 +821,14 @@ No tests yet.
 | `blank-screen-setting.spec.ts` | Browser | 10 | yes | #215 | A blank screen by choice (#215): Settings ▸ Appearance ▸ Panels. |
 | `components-panel-start-setting.spec.ts` | Browser | 2 | yes | #113 | How the Components panel opens is a setting: Settings ▸ Appearance (#113). |
 | `help-keyboard-shortcuts.spec.ts` | Browser | 4 | yes | #292 | Help ▸ Keyboard Shortcuts (#292). |
-| `keep-pnl-current.spec.ts` | Browser | 4 | no | #1304 | Keep PsyNeuLink current and show it (#1304). |
-| `local-checkout-empty-folder.spec.ts` | Browser | 3 | no | #1342 | Another local checkout…: the folder is checked as soon as it is typed, and an empty one can have PsyNeuLink downloaded into it (#1342). |
+| `keep-pnl-current.spec.ts` | Browser | 4 | yes | #1304 | Keep PsyNeuLink current and show it (#1304). |
+| `local-checkout-empty-folder.spec.ts` | Browser | 3 | yes | #1342 | Another local checkout…: the folder is checked as soon as it is typed, and an empty one can have PsyNeuLink downloaded into it (#1342). |
 | `open-menu-follows-source-switch.spec.ts` | Browser | 1 | yes | #1395 | The Open menu describes the PsyNeuLink that is installed now (#1395). |
 | `own-checkout-editable.spec.ts` | Browser | 2 | yes | #1305 | Your own PsyNeuLink checkout is editable; a PsyNeuLink that PsyNeuView manages is not (#1305). |
 | `pnl-record-mismatch.spec.ts` | Browser | 3 | yes | #16 | In the Mac app, Settings ▸ Developer says when the app's saved PsyNeuLink choice disagrees with what is installed, and one button makes what's installed the saved choice (PsyNeuView-MacApp#9, #16). |
 | `pnl-source-list-switch.spec.ts` | Browser | 4 | yes | #1276, #1331 | Settings names the current PsyNeuLink correctly and switches between the known sources through one "Switch to" dropdown (#1276, #1331). |
 | `pnl-source-switch-refreshes-library.spec.ts` | Browser | 1 | yes | #1253 | Switching the PsyNeuLink source refreshes the Open menu's Library (#1253). |
-| `pnl-switch-list-folded.spec.ts` | Browser | 5 | no | #1334 | The Switch to list folds into groups (#1334). |
+| `pnl-switch-list-folded.spec.ts` | Browser | 5 | yes | #1334 | The Switch to list folds into groups (#1334). |
 | `pnl-version-choice.spec.ts` | Browser | 2 | yes | #1295 | General ▸ PsyNeuLink version: the simple view of which PsyNeuLink is installed (#1295 round 4). |
 | `settings-panel.spec.ts` | Browser | 4 | yes | #1288, #1290 | Settings: how it opens and closes (#1288), and its sections (#1290). |
 | `settings-search.spec.ts` | Browser | 6 | yes | #271 | Settings search (#271): a field at the top of Settings finds a setting by its name, its section or the words people use for it, and takes you there. |
@@ -902,13 +902,13 @@ No tests yet.
 | Help ▸ Keyboard Shortcuts › ⌘/ (Ctrl+/) and ? open it; ? does nothing while typing | `help-keyboard-shortcuts.spec.ts` | Browser | yes | #292 |
 | Help ▸ Keyboard Shortcuts › a rebound shortcut is marked changed with its default; Reset all clears it; each page links to the other | `help-keyboard-shortcuts.spec.ts` | Browser | yes | #292 |
 | Help ▸ Keyboard Shortcuts › Help's other items open the Tutorials menu and Settings ▸ About | `help-keyboard-shortcuts.spec.ts` | Browser | yes | #292 |
-| General: behind shows the count and when it was checked; Check now asks the backend; off removes the ready note | `keep-pnl-current.spec.ts` | Browser | no | #1304 |
-| General: up to date, and a failed automatic update is shown with the version kept | `keep-pnl-current.spec.ts` | Browser | no | #1304 |
-| General: an official release is told about a newer release, with no automatic-update switch | `keep-pnl-current.spec.ts` | Browser | no | #1304 |
-| Developer: each checkout has its two switches, off by default, naming the remote branch; a refused pull is said | `keep-pnl-current.spec.ts` | Browser | no | #1304 |
-| an empty folder: the offer to download PsyNeuLink appears, and Apply downloads it | `local-checkout-empty-folder.spec.ts` | Browser | no | #1342 |
-| a folder that doesn't exist yet is offered the download too | `local-checkout-empty-folder.spec.ts` | Browser | no | #1342 |
-| a folder of other files: the reason under the field, and no Apply | `local-checkout-empty-folder.spec.ts` | Browser | no | #1342 |
+| General: behind shows the count and when it was checked; Check now asks the backend; off removes the ready note | `keep-pnl-current.spec.ts` | Browser | yes | #1304 |
+| General: up to date, and a failed automatic update is shown with the version kept | `keep-pnl-current.spec.ts` | Browser | yes | #1304 |
+| General: an official release is told about a newer release, with no automatic-update switch | `keep-pnl-current.spec.ts` | Browser | yes | #1304 |
+| Developer: each checkout has its two switches, off by default, naming the remote branch; a refused pull is said | `keep-pnl-current.spec.ts` | Browser | yes | #1304 |
+| an empty folder: the offer to download PsyNeuLink appears, and Apply downloads it | `local-checkout-empty-folder.spec.ts` | Browser | yes | #1342 |
+| a folder that doesn't exist yet is offered the download too | `local-checkout-empty-folder.spec.ts` | Browser | yes | #1342 |
+| a folder of other files: the reason under the field, and no Apply | `local-checkout-empty-folder.spec.ts` | Browser | yes | #1342 |
 | Open menu after a PsyNeuLink source switch › reopening the menu shows the new install without a reload | `open-menu-follows-source-switch.spec.ts` | Browser | yes | #1395 |
 | your own checkout is editable by default; protecting it is a choice (#1305) | `own-checkout-editable.spec.ts` | Browser | yes | #1305 |
 | a managed PsyNeuLink (GitHub) is read only, with the reason and the way out (#1305) | `own-checkout-editable.spec.ts` | Browser | yes | #1305 |
@@ -920,11 +920,11 @@ No tests yet.
 | Another local checkout…: Path with Choose… through the Mac app's bridge; an empty path shows no Apply | `pnl-source-list-switch.spec.ts` | Browser | yes | #1276 |
 | in a browser there is no Choose…, and typing the path is the way | `pnl-source-list-switch.spec.ts` | Browser | yes | #1276 |
 | a source switch in Settings points the Library at the new install | `pnl-source-switch-refreshes-library.spec.ts` | Browser | yes | #1253 |
-| the list opens short: Another… first, only the group in use open, a folded group saying it holds the one in use | `pnl-switch-list-folded.spec.ts` | Browser | no | #1334 |
-| unfolding a repo shows its branches alone; picking one shows the full source and Apply | `pnl-switch-list-folded.spec.ts` | Browser | no | #1334 |
-| the releases: the newest five, then Show older reveals the rest, the incompatible ones disabled with the reason | `pnl-switch-list-folded.spec.ts` | Browser | no | #1334 |
-| keyboard: Up and Down over headings and rows, Right and Left unfold and fold, Enter picks, Escape closes | `pnl-switch-list-folded.spec.ts` | Browser | no | #1334 |
-| nothing matches what is in use: every group starts folded | `pnl-switch-list-folded.spec.ts` | Browser | no | #1334 |
+| the list opens short: Another… first, only the group in use open, a folded group saying it holds the one in use | `pnl-switch-list-folded.spec.ts` | Browser | yes | #1334 |
+| unfolding a repo shows its branches alone; picking one shows the full source and Apply | `pnl-switch-list-folded.spec.ts` | Browser | yes | #1334 |
+| the releases: the newest five, then Show older reveals the rest, the incompatible ones disabled with the reason | `pnl-switch-list-folded.spec.ts` | Browser | yes | #1334 |
+| keyboard: Up and Down over headings and rows, Right and Left unfold and fold, Enter picks, Escape closes | `pnl-switch-list-folded.spec.ts` | Browser | yes | #1334 |
+| nothing matches what is in use: every group starts folded | `pnl-switch-list-folded.spec.ts` | Browser | yes | #1334 |
 | Latest development is selected and in use by default; choosing Official explains and posts the same install | `pnl-version-choice.spec.ts` | Browser | yes | #1295 |
 | a custom source shows the Custom line and a link to Developer, not radios | `pnl-version-choice.spec.ts` | Browser | yes | #1295 |
 | Settings: closing › Escape closes it; the × stays visible after scrolling and closes it | `settings-panel.spec.ts` | Browser | yes | #1288 |
@@ -1125,10 +1125,10 @@ No tests yet.
 |---|---|---|---|---|---|
 | `_measure-load-latency.spec.ts` | Browser | 1 | no | #864 | Manual measurement harness (#864) — quantifies where model-load latency goes end-to-end: click -&gt; backend introspect -&gt; response -&gt; frontend build/layout -&gt; React Flow paint. |
 | `developer-tests-loader.spec.ts` | Browser | 3 | yes | #274, #249 | E2E smoke for the "Open ▾ → Developer / Tests…" modal (#274 / Phase 3 of #249). |
-| `diagnostics-load-messages.spec.ts` | Browser | 1 | no | #879 | #879: load-time messages (version mismatch, module-level-driver notices) are surfaced persistently in the Model Diagnostics bar for EVERY load path — including reference models, which previously dropped them silently… |
+| `diagnostics-load-messages.spec.ts` | Browser | 1 | yes | #879 | #879: load-time messages (version mismatch, module-level-driver notices) are surfaced persistently in the Model Diagnostics bar for EVERY load path — including reference models, which previously dropped them silently… |
 | `drop-new-model-file.spec.ts` | Browser | 1 | yes | #227 | Dropping a .py file the models folder has never seen (#227). |
 | `github-file-loader.spec.ts` | Browser | 2 | yes | #258 | E2E smoke for the "Open ▾ → From GitHub repo…" modal (#258). |
-| `load-time-display.spec.ts` | Browser | 1 | no | #874 | #874: model load time is surfaced in the UI. |
+| `load-time-display.spec.ts` | Browser | 1 | yes | #874 | #874: model load time is surfaced in the UI. |
 | `open-menu-custom-catalogs.spec.ts` | Browser | 1 | yes | #1229 | Your own catalogs in the Open menu, and My Project Folder (#1229). |
 | `open-menu-dev-catalogs.spec.ts` | Browser | 4 | yes | #1228 | Catalogs under development stay out of the Open menu unless asked for (#1228). |
 | `open-menu-examples-probe.spec.ts` | Browser | 2 | yes | #175 | Opening the Open menu asks the server for nothing slow (#175). |
@@ -1165,11 +1165,11 @@ No tests yet.
 | @smoke developer tests loader › dropdown → modal → pick test → save-as round-trips through extract | `developer-tests-loader.spec.ts` | Browser | yes | #274 |
 | @smoke developer tests loader › 422 unextractable greys the row inline (no global toast) | `developer-tests-loader.spec.ts` | Browser | yes | #274 |
 | @smoke developer tests loader › Developer / Tests… entry is hidden when developer mode is off | `developer-tests-loader.spec.ts` | Browser | yes | #274 |
-| surfaces a reference model's version-mismatch warning in the Diagnostics bar | `diagnostics-load-messages.spec.ts` | Browser | no | #879 |
+| surfaces a reference model's version-mismatch warning in the Diagnostics bar | `diagnostics-load-messages.spec.ts` | Browser | yes | #879 |
 | dropping a new .py file (#227) › a file whose name is not in the models folder is created there and opens | `drop-new-model-file.spec.ts` | Browser | yes | #227 |
 | @smoke github file loader › dropdown → modal → pick path → Open round-trips through save-as | `github-file-loader.spec.ts` | Browser | yes | #258 |
 | @smoke github file loader › Escape closes the modal | `github-file-loader.spec.ts` | Browser | yes | #258 |
-| surfaces model load time in the Model Diagnostics bar | `load-time-display.spec.ts` | Browser | no | #874 |
+| surfaces model load time in the Model Diagnostics bar | `load-time-display.spec.ts` | Browser | yes | #874 |
 | Open menu: your own catalogs › a folder added in Settings is a section, and removing it leaves the files | `open-menu-custom-catalogs.spec.ts` | Browser | yes | #1229 |
 | Open menu: catalogs under development › hidden by default, leaving My Project Folder and the PsyNeuLink Library | `open-menu-dev-catalogs.spec.ts` | Browser | yes | #1228 |
 | Open menu: catalogs under development › shown in developer mode, marked under development | `open-menu-dev-catalogs.spec.ts` | Browser | yes | #1228 |
@@ -1201,7 +1201,7 @@ No tests yet.
 | `diagnostics.spec.ts` | Browser | 2 | yes | #1287 | Diagnostics (#1287): `window.__pnvDiagnostics` answers with the page's state and the activity since launch, and Settings ▸ About downloads the same object as a JSON file in a browser. |
 | `docs-shots-saving.spec.ts` | Browser | 2 | no | #662 | Docs pictures for saving and changes since save (#662). |
 | `harness.spec.ts` | Browser | 1 | yes | #147 | Proves the test harness wiring end-to-end (#147): playwright.config env vars → backend in test mode → /api/test/reset open → mutatingTest fixture fires it. |
-| `notification-dwell.spec.ts` | Browser | 1 | no | #879 | #879: info/success toasts dwell long enough to read. |
+| `notification-dwell.spec.ts` | Browser | 1 | yes | #879 | #879: info/success toasts dwell long enough to read. |
 | `pycharm-live.local.spec.ts` | Browser | 1 | no |  | LOCAL ONLY — the full two-headed loop with a real PyCharm. |
 | `read-only-badge-note.spec.ts` | Browser | 1 | yes | #50 | Clicking the "PsyNeuLink from … · read only" tag explains it (#50). |
 | `round-trips.spec.ts` | Browser | 5 | yes | #319 | Round trips: an edit in the graph reaches the code and survives a reload; an edit in the code reaches the graph (#319). |
@@ -1252,7 +1252,7 @@ No tests yet.
 | Docs pictures: saving › History with two saves, and the revert confirm | `docs-shots-saving.spec.ts` | Browser | no | #662 |
 | Docs pictures: saving › Changes since save, after a change outside PsyNeuView | `docs-shots-saving.spec.ts` | Browser | no | #662 |
 | @smoke harness › mutatingTest fixture reaches /api/test/reset | `harness.spec.ts` | Browser | yes | #147 |
-| success toast dwells past the old 2s window | `notification-dwell.spec.ts` | Browser | no | #879 |
+| success toast dwells past the old 2s window | `notification-dwell.spec.ts` | Browser | yes | #879 |
 | a real PyCharm save updates the PsyNeuView canvas | `pycharm-live.local.spec.ts` | Browser | no |  |
 | the read-only tag explains itself and offers Save a copy as… (#50) | `read-only-badge-note.spec.ts` | Browser | yes | #50 |
 | round trips between the graph and the code (#319) › add a node: placed in the graph, written to the code, there after reopening | `round-trips.spec.ts` | Browser | yes | #319 |
@@ -1565,31 +1565,15 @@ Nodes: show_graph's nodes the canvas draws. Rows: pairs of nodes whose above, le
 
 ## Browser tests CI doesn't run
 
-21 browser spec files aren't in CI at all. Each says why in a `Not in CI:` line in its header; this table is read from those lines. (Every tutorial runs, in the tutorials job.)
+5 browser spec files aren't in CI at all. Each says why in a `Not in CI:` line in its header; this table is read from those lines. (Every tutorial runs, in the tutorials job.)
 
 | Spec | Why | Detail |
 |---|---|---|
 | `_measure-load-latency.spec.ts` | measurement | it only logs load timings, with no assertions; run it with PERF_MEASURE=1 when measuring |
 | `_measure-undo-memory.spec.ts` | measurement | it only logs heap use, with no assertions; run it with PERF_MEASURE=1 when measuring |
-| `apply-only-when-needed.spec.ts` | should be added | passes locally in about 8 s (2026-11-23); never tagged |
-| `autosave-delay-commit.spec.ts` | should be added | passes locally in under 1 s (2026-11-23); never tagged |
-| `autosave.spec.ts` | should be added | passes locally in about 76 s for five tests (2026-11-23); never tagged |
-| `changes-since-save.spec.ts` | should be added | passes locally in about 24 s (2026-11-23); never tagged |
-| `diagnostics-load-messages.spec.ts` | should be added | passes locally in under 2 s (2026-11-23); never tagged |
 | `docs-shots-saving.spec.ts` | pictures only | it retakes the docs' pictures; the behaviour is tested by saves-in-history and changes-since-save |
-| `edge-bend-drag.spec.ts` | should be added | passes locally in about 15 s (2026-11-23); never tagged. edge-shaping-auto-layout.spec.ts covers part of it in CI |
-| `editor-drag-select.spec.ts` | should be added | passes locally in about 26 s (2026-11-23); never tagged |
-| `keep-pnl-current.spec.ts` | should be added | passes locally in under 3 s, with the network answers stubbed (2026-11-23); never tagged |
-| `load-time-display.spec.ts` | should be added | passes locally in under 2 s (2026-11-23); never tagged |
-| `local-checkout-empty-folder.spec.ts` | should be added | passes locally in about 8 s, nothing downloaded (2026-11-23); never tagged |
-| `notification-dwell.spec.ts` | should be added | passes locally in about 4 s (2026-11-23); never tagged |
-| `pnl-switch-list-folded.spec.ts` | should be added | passes locally in about 3 s (2026-11-23); never tagged |
-| `protection-line.spec.ts` | should be added | passes locally in about 24 s (2026-11-23); never tagged |
 | `pycharm-live.local.spec.ts` | local only | it drives a real PyCharm on macOS, which the runners don't have; external-edit-sync.spec.ts is the CI version |
-| `save-copy-sidecars.spec.ts` | should be added | passes locally in about 21 s (2026-11-23); never tagged |
-| `saves-in-history.spec.ts` | should be added | passes locally in about 33 s (2026-11-23); never tagged |
-| `style-conventions.spec.ts` | broken | two tests fail on devel (2026-11-23), expecting 13px buttons that the default Text size (1.1, since #111) draws at 14.3px. Fix, then add |
-| `whats-running.spec.ts` | should be added | passes locally in about 2 s (2026-11-23); never tagged |
+| `style-conventions.spec.ts` | broken | two tests fail on devel, expecting 13px buttons that the default Text size (1.1, since #111) draws at 14.3px; tracked in #322. Fix, then add |
 
 Spec files in CI that hold tests CI skips (untagged, or a measurement run only on request):
 
@@ -1628,8 +1612,7 @@ Found while building this page (#319). Each is a gap in what the tests check, no
 
 - **A model built in the UI against the same model typed as code: now covered** for Mapping, Control, Gating and Learning projections and one into a nested composition (`ui-text-equivalence.spec.ts`, with `backend/tests/model_equivalence.py`). Not yet covered: projections between nested compositions, control of a nested node's parameter, and models whose nodes the UI builds with non-default parameters.
 - **Round trips: now covered** for adding, deleting, renaming and connecting nodes and changing a parameter (`round-trips.spec.ts`); shaping an arrow was already covered by `edge-curve-handles.spec.ts`. Renaming or deleting an arrow is covered one way only (`graph-arrow-menus.spec.ts`).
-- **Seventeen browser specs pass but never run in CI** (the "should be added" rows above): together about four and a half minutes locally. Nothing in CI would notice if they broke, as `style-conventions.spec.ts` already has.
-- **`style-conventions.spec.ts` is broken on devel.** Its two tests expect 13px buttons; the default Text size (1.1, since #111) draws them at 14.3px. It isn't in CI, so nothing failed.
+- **`style-conventions.spec.ts` is broken on devel** (#322). Its two tests expect 13px buttons; the default Text size (1.1, since #111) draws them at 14.3px. It isn't in CI, so nothing failed. The sixteen other specs CI used to skip now run in it.
 - **The React components have no unit tests.** Frontend line coverage is about a quarter, because `components/` is tested only in the browser, which coverage can't see. The feature map is the measure for those.
 - **Frontend logic modules with little unit coverage:** `utils/labels.ts`, `utils/nodeActions.ts`, `hooks/useFileWatcher.ts` and `stores/edgeAttachStore.ts` are each a quarter covered or less, and `stores/modelStore.ts`, the biggest store, about half.
 - **The AI assistant's tests are not on devel.** Its runner-guard and OS-sandbox suites live on the assistant branch, so this page shows that area empty.
