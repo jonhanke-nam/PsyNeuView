@@ -519,7 +519,10 @@ def test_a_job_payload_carries_the_review_state(st, monkeypatch):
     model.write_text(learnable_model(st["tmp"] / "mine_ran.txt"))
     r = client.post("/api/jobs", json=_job_body(model))
     assert r.status_code == 200, r.text
-    assert _wait_job(r.json()["id"])["status"] == "done"
+    snap = _wait_job(r.json()["id"])
+    # The whole snapshot on failure: its error says why (a CI run on Linux
+    # failed here once with no reason shown).
+    assert snap["status"] == "done", snap
     assert sent["payload"]["review_state"] == str(review.state_path())
     assert sent["payload"]["exempt_roots"] == review.exempt_roots()
 
