@@ -35,6 +35,7 @@ MAX_TOOL_CALLS = 200
 MAX_MINUTES = 120
 MAX_TOKENS = 10_000_000
 LIMIT_KEYS = ("tool_calls", "minutes", "max_tokens")
+SANDBOX_KEYS = ("all_runs", "require")
 
 DEFAULTS: dict[str, Any] = {
     "enabled": False,
@@ -47,6 +48,11 @@ DEFAULTS: dict[str, Any] = {
     # summed over the session; the turn ends with ``done: limit`` when reached.
     "limits": {"tool_calls": 25, "minutes": 10, "max_tokens": 100_000},
     "keep_log": True,
+    # The operating-system sandbox for model runs (#311). all_runs: every
+    # model run while the assistant is on, not only while something it wrote
+    # is tracked (opening any shared model runs its code). require: the
+    # assistant doesn't turn on where no sandbox can be applied.
+    "sandbox": {"all_runs": True, "require": True},
 }
 
 _lock = threading.Lock()
@@ -106,6 +112,7 @@ def update_settings(changes: dict, *, confirm_raise: bool = False, config_file: 
         raised = permission_raises(current, new)
         if raised and not confirm_raise:
             raise RaiseNeedsConfirmation(raised)
+        _check_sandbox_for(current, new)
         config[_KEY] = new
         _write_config_atomic(path, config)
     return copy.deepcopy(new)
@@ -139,7 +146,33 @@ def permission_raises(old: dict, new: dict) -> list[str]:
     for key in LIMIT_KEYS:
         if new["limits"][key] > old["limits"][key]:
             raised.append(f"limit {key} from {old['limits'][key]} to {new['limits'][key]}")
+    if old["sandbox"]["all_runs"] and not new["sandbox"]["all_runs"]:
+        raised.append("running models without the sandbox while nothing the assistant wrote is tracked")
+    if old["sandbox"]["require"] and not new["sandbox"]["require"]:
+        raised.append("using the assistant where model runs can't be sandboxed")
     return raised
+
+
+class SandboxRequired(SettingsError):
+    """Turning the assistant on where no sandbox can be applied, with
+    ``sandbox.require`` set (#311). Routes answer 400 with the reason."""
+
+
+def _check_sandbox_for(old: dict, new: dict) -> None:
+    """The assistant turns on only where model runs can be sandboxed,
+    unless the user has said it may run without (#311)."""
+    if not new["enabled"] or not new["sandbox"]["require"]:
+        return
+    if old["enabled"] and old["sandbox"]["require"]:
+        return  # already on under the same rule; the state is shown, not re-checked
+    from app.services import os_sandbox
+
+    if not os_sandbox.available():
+        reason = os_sandbox.capability().get("reason") or "no sandbox on this system"
+        raise SandboxRequired(
+            "The assistant can't be turned on: model runs can't be sandboxed here "
+            f"({reason}). Turn off \"Require the sandbox\" to use it without one."
+        )
 
 
 # ── validation ───────────────────────────────────────────────────────────
@@ -158,7 +191,7 @@ def _merge(current: dict, changes: dict) -> dict:
             if "type" in value and value["type"] != kept.get("type") and "base_url" not in value:
                 kept["base_url"] = ""
             merged[key] = {**kept, **value}
-        elif key in ("visibility", "limits") and isinstance(value, dict) and isinstance(merged.get(key), dict):
+        elif key in ("visibility", "limits", "sandbox") and isinstance(value, dict) and isinstance(merged.get(key), dict):
             merged[key] = {**merged[key], **value}
         else:
             merged[key] = value
@@ -242,6 +275,15 @@ def _validate(doc: dict) -> dict:
     if not isinstance(doc.get("keep_log", True), bool):
         raise SettingsError("keep_log must be true or false")
     out["keep_log"] = doc.get("keep_log", True)
+
+    sandbox = doc.get("sandbox", {})
+    if not isinstance(sandbox, dict) or set(sandbox) - set(SANDBOX_KEYS):
+        raise SettingsError(f"sandbox keys are {', '.join(SANDBOX_KEYS)}")
+    for key in SANDBOX_KEYS:
+        value = sandbox.get(key, DEFAULTS["sandbox"][key])
+        if not isinstance(value, bool):
+            raise SettingsError(f"sandbox.{key} must be true or false")
+        out["sandbox"][key] = value
     return out
 
 
