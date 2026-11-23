@@ -654,3 +654,345 @@ def test_the_audit_hook_is_added_only_once_something_is_tracked(tmp_path):
     out = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=60)
     assert out.returncode == 0, out.stderr
     assert json.loads(out.stdout.strip().splitlines()[-1]) == [False, True]
+
+
+# ── 9. the second review of #187: one identity for a file, any spelling ──
+
+
+import unicodedata
+
+
+def _case_insensitive(folder: Path) -> bool:
+    probe = folder / "Case_Probe.txt"
+    probe.write_text("x")
+    try:
+        return (folder / "case_probe.TXT").exists()
+    finally:
+        probe.unlink()
+
+
+def _accents_folded(folder: Path) -> bool:
+    nfd = folder / unicodedata.normalize("NFD", "é_probe")
+    nfd.mkdir()
+    try:
+        return (folder / unicodedata.normalize("NFC", "é_probe")).exists()
+    finally:
+        nfd.rmdir()
+
+
+def _upper(p: Path) -> Path:
+    return p.with_name(p.stem.upper() + p.suffix)
+
+
+@pytest.fixture
+def ci_volume(st):
+    if not _case_insensitive(st["tmp"]):
+        pytest.skip("needs a volume that ignores case (macOS)")
+    return st
+
+
+def test_a_case_variant_of_an_unreviewed_model_is_refused_by_every_route(ci_volume):
+    st = ci_volume
+    variant = _upper(st["agent_file"])
+    assert unreviewed(load(variant))
+    r = client.post("/api/model/convert", json={"file_path": str(variant), "backup": False})
+    assert unreviewed(r), r.text
+    model = st["models"] / "learn_case.py"
+    model.write_text(learnable_model(st["marker"]))
+    review.mark_unreviewed(str(model), model.read_text())
+    assert unreviewed(client.post("/api/jobs", json=_job_body(_upper(model))))
+    result = _direct_worker({"task": "introspect", "params": {"file_path": str(variant)}}, env_state=review.state_path())
+    assert result.get("unreviewed_import") == str(st["agent_file"].resolve()), result
+    assert not st["marker"].exists()
+
+
+CASE_WAYS = {
+    "exec_open": lambda up, h: f"exec(open({up!r}).read())",
+    "runpy": lambda up, h: f"import runpy\nrunpy.run_path({up!r})",
+    "spec": lambda up, h: (f"import importlib.util as u\ns = u.spec_from_file_location('zz', {up!r})\n"
+                           "m = u.module_from_spec(s)\ns.loader.exec_module(m)"),
+    "symlink": lambda up, h: f"os.symlink({up!r}, {str(h.parent / 'alias_x.py')!r})\nexec(open({str(h.parent / 'alias_x.py')!r}).read())",
+    "link": lambda up, h: f"os.link({up!r}, {str(h.parent / 'lnk_case.py')!r})\nimport lnk_case",
+    "rename": lambda up, h: f"os.rename({up!r}, {str(h.parent / 'ren_case.py')!r})\nimport ren_case",
+    "copy": lambda up, h: f"import shutil\nshutil.copy({up!r}, {str(h.parent / 'cp_case.py')!r})\nimport cp_case",
+}
+
+
+@pytest.mark.parametrize("how", list(CASE_WAYS))
+def test_a_case_variant_of_an_unreviewed_helper_is_refused(ci_volume, how):
+    st = ci_volume
+    marker2 = st["tmp"] / f"case_ran_{how}.txt"
+    helper = st["models"] / f"hx_case_{how}.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    model = st["tmp"] / "OwnCase" / f"m_{how}.py"
+    model.parent.mkdir(exist_ok=True)
+    model.write_text(_model_importing(f"sys.path.insert(0, {str(st['models'])!r})\n" + CASE_WAYS[how](str(_upper(helper)), helper)))
+    r = load(model)
+    assert unreviewed(r), r.text
+    assert not marker2.exists()
+
+
+def test_approving_through_a_case_variant_approves_the_same_entry(ci_volume):
+    st = ci_volume
+    approve(_upper(st["agent_file"]))
+    state = json.loads(review.state_path().read_text())["files"]
+    assert len([k for k in state if k.lower().endswith("assistant_wrote.py")]) == 1
+    assert load(st["agent_file"]).status_code == 200
+    assert st["marker"].exists()
+
+
+@pytest.fixture
+def nfd_folder(st):
+    if not _accents_folded(st["tmp"]):
+        pytest.skip("needs a volume that folds accents (macOS)")
+    root = st["tmp"] / "AssistantFolder"
+    root.mkdir()
+    sub = root / unicodedata.normalize("NFD", "Modèles")
+    sub.mkdir()
+    files.set_folders_provider(lambda: [{"path": str(root), "access": "read_write"}])
+    yield root, sub
+    files.set_folders_provider(files._folders_from_settings)
+
+
+def test_an_assistant_model_in_a_decomposed_folder_is_refused_by_its_listed_path(st, nfd_folder):
+    root, sub = nfd_folder
+    nfc = os.path.join(os.path.realpath(root), unicodedata.normalize("NFC", "Modèles"), "agent_model.py")
+    files.write_model_file(nfc, marker_model(st["marker"]), base_hash=None)
+    listed = os.path.join(os.path.realpath(sub), os.listdir(sub)[0])
+    assert unreviewed(load(listed))
+    assert unreviewed(client.post("/api/model/convert", json={"file_path": listed, "backup": False}))
+    assert not st["marker"].exists()
+
+
+def test_a_plain_import_of_an_assistant_helper_in_a_decomposed_folder_is_refused(st, nfd_folder):
+    """No attacker: the user's own model beside a helper the assistant wrote."""
+    root, sub = nfd_folder
+    marker2 = st["tmp"] / "nfd_helper_ran.txt"
+    nfc_dir = os.path.join(os.path.realpath(root), unicodedata.normalize("NFC", "Modèles"))
+    files.write_model_file(os.path.join(nfc_dir, "agent_helper.py"), _helper(marker2), base_hash=None)
+    (sub / "users_model.py").write_text(_model_importing("import agent_helper"))
+    r = load(os.path.join(os.path.realpath(sub), "users_model.py"))
+    assert unreviewed(r), r.text
+    assert not marker2.exists()
+
+
+def test_a_decomposed_file_name_is_the_same_tracked_file(st):
+    if not _accents_folded(st["tmp"]):
+        pytest.skip("needs a volume that folds accents (macOS)")
+    marker2 = st["tmp"] / "nfd_name_ran.txt"
+    nfc = st["models"] / unicodedata.normalize("NFC", "modèle_aide.py")
+    nfc.write_text(_helper(marker2))
+    review.mark_unreviewed(str(nfc), nfc.read_text())
+    nfd = st["models"] / unicodedata.normalize("NFD", "modèle_aide.py")
+    model = st["tmp"] / "OwnNfd" / "uses.py"
+    model.parent.mkdir()
+    model.write_text(_model_importing(f"exec(open({str(nfd)!r}).read())"))
+    assert unreviewed(load(model))
+    assert not marker2.exists()
+
+
+def test_a_hard_link_made_beforehand_is_the_same_tracked_file(st):
+    """Any volume: the file on disk, not the name, is what is tracked."""
+    marker2 = st["tmp"] / "hard_ran.txt"
+    helper = st["models"] / "hard_helper.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    other = st["tmp"] / "Elsewhere" / "innocent_name.py"
+    other.parent.mkdir()
+    os.link(helper, other)
+    model = st["tmp"] / "OwnHard" / "uses.py"
+    model.parent.mkdir()
+    model.write_text(_model_importing(f"sys.path.insert(0, {str(other.parent)!r})\nimport innocent_name"))
+    assert unreviewed(load(model))
+    assert not marker2.exists()
+
+
+def test_a_case_variant_on_a_case_sensitive_volume_is_still_treated_as_tracked(tmp_path):
+    """Folding case can only refuse more: where the volume tells ``hx.py``
+    from ``HX.py``, the second is still taken for the first."""
+    index = import_guard.TrackedIndex({str(tmp_path / "hx.py"): {"approved": None}})
+    assert index.find(str(tmp_path / "HX.py")) == str(tmp_path / "hx.py")
+    assert index.find(str(tmp_path / unicodedata.normalize("NFD", "é.py"))) is None
+    index2 = import_guard.TrackedIndex({str(tmp_path / unicodedata.normalize("NFC", "é.py")): {}})
+    assert index2.find(str(tmp_path / unicodedata.normalize("NFD", "É.py"))) is not None
+
+
+# ── 10. a write whose review record can't be saved isn't written ────────
+
+
+def test_a_write_is_refused_when_the_review_state_cant_be_saved(st):
+    own_dir = st["tmp"] / "RW"
+    own_dir.mkdir()
+    own = own_dir / "mine.py"
+    original = "import psyneulink as pnl\ncomp = pnl.Composition(name='c')\n"
+    own.write_text(original)
+    files.set_folders_provider(lambda: [{"path": str(own_dir), "access": "read_write"}])
+    ro = st["tmp"] / "ro_state"
+    ro.mkdir()
+    st["monkeypatch"].setenv("PSYNEUVIEW_ASSISTANT_REVIEW_FILE", str(ro / "review.json"))
+    os.chmod(ro, 0o500)
+    try:
+        with pytest.raises(files.PathRefused) as e:
+            files.write_model_file(str(own.resolve()), marker_model(st["marker"]), base_hash=review.content_hash(original))
+        assert e.value.reason == "cannot_record"
+    finally:
+        os.chmod(ro, 0o700)
+        files.set_folders_provider(files._folders_from_settings)
+    assert own.read_text() == original
+    assert not [p for p in own_dir.iterdir() if p.name.startswith(".")]
+    assert load(own).status_code == 200
+    assert not st["marker"].exists()
+
+
+def test_a_write_whose_rename_fails_leaves_the_entry_as_it_was(st, monkeypatch):
+    own_dir = st["tmp"] / "RW3"
+    own_dir.mkdir()
+    own = own_dir / "mine.py"
+    original = "import psyneulink as pnl\ncomp = pnl.Composition(name='c')\n"
+    own.write_text(original)
+    files.set_folders_provider(lambda: [{"path": str(own_dir), "access": "read_write"}])
+    real_rename = os.rename
+
+    def failing(src, dst, *a, **k):
+        if str(dst) == "mine.py":
+            raise OSError("disk full")
+        return real_rename(src, dst, *a, **k)
+
+    monkeypatch.setattr(files.os, "rename", failing)
+    try:
+        with pytest.raises(OSError):
+            files.write_model_file(str(own.resolve()), marker_model(st["marker"]), base_hash=review.content_hash(original))
+    finally:
+        files.set_folders_provider(files._folders_from_settings)
+    assert own.read_text() == original
+    assert not review.is_tracked(str(own))
+
+
+# ── 11. what one task's model does to the guard doesn't reach the next ──
+
+
+@pytest.mark.parametrize("tamper", [
+    "__main__._guard._audit_local.busy = True",
+    "__main__._guard._state.tracked = {}",
+    "__main__._guard._AUDIT_EVENTS = frozenset()",
+    "__main__._guard._audit_everywhere = False",
+    "__main__._guard.vet = lambda p: None\n__main__._guard._audit = lambda e, a: None",
+])
+def test_a_model_cannot_switch_the_guard_off_for_later_tasks(st, tamper):
+    marker2 = st["tmp"] / "later_ran.txt"
+    helper = st["models"] / "later_helper.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    a = st["tmp"] / "Tamper"
+    a.mkdir()
+    (a / "first.py").write_text(f"import __main__\n{tamper}\nimport psyneulink as pnl\ncomp = pnl.Composition(name='c')\n")
+    (a / "second.py").write_text(_model_importing(f"exec(open({str(helper)!r}).read())"))
+    (a / "third.py").write_text(_model_importing(f"sys.path.insert(0, {str(st['models'])!r})\nimport later_helper"))
+    load(a / "first.py")
+    assert unreviewed(load(a / "second.py"))
+    assert unreviewed(load(a / "third.py"))
+    assert not marker2.exists()
+
+
+# ── 12. the process check reads shell and interpreter text ──────────────
+
+
+PROCESS_WAYS = {
+    "shell_glob": lambda h: f"import subprocess\nexec(subprocess.run('cat ' + {str(h.parent)!r} + '/' + {h.name[:-6]!r} + '*', shell=True, capture_output=True, text=True).stdout)",
+    "shell_redirect": lambda h: f"import subprocess\nexec(subprocess.run('cd ' + {str(h.parent)!r} + ' && cat <' + {h.name!r}, shell=True, capture_output=True, text=True).stdout)",
+    "sh_c_list": lambda h: f"import subprocess\nexec(subprocess.run(['sh', '-c', 'cat ' + {str(h)!r}], capture_output=True, text=True).stdout)",
+    "env_value": lambda h: f"import subprocess\nexec(subprocess.run(['sh', '-c', 'cat \"$P\"'], env={{'P': {str(h)!r}}}, capture_output=True, text=True).stdout)",
+    "putenv": lambda h: f"import subprocess\nos.environ['P'] = {str(h)!r}\nexec(subprocess.run(['sh', '-c', 'cat \"$P\"'], capture_output=True, text=True).stdout)",
+    "python_c": lambda h: f"import subprocess\nsubprocess.run([sys.executable, '-c', 'exec(open(' + repr({str(h)!r}) + ').read())'])",
+    "python_c_import": lambda h: f"import subprocess\nsubprocess.run([sys.executable, '-c', 'import sys; sys.path.insert(0, ' + repr({str(h.parent)!r}) + '); import {h.stem}'])",
+}
+
+
+@pytest.mark.parametrize("how", list(PROCESS_WAYS))
+def test_a_process_whose_text_mentions_an_unreviewed_file_is_refused(st, how):
+    marker2 = st["tmp"] / f"proc_ran_{how}.txt"
+    helper = st["models"] / f"hx_proc_{how}_zz.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    model = st["tmp"] / "OwnProc" / f"m_{how}.py"
+    model.parent.mkdir(exist_ok=True)
+    model.write_text(_model_importing(PROCESS_WAYS[how](helper)))
+    r = load(model)
+    assert unreviewed(r), r.text
+    assert not marker2.exists()
+
+
+def test_an_open_relative_to_another_folder_is_refused_by_name(st):
+    marker2 = st["tmp"] / "dirfd_ran.txt"
+    helper = st["models"] / "hx_dirfd.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    model = st["tmp"] / "OwnFd" / "m.py"
+    model.parent.mkdir()
+    model.write_text(_model_importing(
+        f"os.chdir('/')\nd = os.open({str(helper.parent)!r}, os.O_RDONLY)\n"
+        f"fd = os.open({helper.name!r}, os.O_RDONLY, dir_fd=d)\nexec(os.read(fd, 1 << 20).decode())"))
+    assert unreviewed(load(model))
+    assert not marker2.exists()
+
+
+# ── 13. a task naming a state file that doesn't exist ───────────────────
+
+
+def test_a_task_naming_a_missing_state_file_still_sees_the_tracked_files(st):
+    result = _direct_worker({"task": "introspect", "params": {"file_path": str(st["agent_file"])},
+                             "review_state": str(st["tmp"] / "nonexistent.json")}, env_state=review.state_path())
+    assert result.get("unreviewed_import") == str(st["agent_file"].resolve()), result
+    assert not st["marker"].exists()
+
+
+# ── 14. threads, and the guard's refusal when the server's step is skipped ─
+
+
+def test_a_thread_in_the_worker_is_refused(st):
+    marker2 = st["tmp"] / "thread_ran.txt"
+    helper = st["models"] / "hx_thread.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    model = st["tmp"] / "OwnThread" / "m.py"
+    model.parent.mkdir()
+    model.write_text(_model_importing(
+        "import threading\nerr = []\n"
+        f"def go():\n    try:\n        exec(open({str(helper)!r}).read())\n    except BaseException as e:\n        err.append(e)\n"
+        "t = threading.Thread(target=go); t.start(); t.join()\nif err: raise err[0]"))
+    assert unreviewed(load(model))
+    assert not marker2.exists()
+
+
+def test_a_thread_in_the_in_process_converter_is_refused(st):
+    marker2 = st["tmp"] / "conv_thread_ran.txt"
+    helper = st["models"] / "conv_thread_helper.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    model = st["tmp"] / "ConvThread" / "conv_thread.py"
+    model.parent.mkdir()
+    model.write_text(_model_importing(
+        f"import threading\nt = threading.Thread(target=lambda: exec(open({str(helper)!r}).read())); t.start(); t.join()"))
+    client.post("/api/model/convert", json={"file_path": str(model), "backup": False})
+    assert not marker2.exists()
+
+
+def test_the_guards_refusal_is_a_409_even_when_the_servers_step_is_skipped(st, monkeypatch):
+    """With ``guard_imports`` replaced (say, by a model run earlier in the
+    server), the import guard's own refusal still reaches the page as the
+    review 409, not as a failed request."""
+    import contextlib
+    from app.services import converter
+    monkeypatch.setattr(converter.assistant_review, "guard_imports", lambda: contextlib.nullcontext())
+    marker2 = st["tmp"] / "skip_ran.txt"
+    helper = st["models"] / "skip_helper.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    import_guard.refresh()
+    model = st["tmp"] / "Skip" / "m.py"
+    model.parent.mkdir()
+    model.write_text(_model_importing(f"sys.path.insert(0, {str(st['models'])!r})\nimport skip_helper"))
+    r = client.post("/api/model/convert", json={"file_path": str(model), "backup": False})
+    assert unreviewed(r), r.text
+    assert not marker2.exists()
