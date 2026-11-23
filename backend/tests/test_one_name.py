@@ -25,6 +25,10 @@ ALLOWED = {
     # The code scan's old-name check looks for it, and its tests write it (#243).
     "scripts/code_scan.py",
     "backend/tests/test_code_scan.py",
+    # Generated from the test files (scripts/test_map.py, #319): they quote
+    # the titles of the tests above, which name the old spelling.
+    "docs/testing-coverage.md",
+    "docs/testing-coverage-tests.md",
 }
 
 

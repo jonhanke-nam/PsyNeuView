@@ -1,0 +1,2109 @@
+{
+ "measured": "2026-11-23",
+ "commit": "cafdb905f1",
+ "backend": {
+  "lines": 88.0,
+  "statements": 13233,
+  "branches": 82.3,
+  "folders": {
+   "app": {
+    "lines": 93.7,
+    "statements": 175,
+    "branches": 86.1
+   },
+   "app/api": {
+    "lines": 85.4,
+    "statements": 1957,
+    "branches": 68.2
+   },
+   "app/models": {
+    "lines": 0.0,
+    "statements": 38,
+    "branches": null
+   },
+   "app/services": {
+    "lines": 88.7,
+    "statements": 11063,
+    "branches": 83.7
+   }
+  },
+  "files": [
+   {
+    "file": "backend/app/__init__.py",
+    "lines": 100.0,
+    "statements": 1,
+    "branches": null
+   },
+   {
+    "file": "backend/app/api/__init__.py",
+    "lines": null,
+    "statements": 0,
+    "branches": null
+   },
+   {
+    "file": "backend/app/api/routes.py",
+    "lines": 86.5,
+    "statements": 1738,
+    "branches": 68.5
+   },
+   {
+    "file": "backend/app/api/test_routes.py",
+    "lines": 79.0,
+    "statements": 100,
+    "branches": 60.5
+   },
+   {
+    "file": "backend/app/api/ws.py",
+    "lines": 75.6,
+    "statements": 119,
+    "branches": 75.0
+   },
+   {
+    "file": "backend/app/frontend_files.py",
+    "lines": 100.0,
+    "statements": 17,
+    "branches": null
+   },
+   {
+    "file": "backend/app/main.py",
+    "lines": 92.1,
+    "statements": 101,
+    "branches": 75.0
+   },
+   {
+    "file": "backend/app/models/__init__.py",
+    "lines": null,
+    "statements": 0,
+    "branches": null
+   },
+   {
+    "file": "backend/app/models/schema.py",
+    "lines": 0.0,
+    "statements": 38,
+    "branches": null
+   },
+   {
+    "file": "backend/app/request_guard.py",
+    "lines": 94.6,
+    "statements": 56,
+    "branches": 95.0
+   },
+   {
+    "file": "backend/app/services/__init__.py",
+    "lines": null,
+    "statements": 0,
+    "branches": null
+   },
+   {
+    "file": "backend/app/services/activity_log.py",
+    "lines": 91.0,
+    "statements": 145,
+    "branches": 84.6
+   },
+   {
+    "file": "backend/app/services/app_config.py",
+    "lines": 91.7,
+    "statements": 24,
+    "branches": 100.0
+   },
+   {
+    "file": "backend/app/services/app_settings.py",
+    "lines": 89.6,
+    "statements": 77,
+    "branches": 100.0
+   },
+   {
+    "file": "backend/app/services/branch_lookup.py",
+    "lines": 93.3,
+    "statements": 90,
+    "branches": 72.7
+   },
+   {
+    "file": "backend/app/services/bundle.py",
+    "lines": 86.0,
+    "statements": 86,
+    "branches": 50.0
+   },
+   {
+    "file": "backend/app/services/catalogs.py",
+    "lines": 95.5,
+    "statements": 89,
+    "branches": 75.0
+   },
+   {
+    "file": "backend/app/services/checkout_updates.py",
+    "lines": 87.9,
+    "statements": 239,
+    "branches": 86.1
+   },
+   {
+    "file": "backend/app/services/clone_manager.py",
+    "lines": 78.5,
+    "statements": 181,
+    "branches": 72.2
+   },
+   {
+    "file": "backend/app/services/code_view.py",
+    "lines": 93.9,
+    "statements": 33,
+    "branches": 92.9
+   },
+   {
+    "file": "backend/app/services/converter.py",
+    "lines": 92.0,
+    "statements": 287,
+    "branches": 85.4
+   },
+   {
+    "file": "backend/app/services/dangling_check.py",
+    "lines": 97.2,
+    "statements": 145,
+    "branches": 97.8
+   },
+   {
+    "file": "backend/app/services/deployment_mode.py",
+    "lines": 100.0,
+    "statements": 34,
+    "branches": 100.0
+   },
+   {
+    "file": "backend/app/services/edit_lock.py",
+    "lines": 100.0,
+    "statements": 72,
+    "branches": 96.2
+   },
+   {
+    "file": "backend/app/services/env_names.py",
+    "lines": 100.0,
+    "statements": 16,
+    "branches": 100.0
+   },
+   {
+    "file": "backend/app/services/examples_status.py",
+    "lines": 92.4,
+    "statements": 105,
+    "branches": 95.5
+   },
+   {
+    "file": "backend/app/services/execution_modes.py",
+    "lines": 92.6,
+    "statements": 68,
+    "branches": 94.4
+   },
+   {
+    "file": "backend/app/services/executor.py",
+    "lines": 87.5,
+    "statements": 361,
+    "branches": 78.2
+   },
+   {
+    "file": "backend/app/services/file_history.py",
+    "lines": 89.2,
+    "statements": 74,
+    "branches": 88.9
+   },
+   {
+    "file": "backend/app/services/file_types.py",
+    "lines": 95.2,
+    "statements": 104,
+    "branches": 96.9
+   },
+   {
+    "file": "backend/app/services/file_writer.py",
+    "lines": 91.4,
+    "statements": 752,
+    "branches": 84.1
+   },
+   {
+    "file": "backend/app/services/github_auth.py",
+    "lines": 97.9,
+    "statements": 96,
+    "branches": 100.0
+   },
+   {
+    "file": "backend/app/services/github_files.py",
+    "lines": 91.0,
+    "statements": 122,
+    "branches": 86.1
+   },
+   {
+    "file": "backend/app/services/install_manager.py",
+    "lines": 89.5,
+    "statements": 531,
+    "branches": 89.3
+   },
+   {
+    "file": "backend/app/services/introspector.py",
+    "lines": 87.8,
+    "statements": 491,
+    "branches": 82.1
+   },
+   {
+    "file": "backend/app/services/jobs.py",
+    "lines": 79.9,
+    "statements": 174,
+    "branches": 62.5
+   },
+   {
+    "file": "backend/app/services/labels.py",
+    "lines": 88.9,
+    "statements": 27,
+    "branches": 75.0
+   },
+   {
+    "file": "backend/app/services/layout.py",
+    "lines": 98.5,
+    "statements": 65,
+    "branches": 97.5
+   },
+   {
+    "file": "backend/app/services/lineage.py",
+    "lines": 100.0,
+    "statements": 42,
+    "branches": 87.5
+   },
+   {
+    "file": "backend/app/services/locations.py",
+    "lines": 92.3,
+    "statements": 142,
+    "branches": 81.6
+   },
+   {
+    "file": "backend/app/services/managed_layouts.py",
+    "lines": 86.8,
+    "statements": 310,
+    "branches": 84.7
+   },
+   {
+    "file": "backend/app/services/mdf_metadata.py",
+    "lines": 91.7,
+    "statements": 108,
+    "branches": 83.3
+   },
+   {
+    "file": "backend/app/services/model_dirs.py",
+    "lines": 76.0,
+    "statements": 100,
+    "branches": 65.2
+   },
+   {
+    "file": "backend/app/services/model_warnings.py",
+    "lines": 100.0,
+    "statements": 41,
+    "branches": 100.0
+   },
+   {
+    "file": "backend/app/services/pathway_learning.py",
+    "lines": 87.1,
+    "statements": 202,
+    "branches": 78.0
+   },
+   {
+    "file": "backend/app/services/pnl_code_watcher.py",
+    "lines": 92.0,
+    "statements": 100,
+    "branches": 82.1
+   },
+   {
+    "file": "backend/app/services/pnl_freshness.py",
+    "lines": 100.0,
+    "statements": 53,
+    "branches": 100.0
+   },
+   {
+    "file": "backend/app/services/pnl_health.py",
+    "lines": 90.5,
+    "statements": 42,
+    "branches": 75.0
+   },
+   {
+    "file": "backend/app/services/pnl_releases.py",
+    "lines": 89.7,
+    "statements": 156,
+    "branches": 85.0
+   },
+   {
+    "file": "backend/app/services/pnl_source_guard.py",
+    "lines": 95.6,
+    "statements": 90,
+    "branches": 88.9
+   },
+   {
+    "file": "backend/app/services/pnl_updates.py",
+    "lines": 74.3,
+    "statements": 253,
+    "branches": 64.1
+   },
+   {
+    "file": "backend/app/services/presence.py",
+    "lines": 100.0,
+    "statements": 46,
+    "branches": 100.0
+   },
+   {
+    "file": "backend/app/services/preview.py",
+    "lines": 96.4,
+    "statements": 28,
+    "branches": 83.3
+   },
+   {
+    "file": "backend/app/services/project_folder.py",
+    "lines": 89.8,
+    "statements": 167,
+    "branches": 87.5
+   },
+   {
+    "file": "backend/app/services/protection_line.py",
+    "lines": 95.2,
+    "statements": 63,
+    "branches": 92.9
+   },
+   {
+    "file": "backend/app/services/quick_check.py",
+    "lines": 84.6,
+    "statements": 26,
+    "branches": 100.0
+   },
+   {
+    "file": "backend/app/services/running_from.py",
+    "lines": 95.3,
+    "statements": 191,
+    "branches": 88.3
+   },
+   {
+    "file": "backend/app/services/sandbox.py",
+    "lines": 84.6,
+    "statements": 221,
+    "branches": 80.0
+   },
+   {
+    "file": "backend/app/services/sandbox_worker.py",
+    "lines": 85.1,
+    "statements": 2407,
+    "branches": 81.8
+   },
+   {
+    "file": "backend/app/services/settings_info.py",
+    "lines": 85.6,
+    "statements": 174,
+    "branches": 79.2
+   },
+   {
+    "file": "backend/app/services/show_graph_cache.py",
+    "lines": 90.9,
+    "statements": 44,
+    "branches": 100.0
+   },
+   {
+    "file": "backend/app/services/show_graph_guard.py",
+    "lines": 90.0,
+    "statements": 30,
+    "branches": 87.5
+   },
+   {
+    "file": "backend/app/services/show_graph_picture.py",
+    "lines": 100.0,
+    "statements": 7,
+    "branches": null
+   },
+   {
+    "file": "backend/app/services/sidecar_copy.py",
+    "lines": 83.9,
+    "statements": 87,
+    "branches": 84.4
+   },
+   {
+    "file": "backend/app/services/sidecar_index.py",
+    "lines": 92.0,
+    "statements": 274,
+    "branches": 78.7
+   },
+   {
+    "file": "backend/app/services/sidecar_placement.py",
+    "lines": 99.1,
+    "statements": 109,
+    "branches": 97.8
+   },
+   {
+    "file": "backend/app/services/source_history.py",
+    "lines": 96.1,
+    "statements": 229,
+    "branches": 94.3
+   },
+   {
+    "file": "backend/app/services/startup_phases.py",
+    "lines": 95.2,
+    "statements": 105,
+    "branches": 95.5
+   },
+   {
+    "file": "backend/app/services/stderr_summary.py",
+    "lines": 100.0,
+    "statements": 44,
+    "branches": 100.0
+   },
+   {
+    "file": "backend/app/services/test_extractor.py",
+    "lines": 84.5,
+    "statements": 207,
+    "branches": 78.8
+   },
+   {
+    "file": "backend/app/services/watcher.py",
+    "lines": 91.3,
+    "statements": 241,
+    "branches": 81.8
+   },
+   {
+    "file": "backend/app/services/working_copies.py",
+    "lines": 86.0,
+    "statements": 236,
+    "branches": 88.6
+   }
+  ]
+ },
+ "frontend": {
+  "lines": 26.3,
+  "statements": 40531,
+  "branches": 84.3,
+  "folders": {
+   "components": {
+    "lines": 0.0,
+    "statements": 59,
+    "branches": 0.0
+   },
+   "components/common": {
+    "lines": 6.0,
+    "statements": 9294,
+    "branches": 67.0
+   },
+   "components/editor": {
+    "lines": 0.0,
+    "statements": 1680,
+    "branches": 0.0
+   },
+   "components/graph": {
+    "lines": 2.0,
+    "statements": 6167,
+    "branches": 72.6
+   },
+   "components/inspector": {
+    "lines": 1.8,
+    "statements": 6474,
+    "branches": 71.8
+   },
+   "components/layout": {
+    "lines": 0.4,
+    "statements": 3232,
+    "branches": 66.7
+   },
+   "components/scheduler": {
+    "lines": 0.0,
+    "statements": 178,
+    "branches": 0.0
+   },
+   "config": {
+    "lines": 41.2,
+    "statements": 17,
+    "branches": null
+   },
+   "constants": {
+    "lines": 93.5,
+    "statements": 383,
+    "branches": 100.0
+   },
+   "hooks": {
+    "lines": 19.3,
+    "statements": 762,
+    "branches": 69.0
+   },
+   "shortcuts": {
+    "lines": 85.8,
+    "statements": 642,
+    "branches": 92.6
+   },
+   "src (top level)": {
+    "lines": 10.2,
+    "statements": 305,
+    "branches": 86.7
+   },
+   "stores": {
+    "lines": 67.7,
+    "statements": 3815,
+    "branches": 79.1
+   },
+   "types": {
+    "lines": null,
+    "statements": 0,
+    "branches": 100.0
+   },
+   "utils": {
+    "lines": 82.1,
+    "statements": 7523,
+    "branches": 87.1
+   }
+  },
+  "files": [
+   {
+    "file": "frontend/src/App.tsx",
+    "lines": 0.0,
+    "statements": 245,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/ErrorBoundary.tsx",
+    "lines": 0.0,
+    "statements": 59,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/AppUpdateNotice.tsx",
+    "lines": 0.0,
+    "statements": 60,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/BusyIndicator.tsx",
+    "lines": 58.1,
+    "statements": 272,
+    "branches": 92.3
+   },
+   {
+    "file": "frontend/src/components/common/Button.tsx",
+    "lines": 58.1,
+    "statements": 124,
+    "branches": null
+   },
+   {
+    "file": "frontend/src/components/common/ChangesSinceSaveDialog.tsx",
+    "lines": 0.0,
+    "statements": 113,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/Combobox.tsx",
+    "lines": 0.0,
+    "statements": 203,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/DeveloperBadge.tsx",
+    "lines": 0.0,
+    "statements": 35,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/DeveloperTestsModal.tsx",
+    "lines": 0.0,
+    "statements": 390,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/DiagnosticPanel.tsx",
+    "lines": 24.0,
+    "statements": 317,
+    "branches": 47.1
+   },
+   {
+    "file": "frontend/src/components/common/ExternalChangeModal.tsx",
+    "lines": 0.0,
+    "statements": 60,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/FileBrowserModal.tsx",
+    "lines": 0.0,
+    "statements": 147,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/GithubFileLoaderModal.tsx",
+    "lines": 0.0,
+    "statements": 423,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/HistoryPanel.tsx",
+    "lines": 0.0,
+    "statements": 343,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/KeyboardShortcutsReference.tsx",
+    "lines": 0.0,
+    "statements": 189,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/LineDiffView.tsx",
+    "lines": 0.0,
+    "statements": 63,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/MacAppSettingsSection.tsx",
+    "lines": 0.0,
+    "statements": 340,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/NotificationBar.tsx",
+    "lines": 0.0,
+    "statements": 75,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/OrientationOffer.tsx",
+    "lines": 0.0,
+    "statements": 123,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/PresenceIndicator.tsx",
+    "lines": 0.0,
+    "statements": 38,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/PromptModal.tsx",
+    "lines": 0.0,
+    "statements": 78,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/RevertToSaveDialog.tsx",
+    "lines": 0.0,
+    "statements": 143,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/SettingsPanel.tsx",
+    "lines": 0.0,
+    "statements": 221,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/StatusBar.tsx",
+    "lines": 80.6,
+    "statements": 36,
+    "branches": 57.1
+   },
+   {
+    "file": "frontend/src/components/common/SyncIndicator.tsx",
+    "lines": 0.0,
+    "statements": 153,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/TourBar.tsx",
+    "lines": 0.0,
+    "statements": 502,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/TutorialChoiceDialog.tsx",
+    "lines": 0.0,
+    "statements": 190,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/UndoRedoButtons.tsx",
+    "lines": 0.0,
+    "statements": 58,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/ValueGrid.tsx",
+    "lines": 0.0,
+    "statements": 190,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/dialog/DialogHeader.tsx",
+    "lines": 3.8,
+    "statements": 78,
+    "branches": null
+   },
+   {
+    "file": "frontend/src/components/common/dialog/useDismiss.ts",
+    "lines": 79.4,
+    "statements": 34,
+    "branches": 93.3
+   },
+   {
+    "file": "frontend/src/components/common/exportFormats.ts",
+    "lines": 100.0,
+    "statements": 66,
+    "branches": 92.9
+   },
+   {
+    "file": "frontend/src/components/common/settings/AboutSection.tsx",
+    "lines": 0.0,
+    "statements": 229,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/AppearanceSection.tsx",
+    "lines": 0.0,
+    "statements": 546,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/CheckoutUpdates.tsx",
+    "lines": 0.0,
+    "statements": 74,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/DeveloperSection.tsx",
+    "lines": 0.0,
+    "statements": 66,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/FoldersSection.tsx",
+    "lines": 0.0,
+    "statements": 423,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/GeneralSection.tsx",
+    "lines": 0.0,
+    "statements": 210,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/InstallControls.tsx",
+    "lines": 0.0,
+    "statements": 547,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/NarrationVoiceSetting.tsx",
+    "lines": 0.0,
+    "statements": 115,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/OpenMenuSection.tsx",
+    "lines": 0.0,
+    "statements": 110,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/PnlDetails.tsx",
+    "lines": 0.0,
+    "statements": 59,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/PnlRecordNotice.tsx",
+    "lines": 0.0,
+    "statements": 43,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/PnlUpdateStatus.tsx",
+    "lines": 0.0,
+    "statements": 70,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/PnlVersionChoice.tsx",
+    "lines": 0.0,
+    "statements": 184,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/ReportsSection.tsx",
+    "lines": 0.0,
+    "statements": 11,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/SettingsSearch.tsx",
+    "lines": 0.0,
+    "statements": 141,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/ShortcutsSection.tsx",
+    "lines": 0.0,
+    "statements": 130,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/SwitchListbox.tsx",
+    "lines": 0.0,
+    "statements": 249,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/TutorialsVoiceSection.tsx",
+    "lines": 0.0,
+    "statements": 172,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/WhereThingsLive.tsx",
+    "lines": 0.0,
+    "statements": 320,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/sections.ts",
+    "lines": 100.0,
+    "statements": 50,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/settingsSearchIndex.ts",
+    "lines": 100.0,
+    "statements": 53,
+    "branches": 98.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/shared.tsx",
+    "lines": 0.0,
+    "statements": 181,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/types.ts",
+    "lines": null,
+    "statements": 0,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/useInstallJob.ts",
+    "lines": 11.3,
+    "statements": 124,
+    "branches": 40.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/usePnlUpdates.ts",
+    "lines": 0.0,
+    "statements": 65,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/settings/useReleases.ts",
+    "lines": 0.0,
+    "statements": 19,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/common/toolbarStyles.ts",
+    "lines": 0.0,
+    "statements": 13,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/components/common/useMenuInWindow.ts",
+    "lines": 38.5,
+    "statements": 26,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/components/editor/CodeEditor.tsx",
+    "lines": 0.0,
+    "statements": 1264,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/editor/SidecarPlacementPicker.tsx",
+    "lines": 0.0,
+    "statements": 160,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/editor/SidecarVariantPicker.tsx",
+    "lines": 0.0,
+    "statements": 256,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/CIMNode.tsx",
+    "lines": 0.0,
+    "statements": 99,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/ComponentIcon.tsx",
+    "lines": 0.0,
+    "statements": 25,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/CompositionNode.tsx",
+    "lines": 0.0,
+    "statements": 210,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/ConnectionLine.tsx",
+    "lines": 0.0,
+    "statements": 27,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/DanglingNode.tsx",
+    "lines": 0.0,
+    "statements": 26,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/FocusBreadcrumb.tsx",
+    "lines": 0.0,
+    "statements": 57,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/GSCEdge.tsx",
+    "lines": 0.0,
+    "statements": 155,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/GSCLegend.tsx",
+    "lines": 8.2,
+    "statements": 294,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/components/graph/GraphCanvas.tsx",
+    "lines": 0.0,
+    "statements": 1085,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/GraphMenus.tsx",
+    "lines": 0.0,
+    "statements": 104,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/GraphStylePanel.tsx",
+    "lines": 0.0,
+    "statements": 142,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/GraphToolbar.tsx",
+    "lines": 0.0,
+    "statements": 187,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/GraphViewOptionsMenu.tsx",
+    "lines": 0.0,
+    "statements": 397,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/LastGoodDiff.tsx",
+    "lines": 0.0,
+    "statements": 55,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/MechanismNode.tsx",
+    "lines": 0.0,
+    "statements": 793,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/NodeContextMenu.tsx",
+    "lines": 0.0,
+    "statements": 171,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/NodeShapeOutline.tsx",
+    "lines": 0.0,
+    "statements": 58,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/OffscreenNodesIndicator.tsx",
+    "lines": 0.0,
+    "statements": 53,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/PaletteSidebar.tsx",
+    "lines": 0.0,
+    "statements": 728,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/PortChooser.tsx",
+    "lines": 10.8,
+    "statements": 65,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/components/graph/ProjectionEdge.tsx",
+    "lines": 0.0,
+    "statements": 666,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/TourOverlay.tsx",
+    "lines": 26.0,
+    "statements": 308,
+    "branches": 85.1
+   },
+   {
+    "file": "frontend/src/components/graph/TraceControls.tsx",
+    "lines": 0.0,
+    "statements": 320,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/ValidationPanel.tsx",
+    "lines": 0.0,
+    "statements": 127,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/graph/canvasLayers.ts",
+    "lines": 100.0,
+    "statements": 9,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/components/graph/connectHandles.ts",
+    "lines": 100.0,
+    "statements": 6,
+    "branches": null
+   },
+   {
+    "file": "frontend/src/components/inspector/InspectorPanel.tsx",
+    "lines": 3.8,
+    "statements": 3047,
+    "branches": 84.8
+   },
+   {
+    "file": "frontend/src/components/inspector/LearnPanel.tsx",
+    "lines": 0.0,
+    "statements": 657,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/inspector/PnlCallLine.tsx",
+    "lines": 0.0,
+    "statements": 25,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/inspector/ResultsChart.tsx",
+    "lines": 0.0,
+    "statements": 105,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/inspector/RunPanel.tsx",
+    "lines": 0.0,
+    "statements": 2005,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/inspector/RunStatePanel.tsx",
+    "lines": 0.0,
+    "statements": 332,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/inspector/ShowGraphPanel.tsx",
+    "lines": 0.0,
+    "statements": 303,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/layout/AutosaveStatus.tsx",
+    "lines": 0.0,
+    "statements": 61,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/layout/BlankScreen.tsx",
+    "lines": 28.3,
+    "statements": 46,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/components/layout/DeveloperModeIndicator.tsx",
+    "lines": 0.0,
+    "statements": 90,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/layout/HelpMenu.tsx",
+    "lines": 0.0,
+    "statements": 124,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/layout/Toolbar.tsx",
+    "lines": 0.0,
+    "statements": 2911,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/components/scheduler/SchedulerPanel.tsx",
+    "lines": 0.0,
+    "statements": 178,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/config/renderingDefaults.ts",
+    "lines": 41.2,
+    "statements": 17,
+    "branches": null
+   },
+   {
+    "file": "frontend/src/constants/paramEnums.ts",
+    "lines": 46.2,
+    "statements": 39,
+    "branches": null
+   },
+   {
+    "file": "frontend/src/constants/pnlTypes.ts",
+    "lines": 98.8,
+    "statements": 339,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/constants/zLayers.ts",
+    "lines": 100.0,
+    "statements": 5,
+    "branches": null
+   },
+   {
+    "file": "frontend/src/hooks/useAutosave.ts",
+    "lines": 0.0,
+    "statements": 88,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/hooks/useFileWatcher.ts",
+    "lines": 10.5,
+    "statements": 200,
+    "branches": 83.3
+   },
+   {
+    "file": "frontend/src/hooks/useFitGraph.ts",
+    "lines": 72.0,
+    "statements": 50,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/hooks/useFrameFit.ts",
+    "lines": 0.0,
+    "statements": 27,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/hooks/useLayeredLayoutFit.ts",
+    "lines": 0.0,
+    "statements": 35,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/hooks/useNodeBoxes.ts",
+    "lines": 57.1,
+    "statements": 21,
+    "branches": 75.0
+   },
+   {
+    "file": "frontend/src/hooks/useSafeUpdateNodeInternals.ts",
+    "lines": 0.0,
+    "statements": 16,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/hooks/useShowGraphLayout.ts",
+    "lines": 0.0,
+    "statements": 90,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/hooks/useTourProgress.ts",
+    "lines": 3.0,
+    "statements": 99,
+    "branches": null
+   },
+   {
+    "file": "frontend/src/hooks/useUndoRedo.ts",
+    "lines": 55.1,
+    "statements": 136,
+    "branches": 68.1
+   },
+   {
+    "file": "frontend/src/main.tsx",
+    "lines": 0.0,
+    "statements": 29,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/migrateStorageNames.ts",
+    "lines": 100.0,
+    "statements": 31,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/shortcuts/binding.ts",
+    "lines": 97.8,
+    "statements": 135,
+    "branches": 90.3
+   },
+   {
+    "file": "frontend/src/shortcuts/capture.ts",
+    "lines": 92.6,
+    "statements": 54,
+    "branches": 91.4
+   },
+   {
+    "file": "frontend/src/shortcuts/commands.ts",
+    "lines": 100.0,
+    "statements": 19,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/shortcuts/lastPanel.ts",
+    "lines": 100.0,
+    "statements": 47,
+    "branches": 85.7
+   },
+   {
+    "file": "frontend/src/shortcuts/reference.ts",
+    "lines": 100.0,
+    "statements": 65,
+    "branches": 95.5
+   },
+   {
+    "file": "frontend/src/shortcuts/registry.ts",
+    "lines": 100.0,
+    "statements": 150,
+    "branches": 93.3
+   },
+   {
+    "file": "frontend/src/shortcuts/storage.ts",
+    "lines": 100.0,
+    "statements": 63,
+    "branches": 97.0
+   },
+   {
+    "file": "frontend/src/shortcuts/target.ts",
+    "lines": 100.0,
+    "statements": 19,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/shortcuts/useAppShortcuts.ts",
+    "lines": 6.0,
+    "statements": 67,
+    "branches": null
+   },
+   {
+    "file": "frontend/src/shortcuts/useShortcuts.ts",
+    "lines": 8.7,
+    "statements": 23,
+    "branches": null
+   },
+   {
+    "file": "frontend/src/stores/autosaveStore.ts",
+    "lines": 0.0,
+    "statements": 59,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/stores/busyStore.ts",
+    "lines": 96.3,
+    "statements": 217,
+    "branches": 88.0
+   },
+   {
+    "file": "frontend/src/stores/catalogOpenerStore.ts",
+    "lines": 91.7,
+    "statements": 12,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/catalogStore.ts",
+    "lines": 15.1,
+    "statements": 86,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/changesSinceSaveStore.ts",
+    "lines": 0.0,
+    "statements": 6,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/stores/componentsPanelStartStore.ts",
+    "lines": 96.6,
+    "statements": 29,
+    "branches": 88.9
+   },
+   {
+    "file": "frontend/src/stores/connectTargetsStore.ts",
+    "lines": 100.0,
+    "statements": 14,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/edgeAttachStore.ts",
+    "lines": 25.0,
+    "statements": 104,
+    "branches": 37.5
+   },
+   {
+    "file": "frontend/src/stores/edgeLineStore.ts",
+    "lines": 88.9,
+    "statements": 45,
+    "branches": 76.2
+   },
+   {
+    "file": "frontend/src/stores/editLockStore.ts",
+    "lines": 15.8,
+    "statements": 57,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/externalChangeStore.ts",
+    "lines": 100.0,
+    "statements": 6,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/fitButtonStyleStore.ts",
+    "lines": 89.7,
+    "statements": 29,
+    "branches": 75.0
+   },
+   {
+    "file": "frontend/src/stores/graphLayoutDefaultStore.ts",
+    "lines": 96.8,
+    "statements": 31,
+    "branches": 88.9
+   },
+   {
+    "file": "frontend/src/stores/graphLegendStore.ts",
+    "lines": 96.6,
+    "statements": 29,
+    "branches": 88.9
+   },
+   {
+    "file": "frontend/src/stores/graphPointerStore.ts",
+    "lines": 64.1,
+    "statements": 39,
+    "branches": 42.9
+   },
+   {
+    "file": "frontend/src/stores/graphSettingsStore.ts",
+    "lines": 70.5,
+    "statements": 149,
+    "branches": 89.5
+   },
+   {
+    "file": "frontend/src/stores/historyStore.ts",
+    "lines": 98.0,
+    "statements": 345,
+    "branches": 87.6
+   },
+   {
+    "file": "frontend/src/stores/ioRowsStore.ts",
+    "lines": 72.0,
+    "statements": 50,
+    "branches": 94.1
+   },
+   {
+    "file": "frontend/src/stores/layoutSpacingStore.ts",
+    "lines": 83.7,
+    "statements": 43,
+    "branches": 91.7
+   },
+   {
+    "file": "frontend/src/stores/layoutStore.ts",
+    "lines": 93.0,
+    "statements": 229,
+    "branches": 94.9
+   },
+   {
+    "file": "frontend/src/stores/learnResultsStore.ts",
+    "lines": 100.0,
+    "statements": 6,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/livePreviewStore.ts",
+    "lines": 90.0,
+    "statements": 30,
+    "branches": 77.8
+   },
+   {
+    "file": "frontend/src/stores/loadTimingStore.ts",
+    "lines": 100.0,
+    "statements": 6,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/modelStore.ts",
+    "lines": 51.5,
+    "statements": 1329,
+    "branches": 58.8
+   },
+   {
+    "file": "frontend/src/stores/nodeOutlineStore.ts",
+    "lines": 87.8,
+    "statements": 41,
+    "branches": 75.0
+   },
+   {
+    "file": "frontend/src/stores/notificationStore.ts",
+    "lines": 86.2,
+    "statements": 58,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/openMenuOrder.ts",
+    "lines": 88.3,
+    "statements": 111,
+    "branches": 81.8
+   },
+   {
+    "file": "frontend/src/stores/paletteStore.ts",
+    "lines": 66.7,
+    "statements": 81,
+    "branches": 92.9
+   },
+   {
+    "file": "frontend/src/stores/pnlSourceStore.ts",
+    "lines": 24.0,
+    "statements": 50,
+    "branches": 50.0
+   },
+   {
+    "file": "frontend/src/stores/portLayoutStore.ts",
+    "lines": 40.0,
+    "statements": 20,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/presenceStore.ts",
+    "lines": 100.0,
+    "statements": 7,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/revertToSaveStore.ts",
+    "lines": 0.0,
+    "statements": 6,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/stores/runRecordsStore.ts",
+    "lines": 80.0,
+    "statements": 10,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/runResultsStore.ts",
+    "lines": 100.0,
+    "statements": 7,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/runTimingStore.ts",
+    "lines": 0.0,
+    "statements": 6,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/stores/schedulingArrowsStore.ts",
+    "lines": 69.0,
+    "statements": 29,
+    "branches": 50.0
+   },
+   {
+    "file": "frontend/src/stores/showGraphCurvesStore.ts",
+    "lines": 100.0,
+    "statements": 20,
+    "branches": 90.9
+   },
+   {
+    "file": "frontend/src/stores/statusStore.ts",
+    "lines": 100.0,
+    "statements": 7,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/syncStore.ts",
+    "lines": 92.9,
+    "statements": 14,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/textSizeStore.ts",
+    "lines": 89.1,
+    "statements": 46,
+    "branches": 75.0
+   },
+   {
+    "file": "frontend/src/stores/tourHighlightStore.ts",
+    "lines": 67.1,
+    "statements": 79,
+    "branches": 42.9
+   },
+   {
+    "file": "frontend/src/stores/tourStore.ts",
+    "lines": 100.0,
+    "statements": 80,
+    "branches": 94.4
+   },
+   {
+    "file": "frontend/src/stores/tutorialsMenuStore.ts",
+    "lines": 96.6,
+    "statements": 29,
+    "branches": 94.4
+   },
+   {
+    "file": "frontend/src/stores/uiStore.ts",
+    "lines": 64.4,
+    "statements": 101,
+    "branches": 63.6
+   },
+   {
+    "file": "frontend/src/stores/valueViewStore.ts",
+    "lines": 100.0,
+    "statements": 34,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/stores/viewOnlyTagsStore.ts",
+    "lines": 89.7,
+    "statements": 29,
+    "branches": 75.0
+   },
+   {
+    "file": "frontend/src/types/model.ts",
+    "lines": null,
+    "statements": 0,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/activityLog.ts",
+    "lines": 93.5,
+    "statements": 138,
+    "branches": 96.9
+   },
+   {
+    "file": "frontend/src/utils/activitySaver.ts",
+    "lines": 86.5,
+    "statements": 111,
+    "branches": 88.5
+   },
+   {
+    "file": "frontend/src/utils/appUpdateNotice.ts",
+    "lines": 91.6,
+    "statements": 83,
+    "branches": 94.2
+   },
+   {
+    "file": "frontend/src/utils/appWindow.ts",
+    "lines": 91.2,
+    "statements": 34,
+    "branches": 80.0
+   },
+   {
+    "file": "frontend/src/utils/arrowShapes.ts",
+    "lines": 96.2,
+    "statements": 53,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/autosave.ts",
+    "lines": 100.0,
+    "statements": 109,
+    "branches": 85.7
+   },
+   {
+    "file": "frontend/src/utils/cimPlacement.ts",
+    "lines": 100.0,
+    "statements": 34,
+    "branches": 95.2
+   },
+   {
+    "file": "frontend/src/utils/clickLog.ts",
+    "lines": 100.0,
+    "statements": 36,
+    "branches": 96.9
+   },
+   {
+    "file": "frontend/src/utils/componentIcons.ts",
+    "lines": 100.0,
+    "statements": 21,
+    "branches": 66.7
+   },
+   {
+    "file": "frontend/src/utils/curveHandles.ts",
+    "lines": 100.0,
+    "statements": 49,
+    "branches": 97.1
+   },
+   {
+    "file": "frontend/src/utils/curveSmoothness.ts",
+    "lines": 100.0,
+    "statements": 36,
+    "branches": 75.0
+   },
+   {
+    "file": "frontend/src/utils/defaultNaming.ts",
+    "lines": 9.1,
+    "statements": 11,
+    "branches": null
+   },
+   {
+    "file": "frontend/src/utils/diagnostics.ts",
+    "lines": 77.7,
+    "statements": 287,
+    "branches": 62.3
+   },
+   {
+    "file": "frontend/src/utils/diskSource.ts",
+    "lines": 0.0,
+    "statements": 25,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/utils/edgeLanes.ts",
+    "lines": 85.3,
+    "statements": 170,
+    "branches": 78.9
+   },
+   {
+    "file": "frontend/src/utils/edgeRouter.ts",
+    "lines": 82.3,
+    "statements": 249,
+    "branches": 86.2
+   },
+   {
+    "file": "frontend/src/utils/edgeRoutes.ts",
+    "lines": 100.0,
+    "statements": 88,
+    "branches": 93.1
+   },
+   {
+    "file": "frontend/src/utils/errorDetail.ts",
+    "lines": 100.0,
+    "statements": 17,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/fileBridge.ts",
+    "lines": 0.0,
+    "statements": 25,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/frameEdges.ts",
+    "lines": 100.0,
+    "statements": 41,
+    "branches": 92.9
+   },
+   {
+    "file": "frontend/src/utils/frameRoom.ts",
+    "lines": 100.0,
+    "statements": 82,
+    "branches": 83.6
+   },
+   {
+    "file": "frontend/src/utils/graphCursor.ts",
+    "lines": 100.0,
+    "statements": 141,
+    "branches": 98.1
+   },
+   {
+    "file": "frontend/src/utils/graphView.ts",
+    "lines": 42.2,
+    "statements": 64,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/graphViewport.ts",
+    "lines": 100.0,
+    "statements": 11,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/gscEdgeId.ts",
+    "lines": 100.0,
+    "statements": 12,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/history.ts",
+    "lines": 44.3,
+    "statements": 79,
+    "branches": 61.1
+   },
+   {
+    "file": "frontend/src/utils/historyNotice.ts",
+    "lines": 100.0,
+    "statements": 53,
+    "branches": 90.6
+   },
+   {
+    "file": "frontend/src/utils/importModelFiles.ts",
+    "lines": 88.4,
+    "statements": 146,
+    "branches": 78.9
+   },
+   {
+    "file": "frontend/src/utils/inputSets.ts",
+    "lines": 100.0,
+    "statements": 38,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/ioRows.ts",
+    "lines": 97.8,
+    "statements": 223,
+    "branches": 89.4
+   },
+   {
+    "file": "frontend/src/utils/labels.ts",
+    "lines": 5.7,
+    "statements": 159,
+    "branches": null
+   },
+   {
+    "file": "frontend/src/utils/layout.ts",
+    "lines": 95.3,
+    "statements": 555,
+    "branches": 80.9
+   },
+   {
+    "file": "frontend/src/utils/layoutAgreement.ts",
+    "lines": 100.0,
+    "statements": 42,
+    "branches": 95.0
+   },
+   {
+    "file": "frontend/src/utils/layoutOrigin.ts",
+    "lines": 86.2,
+    "statements": 29,
+    "branches": 95.5
+   },
+   {
+    "file": "frontend/src/utils/learnPlan.ts",
+    "lines": 100.0,
+    "statements": 61,
+    "branches": 98.0
+   },
+   {
+    "file": "frontend/src/utils/lineDiff.ts",
+    "lines": 92.9,
+    "statements": 113,
+    "branches": 94.7
+   },
+   {
+    "file": "frontend/src/utils/loadPerf.ts",
+    "lines": 0.0,
+    "statements": 35,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/utils/macAppSettings.ts",
+    "lines": 83.0,
+    "statements": 88,
+    "branches": 96.2
+   },
+   {
+    "file": "frontend/src/utils/narratedCaptions.ts",
+    "lines": 100.0,
+    "statements": 11,
+    "branches": 75.0
+   },
+   {
+    "file": "frontend/src/utils/narration.ts",
+    "lines": 94.8,
+    "statements": 251,
+    "branches": 85.4
+   },
+   {
+    "file": "frontend/src/utils/nodeActions.ts",
+    "lines": 6.0,
+    "statements": 249,
+    "branches": 94.1
+   },
+   {
+    "file": "frontend/src/utils/nodeBox.ts",
+    "lines": 83.9,
+    "statements": 56,
+    "branches": 92.9
+   },
+   {
+    "file": "frontend/src/utils/nodeSelector.ts",
+    "lines": 100.0,
+    "statements": 7,
+    "branches": 60.0
+   },
+   {
+    "file": "frontend/src/utils/nodeShape.ts",
+    "lines": 98.1,
+    "statements": 103,
+    "branches": 91.7
+   },
+   {
+    "file": "frontend/src/utils/offscreenNodes.ts",
+    "lines": 100.0,
+    "statements": 26,
+    "branches": 80.0
+   },
+   {
+    "file": "frontend/src/utils/orientationOffer.ts",
+    "lines": 67.6,
+    "statements": 37,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/paletteColor.ts",
+    "lines": 38.5,
+    "statements": 13,
+    "branches": 66.7
+   },
+   {
+    "file": "frontend/src/utils/pnlRecord.ts",
+    "lines": 93.8,
+    "statements": 32,
+    "branches": 84.6
+   },
+   {
+    "file": "frontend/src/utils/pnlSourceEvents.ts",
+    "lines": 100.0,
+    "statements": 9,
+    "branches": 75.0
+   },
+   {
+    "file": "frontend/src/utils/pnlSources.ts",
+    "lines": 95.7,
+    "statements": 416,
+    "branches": 87.2
+   },
+   {
+    "file": "frontend/src/utils/pnlUpdates.ts",
+    "lines": 95.7,
+    "statements": 93,
+    "branches": 79.3
+   },
+   {
+    "file": "frontend/src/utils/positionsOnScreen.ts",
+    "lines": 100.0,
+    "statements": 10,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/previewBreak.ts",
+    "lines": 100.0,
+    "statements": 19,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/pronunciation.ts",
+    "lines": 93.3,
+    "statements": 30,
+    "branches": 75.0
+   },
+   {
+    "file": "frontend/src/utils/protectionLine.ts",
+    "lines": 100.0,
+    "statements": 17,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/prunePositions.ts",
+    "lines": 100.0,
+    "statements": 8,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/recentPaths.ts",
+    "lines": 36.1,
+    "statements": 36,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/recordedNarration.ts",
+    "lines": 100.0,
+    "statements": 34,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/revealPath.ts",
+    "lines": 56.8,
+    "statements": 37,
+    "branches": 90.9
+   },
+   {
+    "file": "frontend/src/utils/revertToSave.ts",
+    "lines": 0.0,
+    "statements": 20,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/utils/roleRanks.ts",
+    "lines": 100.0,
+    "statements": 97,
+    "branches": 81.2
+   },
+   {
+    "file": "frontend/src/utils/runEcho.ts",
+    "lines": 91.3,
+    "statements": 23,
+    "branches": 80.0
+   },
+   {
+    "file": "frontend/src/utils/runningFrom.ts",
+    "lines": 93.9,
+    "statements": 229,
+    "branches": 77.4
+   },
+   {
+    "file": "frontend/src/utils/saveHistory.ts",
+    "lines": 89.2,
+    "statements": 83,
+    "branches": 97.4
+   },
+   {
+    "file": "frontend/src/utils/saveRequest.ts",
+    "lines": 83.3,
+    "statements": 12,
+    "branches": 75.0
+   },
+   {
+    "file": "frontend/src/utils/showGraphLayout.ts",
+    "lines": 92.5,
+    "statements": 507,
+    "branches": 83.6
+   },
+   {
+    "file": "frontend/src/utils/showGraphLoadRequest.ts",
+    "lines": 90.9,
+    "statements": 33,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/sidecarApi.ts",
+    "lines": 17.1,
+    "statements": 82,
+    "branches": null
+   },
+   {
+    "file": "frontend/src/utils/sidecarPlacement.ts",
+    "lines": 100.0,
+    "statements": 19,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/sidecarSeed.ts",
+    "lines": 0.0,
+    "statements": 60,
+    "branches": 0.0
+   },
+   {
+    "file": "frontend/src/utils/sourceDiff.ts",
+    "lines": 95.3,
+    "statements": 86,
+    "branches": 97.6
+   },
+   {
+    "file": "frontend/src/utils/syncState.ts",
+    "lines": 100.0,
+    "statements": 53,
+    "branches": 93.8
+   },
+   {
+    "file": "frontend/src/utils/timeline.ts",
+    "lines": 99.1,
+    "statements": 114,
+    "branches": 89.7
+   },
+   {
+    "file": "frontend/src/utils/tourStep.ts",
+    "lines": 97.8,
+    "statements": 269,
+    "branches": 95.8
+   },
+   {
+    "file": "frontend/src/utils/traceValues.ts",
+    "lines": 5.9,
+    "statements": 34,
+    "branches": null
+   },
+   {
+    "file": "frontend/src/utils/trialBoundaries.ts",
+    "lines": 4.8,
+    "statements": 21,
+    "branches": null
+   },
+   {
+    "file": "frontend/src/utils/tutorialGuard.ts",
+    "lines": 88.8,
+    "statements": 241,
+    "branches": 83.2
+   },
+   {
+    "file": "frontend/src/utils/tutorialProgress.ts",
+    "lines": 98.5,
+    "statements": 65,
+    "branches": 93.8
+   },
+   {
+    "file": "frontend/src/utils/tutorialView.ts",
+    "lines": 100.0,
+    "statements": 59,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/tutorialsMenuFold.ts",
+    "lines": 83.7,
+    "statements": 43,
+    "branches": 94.4
+   },
+   {
+    "file": "frontend/src/utils/valueGrid.ts",
+    "lines": 97.8,
+    "statements": 92,
+    "branches": 86.5
+   },
+   {
+    "file": "frontend/src/utils/valueViewSave.ts",
+    "lines": 100.0,
+    "statements": 12,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/viewTransform.ts",
+    "lines": 0.0,
+    "statements": 63,
+    "branches": 100.0
+   },
+   {
+    "file": "frontend/src/utils/waitLog.ts",
+    "lines": 100.0,
+    "statements": 109,
+    "branches": 96.7
+   },
+   {
+    "file": "frontend/src/utils/yamlMapping.ts",
+    "lines": 0.0,
+    "statements": 55,
+    "branches": 100.0
+   }
+  ]
+ }
+}
