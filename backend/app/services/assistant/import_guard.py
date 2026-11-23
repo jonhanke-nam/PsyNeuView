@@ -485,7 +485,10 @@ def _vet_tracked(path, cwd: str | None = None, *, by_name: bool = True) -> None:
     text = _as_text(path)
     if not text or text.startswith("<") or "\0" in text:
         return
-    name = fold(os.path.basename(text))
+    base = text.rsplit(os.sep, 1)[-1]
+    # ASCII names (nearly every file a model opens) fold by lowering, which
+    # is what NFC and casefold do to them; only others pay for the full fold.
+    name = base.lower() if base.isascii() else fold(base)
     if by_name and name not in _state.index.by_name:
         return
     if not os.path.isabs(text):
