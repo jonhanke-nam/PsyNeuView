@@ -401,7 +401,17 @@ def worker_must_be_fresh() -> bool:
 def worker_payload_extras() -> dict:
     """What every task sent to a sandbox worker carries for the import
     guard: the state file's path and the roots never vetted."""
-    return {"review_state": str(state_path()), "exempt_roots": exempt_roots()}
+    return {"review_state": str(state_path()), "exempt_roots": exempt_roots(), "settings_files": settings_files()}
+
+
+def settings_files() -> list[str]:
+    """The app's settings file and its first name, which a model in the
+    worker may not change while something is tracked (#187)."""
+    try:
+        from app.services import app_config
+        return [str(app_config.app_config_path()), str(app_config.LEGACY_CONFIG_FILE)]
+    except Exception:
+        return []
 
 
 # The server's own importers go through the same finder as the worker's,

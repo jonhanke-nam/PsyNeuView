@@ -334,11 +334,15 @@ class _State:
         self.extra_roots: tuple[str, ...] = ()
         #: Set once the model made a symlink in this task (see ``_vet_existing``).
         self.links_made = False
+        #: The app's settings files, as the server names them (see ``_protected_files``).
+        self.settings_files: tuple[str, ...] = ()
         #: What the state files looked like when last read, and when last looked at.
         self._seen: tuple | None = None
         self._looked = 0.0
 
-    def refresh(self, path: str | None = None, exempt_roots=None) -> None:
+    def refresh(self, path: str | None = None, exempt_roots=None, settings_files=None) -> None:
+        if settings_files is not None:
+            self.settings_files = tuple(str(p) for p in settings_files if p)
         if exempt_roots is not None:
             roots = []
             for root in exempt_roots:
@@ -817,12 +821,10 @@ def _protected_files() -> tuple[list[str], list[tuple[str, str]]]:
     for state in {_state._path, default_state_path()}:
         if state:
             paths += [state, state + ".bak", state + ".tmp"]
-    # The app's settings (~/.psyneuview.json, or the file the environment
-    # names, and the name it had first): what they say changes what runs.
-    config = os.environ.get("PSYNEUVIEW_CONFIG_FILE", "").strip()
-    home = os.path.expanduser("~")
-    paths += [os.path.expanduser(config) if config else os.path.join(home, ".psyneuview.json"),
-              os.path.join(home, ".psynewview.json")]
+    # The app's settings file, and the name it had first (what they say
+    # changes what runs). The server names them with each task, from where
+    # the app defines them (``app_config``).
+    paths += list(_state.settings_files)
     sources = [os.path.abspath(__file__)]
     main = getattr(sys.modules.get("__main__"), "__file__", None)
     if main and os.path.basename(main) == "sandbox_worker.py":
@@ -1115,9 +1117,9 @@ def reset_for_task() -> None:
     _audit_local = threading.local()
     _AUDIT_EVENTS, _PROCESS_EVENTS = _audit_event_names()
     _audit_everywhere = _worker_mode
-    provider, path = _state.provider, _state._path
+    provider, path, settings = _state.provider, _state._path, _state.settings_files
     _state = _State()
-    _state.provider, _state._path = provider, path
+    _state.provider, _state._path, _state.settings_files = provider, path, settings
     install()
 
 
@@ -1146,12 +1148,12 @@ def fingerprint() -> tuple:
     )
 
 
-def refresh(path: str | None = None, exempt_roots=None) -> None:
+def refresh(path: str | None = None, exempt_roots=None, settings_files=None) -> None:
     """Read the state again (or ask the provider), put the finder first
     again, drop cached user modules, and add the audit hook if something is
     now tracked. Called by the worker before every task, and by the server
     before an in-process load."""
-    _state.refresh(path, exempt_roots)
+    _state.refresh(path, exempt_roots, settings_files)
     _add_audit_hook_if_needed()
 
 

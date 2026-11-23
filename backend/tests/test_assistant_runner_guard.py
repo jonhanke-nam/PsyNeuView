@@ -1588,10 +1588,14 @@ def test_the_standard_library_and_the_apps_settings_are_protected(st, tmp_path, 
     monkeypatch.setattr(sysconfig, "get_paths", lambda *a, **k: {**real_paths, "stdlib": str(fake_stdlib), "platstdlib": str(fake_stdlib)})
     with pytest.raises(import_guard.UnreviewedImport):
         import_guard._guard_protected(str(fake_stdlib / "sitecustomize.py"), "writing it")
+    from app.services import app_config
     config = tmp_path / "settings.json"
     monkeypatch.setenv("PSYNEUVIEW_CONFIG_FILE", str(config))
+    # What every task carries names them, from where the app defines them.
+    assert review.worker_payload_extras()["settings_files"] == [str(config), str(app_config.LEGACY_CONFIG_FILE)]
+    monkeypatch.setattr(import_guard._state, "settings_files", tuple(review.settings_files()))
     with pytest.raises(import_guard.UnreviewedImport):
         import_guard._guard_protected(str(config), "writing it")
     with pytest.raises(import_guard.UnreviewedImport):
-        import_guard._guard_protected(os.path.join(os.path.expanduser("~"), ".psynewview.json"), "writing it")
+        import_guard._guard_protected(str(app_config.LEGACY_CONFIG_FILE), "writing it")
     import_guard._guard_protected(str(tmp_path / "results.csv"), "writing it")  # anything else is fine
