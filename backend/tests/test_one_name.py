@@ -25,6 +25,10 @@ ALLOWED = {
     # The code scan's old-name check looks for it, and its tests write it (#243).
     "scripts/code_scan.py",
     "backend/tests/test_code_scan.py",
+    # The runner guard protects the settings file under its first name too,
+    # and its test checks that (#187).
+    "backend/app/services/assistant/import_guard.py",
+    "backend/tests/test_assistant_runner_guard.py",
 }
 
 
