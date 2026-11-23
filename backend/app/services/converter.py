@@ -254,8 +254,8 @@ except UnreviewedImport as e:
 except BaseException as e:
     out = {"error": str(e), "type": type(e).__name__}
 out["os_sandbox_applied"] = applied
-os_sandbox_apply.end_own_children(time_limit=1.0)
 print(%r + json.dumps(out), flush=True)
+os_sandbox_apply.end_own_children(time_limit=1.0)
 """ % _SOURCE_MARKER
 
 

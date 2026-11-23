@@ -153,6 +153,8 @@ def render_sbpl(policy: dict) -> str:
                   ";; No new file without an extension: Finder runs such a file if it is executable.",
                   f"(deny file-write-create (require-all (subpath {_sb_str(folder)}) (regex {_sb_str('/[^/.]+$')}) "
                   "(vnode-type REGULAR-FILE)))",
+                  ";; No mode changes: an execute bit set here could be run outside (Finder).",
+                  f"(deny file-write-mode (subpath {_sb_str(folder)}))",
                   ";; Nor a name ending in a dot (Finder treats it as having no extension).",
                   f"(deny file-write* (require-all (subpath {_sb_str(folder)}) (regex {_sb_str('[.][ ]*$')})))"]
     for folder in policy.get("no_code_in") or []:
@@ -536,8 +538,41 @@ def apply(policy: dict) -> dict:
         raise SandboxUnavailable(f"no sandbox for this platform ({sys.platform})")
     info["key"] = policy.get("key")
     _applied = info
+    if sys.platform == "darwin":
+        _tolerate_refused_mode_copies(policy)
     os.environ[APPLIED_ENV] = info["mechanism"]
     return info
+
+
+def _tolerate_refused_mode_copies(policy: dict) -> None:
+    """``shutil.copy`` and ``copy2`` copy the data, then the mode; in a
+    writable folder the sandbox refuses mode changes, so that last step is
+    let go there: the data is copied and the file keeps its default mode.
+    Convenience only, not a boundary (#311, W1)."""
+    import shutil
+
+    roots = [r.rstrip("/") + "/" for r in (policy.get("no_autorun_in") or []) if r != policy.get("scratch")]
+
+    def inside(dst) -> bool:
+        try:
+            path = os.path.realpath(os.fspath(dst))
+        except (TypeError, ValueError, OSError):
+            return False
+        return any(path.startswith(r) for r in roots)
+
+    def tolerant(original):
+        def wrapped(src, dst, *args, **kwargs):
+            try:
+                return original(src, dst, *args, **kwargs)
+            except PermissionError:
+                if inside(dst):
+                    return None
+                raise
+        wrapped.__wrapped__ = original
+        return wrapped
+
+    shutil.copymode = tolerant(shutil.copymode)
+    shutil.copystat = tolerant(shutil.copystat)
 
 
 def apply_from_env() -> dict | None:

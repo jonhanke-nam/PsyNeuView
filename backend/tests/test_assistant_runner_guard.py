@@ -150,7 +150,7 @@ def test_a_normal_learn_job_for_the_users_own_file_works_as_before(st):
     r = client.post("/api/jobs", json=_job_body(model))
     assert r.status_code == 200, r.text
     snap = _wait_job(r.json()["job"]["id"] if "job" in r.json() else r.json()["id"])
-    assert snap["status"] == "done", snap
+    assert snap["status"] == "done", snap.get("error")
     assert marker.exists()
 
 

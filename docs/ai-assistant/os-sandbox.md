@@ -232,18 +232,30 @@ from the next one.
     its mark removed from the environment is still ended (as long as it is
     a descendant of the worker when the task ends). Per-task cgroups aren't
     used.
-- **No executable files are left behind.** After every task, the execute
-  bits are taken off regular files in its writable folders whose status
-  changed during the task (at most 50,000 files a check). Names ending in a
-  dot are refused (macOS).
+- **No executable files.** On macOS, mode changes are refused in every
+  writable folder but the task's own, so a model can't set an execute bit;
+  `shutil.copy` and `copy2` let their last step (copying the mode) go
+  there, so ordinary copies work and the file keeps its default mode. That
+  allowance is convenience, not part of the boundary. Archives that restore
+  modes (`tarfile` extraction into such a folder) fail. After every task,
+  the execute bits also come off regular files in its writable folders
+  whose status changed during the task, every file however many: the
+  backstop on macOS, and on Linux (where Landlock has no right for mode
+  changes) the mechanism, so there a file can be executable until its task
+  ends. Names ending in a dot are refused (macOS).
+- **Pool mode is slower:** previews take about 2.5 s (fork mode about
+  0.37 s). The pool is only the fallback where forking isn't usable. On
+  Linux a pool worker's rules are set when it starts and don't open any
+  model's folder for writing; and a model in a folder made after the ready
+  workers started (next to a file the assistant wrote) needs a fresh
+  worker, since Landlock's rules don't reach folders made later there.
 - **Output is bounded.** Every worker's output is read with a 16 MB cap and
   no longer than a moment after the worker exits, so a leftover writing
   without end can't fill the server's memory or stall the next task.
 - **No new file without an extension (macOS)** in writable folders other
   than the task's own: Finder runs such a file if it is executable. Link
   and launcher files (`.terminal`, `.fileloc`, `.webloc`, `.inetloc`,
-  `.desktop`) are refused too. Changing a file's mode is allowed, since
-  `shutil.copy` needs it; execute bits are taken off after the task.
+  `.desktop`) are refused too.
 - **The proof is defence in depth, not the barrier.** Model code can read
   the policy's key, so it could forge an answer; the barrier is the
   worker's own refusal to run a task whose policy it hasn't applied. The

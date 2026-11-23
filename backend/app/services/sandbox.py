@@ -663,7 +663,10 @@ class WorkerPool:
             threading.Thread(target=self._start_one, daemon=True, name="worker-pool").start()
 
     def _start_one(self) -> None:
-        proc = _spawn_worker_process(getattr(self, "_model_path", None))
+        # Linux: a pool worker's policy is set when it starts, and doesn't open
+        # any model's folder, so a ready worker fits every task (a worker per
+        # model folder made the next task wait on a start, #311).
+        proc = _spawn_worker_process(None)
         with self._cond:
             self._starting -= 1
             if proc is not None:
@@ -678,7 +681,7 @@ class WorkerPool:
         model_path = getattr(self, "_model_path", None)
         # macOS: workers start unsandboxed and take each task's own policy
         # (so any ready worker will do); Linux: the policy is set at start.
-        want = os_sandbox.policy_key(model_path) if (os_sandbox.active() and not _POOL_PER_TASK) else None
+        want = os_sandbox.policy_key(None) if (os_sandbox.active() and not _POOL_PER_TASK) else None
         with self._cond:
             while True:
                 while self._ready:
@@ -691,7 +694,7 @@ class WorkerPool:
                 if self._starting == 0 or time.time() > deadline:
                     break
                 self._cond.wait(timeout=0.5)
-        return _spawn_worker_process(model_path)
+        return _spawn_worker_process(None)
 
     def send_task(self, task: str, params: dict, timeout: int) -> dict:
         with self._lock:

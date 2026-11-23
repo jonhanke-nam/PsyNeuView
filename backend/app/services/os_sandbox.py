@@ -254,10 +254,6 @@ def sweep_survivors(wait: bool = False) -> None:
     threading.Thread(target=run, daemon=True, name="sandbox-sweep").start()
 
 
-#: The most files looked at in one check, so a huge folder can't stall it.
-EXEC_CHECK_LIMIT = 50_000
-
-
 def clear_exec_bits() -> int:
     """Take the execute bits off regular files that finished tasks made or
     changed in their writable folders (#311, V2): a file made executable
@@ -267,21 +263,20 @@ def clear_exec_bits() -> int:
     with _live_lock:
         checks, _exec_checks[:] = list(_exec_checks), []
     changed = 0
+    import stat as _stat
+    # Every file, however many: a cap let a model hide one behind decoys
+    # (#311, W1). On macOS mode changes are refused anyway; this is the
+    # backstop there, and the mechanism on Linux.
     for roots, since in checks:
-        seen = 0
         for root in roots:
             for dirpath, dirnames, filenames in os.walk(root):
                 dirnames[:] = [d for d in dirnames if not os.path.islink(os.path.join(dirpath, d))]
                 for name in filenames:
-                    seen += 1
-                    if seen > EXEC_CHECK_LIMIT:
-                        break
                     path = os.path.join(dirpath, name)
                     try:
                         st = os.lstat(path)
                     except OSError:
                         continue
-                    import stat as _stat
                     if not _stat.S_ISREG(st.st_mode) or not st.st_mode & 0o111 or st.st_ctime < since - 1:
                         continue
                     try:
@@ -289,9 +284,6 @@ def clear_exec_bits() -> int:
                         changed += 1
                     except OSError:
                         pass
-                if seen > EXEC_CHECK_LIMIT:
-                    logger.warning("stopped checking %s for execute bits after %d files", root, EXEC_CHECK_LIMIT)
-                    break
     return changed
 
 

@@ -4801,10 +4801,12 @@ def _run_persistent():
             continue
 
         result_str = _handle_one_task(line)
-        if _os_sandbox.applied() is not None:
-            _os_sandbox.end_own_children(time_limit=1.0)  # a sandboxed worker's task is over (#311, V3)
         print(RESULT_MARKER, flush=True)
         print(result_str, flush=True)
+        if _os_sandbox.applied() is not None:
+            # After answering, so the server never waits on a survivor
+            # (#311, V3): the task's orphans, adopted here, are ended.
+            _os_sandbox.end_own_children(time_limit=1.0)
         if _guard_was_replaced():
             # The next task starts in a fresh worker, with a guard nobody
             # has touched; the server restarts a worker that has exited.
@@ -5033,10 +5035,11 @@ def _run_oneshot():
         pass  # the task reports it
     payload = sys.stdin.read()
     result_str = _handle_one_task(payload)
-    if _os_sandbox.applied() is not None:
-        _os_sandbox.end_own_children(time_limit=1.0)  # the task is over (#311, V3)
     print(RESULT_MARKER)
-    print(result_str)
+    print(result_str, flush=True)
+    if _os_sandbox.applied() is not None:
+        # After answering (#311, V3): the task's orphans, adopted here, are ended.
+        _os_sandbox.end_own_children(time_limit=1.0)
 
 
 if __name__ == "__main__":

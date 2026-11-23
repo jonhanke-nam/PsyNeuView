@@ -433,6 +433,9 @@ def _model_in(folder: Path, body: str) -> Path:
 
 def _no_declared_folders(st):
     """Only the model's own folder and the task's own may be written here."""
+    from app.services import sandbox
+    if sys.platform.startswith("linux") and sandbox.isolation_mode() == "pool":
+        pytest.skip("Linux pool workers don't open the model's folder (their policy is set when they start)")
     st["monkeypatch"].setenv(os_sandbox.WRITE_FOLDERS_ENV, "")
 
 
@@ -1103,3 +1106,54 @@ def test_v2_no_executable_files_are_left_in_writable_folders(st):
     if sys.platform == "darwin":
         for name in names:
             assert not (folder / name).exists(), name
+
+
+# ── The fifth independent review of #312 (W1) ──────────────────────────────
+
+
+def test_w1_an_execute_bit_cant_be_set_behind_many_decoys(st):
+    import stat as _stat
+
+    _no_declared_folders(st)
+    folder = Path(os.path.realpath(st["tmp"])) / "W1"
+    (folder / "sub").mkdir(parents=True)
+    target = folder / "sub" / "LICENSE"
+    target.write_text("MIT\n")
+    note = folder / "w1_note.txt"
+    model = _guard_off_model(folder, (
+        "here = os.path.dirname(os.path.abspath(__file__))\n"
+        "for i in range(50050):\n    open(os.path.join(here, f'd{i}.txt'), 'w').close()\n"
+        "try:\n    os.chmod(os.path.join(here, 'sub', 'LICENSE'), 0o755)\n    r = 'set'\n"
+        "except PermissionError:\n    r = 'refused'\n"
+        f"open({str(note)!r}, 'w').write(r)\n"))
+    load(model)
+    from app.services import os_sandbox
+    os_sandbox.sweep_survivors(wait=True)
+    if sys.platform == "darwin":
+        assert note.read_text() == "refused"
+    assert not target.stat().st_mode & (_stat.S_IXUSR | _stat.S_IXGRP | _stat.S_IXOTH), oct(target.stat().st_mode)
+
+
+def test_w1_mode_changes_are_refused_and_copies_still_work(st):
+    _no_declared_folders(st)
+    folder = Path(os.path.realpath(st["tmp"])) / "W1b"
+    folder.mkdir()
+    src = st["tmp"] / "source.csv"
+    src.write_text("1,2\n")
+    note = folder / "w1b_note.txt"
+    model = _guard_off_model(folder, (
+        "import shutil\nhere = os.path.dirname(os.path.abspath(__file__))\n"
+        "open(os.path.join(here, 'own.csv'), 'w').write('1')\n"
+        "try:\n    os.chmod(os.path.join(here, 'own.csv'), 0o644)\n    r = 'set'\n"
+        "except PermissionError:\n    r = 'refused'\n"
+        f"open({str(note)!r}, 'w').write(r)\n"
+        f"shutil.copy({str(src)!r}, os.path.join(here, 'a.csv'))\n"
+        f"shutil.copy2({str(src)!r}, os.path.join(here, 'b.csv'))\n"
+        f"shutil.copyfile({str(src)!r}, os.path.join(here, 'c.csv'))\n"))
+    r = load(model)
+    assert r.status_code == 200, r.text[:300]
+    assert not (r.json().get("model") or {}).get("skippedStatements"), r.json()["model"]["skippedStatements"]
+    if sys.platform == "darwin":
+        assert note.read_text() == "refused"
+    for name in ("own.csv", "a.csv", "b.csv", "c.csv"):
+        assert (folder / name).exists(), name
