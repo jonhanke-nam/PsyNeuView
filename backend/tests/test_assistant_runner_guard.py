@@ -205,7 +205,7 @@ def test_every_spawn_and_exec_site_is_listed():
         "services/locations.py": (1, 1),         # git; a dynamic import of an app module
         "services/quick_check.py": (0, 2),       # not a load: the "exec(" and "eval(" it looks for in the text (#256), and a compile that is never run
         "services/running_from.py": (1, 0),      # which process runs the app
-        "services/sandbox.py": (4, 0),           # warm worker + cold fallback: run_in_sandbox → require_runnable; payload carries the state
+        "services/sandbox.py": (6, 0),           # warm worker + cold fallback + the fork server (#187): run_in_sandbox → require_runnable; payload carries the state
         "services/sandbox_worker.py": (1, 12),   # the fork server's fork of a clean child per task (#187); the guard's own load (spec + exec_module); load_module (spec + exec_module) and load_module_resilient (spec, compile + exec): check_model_path + hooks; introspect's syntax compile; two keyword compile + eval
         "services/settings_info.py": (2, 0),     # git
         "services/working_copies.py": (2, 0),    # which files are open
@@ -1506,3 +1506,82 @@ def test_a_model_cannot_write_code_that_later_tasks_import(st):
     assert target.read_text() == before
     assert not (APP_DIR / "services" / "new_module.py").exists()
     assert not (pnl_file.parent / "zz_planted.py").exists()
+
+
+# ── 19. the fifth round of review of PR #310 ────────────────────────────
+
+
+def test_a_noisy_leftover_process_doesnt_stall_or_steer_later_tasks(st):
+    """H1: a ``setsid`` process that keeps writing into its task's copy, with
+    fake child-start lines naming a victim, neither keeps the fork server's
+    parent copying nor gets a later task's timeout aimed at the victim: the
+    parent's own messages come on a pipe no child holds. The next three
+    tasks answer promptly, and the victim is untouched."""
+    victim = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"], start_new_session=True)
+    try:
+        gc = ("import os, time\nos.setsid()\nend = time.time() + 40\n"
+              "while time.time() < end:\n"
+              "    try:\n"
+              f"        os.write(1, b'noise\\n###PSYNEUVIEW_CHILD### {victim.pid}\\n###PSYNEUVIEW_CHILD_DONE### 0\\n')\n"
+              "    except OSError:\n        break\n"
+              "    time.sleep(0.02)\n")
+        first = _plain_model(st["tmp"] / "H1a", f"import subprocess\nsubprocess.Popen([sys.executable, '-c', {gc!r}])\n")
+        assert _runs_normally(load(first))
+        for i in range(3):
+            model = _plain_model(st["tmp"] / f"H1b{i}", f"comp_name_{i} = 'c{i}'\n")
+            t0 = time.time()
+            r = load(model)
+            assert _runs_normally(r), r.text[:300]
+            assert time.time() - t0 < 10, "a task waited on the leftover process"
+        marker2 = st["tmp"] / "h1_ran.txt"
+        helper = st["models"] / "hx_h1.py"
+        helper.write_text(_helper(marker2))
+        review.mark_unreviewed(str(helper), helper.read_text())
+        assert unreviewed(load(_plain_model(st["tmp"] / "H1c", f"exec(open({str(helper)!r}).read())\n")))
+        assert victim.poll() is None, "the victim's process group was killed"
+    finally:
+        victim.kill()
+
+
+def test_a_write_through_dir_fd_into_the_apps_code_is_refused(st):
+    """H2: ``os.open(name, O_WRONLY | O_APPEND, dir_fd=d)`` names its folder
+    only through the fd, which the audit event doesn't show; the folder is
+    looked up from the fd and the write refused."""
+    target = APP_DIR / "services" / "show_graph_guard.py"
+    before = target.read_text()
+    stmt = (f"d = os.open({str(target.parent)!r}, os.O_RDONLY)\n"
+            f"fd = os.open({target.name!r}, os.O_WRONLY | os.O_APPEND, dir_fd=d)\n"
+            "os.write(fd, b'# changed')\n")
+    r = load(_plain_model(st["tmp"] / "H2", stmt))
+    assert unreviewed(r), r.text[:300]
+    assert target.read_text() == before
+
+
+def test_a_dir_fd_write_elsewhere_runs(st):
+    out = st["tmp"] / "OutFd"
+    out.mkdir()
+    stmt = (f"d = os.open({str(out)!r}, os.O_RDONLY)\n"
+            "fd = os.open('result.txt', os.O_WRONLY | os.O_CREAT, dir_fd=d)\nos.write(fd, b'ok')\nos.close(fd)\n")
+    assert _runs_normally(load(_plain_model(st["tmp"] / "H2ok", stmt)))
+    assert (out / "result.txt").read_text() == "ok"
+
+
+def test_the_standard_library_and_the_apps_settings_are_protected(st, tmp_path, monkeypatch):
+    """H3: a ``sitecustomize.py`` in the standard library would run in every
+    new Python, and the app's settings change what runs; both are among
+    the places a model may not write. Checked against a stand-in standard
+    library, not the real one."""
+    import sysconfig
+    fake_stdlib = tmp_path / "fake_stdlib"
+    fake_stdlib.mkdir()
+    real_paths = sysconfig.get_paths()
+    monkeypatch.setattr(sysconfig, "get_paths", lambda *a, **k: {**real_paths, "stdlib": str(fake_stdlib), "platstdlib": str(fake_stdlib)})
+    with pytest.raises(import_guard.UnreviewedImport):
+        import_guard._guard_protected(str(fake_stdlib / "sitecustomize.py"), "writing it")
+    config = tmp_path / "settings.json"
+    monkeypatch.setenv("PSYNEUVIEW_CONFIG_FILE", str(config))
+    with pytest.raises(import_guard.UnreviewedImport):
+        import_guard._guard_protected(str(config), "writing it")
+    with pytest.raises(import_guard.UnreviewedImport):
+        import_guard._guard_protected(os.path.join(os.path.expanduser("~"), ".psynewview.json"), "writing it")
+    import_guard._guard_protected(str(tmp_path / "results.csv"), "writing it")  # anything else is fine
