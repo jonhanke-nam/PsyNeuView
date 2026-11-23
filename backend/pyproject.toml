@@ -31,9 +31,11 @@ dev = [
 include = ["app*"]
 
 # Coverage for docs/testing-coverage.md (#319). Run from backend/:
-#   pytest tests -n auto --cov --cov-report=json:coverage.json
+#   pytest tests -n auto --cov --cov-report=
+#   coverage combine --append && coverage json
 # `patch = subprocess` also measures the sandbox worker processes, where
-# models actually load and run.
+# models actually load and run; the combine picks up what they write as
+# they exit, after pytest-cov has reported.
 [tool.coverage.run]
 source = ["app"]
 branch = true
