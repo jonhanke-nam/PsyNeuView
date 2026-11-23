@@ -20,7 +20,7 @@
  * A source check, not a render: e2e/style-conventions.spec.ts checks the
  * computed styles in a browser against the tokens.
  */
-import { readFileSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { ALLOWED_COLOURS, paletteTokens, scan, unallowedColours } from "../scripts/style-report.mjs";
@@ -54,11 +54,11 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
       "the Show N warnings fold on a failed run; a trial card's ×N steps fold; a debugger-snapshot category chip",
   },
   "components/layout/Toolbar.tsx": {
-    count: 38,
+    count: 37,
     what:
       "toolbar-sized buttons and menu triggers (⚙, Open ▾, Save, Save a copy as…, Layout ▾, Tutorials ▾: 6); " +
       "the Open menu's rows (actions, catalog models, a folder heading, recent files: 14) and a section's fold heading and ⇅ reorder (2); " +
-      "the Layout and Tutorials menus' rows (8, with Tidy inputs and outputs, #219, and Fit / Actual size, #289) and a Tutorials section's fold heading (1); the tags beside the model name (the unsaved dot, view only, the checkout tag, the managed PsyNeuLink's read-only tag (#50), Reset to Original for a demo and for a reference model: 6); " +
+      "the Layout and Tutorials menus' rows (7, with Tidy inputs and outputs, #219, and Fit / Actual size, #289; Settings… left the Layout menu, #109) and a Tutorials section's fold heading (1); the tags beside the model name (the unsaved dot, view only, the checkout tag, the managed PsyNeuLink's read-only tag (#50), Reset to Original for a demo and for a reference model: 6); " +
       "the reminder's quiet Don't remind me (1)",
   },
   "components/layout/HelpMenu.tsx": { count: 2, what: "Help ▾, a toolbar menu trigger, and the Help menu's rows (#292)" },
@@ -134,6 +134,16 @@ const BARE_MONOSPACE_PENDING = new Set([
   "components/graph/GraphCanvas.tsx",
 ]);
 
+/**
+ * Three dots where the app means an ellipsis (#109): a label or a status
+ * ends in "…", the one character, as macOS writes it (Open from path…,
+ * Saving…). The pattern is three dots after a word and before the end of a
+ * string, a tag or a line — not the spread operator. GraphCanvas.tsx keeps
+ * its three status lines until the canvas work in flight lands.
+ */
+const THREE_DOTS = /(?<=[A-Za-z0-9)\]}])\.\.\.(?=["'`<\s)}\]]|$)/m;
+const THREE_DOTS_PENDING = new Set(["components/graph/GraphCanvas.tsx"]);
+
 const rows = scan();
 const byFile = new Map(rows.map((r) => [r.file, r]));
 
@@ -203,6 +213,34 @@ describe("style conventions (#1302)", () => {
       expect(/["'`]monospace["'`]/.test(text), `${f} no longer writes "monospace"; take it off BARE_MONOSPACE_PENDING`).toBe(true);
     }
     expect(paletteTokens().has("--pnv-font-mono")).toBe(true);
+  });
+
+  it('writes an ellipsis as "…", never three dots (#109)', () => {
+    const src = path.dirname(new URL(import.meta.url).pathname);
+    for (const r of rows) {
+      if (THREE_DOTS_PENDING.has(r.file)) continue;
+      const text = readFileSync(path.join(src, r.file), "utf8");
+      const m = THREE_DOTS.exec(text);
+      expect(m && text.slice(Math.max(0, m.index - 30), m.index + 4), `${r.file} writes "..."; use "…"`).toBeNull();
+    }
+    for (const f of THREE_DOTS_PENDING) {
+      expect(THREE_DOTS.test(readFileSync(path.join(src, f), "utf8")), `${f} no longer writes "..."; take it off THREE_DOTS_PENDING`).toBe(true);
+    }
+  });
+
+  it('e2e specs select the "…" labels, never three dots (#109)', () => {
+    // A spec that looks for "Open from path..." waits out its timeout for a
+    // button that no longer exists; catch it here, in seconds, instead.
+    const e2e = path.join(path.dirname(new URL(import.meta.url).pathname), "..", "e2e");
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((d) =>
+        d.isDirectory() ? walk(path.join(dir, d.name)) : d.name.endsWith(".ts") ? [path.join(dir, d.name)] : [],
+      );
+    for (const f of walk(e2e)) {
+      const code = readFileSync(f, "utf8").split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+      const m = THREE_DOTS.exec(code);
+      expect(m && code.slice(Math.max(0, m.index - 40), m.index + 4), `${path.relative(e2e, f)} selects "..."; the app writes "…"`).toBeNull();
+    }
   });
 
   it("defines nothing twice in palette.css", () => {

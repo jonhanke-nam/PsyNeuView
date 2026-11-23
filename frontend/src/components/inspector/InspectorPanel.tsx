@@ -875,8 +875,10 @@ export function InspectorPanel() {
         </div>
       )}
 
-      {/* Legend */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 10, fontSize: s(11), color: "var(--pnv-text-faint)" }}>
+      {/* Legend. #109: shown only while a row on screen is customized (its
+          purple bar is what the legend explains); index.css shows it when
+          the Inspector holds a row with data-pnv-customized. */}
+      <div className="pnv-inspector-legend" data-testid="inspector-legend" style={{ gap: 12, marginBottom: 10, fontSize: s(11), color: "var(--pnv-text-faint)" }}>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <span style={{ display: "inline-block", width: 10, height: 10, borderLeft: "3px solid var(--pnv-customized)", background: "var(--pnv-customized-tint)", borderRadius: 1 }} />
           customized
@@ -2900,7 +2902,7 @@ function SchedulingSection({
                     }
                   }}
                 >
-                  {adding ? "Adding..." : "Add"}
+                  {adding ? "Adding…" : "Add"}
                 </Button>
                 <Button kind="secondary" size="tall" style={{ fontSize: s(11) }} onClick={() => setShowAddForm(false)}>
                   Cancel
@@ -3277,7 +3279,7 @@ function ConditionBuilder({
           disabled={submitting || !specIsComplete(spec)}
           onClick={submit}
         >
-          {submitting ? "Saving..." : "Save"}
+          {submitting ? "Saving…" : "Save"}
         </Button>
         <Button kind="secondary" size="tall" style={{ fontSize: s(11) }} onClick={onDone}>
           Cancel
@@ -3514,7 +3516,7 @@ export function TerminationSection({
               disabled={submitting || (meta?.needsNode && !depNode)}
               onClick={handleAdd}
             >
-              {submitting ? "Saving..." : "Set"}
+              {submitting ? "Saving…" : "Set"}
             </Button>
             <Button kind="secondary" size="tall" style={{ fontSize: s(11) }} onClick={() => setShow(false)}>
               Cancel
@@ -3724,6 +3726,8 @@ function FieldRow({
     <div
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
+      // #109: the legend above shows while any row carries this.
+      data-pnv-customized={modified ? "true" : undefined}
       style={{
         display: "flex",
         justifyContent: "space-between",

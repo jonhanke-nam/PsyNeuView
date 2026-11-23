@@ -48,7 +48,7 @@ async function setAutosave(page: Page, setting: { enabled?: boolean; seconds?: n
 async function openModel(page: Page, model: string) {
   await page.goto("/");
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(model);
   await prompt.press("Enter");
@@ -135,7 +135,7 @@ test.describe("autosave (#1347)", () => {
     await expect(status(page)).toHaveAttribute("title", /saved 3 s after your last edit[\s\S]*Settings ▸ General ▸ Model files/);
 
     await typeIntoEditor(page, EDITED);
-    // Not before the wait is over...
+    // Not before the wait is over…
     expect(readFileSync(model, "utf8")).toBe(BASE);
     // ...then written, through the same Save: the unsaved dot goes too.
     await expect.poll(() => readFileSync(model, "utf8"), { timeout: 30_000 }).toBe(EDITED);
@@ -172,7 +172,7 @@ test.describe("autosave (#1347)", () => {
     const model = scratchModel();
     await openModel(page, model);
 
-    // An unsaved edit, then the model is locked (view only)...
+    // An unsaved edit, then the model is locked (view only)…
     await typeIntoEditor(page, EDITED);
     await page.getByTestId("layout-menu-button").click();
     await page.getByTestId("layout-menu-lock-model").click();

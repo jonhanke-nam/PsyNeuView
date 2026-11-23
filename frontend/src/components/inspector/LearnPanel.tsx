@@ -649,7 +649,7 @@ export function LearnPanel() {
       {/* Status line */}
       {phase !== "idle" && (
         <div style={{ marginBottom: 10, color: "var(--pnv-text-secondary)" }}>
-          {phase === "submitting" && "Submitting job..."}
+          {phase === "submitting" && "Submitting job…"}
           {phase === "running" && (
             <span>
               Training… epoch {progress.length}/{epochs}

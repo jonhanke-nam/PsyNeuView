@@ -35,7 +35,7 @@ async function changeCompositionView(what: string, done: string, apply: () => vo
   const before = captureView();
   const { setStatus, clearStatus } = useStatusStore.getState();
   apply();
-  setStatus(`${what}...`);
+  setStatus(`${what}…`);
   try {
     const failure = await withBusy(what, rebuildGraph(done));
     if (failure !== null) {
@@ -277,7 +277,7 @@ export async function addNodeToModel(
   if (dropPosition && useModelStore.getState().autoLayout) useModelStore.getState().setAutoLayout(false);
 
   const { setStatus, clearStatus } = useStatusStore.getState();
-  setStatus(`Adding ${mechType}: ${varName}...`);
+  setStatus(`Adding ${mechType}: ${varName}…`);
 
   // Find the composition name
   const resp = await fetch("/api/model/load", {

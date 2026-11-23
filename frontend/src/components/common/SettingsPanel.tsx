@@ -1,8 +1,7 @@
 /**
  * Settings: a sidebar of sections, one shown at a time. (#119, #1290)
  *
- * Reachable via the gear icon in the toolbar, Layout ▸ Settings…, the Mac
- * app's ⌘, and `openSettings(section)` (settings/sections.ts). It reopens on
+ * Reachable via the gear icon in the toolbar, the Mac app's ⌘, and `openSettings(section)` (settings/sections.ts). It reopens on
  * the section shown last; About the first time.
  *
  * This is the one Settings (#1279, PsyNeuView-MacApp#200): inside the Mac app

@@ -25,7 +25,7 @@ const MODEL = path.resolve(
 /** Open MODEL via the Open-from-path flow and wait for the graph to draw. */
 async function openFromPath(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(MODEL);
   await prompt.press("Enter");

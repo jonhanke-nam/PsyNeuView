@@ -832,7 +832,7 @@ export function Toolbar() {
     setDropdownOpen(false);
     clearNotifications();
     const fileName = bundlePath.split("/").pop() || bundlePath;
-    setStatus(`Opening bundle: ${fileName}...`);
+    setStatus(`Opening bundle: ${fileName}…`);
     try {
       const resp = await fetch("/api/model/open-project", {
         method: "POST",
@@ -896,7 +896,7 @@ export function Toolbar() {
     clearNotifications();
     const fileName = path.split("/").pop() || path;
     const t0 = performance.now();
-    setStatus(`Loading model: ${fileName}...`);
+    setStatus(`Loading model: ${fileName}…`);
     try {
       const resp = await fetch("/api/model/load", {
         method: "POST",
@@ -919,7 +919,7 @@ export function Toolbar() {
       const t2 = performance.now();
       setFilePath(path);
       setSource(data.source);
-      setStatus(`Building graph for ${fileName}...`);
+      setStatus(`Building graph for ${fileName}…`);
       loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
       if (data.starImportConverted) {
         useModelStore.setState({ starImportConverted: true });
@@ -988,7 +988,7 @@ export function Toolbar() {
     if (tutorial) applyTutorialViewModes();
     setDropdownOpen(false);
     clearNotifications();
-    setStatus(`Loading demo: ${demo.label}...`);
+    setStatus(`Loading demo: ${demo.label}…`);
     const t0 = performance.now();
     try {
       const resp = await fetch("/api/demos/reset", {
@@ -1169,7 +1169,7 @@ export function Toolbar() {
     if (tutorial) applyTutorialViewModes();
     setDropdownOpen(false);
     clearNotifications();
-    setStatus(`Loading reference model: ${rm.label}...`);
+    setStatus(`Loading reference model: ${rm.label}…`);
     const t0 = performance.now();
     try {
       const resp = await fetch("/api/reference-models/load", {
@@ -1244,7 +1244,7 @@ export function Toolbar() {
     if (!confirmDiscard()) return;
     setDropdownOpen(false);
     clearNotifications();
-    setStatus(`Loading PsyNeuLink example: ${m.label}...`);
+    setStatus(`Loading PsyNeuLink example: ${m.label}…`);
     const t0 = performance.now();
     try {
       const resp = await fetch("/api/psyneulink-examples/load", {
@@ -1470,7 +1470,7 @@ export function Toolbar() {
     if (!(await guardOpen({ kind: "file", name: file.name }))) return;
 
     clearNotifications();
-    setStatus(`Importing MDF: ${file.name}...`);
+    setStatus(`Importing MDF: ${file.name}…`);
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -1510,7 +1510,7 @@ export function Toolbar() {
     if (!saveAsName.trim()) return;
     const currentSource = useModelStore.getState().source;
     const { setStatus, clearStatus } = useStatusStore.getState();
-    setStatus("Saving model...");
+    setStatus("Saving model…");
     try {
       const resp = await fetch("/api/models/save-as", {
         method: "POST",
@@ -1706,7 +1706,8 @@ export function Toolbar() {
 
       {/* Settings (gear icon) — opens sectioned settings panel (#119). Next to
           the name, where nothing a model adds to the toolbar can push it off
-          the edge; Layout ▸ Settings… and the Mac app's ⌘, open it too (#1279). */}
+          the edge; the Mac app's ⌘, opens it too (#1279). Not in the Layout menu
+          as well: one obvious way in (#109). */}
       <button
         onClick={() => openSettingsAt(null)}
         data-testid="settings-button"
@@ -1733,7 +1734,7 @@ export function Toolbar() {
       {/* Developer mode, visible whenever it is on (#1291). */}
       <DeveloperModeIndicator />
 
-      <LayoutMenu onOpenSettings={() => openSettingsAt(null)} />
+      <LayoutMenu />
 
       <WalkthroughMenu />
 
@@ -1807,7 +1808,7 @@ export function Toolbar() {
                 fontWeight: 500,
               }}
             >
-              + New Model...
+              + New Model…
             </button>
 
             <button
@@ -1818,7 +1819,7 @@ export function Toolbar() {
                 color: "var(--pnv-primary)",
               }}
             >
-              Open from path...
+              Open from path…
             </button>
             <button
               onClick={handleImportModelClick}
@@ -1828,7 +1829,7 @@ export function Toolbar() {
               }}
               title="Import a .py model or .pnlproject bundle from your computer (you can also drag one onto the window)"
             >
-              Import model or project...
+              Import model or project…
             </button>
             <button
               onClick={handleImportMdfClick}
@@ -1838,7 +1839,7 @@ export function Toolbar() {
               }}
               title="Import a ModECI MDF file (.mdf.json, .mdf.yaml, or sniffed bare .json/.yaml)"
             >
-              Import MDF...
+              Import MDF…
             </button>
             <button
               onClick={() => { setDropdownOpen(false); setGithubLoaderOpen(true); }}
@@ -1848,7 +1849,7 @@ export function Toolbar() {
               }}
               title="Browse and load a .py file from a public GitHub repo (#258)"
             >
-              From GitHub repo...
+              From GitHub repo…
             </button>
             {developerMode && (
               <button
@@ -1860,7 +1861,7 @@ export function Toolbar() {
                 }}
                 title="Browse PsyNeuLink pytest tests and open one as a standalone model (#274)"
               >
-                Developer / Tests...
+                Developer / Tests…
                 <DeveloperBadge />
                 {pnlSectionSource && (
                   <span
@@ -3643,7 +3644,7 @@ function WalkthroughMenu() {
   );
 }
 
-function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
+function LayoutMenu() {
   const codeVisible = useLayoutStore((s) => s.codeVisible);
   const graphVisible = useLayoutStore((s) => s.graphVisible);
   const bottomVisible = useLayoutStore((s) => s.bottomVisible);
@@ -3826,19 +3827,8 @@ function LayoutMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
           <span style={{ display: "block", height: 1, background: "var(--pnv-border-faint)", margin: "4px 4px" }} />
           <TidyIoRowsMenuItem onDone={() => setOpen(false)} />
           <LockModelMenuItem onDone={() => setOpen(false)} />
-          <button
-            onClick={() => {
-              setOpen(false);
-              onOpenSettings();
-            }}
-            data-testid="layout-menu-settings"
-            title="Open Settings (also the ⚙ button)"
-            style={menuRowStyle(false)}
-            onMouseEnter={(e) => (e.currentTarget.style.background = MENU_ROW_HOVER)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-          >
-            Settings…
-          </button>
+          {/* #109: no Settings… here. One obvious way in: the ⚙ beside the
+              app name (and ⌘, in the Mac app). */}
         </div>
       )}
     </div>

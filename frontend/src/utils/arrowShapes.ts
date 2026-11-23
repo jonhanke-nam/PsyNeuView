@@ -87,6 +87,7 @@ export function currentRoutes(): EdgeRouteMap {
     ea.shaped,
     ea.waypoints,
     ea.overrides,
+    ea,
   );
 }
 

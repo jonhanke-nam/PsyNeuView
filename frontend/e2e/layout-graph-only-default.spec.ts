@@ -52,6 +52,8 @@ freshProfileTest.describe("the default layout (#189)", { tag: "@ci" }, () => {
     await expect(menu.getByTestId("layout-menu-panel-code")).toContainText("·");
     await expect(menu.getByTestId("layout-menu-panel-bottom")).toContainText("·");
     await expect(menu.getByTestId("layout-menu-panel-graph")).toContainText("✓");
+    // #109: Settings is the ⚙ beside the app name, not a Layout row as well.
+    await expect(menu.getByText(/^Settings/)).toHaveCount(0);
     // The graph is the last visible of the three, so its row looks unavailable
     // (#213: it stays clickable, so a click can say why; see the test below).
     await expect(menu.getByTestId("layout-menu-panel-graph")).toHaveAttribute("aria-disabled", "true");

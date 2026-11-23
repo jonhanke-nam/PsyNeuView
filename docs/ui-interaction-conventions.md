@@ -114,7 +114,7 @@ subcomponent purely to hold a boolean.
 
 **When the background is conditional**, prefer a `filter: brightness(...)` over a
 fixed color — a single hover color will fight one of the states. The collapsed
-diagnostics bar is amber when there are issues and green when there are not, so
+diagnostics bar is amber when there is something to act on and neutral grey when there is not, so
 it uses brightness, matching what `button:hover` already does app-wide.
 
 Reach for React state only when the reveal is genuinely *coordinated* — when

@@ -43,7 +43,7 @@ Escape, which every row has.
 
 | Name | Kind | File | Test id | Opens from | Closes by |
 |---|---|---|---|---|---|
-| Settings | dialog | `common/SettingsPanel.tsx` | `settings-panel` | the gear; Layout ▸ Settings…; ⌘, in the Mac app | ×, click outside, Close |
+| Settings | dialog | `common/SettingsPanel.tsx` | `settings-panel` | the gear; ⌘, in the Mac app | ×, click outside, Close |
 | Move My Project Folder | dialog | `common/settings/FoldersSection.tsx` | `project-folder-move-dialog` | Settings ▸ Folders ▸ Move… | ×, click outside, Cancel (Settings stays open) |
 | Switch to (the PsyNeuLink list) | menu | `common/settings/SwitchListbox.tsx` | `pnl-switch-listbox` | Settings ▸ Developer ▸ Which PsyNeuLink is installed ▸ Switch to | click outside, a pick (Settings stays open) |
 | New to PsyNeuView? (the orientation offer) | dialog | `common/OrientationOffer.tsx` | `orientation-offer` | the first launch in a browser | ×, click outside, any of its three answers |

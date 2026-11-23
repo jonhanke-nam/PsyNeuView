@@ -16,7 +16,7 @@ const BACKEND_DIR = path.resolve(__dirname, "..", "..", "backend");
 
 async function openModel(page: Page, model: string) {
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(path.join(BACKEND_DIR, model));
   await Promise.all([
@@ -150,6 +150,14 @@ for (const [style, name] of [
         })
         .first();
       await Promise.all([loaded(page), view.selectOption("EGO_comp")]);
+      // The load's answer lands before the graph is rebuilt from it, and
+      // whether the view opens in Custom (it has saved positions) is decided
+      // in that rebuild. Asked straight away, "is it Custom?" could still see
+      // the view before, say no, and leave the saved positions in place, with
+      // EGO's Output_CIM where it was saved, above the EM frame (#317). So ask
+      // once the graph has settled.
+      await expect(page.locator("html.pnv-busy")).toHaveCount(0, { timeout: 30_000 });
+      await settled(page, "mechanismNode");
       // A view with saved positions opens in Custom; this is about the automatic layout.
       const custom = page.getByRole("button", { name: /^Layout: Custom$/ });
       if (await custom.isVisible().catch(() => false))

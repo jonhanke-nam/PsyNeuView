@@ -204,7 +204,7 @@ test.describe("Reference model editing (#1242)", { tag: "@ci" }, () => {
     await expect(conflictModal(page)).toHaveCount(0);
     await expect.poll(() => editorTail(page)).toContain("# edited in PsyNeuView");
 
-    // Save now would discard the outside edit, so the server refuses (#926)...
+    // Save now would discard the outside edit, so the server refuses (#926)…
     const [resp] = await Promise.all([
       page.waitForResponse((r) => r.url().includes("/api/model/save-source"), { timeout: 60_000 }),
       saveButton(page).click(),

@@ -17,6 +17,11 @@ test("surfaces a reference model's version-mismatch warning in the Diagnostics b
   await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 60000 });
 
   // The warning lives in the (persistent) Diagnostics bar — expand it and read.
-  await page.getByText(/click to expand/i).click();
+  // #109: no "click to expand" line; the bar's tooltip says it, and a click
+  // on the bar (away from the file-watch status at its right end) expands it.
+  const bar = page.locator(".diagnostics-collapsed-bar");
+  await expect(bar).toHaveAttribute("title", /click to expand/i);
+  await expect(bar).toHaveAttribute("data-tone", "attention");
+  await bar.click({ position: { x: 20, y: 6 } });
   await expect(page.getByText(/written for PsyNeuLink 0\.18/i)).toBeVisible({ timeout: 5000 });
 });

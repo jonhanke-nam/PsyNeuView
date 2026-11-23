@@ -203,7 +203,7 @@ async function act(page: Page, step: TourStep): Promise<void> {
   if (step.act?.addFromPalette) {
     const type = step.act.addFromPalette;
     const palette = page.getByTestId("palette-sidebar");
-    await palette.getByPlaceholder("Search components...").fill(type);
+    await palette.getByPlaceholder("Search components…").fill(type);
     // By type, not visible text: the palette shows a short display label
     // ("Transfer"), and the exact type keeps "TransferMechanism" off
     // "RecurrentTransferMechanism", which the same search also returns.
@@ -296,7 +296,7 @@ async function act(page: Page, step: TourStep): Promise<void> {
     const palette = page.getByTestId("palette-sidebar");
     if (!(await palette.isVisible())) await page.getByTitle("Show object palette").click();
     await expect(palette).toBeVisible();
-    await palette.getByPlaceholder("Search components...").fill("MappingProjection");
+    await palette.getByPlaceholder("Search components…").fill("MappingProjection");
     const item = palette.locator('[data-testid="palette-item"][data-type="MappingProjection"]').first();
     await item.dragTo(canvasNode(page, receiver).first());
     await expect(page.getByText("Click the source node to connect into")).toBeVisible({ timeout: 10_000 });

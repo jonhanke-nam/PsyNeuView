@@ -17,7 +17,7 @@ const SHOTS = process.env.PNV_SHOT_DIR;
 
 async function openModel(page: Page) {
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(MODEL);
   await prompt.press("Enter");

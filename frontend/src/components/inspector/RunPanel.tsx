@@ -3,7 +3,7 @@
  * Shows input fields for each input node, a Run button, and Plotly charts.
  */
 
-import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import { cellsFromSet, preloadable, setsFor } from "@/utils/inputSets";
 import { realInputNodes } from "@/utils/learnPlan";
 import { useModelStore, type DebuggerSnapshot, selectExecPath } from "@/stores/modelStore";
@@ -375,7 +375,7 @@ export function RunPanel() {
     setModelWarnings(null);
       setResults(null);
       setSubmitted(null);
-      setStatus("Running model (this may take a few seconds)...");
+      setStatus("Running model (this may take a few seconds)…");
 
       const t0 = performance.now();
       // For the activity log (#1287): started now, finished in `finally` with
@@ -736,7 +736,10 @@ export function RunPanel() {
                 marginBottom: 6,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {/* #109: the row's controls stand as tall as Reset and Run Model
+                  (the compact size): each group stretches to the row, the
+                  text keeping its size. */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, alignSelf: "stretch" }}>
                 <span style={{ fontSize: "var(--pnv-fs-12)", fontWeight: 600, color: "var(--pnv-text-body)" }}>
                   Inputs
                 </span>
@@ -745,15 +748,15 @@ export function RunPanel() {
                 )}
                 {runSets.length > 0 && (
                   <label
-                    style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", whiteSpace: "nowrap" }}
+                    style={{ ...RUN_ROW_LABEL }}
                     title="Inputs this model declares itself, in the shape Composition.run takes (#1216)"
                   >
-                    From{" "}
+                    From
                     <select
                       data-testid="run-input-set"
                       value={inputSetName}
                       onChange={(e) => applyInputSet(e.target.value)}
-                      style={{ fontSize: "var(--pnv-fs-12)" }}
+                      style={{ ...RUN_ROW_SELECT, fontSize: "var(--pnv-fs-12)" }}
                     >
                       {runSets.map((set) => (
                         <option key={set.name} value={set.name}>
@@ -765,20 +768,22 @@ export function RunPanel() {
                   </label>
                 )}
               </div>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 6, alignItems: "center", alignSelf: "stretch" }}>
                 {executionModes.length > 0 && (
                   <label
-                    style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", whiteSpace: "nowrap" }}
+                    data-testid="run-backend"
+                    style={{ ...RUN_ROW_LABEL }}
                     title={
                       executionModes.find((m) => m.id === executionMode)?.reason ??
                       "Execution backend used for this run"
                     }
                   >
-                    Backend{" "}
+                    Backend
                     <select
                       value={executionMode}
                       onChange={(e) => setExecutionMode(e.target.value)}
                       disabled={running}
+                      style={RUN_ROW_SELECT}
                     >
                       {executionModes.map((m) => (
                         <option
@@ -1631,6 +1636,29 @@ function InputCell({
 }
 
 // Segmented control to pick which dimension is outermost in the input grid (#570).
+/**
+ * The Run row's labelled selects (Backend, From), #109: the label beside its
+ * select, both as tall as Reset and Run Model (the row's compact buttons),
+ * the select drawn on the palette like an input so it can take that height.
+ */
+const RUN_ROW_LABEL: CSSProperties = {
+  fontSize: "var(--pnv-fs-12)",
+  color: "var(--pnv-text-secondary)",
+  whiteSpace: "nowrap",
+  display: "flex",
+  alignItems: "center",
+  alignSelf: "stretch",
+  gap: 4,
+};
+const RUN_ROW_SELECT: CSSProperties = {
+  alignSelf: "stretch",
+  padding: "0 6px",
+  border: "1px solid var(--pnv-border)",
+  borderRadius: 4,
+  background: "var(--pnv-surface)",
+  color: "var(--pnv-text-body)",
+};
+
 function GroupingToggle({
   value,
   onChange,
@@ -1645,15 +1673,19 @@ function GroupingToggle({
   return (
     <div
       title="Group input cells by node (each node's trials together) or by trial (each trial's nodes together)"
+      data-testid="run-grouping"
       style={{
         display: "inline-flex",
-        alignItems: "center",
+        // #109: as tall as Reset and Run Model beside it; the segments
+        // stretch with it, their text unchanged.
+        alignItems: "stretch",
+        alignSelf: "stretch",
         border: "1px solid var(--pnv-border-light)",
         borderRadius: 4,
         overflow: "hidden",
       }}
     >
-      <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", padding: "2px 6px" }}>Group by</span>
+      <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", padding: "2px 6px", display: "flex", alignItems: "center" }}>Group by</span>
       {options.map((o) => (
         <button
           key={o.key}

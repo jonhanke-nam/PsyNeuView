@@ -8,7 +8,7 @@ import { CanvasContextMenu, EdgeContextMenu } from "./GraphMenus";
 import { arrowShaped, reshapeDescription, startShapingArrow } from "@/utils/arrowShapes";
 import { PortChooser, type ConnectionOption } from "./PortChooser";
 import { ConnectionLine } from "./ConnectionLine";
-import { CONNECT_HANDLE, NODE_TARGET_HANDLE } from "./connectHandles";
+import { CONNECT_GESTURE, CONNECT_HANDLE, NODE_TARGET_HANDLE } from "./connectHandles";
 import { useConnectTargets } from "@/stores/connectTargetsStore";
 import { registerVisibleCentre } from "@/utils/graphViewport";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -133,6 +133,7 @@ function saveLayoutDebounced(filePath: string, nodes: any[]) {
       ea.shaped,
       ea.waypoints,
       ea.overrides,
+      ea,
     );
     const body = usesFlatPositions()
       ? { file_path: filePath, flatPositions: merged, flatEdgeRoutes: routes }
@@ -1193,6 +1194,8 @@ export function GraphCanvas() {
               onConnect={onConnect}
               onConnectStart={onConnectStart}
               onConnectEnd={onConnectEnd}
+              // #317: a click never connects; a drag past a few pixels does.
+              {...CONNECT_GESTURE}
               connectionLineComponent={ConnectionLine}
               onNodeClick={(e, n) => (isMacSecondaryClick(e) ? onNodeContextMenu(e, n) : onNodeClick(e, n))}
               onNodeContextMenu={onNodeContextMenu}
@@ -1247,7 +1250,8 @@ export function GraphCanvas() {
             <EdgeContextMenu
               x={graphMenu.x}
               y={graphMenu.y}
-              shaped={(useEdgeAttach.getState().waypoints[graphMenu.edgeId]?.length ?? 0) > 0}
+              shaped={(useEdgeAttach.getState().waypoints[graphMenu.edgeId]?.length ?? 0) > 0
+                || !!useEdgeAttach.getState().handles[graphMenu.edgeId]}
               onSelectSender={() => { selectOnly([graphMenu.source]); setGraphMenu(null); }}
               onSelectReceiver={() => { selectOnly([graphMenu.target]); setGraphMenu(null); }}
               onResetShape={() => {

@@ -507,7 +507,7 @@ export function CodeEditor() {
     const { signal } = abortControllerRef.current;
 
     const { setStatus, clearStatus } = useStatusStore.getState();
-    if (!silent) setStatus("Saving code and re-introspecting model...");
+    if (!silent) setStatus("Saving code and re-introspecting model…");
     if (silent) setSyncStatusWithClear("syncing");
     // When the model was opened from a .pnlproject (#348), save-project writes
     // the working file AND re-zips it back into the origin bundle. Otherwise
@@ -1144,7 +1144,7 @@ export function CodeEditor() {
                   color: syncStatus === "syncing" ? "var(--pnv-primary)" : syncStatus === "synced" ? "var(--pnv-success)" : "var(--pnv-danger)",
                   marginLeft: 4,
                 }}>
-                  {syncStatus === "syncing" ? "syncing..." : syncStatus === "synced" ? "synced" : "sync error"}
+                  {syncStatus === "syncing" ? "syncing…" : syncStatus === "synced" ? "synced" : "sync error"}
                 </span>
               )}
             </span>

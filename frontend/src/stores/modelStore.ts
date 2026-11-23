@@ -2211,7 +2211,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     // Carried over by endpoint, as they are saved.
     const ea = useEdgeAttach.getState();
     const shapedHere = isReload
-      ? serializeRoutes(screenEdges as unknown as RoutableEdge[], ea.shaped, ea.waypoints, ea.overrides)
+      ? serializeRoutes(screenEdges as unknown as RoutableEdge[], ea.shaped, ea.waypoints, ea.overrides, ea)
       : {};
     useEdgeAttach
       .getState()

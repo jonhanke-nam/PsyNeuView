@@ -26,7 +26,7 @@ test("Fit: a wide graph fills the canvas's width and is centred (#54)", { tag: "
   await page.getByText("Components", { exact: true }).locator("xpath=..").getByRole("button").last().click();
 
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(path.join(MODELS_DIR, EGO));
   await prompt.press("Enter");

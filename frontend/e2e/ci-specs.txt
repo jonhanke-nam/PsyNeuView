@@ -7,6 +7,7 @@ arrow-drag-keeps-layout.spec.ts
 arrowheads-at-end.spec.ts
 blank-screen-setting.spec.ts
 busy-indicator.spec.ts
+click-never-connects.spec.ts
 component-icons.spec.ts
 components-panel-start-setting.spec.ts
 composition-cim-edges.spec.ts
@@ -21,6 +22,7 @@ drag-to-connect-stage2.spec.ts
 drag-to-connect-stage3.spec.ts
 drag-to-connect.spec.ts
 drop-new-model-file.spec.ts
+edge-curve-handles.spec.ts
 edge-line-width.spec.ts
 edge-routing-no-crossings.spec.ts
 edge-shaping-auto-layout.spec.ts
@@ -47,6 +49,7 @@ gsc-row-selects-edge.spec.ts
 harness.spec.ts
 help-keyboard-shortcuts.spec.ts
 inspector-condition-undo.spec.ts
+inspector-legend.spec.ts
 io-role-rows.spec.ts
 layered-wide-boxes.spec.ts
 layout-default-fresh-profile.spec.ts

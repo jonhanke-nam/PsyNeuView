@@ -138,7 +138,9 @@ async def _broadcast_presence() -> None:
     include the recipient's own other tabs (#1082).
     """
     dead = set()
-    for ws in _connected_clients:
+    # Snapshot: we await per client, so a window connecting or leaving
+    # mid-broadcast would otherwise change the set under the loop (#305).
+    for ws in list(_connected_clients):
         try:
             await ws.send_json(presence.snapshot_for(ws))
         except Exception:
