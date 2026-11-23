@@ -440,13 +440,16 @@ def prepare_scratch(policy: dict) -> None:
         return
     os.makedirs(scratch, mode=0o700, exist_ok=True)
     for var, sub in (("TMPDIR", ""), ("TMP", ""), ("TEMP", ""), ("MPLCONFIGDIR", "matplotlib"),
-                     ("NUMBA_CACHE_DIR", "numba"), ("XDG_CACHE_HOME", "cache"), ("PYTHONPYCACHEPREFIX", "pycache")):
+                     ("NUMBA_CACHE_DIR", "numba"), ("XDG_CACHE_HOME", "cache")):
         path = os.path.join(scratch, sub) if sub else scratch
         os.makedirs(path, exist_ok=True)
         os.environ[var] = path
     import tempfile
     tempfile.tempdir = scratch
-    sys.pycache_prefix = os.path.join(scratch, "pycache")
+    # Python's bytecode cache is left where it is: read from the existing
+    # __pycache__ folders (a prefix would mean recompiling PsyNeuLink and
+    # torch on every one-shot run); writing new ones is refused and Python
+    # carries on without them.
 
 
 def apply(policy: dict) -> dict:
