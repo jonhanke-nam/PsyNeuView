@@ -129,7 +129,7 @@ export function DiagnosticPanel() {
         )}
         {/* #103: the file-watch status lives here, not in a row of its own,
             at the right end of the bar. */}
-        <span style={{ marginLeft: "auto" }}>
+        <span style={{ marginLeft: "auto", display: "flex" }}>
           <SyncIndicator />
         </span>
       </div>
