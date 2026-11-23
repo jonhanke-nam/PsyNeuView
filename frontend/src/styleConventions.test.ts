@@ -20,7 +20,7 @@
  * A source check, not a render: e2e/style-conventions.spec.ts checks the
  * computed styles in a browser against the tokens.
  */
-import { readFileSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { ALLOWED_COLOURS, paletteTokens, scan, unallowedColours } from "../scripts/style-report.mjs";
@@ -225,6 +225,21 @@ describe("style conventions (#1302)", () => {
     }
     for (const f of THREE_DOTS_PENDING) {
       expect(THREE_DOTS.test(readFileSync(path.join(src, f), "utf8")), `${f} no longer writes "..."; take it off THREE_DOTS_PENDING`).toBe(true);
+    }
+  });
+
+  it('e2e specs select the "…" labels, never three dots (#109)', () => {
+    // A spec that looks for "Open from path..." waits out its timeout for a
+    // button that no longer exists; catch it here, in seconds, instead.
+    const e2e = path.join(path.dirname(new URL(import.meta.url).pathname), "..", "e2e");
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((d) =>
+        d.isDirectory() ? walk(path.join(dir, d.name)) : d.name.endsWith(".ts") ? [path.join(dir, d.name)] : [],
+      );
+    for (const f of walk(e2e)) {
+      const code = readFileSync(f, "utf8").split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+      const m = THREE_DOTS.exec(code);
+      expect(m && code.slice(Math.max(0, m.index - 40), m.index + 4), `${path.relative(e2e, f)} selects "..."; the app writes "…"`).toBeNull();
     }
   });
 
