@@ -10,7 +10,8 @@ import { useState } from "react";
 import { parseSafeText, isSafeUrl } from "@/utils/safeText";
 import { Button } from "../common/Button";
 
-const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
+// Code type, the app's one token for it (#303).
+const MONO = "var(--pnv-font-mono)";
 
 export function SafeText({ text, testId }: { text: string; testId?: string }) {
   const segments = parseSafeText(text);

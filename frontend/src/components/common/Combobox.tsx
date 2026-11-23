@@ -141,7 +141,7 @@ export function Combobox({
     width: "100%",
     boxSizing: "border-box",
     paddingRight: 26,
-    ...(monospace ? { fontFamily: "monospace" } : {}),
+    ...(monospace ? { fontFamily: "var(--pnv-font-mono)" } : {}),
   };
 
   return (
@@ -235,7 +235,7 @@ export function Combobox({
                     padding: "4px 8px",
                     cursor: "pointer",
                     background: isHighlighted ? "var(--pnv-primary-tint)" : "var(--pnv-surface)",
-                    fontFamily: monospace ? "monospace" : undefined,
+                    fontFamily: monospace ? "var(--pnv-font-mono)" : undefined,
                     display: "flex",
                     justifyContent: "space-between",
                     gap: 8,

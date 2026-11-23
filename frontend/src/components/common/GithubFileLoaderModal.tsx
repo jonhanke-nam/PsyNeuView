@@ -246,7 +246,7 @@ const sectionHeaderStyle: React.CSSProperties = {
 const rowItemStyle = (selected: boolean): React.CSSProperties => ({
   padding: "4px 10px",
   cursor: "pointer",
-  fontFamily: "monospace",
+  fontFamily: "var(--pnv-font-mono)",
   fontSize: "var(--pnv-fs-12)",
   background: selected ? "var(--pnv-primary-tint)" : "transparent",
   whiteSpace: "nowrap",
@@ -394,7 +394,7 @@ export function GithubFileLoaderModal({ onCancel, onLoaded }: GithubFileLoaderMo
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter paths (e.g. tests/composition)"
-            style={{ ...inputStyle, fontFamily: "monospace" }}
+            style={{ ...inputStyle, fontFamily: "var(--pnv-font-mono)" }}
           />
         </div>
 
@@ -469,7 +469,7 @@ export function GithubFileLoaderModal({ onCancel, onLoaded }: GithubFileLoaderMo
             value={path}
             onChange={(e) => setPath(e.target.value)}
             placeholder="path/to/file.py"
-            style={{ ...inputStyle, fontFamily: "monospace" }}
+            style={{ ...inputStyle, fontFamily: "var(--pnv-font-mono)" }}
           />
         </div>
 

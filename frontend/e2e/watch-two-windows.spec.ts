@@ -6,6 +6,9 @@
  * so only the window opened last was watched, and any window closing stopped
  * it for all. Found when an e2e waited for an outside edit while other test
  * pages, on the same server, opened and closed.
+ *
+ * And two models in one folder (#308): each file had its own watch on the
+ * folder, and macOS allows one per folder, so the second model went unwatched.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 import { readFileSync, writeFileSync, mkdtempSync } from "fs";
@@ -15,8 +18,8 @@ import { fixturePath } from "./fixtures";
 
 type Page = import("@playwright/test").Page;
 
-function scratch(name: string): string {
-  const file = path.join(mkdtempSync(path.join(tmpdir(), "watch272-")), `${name}.py`);
+function scratch(name: string, dir?: string): string {
+  const file = path.join(dir ?? mkdtempSync(path.join(tmpdir(), "watch272-")), `${name}.py`);
   writeFileSync(file, readFileSync(fixturePath("two_mech_projection"), "utf8"));
   return file;
 }
@@ -61,5 +64,25 @@ test.describe("watching, with two windows open (#272)", { tag: "@ci" }, () => {
     await other.close();
     editElsewhere(first, "added_again");
     await expect(page.locator(".react-flow__node")).toHaveCount(4, { timeout: 30_000 });
+  });
+});
+
+test.describe("watching, with two models in one folder (#308)", { tag: "@ci" }, () => {
+  test("the second model in the folder hears its own edits", async ({ page, context }) => {
+    test.setTimeout(180_000);
+    const dir = mkdtempSync(path.join(tmpdir(), "watch308-"));
+    const first = scratch("first", dir), second = scratch("second", dir);
+    await open(page, first);
+    const other = await context.newPage();
+    await open(other, second);
+
+    editElsewhere(second, "added_to_second");
+    await expect(other.locator(".react-flow__node")).toHaveCount(3, { timeout: 30_000 });
+    await expect(page.locator(".react-flow__node")).toHaveCount(2);
+
+    // The first window closes; the second, sharing its folder, still hears.
+    await page.close();
+    editElsewhere(second, "added_again");
+    await expect(other.locator(".react-flow__node")).toHaveCount(4, { timeout: 30_000 });
   });
 });

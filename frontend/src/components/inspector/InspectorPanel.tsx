@@ -406,7 +406,7 @@ export function SchedulerModeToggle({ mode, fontPx }: { mode: string; fontPx: nu
       onClick={onClick}
       title={`Scheduling mode: ${mode}. Click to switch to ${next}.`}
       style={{
-        fontSize: fontPx, fontWeight: 600, fontFamily: "monospace",
+        fontSize: fontPx, fontWeight: 600, fontFamily: "var(--pnv-font-mono)",
         color: "var(--pnv-on-primary)", background: mode === "STANDARD" ? "var(--pnv-primary)" : "var(--pnv-warning)",
         padding: "1px 8px", borderRadius: 8, border: "none", cursor: "pointer",
       }}
@@ -921,10 +921,10 @@ export function InspectorPanel() {
                 padding: "4px 8px", marginBottom: 2,
                 background: i % 2 === 0 ? "var(--pnv-surface-muted)" : "var(--pnv-surface)", borderRadius: 4,
               }}>
-                <span style={{ fontSize: s(11), fontWeight: 700, color: "var(--pnv-text-faint)", minWidth: 28, fontFamily: "monospace" }}>
+                <span style={{ fontSize: s(11), fontWeight: 700, color: "var(--pnv-text-faint)", minWidth: 28, fontFamily: "var(--pnv-font-mono)" }}>
                   {i + 1}.
                 </span>
-                <span style={{ fontSize: s(12), fontFamily: "monospace", color: "var(--pnv-text-body)" }}>
+                <span style={{ fontSize: s(12), fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-text-body)" }}>
                   {step.join(", ")}
                 </span>
               </div>
@@ -951,7 +951,7 @@ export function InspectorPanel() {
                 }}
               >
                 <span style={{ fontSize: s(11), fontWeight: 600, color: "var(--pnv-text-secondary)", minWidth: 60 }}>{bc.owner}</span>
-                <span style={{ fontSize: s(11), fontFamily: "monospace", color: "var(--pnv-primary)" }}>
+                <span style={{ fontSize: s(11), fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-primary)" }}>
                   {conditionToString(bc.condition)}
                 </span>
               </div>
@@ -966,7 +966,7 @@ export function InspectorPanel() {
                   onMouseEnter={(e) => { e.currentTarget.style.background = "var(--pnv-surface-sunken)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                 >
-                  <span style={{ fontSize: s(10), fontWeight: 600, fontFamily: "monospace", color: "var(--pnv-on-primary)", background: color, padding: "0 5px", borderRadius: 6, lineHeight: "16px" }}>
+                  <span style={{ fontSize: s(10), fontWeight: 600, fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-on-primary)", background: color, padding: "0 5px", borderRadius: 6, lineHeight: "16px" }}>
                     {gsc.type}
                   </span>
                   <span style={{ fontSize: s(11), color: "var(--pnv-text-secondary)" }}>
@@ -1000,7 +1000,7 @@ export function InspectorPanel() {
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
           <span
             style={{
-              fontSize: s(11), fontWeight: 600, fontFamily: "monospace",
+              fontSize: s(11), fontWeight: 600, fontFamily: "var(--pnv-font-mono)",
               color: "var(--pnv-on-primary)", background: color, padding: "1px 8px",
               borderRadius: 8,
             }}
@@ -1083,7 +1083,7 @@ export function InspectorPanel() {
                 }}
               >
                 <span style={{ color: "var(--pnv-text-secondary)" }}>{key}</span>
-                <span style={{ fontFamily: "monospace", color: "var(--pnv-text-body)" }}>
+                <span style={{ fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-text-body)" }}>
                   {typeof val === "object" ? JSON.stringify(val) : String(val)}
                 </span>
               </div>
@@ -1489,7 +1489,7 @@ export function InspectorPanel() {
             border: "1px solid var(--pnv-trace-border)",
             borderRadius: 4,
             fontSize: s(12),
-            fontFamily: "monospace",
+            fontFamily: "var(--pnv-font-mono)",
             lineHeight: 1.5,
           }}
         >
@@ -1817,7 +1817,7 @@ function TrajectoryRow({
       </svg>
       <div
         style={{
-          fontFamily: "monospace",
+          fontFamily: "var(--pnv-font-mono)",
           fontSize: sFn(10),
           color: "var(--pnv-text-muted)",
           whiteSpace: "nowrap",
@@ -2327,7 +2327,7 @@ function PortRow({
             key={`${label}-${i}`}
             style={{
               fontSize: s(10),
-              fontFamily: "ui-monospace, SFMono-Regular, monospace",
+              fontFamily: "var(--pnv-font-mono)",
               color: "var(--pnv-text-secondary)",
               background: "var(--pnv-surface-sunken)",
               padding: "0 4px",
@@ -2559,7 +2559,7 @@ function ParamSection({
                 title="Inherited — not a constructor parameter"
               >
                 <span style={{ color: "var(--pnv-text-faint)", fontSize: s(12), flexShrink: 0 }}>{key}</span>
-                <span style={{ fontSize: s(12), fontFamily: "monospace", color: "var(--pnv-text-faint)", textAlign: "right" }}>
+                <span style={{ fontSize: s(12), fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-text-faint)", textAlign: "right" }}>
                   {meta.value === null || meta.value === undefined ? ""
                     : typeof meta.value === "object" ? JSON.stringify(meta.value)
                     : String(meta.value)}
@@ -2772,7 +2772,7 @@ function SchedulingSection({
                 onMouseLeave={(e) => (e.currentTarget.style.background = "var(--pnv-surface-muted)")}
               >
                 <span style={{
-                  fontSize: s(10), fontWeight: 600, fontFamily: "monospace",
+                  fontSize: s(10), fontWeight: 600, fontFamily: "var(--pnv-font-mono)",
                   color: "var(--pnv-on-primary)", background: color, padding: "0 5px",
                   borderRadius: 6, lineHeight: "16px",
                 }}>
@@ -2809,7 +2809,7 @@ function SchedulingSection({
                 onMouseLeave={(e) => (e.currentTarget.style.background = "var(--pnv-surface-muted)")}
               >
                 <span style={{
-                  fontSize: s(10), fontWeight: 600, fontFamily: "monospace",
+                  fontSize: s(10), fontWeight: 600, fontFamily: "var(--pnv-font-mono)",
                   color: "var(--pnv-on-primary)", background: color, padding: "0 5px",
                   borderRadius: 6, lineHeight: "16px",
                 }}>
@@ -3419,7 +3419,7 @@ export function TerminationSection({
           </span>
           <span
             title={cond.explanation || undefined}
-            style={{ fontSize: s(11), fontFamily: "monospace", color: "var(--pnv-text-secondary)", flex: 1 }}
+            style={{ fontSize: s(11), fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-text-secondary)", flex: 1 }}
           >
             {conditionToString(cond)}
             {cond.explanation && (
@@ -3559,7 +3559,7 @@ function ConditionTree({
           border: depth === 0 ? "1px solid var(--pnv-primary-tint-border)" : "none",
         }}>
           <span style={{
-            fontSize: s(11), fontWeight: 700, fontFamily: "monospace",
+            fontSize: s(11), fontWeight: 700, fontFamily: "var(--pnv-font-mono)",
             color: "var(--pnv-primary-text-on-tint)",
           }}>
             {condition.type}
@@ -3601,13 +3601,13 @@ function ConditionTree({
         border: depth === 0 ? "1px solid var(--pnv-primary-tint-border)" : "1px solid var(--pnv-border-faint)",
       }}>
         <span style={{
-          fontSize: s(11), fontWeight: 600, fontFamily: "monospace",
+          fontSize: s(11), fontWeight: 600, fontFamily: "var(--pnv-font-mono)",
           color: "var(--pnv-primary)",
         }}>
           {condition.type}
         </span>
         {argStr && (
-          <span style={{ fontSize: s(11), fontFamily: "monospace", color: "var(--pnv-text-secondary)" }}>
+          <span style={{ fontSize: s(11), fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-text-secondary)" }}>
             ({argStr})
           </span>
         )}
@@ -3774,7 +3774,7 @@ function FieldRow({
       >
         {label}
         {defaultValue !== undefined && (
-          <span style={{ fontSize: s(9), color: "var(--pnv-text-faint)", fontFamily: "monospace" }}>
+          <span style={{ fontSize: s(9), color: "var(--pnv-text-faint)", fontFamily: "var(--pnv-font-mono)" }}>
             {inferType(defaultValue)}
           </span>
         )}
@@ -3805,7 +3805,7 @@ function FieldRow({
           borderRadius: 3,
           fontSize: s(13),
           textAlign: "right",
-          fontFamily: "monospace",
+          fontFamily: "var(--pnv-font-mono)",
           background: modified ? "var(--pnv-surface)" : "var(--pnv-surface-muted)",
           color: modified ? "var(--pnv-text)" : "var(--pnv-text-hint)",
           outline: focused ? "none" : undefined,
@@ -3923,7 +3923,7 @@ function EnumParamRow({
           flex: 1,
           maxWidth: 220,
           fontSize: s(12),
-          fontFamily: "monospace",
+          fontFamily: "var(--pnv-font-mono)",
           padding: "2px 4px",
           border: "1px solid var(--pnv-border-light)",
           borderRadius: 3,

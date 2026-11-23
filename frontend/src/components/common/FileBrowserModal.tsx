@@ -182,7 +182,7 @@ const ROW: React.CSSProperties = {
 };
 const MUTED: React.CSSProperties = { padding: 12, color: "var(--pnv-text-faint)", fontSize: "var(--pnv-fs-12)" };
 const PATH_LABEL: React.CSSProperties = {
-  fontFamily: "monospace", fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)",
+  fontFamily: "var(--pnv-font-mono)", fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)",
   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
 };
 const UP_BTN: React.CSSProperties = {

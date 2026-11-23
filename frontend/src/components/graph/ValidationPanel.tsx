@@ -37,7 +37,7 @@ export function ValidationPanel() {
         borderRadius: 6,
         boxShadow: "var(--pnv-shadow-float)",
         fontSize: "var(--pnv-fs-12)",
-        fontFamily: "monospace",
+        fontFamily: "var(--pnv-font-mono)",
         maxWidth: 480,
         minWidth: 240,
       }}
@@ -100,7 +100,7 @@ export function ValidationPanel() {
                     cursor: d.line ? "pointer" : "default",
                     color: "var(--pnv-primary-deep)",
                     fontWeight: 600,
-                    fontFamily: "monospace",
+                    fontFamily: "var(--pnv-font-mono)",
                     fontSize: "var(--pnv-fs-12)",
                   }}
                 >
@@ -130,7 +130,7 @@ export function ValidationPanel() {
                   cursor: b.line ? "pointer" : "default",
                   color: "var(--pnv-primary-deep)",
                   fontWeight: 600,
-                  fontFamily: "monospace",
+                  fontFamily: "var(--pnv-font-mono)",
                   fontSize: "var(--pnv-fs-12)",
                 }}
               >

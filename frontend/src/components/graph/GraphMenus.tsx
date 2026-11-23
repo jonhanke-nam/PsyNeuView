@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useDismiss } from "@/components/common/dialog/useDismiss";
 import { Z_MENU } from "@/constants/zLayers";
+import { useMenuInWindow } from "@/components/common/useMenuInWindow";
 
 export function GraphMenu({ "data-testid": testId, x, y, onClose, children }: {
   "data-testid": string;
@@ -19,6 +20,8 @@ export function GraphMenu({ "data-testid": testId, x, y, onClose, children }: {
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // #109: opens upward / leftward near the window's edge, as macOS menus do.
+  const { left, top } = useMenuInWindow(ref, x, y);
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as HTMLElement)) onClose();
@@ -34,14 +37,17 @@ export function GraphMenu({ "data-testid": testId, x, y, onClose, children }: {
       data-testid={testId}
       style={{
         position: "fixed",
-        left: x,
-        top: y,
+        left,
+        top,
         background: "var(--pnv-surface)",
         border: "1px solid var(--pnv-border-light)",
         borderRadius: 6,
         boxShadow: "var(--pnv-shadow-popover)",
         zIndex: Z_MENU,
         minWidth: 160,
+        // Its own width wherever it opens, so it can be measured and moved
+        // inside the window (#109) without wrapping against the edge.
+        width: "max-content",
         padding: "4px 0",
         fontSize: "var(--pnv-fs-13)",
       }}

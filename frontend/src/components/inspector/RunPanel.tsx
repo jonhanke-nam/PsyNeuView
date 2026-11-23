@@ -1074,7 +1074,7 @@ export function RunPanel() {
                   borderCollapse: "collapse",
                   marginTop: 4,
                   width: "100%",
-                  fontFamily: "monospace",
+                  fontFamily: "var(--pnv-font-mono)",
                 }}
               >
                 <thead>
@@ -1569,7 +1569,7 @@ function InputNodeEditor({
           placeholder={"1, 0\n0, 1"}
           style={{
             width: "100%",
-            fontFamily: "monospace",
+            fontFamily: "var(--pnv-font-mono)",
             fontSize: "var(--pnv-fs-11)",
             padding: 4,
             border: "1px solid var(--pnv-border-light)",
@@ -1610,7 +1610,7 @@ function InputCell({
     <label
       style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-muted)" }}
     >
-      <span style={{ fontFamily: "monospace" }}>{label}</span>
+      <span style={{ fontFamily: "var(--pnv-font-mono)" }}>{label}</span>
       <input
         value={value}
         inputMode="decimal"
@@ -1618,7 +1618,7 @@ function InputCell({
         title={invalid ? "Not a number" : undefined}
         style={{
           width: 48,
-          fontFamily: "monospace",
+          fontFamily: "var(--pnv-font-mono)",
           fontSize: "var(--pnv-fs-11)",
           padding: "2px 4px",
           border: `1px solid ${invalid ? "var(--pnv-danger)" : "var(--pnv-border-light)"}`,
@@ -2070,7 +2070,7 @@ function TrialOutputs({
                     : null;
                   return (
                     <div key={`out-${nodeName}`} style={{ marginBottom: 2 }}>
-                      <div style={{ color: "var(--pnv-text-hint)", fontFamily: "monospace" }}>
+                      <div style={{ color: "var(--pnv-text-hint)", fontFamily: "var(--pnv-font-mono)" }}>
                         {nodeName.replace(/-\d+$/, "")}
                       </div>
                       {ports.map((p, pi) => (
@@ -2191,7 +2191,7 @@ function WithinTrialSteps({
           fontSize: "var(--pnv-fs-10)",
           color: "var(--pnv-trace-value)",
           cursor: "pointer",
-          fontFamily: "monospace",
+          fontFamily: "var(--pnv-font-mono)",
         }}
       >
         {open ? "▾" : "▸"} ×{series.length} steps
@@ -2210,7 +2210,7 @@ function WithinTrialSteps({
               title={`Jump trace to scheduler step ${s.step + 1}`}
               style={{
                 fontSize: "var(--pnv-fs-10)",
-                fontFamily: "monospace",
+                fontFamily: "var(--pnv-font-mono)",
                 color: "var(--pnv-trace-value)",
                 cursor: "pointer",
                 padding: "1px 0 1px 10px",
@@ -2244,7 +2244,7 @@ function GridNodeControls({
   const { view, grid } = useNodeGrid([node], first, declared, scaleFrom);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", lineHeight: 1.5 }}>
-      <span style={{ color: "var(--pnv-trace-value)", fontFamily: "monospace" }}>{node}</span>
+      <span style={{ color: "var(--pnv-trace-value)", fontFamily: "var(--pnv-font-mono)" }}>{node}</span>
       <span style={{ color: "var(--pnv-text-hint)", fontSize: "var(--pnv-fs-10)" }}>{size} values, as</span>
       <ValueViewToggle node={node} size={size} view={view} shape={grid?.shape} testId={`run-value-view-${node}`} />
       {grid && <GridLegend scale={grid.scale} testId={`run-value-legend-${node}`} />}
@@ -2276,7 +2276,7 @@ function TrialGrid({
 
 function ValueText({ text }: { text: string }) {
   return (
-    <span style={{ color: "var(--pnv-text-body)", fontFamily: "monospace", wordBreak: "break-all" }}>
+    <span style={{ color: "var(--pnv-text-body)", fontFamily: "var(--pnv-font-mono)", wordBreak: "break-all" }}>
       {text}
     </span>
   );
@@ -2309,7 +2309,7 @@ function ValueRow({
         <span
           style={{
             color: kind === "in" ? "var(--pnv-primary)" : "var(--pnv-trace-value)",
-            fontFamily: "monospace",
+            fontFamily: "var(--pnv-font-mono)",
             flexShrink: 0,
           }}
         >
@@ -2321,7 +2321,7 @@ function ValueRow({
         <div
           style={{
             color: "var(--pnv-warning)",
-            fontFamily: "monospace",
+            fontFamily: "var(--pnv-font-mono)",
             fontSize: "var(--pnv-fs-10)",
             lineHeight: 1.4,
             paddingLeft: 12,
@@ -2468,7 +2468,7 @@ function DebuggerSnapshotTable() {
                 title={on ? `Hide ${cat} rows` : `Show ${cat} rows`}
                 style={{
                   fontSize: "var(--pnv-fs-10)",
-                  fontFamily: "monospace",
+                  fontFamily: "var(--pnv-font-mono)",
                   padding: "1px 7px",
                   borderRadius: 10,
                   cursor: "pointer",
@@ -2520,7 +2520,7 @@ function DebuggerSnapshotTable() {
               fontSize: "var(--pnv-fs-11)",
               borderCollapse: "collapse",
               width: "100%",
-              fontFamily: "monospace",
+              fontFamily: "var(--pnv-font-mono)",
             }}
           >
             <thead>

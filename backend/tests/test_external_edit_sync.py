@@ -288,6 +288,76 @@ def test_end_to_end_external_edit_reaches_websocket_client(tmp_path):
     assert "b" in node_names, f"re-introspected graph should include the new node: {node_names}"
 
 
+def test_two_windows_on_two_models_in_one_folder_each_hear_their_own(tmp_path, monkeypatch):
+    """#308: the second model in a folder was never watched on macOS.
+
+    Two sockets, as two windows, each watching its own model in one folder;
+    an outside edit to the second reaches the second window.
+    """
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    # Reading the socket blocks with no timeout, so a missed edit would hang
+    # the test. Wait, with a limit, for the watcher to report it first.
+    noticed = threading.Event()
+    on_changed = ws_module._on_file_changed
+
+    def noting(path):
+        noticed.set()
+        on_changed(path)
+
+    monkeypatch.setattr(ws_module, "_on_file_changed", noting)
+
+    first = tmp_path / "first.py"
+    second = tmp_path / "second.py"
+    first.write_text(MODEL_SRC)
+    second.write_text(MODEL_SRC)
+
+    with TestClient(app) as client:
+        with client.websocket_connect("/ws") as one, client.websocket_connect("/ws") as two:
+            one.send_json({"type": "watch_file", "filePath": str(first)})
+            assert _await_message(one, "watching")
+            two.send_json({"type": "watch_file", "filePath": str(second)})
+            assert _await_message(two, "watching")
+
+            time.sleep(0.3)
+            second.write_text(
+                MODEL_SRC + "b = pnl.TransferMechanism(name='b')\nc.add_node(b)\n"
+            )
+            assert noticed.wait(5.0), "the second model in the folder is watched"
+            message = _await_message(two, "file_changed")
+
+    assert message["filePath"] == str(second)
+    assert "name='b'" in message["source"]
+
+
+def test_a_watch_that_cannot_start_is_not_confirmed(tmp_path, monkeypatch):
+    """#308: a failed watch used to look like a working one. Now the window
+    is told it isn't watching, and the sync indicator says so."""
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+    from app.services.watcher import WatchUnavailable
+
+    model = tmp_path / "model.py"
+    model.write_text(MODEL_SRC)
+
+    def refuse(subscriber, file_path, callback):
+        raise WatchUnavailable(f"Can't watch {tmp_path}")
+
+    monkeypatch.setattr(ws_module.file_watcher, "subscribe", refuse)
+    with TestClient(app) as client:
+        with client.websocket_connect("/ws") as socket:
+            socket.send_json({"type": "watch_file", "filePath": str(model)})
+            reply = _await_message(socket, "stopped_watching")
+            # The socket is still serving after the failure.
+            socket.send_json({"type": "no-such-message"})
+            assert _await_message(socket, "error")
+    assert reply["filePath"] == str(model)
+    assert "Can't watch" in reply["reason"]
+
+
 # --- How real editors save -------------------------------------------------
 #
 # Writing in place is only one of several strategies, and our other tests only

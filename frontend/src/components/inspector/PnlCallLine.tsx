@@ -23,7 +23,7 @@ export function PnlCallLine({ call, reason }: Props) {
         style={{
           display: "block",
           fontSize: "var(--pnv-fs-11)",
-          fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+          fontFamily: "var(--pnv-font-mono)",
           color: "var(--pnv-text-body)",
           background: "var(--pnv-surface-sunken)",
           border: "1px solid var(--pnv-border-faint)",

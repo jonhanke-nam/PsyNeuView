@@ -11,6 +11,7 @@ import { useNotificationStore } from "@/stores/notificationStore";
 import { toggleCompositionCollapse, renameNode } from "@/utils/nodeActions";
 import { useDismiss } from "@/components/common/dialog/useDismiss";
 import { Z_MENU } from "@/constants/zLayers";
+import { useMenuInWindow } from "@/components/common/useMenuInWindow";
 
 interface Props {
   nodeId: string;
@@ -32,6 +33,8 @@ interface Props {
 
 export function NodeContextMenu({ nodeId, nodeLabel, nodeType, x, y, selection, onDeleteNodes, onSelectOnly, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  // #109: opens upward / leftward near the window's edge, as macOS menus do.
+  const { left, top } = useMenuInWindow(ref, x, y);
   const expanded = useGraphSettings((s) => s.expandedNodes.has(nodeLabel));
   const isComposition = nodeType === "compositionNode";
   const isCollapsedComp = useGraphSettings((s) => s.collapsedCompositions.has(nodeLabel));
@@ -107,8 +110,8 @@ export function NodeContextMenu({ nodeId, nodeLabel, nodeType, x, y, selection, 
       data-testid="node-context-menu"
       style={{
         position: "fixed",
-        left: x,
-        top: y,
+        left,
+        top,
         background: "var(--pnv-surface)",
         border: "1px solid var(--pnv-border-light)",
         borderRadius: 6,
@@ -116,6 +119,9 @@ export function NodeContextMenu({ nodeId, nodeLabel, nodeType, x, y, selection, 
         // A menu: above the walkthrough ring, so its pulse never covers an item.
         zIndex: Z_MENU,
         minWidth: 160,
+        // Its own width wherever it opens, so it can be measured and moved
+        // inside the window (#109) without wrapping against the edge.
+        width: "max-content",
         padding: "4px 0",
         fontSize: "var(--pnv-fs-13)",
       }}
