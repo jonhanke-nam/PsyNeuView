@@ -273,6 +273,7 @@ class WarmWorker:
             sel.register(self._proc.stdout, selectors.EVENT_READ)
 
             output_lines = []
+            kept = 0
             deadline = time.time() + timeout
             try:
                 while True:
@@ -292,7 +293,7 @@ class WarmWorker:
                     if not sel.select(timeout=min(0.5, remaining)):
                         continue
 
-                    line = self._proc.stdout.readline()
+                    line = self._proc.stdout.readline(1 << 20)  # bounded (#311, U4)
                     if not line:
                         self._restart()
                         return {"error": "Worker closed connection"}
@@ -310,7 +311,8 @@ class WarmWorker:
                         # The task's own process ended without an answer.
                         return {"error": "Worker process died during execution"}
                     else:
-                        if len(output_lines) < 10000:  # bounded (#311, U4)
+                        kept += len(line)
+                        if kept < 16 * 1024 * 1024:  # bounded by size (#311, U4)
                             output_lines.append(line)
             finally:
                 sel.close()
