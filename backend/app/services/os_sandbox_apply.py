@@ -517,10 +517,13 @@ class _ProcBsdInfo(ctypes.Structure):
 
 
 def _macos_survivors(since: float, programs: list[str]) -> list[int]:
-    """Processes a sandboxed task left behind: sandboxed, the user's own,
-    started since the task began, and running one of the only programs the
-    policy lets a task start (Python or Graphviz). Another app's sandboxed
-    process matches none of that together."""
+    """Processes a sandboxed task left behind: orphaned (their parent is
+    launchd, which is where a ``setsid`` survivor ends up once the task's
+    process has exited), sandboxed, the user's own, started since the task
+    began, and running one of the only programs the policy lets a task
+    start (Python or Graphviz). A Learn job, a pool worker or another
+    instance's worker has a live parent (a server) and isn't touched;
+    another app's sandboxed process matches none of it together."""
     try:
         libproc = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
         sb = _libsandbox()
@@ -544,7 +547,9 @@ def _macos_survivors(since: float, programs: list[str]) -> list[int]:
         info = _ProcBsdInfo()
         if libproc.proc_pidinfo(pid, 3, ctypes.c_uint64(0), ctypes.byref(info), ctypes.sizeof(info)) != ctypes.sizeof(info):
             continue
-        if info.pbi_uid != uid or info.pbi_start_tvsec + info.pbi_start_tvusec / 1e6 < since - 1:
+        if info.pbi_ppid != 1 or info.pbi_uid != uid:
+            continue
+        if info.pbi_start_tvsec + info.pbi_start_tvusec / 1e6 < since - 1:
             continue
         if sb.sandbox_check(pid, None, 0) != 1:  # not sandboxed
             continue
@@ -570,7 +575,7 @@ def _linux_survivors() -> list[int]:
         try:
             with open(f"/proc/{name}/stat", "rb") as f:
                 fields = f.read().rsplit(b")", 1)[1].split()
-            if int(fields[1]) == me:
+            if int(fields[1]) == me and fields[0] != b"Z":
                 out.append(int(name))
         except (OSError, IndexError, ValueError):
             continue
@@ -584,26 +589,30 @@ def end_survivors(since: float, programs: list[str] | None = None) -> int:
     how many were ended."""
     import signal
 
-    if sys.platform == "darwin":
-        pids = _macos_survivors(since, programs or [])
-    elif sys.platform.startswith("linux"):
-        pids = _linux_survivors()
-    else:
+    if not (sys.platform == "darwin" or sys.platform.startswith("linux")):
         return 0
-    for pid in pids:
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except OSError:
-            pass
-    if sys.platform.startswith("linux"):
-        while True:
+    ended = 0
+    # A few rounds: ending one survivor orphans whatever it started.
+    for _ in range(5):
+        pids = _macos_survivors(since, programs or []) if sys.platform == "darwin" else _linux_survivors()
+        if not pids:
+            break
+        for pid in pids:
             try:
-                done, _ = os.waitpid(-1, os.WNOHANG)
-            except ChildProcessError:
-                break
-            if not done:
-                break
-    return len(pids)
+                os.kill(pid, signal.SIGKILL)
+                ended += 1
+            except OSError:
+                pass
+        if sys.platform == "darwin":
+            import time
+            time.sleep(0.02)  # let launchd take the newly orphaned
+        else:
+            for pid in pids:  # reap them, so they aren't found again
+                try:
+                    os.waitpid(pid, 0)
+                except ChildProcessError:
+                    pass
+    return ended
 
 
 # ── The probe ───────────────────────────────────────────────────────────────
