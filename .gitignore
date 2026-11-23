@@ -81,9 +81,10 @@ Papers.zip
 # for the review book, never committed.
 docs/tutorials/assets/orientation/
 
-# Coverage data (#319)
+# Coverage data (#319). Anchored: docs/testing-coverage/coverage.json is the
+# committed snapshot the What's tested page is built from.
 .coverage
 .coverage.*
-coverage.json
-htmlcov/
-frontend/coverage/
+/backend/coverage.json
+/backend/htmlcov/
+/frontend/coverage/
