@@ -49,7 +49,12 @@ written into the source, and it's added to the composition.
 
 ## 3. Wire and customize
 
-- **Connect** nodes by dragging from one node's port to another's.
+- **Connect** nodes by dragging from a node's connector (the small handle on
+  its top edge, shown on hover) onto anywhere on another node. While you drag,
+  the nodes you can drop on pulse with a teal halo. From a control, gating or
+  learning mechanism the connection's type follows the sender: it asks which
+  parameter to control or which port to gate, and a learning mechanism is
+  dropped on an arrow.
 - **Customize** any node's parameters, ports, or function — see
   [Editing via the inspector](05-editing-inspector.md) and
   [Editing via the code editor](06-editing-code.md).
