@@ -248,7 +248,7 @@ def _protected_from_writes() -> list[str]:
         out += [str(app_config.app_config_path()), str(app_config.DEFAULT_CONFIG_FILE),
                 str(app_config.LEGACY_CONFIG_FILE)]
     except Exception:  # noqa: BLE001
-        out += [str(Path.home() / ".psynewview.json")]
+        pass
     # The interpreter's own library folders: a sitecustomize.py or a module
     # there would run in every Python (an admin user can write a
     # python.org install's lib folder).

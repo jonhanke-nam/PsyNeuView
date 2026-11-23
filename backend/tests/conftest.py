@@ -1,6 +1,7 @@
 """Shared test utilities."""
 
 import os
+from pathlib import Path
 import re
 
 import pytest
@@ -117,9 +118,14 @@ def _isolate_assistant_state(tmp_path, monkeypatch):
     """The AI assistant's state (#179) lives under ``~/.psyneuview`` by default:
     the review state, previous versions of files it wrote, and its log. Every
     test gets its own, so no test writes there."""
-    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_REVIEW_FILE", str(tmp_path / "assistant-state" / "review.json"))
-    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_STATE_DIR", str(tmp_path / "assistant-state"))
-    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_LOG", str(tmp_path / "assistant-state" / "log.jsonl"))
+    # Beside the test's folder, not in it: under the OS sandbox (#311) the
+    # test folders are declared output folders, and on Linux a folder that
+    # holds a protected path (the review state) can't have new files made
+    # directly in it, which is where tests' models write their markers.
+    state = Path(str(tmp_path.parent) + "-assistant-state") / tmp_path.name
+    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_REVIEW_FILE", str(state / "review.json"))
+    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_STATE_DIR", str(state))
+    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_LOG", str(state / "log.jsonl"))
 
 
 @pytest.fixture(autouse=True)
