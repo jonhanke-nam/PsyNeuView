@@ -29,7 +29,7 @@ from app.services import (
     startup_phases,
     working_copies,
 )
-from app.services.assistant import review as assistant_review
+from app.services.assistant import import_guard, review as assistant_review
 from app.services.sandbox import _get_warm_worker
 
 
@@ -167,6 +167,56 @@ def _prewarm_model_runner() -> None:
 
 app = FastAPI(title="PsyNeuView", version=__version__, lifespan=lifespan)
 
+
+def _review_409(path: str, message: str, reason: str) -> JSONResponse:
+    return JSONResponse(status_code=409, content={
+        "detail": message, "reason": reason, "path": path,
+        # The page asks /status for the content and its hash, shows it, and
+        # approves exactly that hash.
+        "approve": {"method": "POST", "url": "/api/assistant/review/approve",
+                    "body": {"path": path, "content_hash": "<sha256 of the content shown>"},
+                    "status": {"method": "POST", "url": "/api/assistant/review/status", "body": {"path": path}}},
+    })
+
+
+class _UnreviewedImportAs409:
+    """The import guard's own refusal, wherever it surfaces in a route (#187).
+
+    ``UnreviewedImport`` is deliberately not an ``Exception``, so a model
+    can't catch it, and so the app's exception handlers don't see it either.
+    The in-process loaders turn it into ``UnreviewedAssistantCode`` (the
+    usual 409); if that step was skipped or replaced, the refusal still
+    stands, and this answers it as the same 409 instead of a failed request.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+        started = False
+
+        async def sending(message):
+            nonlocal started
+            if message.get("type") == "http.response.start":
+                started = True
+            await send(message)
+
+        try:
+            await self.app(scope, receive, sending)
+        except import_guard.UnreviewedImport as exc:
+            if started:
+                raise
+            reason = assistant_review.REASON_UNREADABLE if exc.state_unreadable else assistant_review.REASON
+            await _review_409(exc.path, str(exc), reason)(scope, receive, send)
+
+
+# First added, so innermost: right around the routes, where the guard's
+# refusal comes from.
+app.add_middleware(_UnreviewedImportAs409)
+
 # Allow frontend dev servers on any port (SLOT-based multi-branch testing)
 app.add_middleware(
     CORSMiddleware,
@@ -218,14 +268,7 @@ async def _assistant_code_unreviewed(request, exc: assistant_review.UnreviewedAs
     approved (#179). 409 with a reason the page recognises, and the route that
     approves it, from wherever the execution began: open, reload, run, learn,
     show_graph, export, import."""
-    return JSONResponse(status_code=409, content={
-        "detail": str(exc), "reason": exc.reason, "path": exc.path,
-        # The page asks /status for the content and its hash, shows it, and
-        # approves exactly that hash.
-        "approve": {"method": "POST", "url": "/api/assistant/review/approve",
-                    "body": {"path": exc.path, "content_hash": "<sha256 of the content shown>"},
-                    "status": {"method": "POST", "url": "/api/assistant/review/status", "body": {"path": exc.path}}},
-    })
+    return _review_409(exc.path, str(exc), exc.reason)
 
 @app.exception_handler(Exception)
 async def _unhandled_error(request, exc: Exception):
