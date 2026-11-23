@@ -4577,20 +4577,42 @@ def _read_line_unbuffered(fd: int) -> str | None:
         data += b
 
 
+def _control_fd() -> int | None:
+    """The fd the server gave the fork server for its own messages."""
+    for i, arg in enumerate(sys.argv):
+        if arg == "--control-fd" and i + 1 < len(sys.argv):
+            try:
+                return int(sys.argv[i + 1])
+            except ValueError:
+                return None
+    return None
+
+
+def _say(fd: int, line: str) -> None:
+    """A control message to the server, on the control pipe only. Nothing a
+    child writes ever reaches this pipe."""
+    import os
+    data = (line + "\n").encode()
+    while data:
+        data = data[os.write(fd, data):]
+
+
 def _run_fork_server():
     """Fork-server mode (#187): a clean parent that runs no model code.
 
     The parent imports PsyNeuLink and the guard, signals ready, and then
     reads only ``FORK <token>`` lines from the server. For each it makes a
-    new pipe, forks a child whose output goes only to that pipe, says the
-    child's pid itself, and copies the child's output to the server until
-    the child exits; then it closes the pipe and ends the child's process
-    group. The child reads its task (the parent never reads it), runs it,
-    and answers with the token, which the server checks. No child, nor any
-    process a child starts, ever holds the server's own output pipe, so
-    nothing it leaves running can write into a later task's answer. A
+    new pipe, forks a child whose output goes only to that pipe, and copies
+    the child's output to the server's output pipe while the child runs.
+    Its own messages (ready, the child's pid, the child's end) go on a
+    separate control pipe the server gave it, which no child holds, so
+    nothing a child or a process it started writes can be read as one. Once
+    the child has exited, the parent copies for a fixed short time at most,
+    however much is still coming, then closes the child's pipe and ends the
+    child's process group. The child reads its task (the parent never reads
+    it), runs it, and answers with the token, which the server checks. A
     process the model started that left the process group (``setsid``, a
-    double fork) can outlive the task; containing that needs the operating
+    double fork) can outlive the task; containing it needs the operating
     system's sandbox (#311).
     """
     import os
@@ -4608,7 +4630,11 @@ def _run_fork_server():
     programs = [os.path.realpath(sys.executable), sys.base_prefix]
     programs += [shutil.which(n) for n in ("dot", "neato", "fdp", "sfdp", "circo", "twopi") if shutil.which(n)]
 
-    print("###READY###", flush=True)
+    control = _control_fd()
+    if control is None:
+        sys.stderr.write("[fork server] no control pipe given\n")
+        os._exit(2)
+    _say(control, "###READY###")
     stdin_fd = sys.stdin.fileno()
     while True:
         command = _read_line_unbuffered(stdin_fd)
@@ -4623,13 +4649,14 @@ def _run_fork_server():
         pid = os.fork()
         if pid == 0:
             os.close(read_end)
+            os.close(control)  # the child never holds the control pipe
             _run_forked_child(stdin_fd, write_end, token)
         os.close(write_end)
         try:
             os.setpgid(pid, pid)
         except OSError:
             pass  # the child has done it already
-        print(f"###PSYNEUVIEW_CHILD### {pid}", flush=True)
+        _say(control, f"###PSYNEUVIEW_CHILD### {pid}")
         status = _relay_child_output(pid, read_end)
         try:
             os.killpg(pid, signal.SIGKILL)
@@ -4639,7 +4666,12 @@ def _run_fork_server():
             _os_sandbox.end_survivors(started, programs)
         except Exception:  # noqa: BLE001 - never stop serving tasks over it
             pass
-        print(f"###PSYNEUVIEW_CHILD_DONE### {status}", flush=True)
+        _say(control, f"###PSYNEUVIEW_CHILD_DONE### {status}")
+
+
+#: How long the parent goes on copying a child's output after the child has
+#: exited (what it wrote just before), whatever else is still arriving.
+RELAY_GRACE = 0.2
 
 
 def _apply_task_sandbox(payload: str) -> str:
@@ -4661,10 +4693,11 @@ def _apply_task_sandbox(payload: str) -> str:
 
 
 def _relay_child_output(pid: int, read_end: int) -> int:
-    """Copy the child's output to the server, as it comes, until the child
-    has exited and its pipe is drained; then close the pipe, so whatever the
-    child left running can't write to the server through it. Returns the
-    child's exit status."""
+    """Copy the child's output to the server while the child runs, and for
+    ``RELAY_GRACE`` seconds after it exits, however much is still coming;
+    then close the pipe, so whatever the child left running can't keep the
+    parent copying or write to the server through it. Returns the child's
+    exit status."""
     import os
     import select
     import time as _time
@@ -4673,22 +4706,22 @@ def _relay_child_output(pid: int, read_end: int) -> int:
     stop_at = None
     out = sys.stdout.fileno()
     while True:
-        ready, _, _ = select.select([read_end], [], [], 0.1)
-        if ready:
-            data = os.read(read_end, 65536)
-            if not data:
-                break
-            view = memoryview(data)
-            while view:
-                view = view[os.write(out, view):]
-            continue
         if status is None:
             done, raw = os.waitpid(pid, os.WNOHANG)
             if done:
                 status = raw
-                stop_at = _time.monotonic() + 0.2
+                stop_at = _time.monotonic() + RELAY_GRACE
         elif _time.monotonic() > stop_at:
             break
+        ready, _, _ = select.select([read_end], [], [], 0.05)
+        if not ready:
+            continue
+        data = os.read(read_end, 65536)
+        if not data:
+            break  # every writer has closed it; the child's exit is waited for below
+        view = memoryview(data)
+        while view:
+            view = view[os.write(out, view):]
     os.close(read_end)
     if status is None:
         try:

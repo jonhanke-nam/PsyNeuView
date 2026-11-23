@@ -264,12 +264,20 @@ only refuse more: there, `HX.py` is still taken for `hx.py`.
    that imported PsyNeuLink and the guard once, has run no model code and
    reads nothing from the server but the word `FORK`. For each task it
    forks a child on a pipe of its own, which reads its task, runs it,
-   answers with a token the server made for that task, and exits; the
-   parent copies the child's output to the server, then closes the pipe
-   and ends the child's process group. A process the model started inside
-   the group ends with it; one that left the group (`setsid`, a double
-   fork) outlives the task, though it can't answer for a later one. A fork
-   takes milliseconds, so this is
+   answers with a token the server made for that task, and exits. The
+   parent copies the child's output to the server while the child runs and
+   for a fixed 0.2 s after it exits, however much is still coming, then
+   closes the pipe and ends the child's process group. The parent's own
+   messages (ready, the child's pid, the child's end) go on a separate
+   control pipe that every child closes before its task, so nothing a
+   child or a process it started writes can be read as one, and a timeout
+   ends only a pid that came on that pipe. A process the model started
+   inside the group ends with it. One that left the group (`setsid`, a
+   double fork) outlives the task: until its task's pipe is closed it can
+   write into that task's copy (which the server reads only for the
+   task's token, so it can't supply the answer), and afterwards it keeps
+   whatever else it holds, the user's files among them. A fork takes
+   milliseconds, so this is
    as fast as the warm worker (faster, since a fresh child has nothing
    cached to purge). Where forking isn't usable (no `fork` in the os
    module, as on native Windows, which PsyNeuView doesn't support; or a
@@ -407,7 +415,13 @@ boundary. It must close, at least:
   `rm` it and its `.bak`), so the next task runs an unapproved file.
 - **G3's survivors:** a process that leaves the process group (`setsid`,
   a double fork) outlives its task and keeps the files and network the
-  user has.
+  user has, and can stall or write into any pipe it still holds.
+- **Writes through `dir_fd`** from a process the model starts (the
+  model's own Python calls are checked by the folder the fd names).
+- **The standard library folder** (a `sitecustomize.py` runs in every new
+  Python) and **the app's settings file** (`~/.psyneuview.json`): refused
+  to the model's own Python code while something is tracked, not to a
+  process it starts.
 - **G5:** a symlink chain made by a child process (`ln -s`), then read.
 - **F5:** `os.open(name, dir_fd=d)` relative to another folder.
 - **`ctypes`** and C extensions reading files without audit events.
