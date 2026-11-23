@@ -370,11 +370,17 @@ def _apply_linux(policy: dict) -> dict:
             add(p, _LL_READ)
         for p in ancestors:
             add(p, LL_READ_DIR)
-        write_deny = [os.path.realpath(p) for p in (policy.get("write_deny") or [])] + read_deny
+        # Writing is granted around the protected places only, not around
+        # the unapproved files: those get no read right from the cover of
+        # "/" above, so a model may overwrite or remove one (its own text
+        # then, still unapproved by its hash) but never read it, and Landlock
+        # refuses moving or linking it somewhere readable (that would gain a
+        # right). This keeps a folder holding an unapproved file writable.
+        write_deny = [os.path.realpath(p) for p in (policy.get("write_deny") or [])]
         for root in policy.get("write_allow") or []:
             w_whole, _ = cover(os.path.realpath(root), write_deny)
             for p in w_whole:
-                add(p, _LL_READ | _LL_WRITE)
+                add(p, _LL_WRITE)
         for dev in ("/dev/null", "/dev/zero", "/dev/tty", "/dev/full"):
             add(dev, LL_READ_FILE | LL_WRITE_FILE)
         if os.path.isdir("/dev/shm"):
