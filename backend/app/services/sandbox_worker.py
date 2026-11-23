@@ -4384,8 +4384,11 @@ def _handle_one_task(payload_str: str) -> str:
                     if mod_name.startswith("user_model"):
                         del sys.modules[mod_name]
                 # The review state as it is now, for this task's imports (#179);
-                # a tracked file cached by an earlier task is dropped here.
-                _guard.refresh(payload.get("review_state"), payload.get("exempt_roots"))
+                # a tracked file cached by an earlier task is dropped here. The
+                # guard's own state is put back first, so nothing an earlier
+                # model set on it carries over to this one (#187).
+                _guard.reset_for_task()
+                _guard.refresh(payload.get("review_state"), payload.get("exempt_roots"), payload.get("settings_files"))
                 result = handler(params)
             except _guard.UnreviewedImport as e:
                 result = {"error": str(e), "unreviewed_import": e.path, "unreviewed_state": e.state_unreadable}
@@ -4410,6 +4413,15 @@ def _handle_one_task(payload_str: str) -> str:
             ]
 
     return json.dumps(result, default=str)
+
+
+def _guard_was_replaced() -> bool:
+    """True when a model replaced part of the guard (its functions, the
+    loader wrapper) during the task just run (#187)."""
+    try:
+        return _guard.fingerprint() != _GUARD_FINGERPRINT
+    except BaseException:
+        return True
 
 
 def _install_orphan_watchdog(interval: float = 1.0, use_signal_timer: bool = False) -> None:
@@ -4504,6 +4516,175 @@ def _run_persistent():
         result_str = _handle_one_task(line)
         print(RESULT_MARKER, flush=True)
         print(result_str, flush=True)
+        if _guard_was_replaced():
+            # The next task starts in a fresh worker, with a guard nobody
+            # has touched; the server restarts a worker that has exited.
+            sys.stderr.write("[guard] the import guard was changed by a model; restarting the worker\n")
+            sys.stderr.flush()
+            _os._exit(0)
+
+
+def _read_line_unbuffered(fd: int) -> str | None:
+    """One line from ``fd`` a byte at a time, so nothing after the newline is
+    taken from the pipe (the fork server's parent must never read past its
+    own command into the task meant for its child). None at end of input."""
+    import os
+    data = bytearray()
+    while True:
+        b = os.read(fd, 1)
+        if not b:
+            return None if not data else data.decode("utf-8", "replace")
+        if b == b"\n":
+            return data.decode("utf-8", "replace")
+        data += b
+
+
+def _control_fd() -> int | None:
+    """The fd the server gave the fork server for its own messages."""
+    for i, arg in enumerate(sys.argv):
+        if arg == "--control-fd" and i + 1 < len(sys.argv):
+            try:
+                return int(sys.argv[i + 1])
+            except ValueError:
+                return None
+    return None
+
+
+def _say(fd: int, line: str) -> None:
+    """A control message to the server, on the control pipe only. Nothing a
+    child writes ever reaches this pipe."""
+    import os
+    data = (line + "\n").encode()
+    while data:
+        data = data[os.write(fd, data):]
+
+
+def _run_fork_server():
+    """Fork-server mode (#187): a clean parent that runs no model code.
+
+    The parent imports PsyNeuLink and the guard, signals ready, and then
+    reads only ``FORK <token>`` lines from the server. For each it makes a
+    new pipe, forks a child whose output goes only to that pipe, and copies
+    the child's output to the server's output pipe while the child runs.
+    Its own messages (ready, the child's pid, the child's end) go on a
+    separate control pipe the server gave it, which no child holds, so
+    nothing a child or a process it started writes can be read as one. Once
+    the child has exited, the parent copies for a fixed short time at most,
+    however much is still coming, then closes the child's pipe and ends the
+    child's process group. The child reads its task (the parent never reads
+    it), runs it, and answers with the token, which the server checks. A
+    process the model started that left the process group (``setsid``, a
+    double fork) can outlive the task; containing it needs the operating
+    system's sandbox (#311).
+    """
+    import os
+    import signal
+
+    import psyneulink as pnl  # noqa: F401  (the expensive part, once)
+
+    control = _control_fd()
+    if control is None:
+        sys.stderr.write("[fork server] no control pipe given\n")
+        os._exit(2)
+    _say(control, "###READY###")
+    stdin_fd = sys.stdin.fileno()
+    while True:
+        command = _read_line_unbuffered(stdin_fd)
+        if command is None:
+            os._exit(0)
+        parts = command.split()
+        if not parts or parts[0] != "FORK":
+            continue  # nothing but FORK is ever acted on here
+        token = parts[1] if len(parts) > 1 and parts[1].isalnum() else ""
+        read_end, write_end = os.pipe()
+        pid = os.fork()
+        if pid == 0:
+            os.close(read_end)
+            os.close(control)  # the child never holds the control pipe
+            _run_forked_child(stdin_fd, write_end, token)
+        os.close(write_end)
+        try:
+            os.setpgid(pid, pid)
+        except OSError:
+            pass  # the child has done it already
+        _say(control, f"###PSYNEUVIEW_CHILD### {pid}")
+        status = _relay_child_output(pid, read_end)
+        try:
+            os.killpg(pid, signal.SIGKILL)
+        except OSError:
+            pass
+        _say(control, f"###PSYNEUVIEW_CHILD_DONE### {status}")
+
+
+#: How long the parent goes on copying a child's output after the child has
+#: exited (what it wrote just before), whatever else is still arriving.
+RELAY_GRACE = 0.2
+
+
+def _relay_child_output(pid: int, read_end: int) -> int:
+    """Copy the child's output to the server while the child runs, and for
+    ``RELAY_GRACE`` seconds after it exits, however much is still coming;
+    then close the pipe, so whatever the child left running can't keep the
+    parent copying or write to the server through it. Returns the child's
+    exit status."""
+    import os
+    import select
+    import time as _time
+
+    status = None
+    stop_at = None
+    out = sys.stdout.fileno()
+    while True:
+        if status is None:
+            done, raw = os.waitpid(pid, os.WNOHANG)
+            if done:
+                status = raw
+                stop_at = _time.monotonic() + RELAY_GRACE
+        elif _time.monotonic() > stop_at:
+            break
+        ready, _, _ = select.select([read_end], [], [], 0.05)
+        if not ready:
+            continue
+        data = os.read(read_end, 65536)
+        if not data:
+            break  # every writer has closed it; the child's exit is waited for below
+        view = memoryview(data)
+        while view:
+            view = view[os.write(out, view):]
+    os.close(read_end)
+    if status is None:
+        try:
+            _, status = os.waitpid(pid, 0)
+        except ChildProcessError:
+            status = -1
+    return status
+
+
+def _run_forked_child(stdin_fd: int, write_end: int, token: str):
+    import os
+    try:
+        os.setpgrp()
+        # This child's output is its own pipe, never the server's.
+        os.dup2(write_end, sys.stdout.fileno())
+        os.close(write_end)
+        _install_orphan_watchdog(use_signal_timer=False)
+        payload = _read_line_unbuffered(stdin_fd) or ""
+        # Nothing the model starts can read the next task from the parent's
+        # input: the child's own input is closed before the task runs.
+        devnull = os.open(os.devnull, os.O_RDONLY)
+        os.dup2(devnull, stdin_fd)
+        os.close(devnull)
+        result_str = _handle_one_task(payload)
+        print(f"{RESULT_MARKER} {token}", flush=True)
+        print(result_str, flush=True)
+    except BaseException:
+        pass
+    finally:
+        try:
+            sys.stdout.flush()
+        except Exception:
+            pass
+        os._exit(0)
 
 
 def _learning_profile(comp, is_autodiff):
@@ -4518,6 +4699,13 @@ def _learning_profile(comp, is_autodiff):
 
 def _run_oneshot():
     """One-shot mode (original behavior): read one task, execute, exit."""
+    # PsyNeuLink first, as the persistent worker does: the import guard's
+    # audit hook is added when the task finds something tracked, and
+    # PsyNeuLink's own import, a library's, needn't pass through it (#187).
+    try:
+        import psyneulink  # noqa: F401
+    except Exception:
+        pass  # the task reports it
     payload = sys.stdin.read()
     result_str = _handle_one_task(payload)
     print(RESULT_MARKER)
@@ -4526,13 +4714,29 @@ def _run_oneshot():
 
 if __name__ == "__main__":
     persistent = "--persistent" in sys.argv
+    fork_server = "--fork-server" in sys.argv
     # Die if orphaned (#864) — installed before any task work so even a spin
     # during the first task can't outlive the parent. The SIGALRM half is armed
     # only for the persistent introspection worker (where pure-Python `while
     # True` spins are the concern); one-shot job workers run long training that a
     # stray SIGALRM would kill (#870), and the daemon-thread watch covers them.
-    _install_orphan_watchdog(use_signal_timer=persistent)
-    if persistent:
+    # The fork server's parent starts no thread, so forking it is safe; it
+    # notices the server has gone when its input ends, and each child
+    # watches for its own parent.
+    if not fork_server:
+        _install_orphan_watchdog(use_signal_timer=persistent)
+    # Running as the worker, where model code runs: a tracked, unapproved
+    # file is also refused when it is opened, compiled, executed, handed to a
+    # new process, renamed or linked (#187). Not when a test imports this file.
+    _guard.install_audit_hook(everywhere=True)
+    _GUARD_FINGERPRINT = _guard.fingerprint()
+    # The worker never writes compiled files: while something is tracked the
+    # guard refuses writes under the app's code and the installed packages,
+    # and a model mustn't be able to pass a forged one off as Python's own.
+    sys.dont_write_bytecode = True
+    if fork_server:
+        _run_fork_server()
+    elif persistent:
         _run_persistent()
     else:
         _run_oneshot()

@@ -221,9 +221,28 @@ the default path. The standard library, site-packages and the active
 PsyNeuLink checkout are never vetted or purged (a tracked path is checked
 first, wherever it sits), and with nothing tracked the finder does one
 check per import and nothing else. A model beside an unapproved file runs
-unless it imports it. What this doesn't cover: a model that runs code by
-other means (`exec(open(...).read())`, `runpy`, a subprocess); approving a
-model means trusting what it does. Every place model code is executed is
+unless it imports it. Every layer, and the review lookups here, match a
+path to a tracked file by its real path with accents composed and case
+folded, or by the file it is on disk, so a case variant, a decomposed
+accent or a hard link names the same entry. An audit hook in the worker
+(and, on the loading thread and threads it starts, in the server's
+in-process converter) refuses a path that leads to an existing tracked,
+unapproved file when model code reads it, compiles or runs it under its
+name, renames, moves, links or symlinks it, or names it in a new process
+(its command, an interpreter's program text past wrappers such as `env`,
+`os.system` text, the environment, or a shell pattern anchored in its
+folder); a path that leads nowhere or to another file is left alone. This
+covers `exec(open(...).read())`, `runpy.run_path`, `python helper.py` and
+`sh -c 'cat helper.py'` (#187). While anything is tracked, each task runs
+in a child forked from a parent that has run no model code, so nothing one
+model does to its process's memory reaches the next, and the model's own
+Python code in the worker can't change the review record, the guard's
+files or the code later tasks import (a process it starts can). The guard stops
+assistant-written code running by accident or through ordinary paths; it
+is not a sandbox against model code that deliberately acts as the user.
+**In-process protection covers memory only. A model that writes files (directly or through a child process) can affect later tasks; only the OS sandbox (#311) closes this. Until #311, don't turn the assistant on for untrusted use.**
+The threat model's section 7 lists exactly what isn't covered. Approving a model means trusting what
+it does. Every place code is started or executed in `backend/app` is
 listed in the threat model with its guard, and a test fails if a new one
 appears unlisted. A route that would execute unreviewed content answers 409
 with `{"detail": <message>, "reason": "assistant_code_unreviewed", "path",

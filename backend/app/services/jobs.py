@@ -244,7 +244,14 @@ class JobManager:
             job.finish("error", error=f"Failed to parse job result: {e}")
             return
 
-        if isinstance(result, dict) and "error" in result:
+        if isinstance(result, dict) and result.get("unreviewed_import"):
+            # The worker's own check refused the model (#187): the job ends in
+            # an error that names the file to review, as the route's 409 does.
+            reason = (assistant_review.REASON_UNREADABLE if result.get("unreviewed_state")
+                      else assistant_review.REASON)
+            job.finish("error", result={"unreviewed_import": result["unreviewed_import"], "reason": reason},
+                       error=result.get("error"))
+        elif isinstance(result, dict) and "error" in result:
             job.finish("error", error=result["error"])
         else:
             # The request's mode is what was asked for; record what actually

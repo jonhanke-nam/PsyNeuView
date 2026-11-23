@@ -2810,6 +2810,10 @@ def convert_model(request: ConvertRequest):
 
     try:
         new_source = convert_to_standard_format(request.file_path, request.backup)
+    except UnreviewedAssistantCode:
+        # The review 409 naming the file, so the page offers the review,
+        # not a "conversion failed" (#187).
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Conversion failed: {e}")
 

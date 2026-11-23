@@ -218,46 +218,261 @@ containment rather than a better approval view.
 
 ## 7. What the execution guard does and doesn't cover
 
-- **Covered** (`import_guard.py`): what the path finder resolves, that is
-  `import`, `importlib.import_module`, packages and subfolders, folders on
-  `sys.path`; and a file loaded by path (`spec_from_file_location` +
-  `exec_module`, `SourceFileLoader(...).load_module()`), through a wrapper
-  on `SourceFileLoader.get_code`. A tracked, unapproved file stops with the
-  409 naming it; a tracked path is tracked wherever it sits, a folder
-  named `site-packages` included. The finder puts itself first on
-  `sys.meta_path` before every task, so a finder a model added earlier
-  can't get ahead of it. This defends against accidental or agent-written
-  imports and loads.
-- **Not covered:** a reviewed model that runs code by other means,
-  `exec(open(...).read())`, `runpy`, a subprocess, or that reads and
-  evaluates text. Hard links, sourceless `.pyc` files and zip imports need
-  something already running as the user to set them up. A `__pycache__`
-  entry compiled from an earlier approved text with the same size and
-  whole-second mtime is what Python runs, as it would for any file.
-  Approving a model means trusting what it does; the review card says so.
+**In-process protection covers memory only. A model that writes files (directly or through a child process) can affect later tasks; only the OS sandbox (#311) closes this. Until #311, don't turn the assistant on for untrusted use.**
 
-### Every way model code is executed, and its guard
+**What the guard is, and what it isn't.** The guard stops
+assistant-written code running by accident or through ordinary paths: an
+import, a load by path, a file read and run, a script handed to a process.
+It is not a sandbox against model code that deliberately acts as the user:
+a model can write files, start processes and use `ctypes`, as any program
+the user runs can. Containment against deliberate model code needs an
+operating-system sandbox, which is not built (Phase 4, `containment.md`).
 
-| Where | What | Guard |
-|---|---|---|
-| `sandbox.py` (warm worker, cold fallback) | Spawns `sandbox_worker.py` | `run_in_sandbox` → `require_runnable`; every task payload carries `review_state` and the exempt roots |
-| `jobs.py` | Spawns `sandbox_worker.py` for a queued job | `create_job` → `require_runnable` (the 409 at once); the payload carries the same |
-| `sandbox_worker.py` `load_module`, `load_module_resilient` | Loads the model by path | `check_model_path` against the state, found from the payload or the default path when a caller names none; fails closed if unreadable; the guard's hooks for everything the model imports or loads |
-| `introspector.py`, `executor.py` (run, learn, input nodes), `converter.py` | In-process loads by path | `require_runnable` + `guard_imports()` (the same hooks, the server's view of the state) |
+The guard has four layers. Each is checked against the same review state,
+and each refuses a tracked file whose text isn't the approved text with the
+same 409 naming that file.
 
-`backend/tests/test_assistant_runner_guard.py::test_every_spawn_and_exec_site_is_listed`
-is a tripwire for reviewers, not a boundary: it counts, per file, the lines
-in `backend/app` that start a process (`Popen`, `subprocess.run`,
-`os.system`, `multiprocessing` and the rest) or load code
-(`spec_from_file_location`, the file loaders, `runpy`, `exec`, `eval`,
-`__import__`), and fails when a count changes, so a reviewer looks at the
-new site and either adds its guard or lists it.
+**One identity for a file.** Every layer, and the server's review lookups,
+match a path to a tracked file the same way: by its real path with accents
+composed (NFC) and case folded, or by the file it is on disk (device and
+inode). macOS volumes ignore case and hand back decomposed accents (NFD)
+where the app wrote composed ones, and `realpath` changes neither, so
+without this `HX.py` for a tracked `hx.py`, or a folder name as `listdir`
+spells it, passed every layer (#187, second review). The inode also makes
+a hard link the same file. Folding case on a case-sensitive volume can
+only refuse more: there, `HX.py` is still taken for `hx.py`.
+
+1. **The routes** (`require_runnable`): every route that executes a model
+   asks before anything runs, including `create_job` for a queued Learn
+   job, which answers the 409 at once and starts nothing. If the
+   in-process step that turns the guard's own refusal into this 409 is
+   skipped, the app still answers the same 409.
+2. **The runner itself** (`sandbox_worker.py`): `load_module` and
+   `load_module_resilient` check the model's own path, whatever started
+   the worker. The worker reads the state file the task names **and** the
+   default one (or the one the environment names), so a task naming a file
+   that doesn't exist can't make tracked files untracked. A state file
+   that can't be parsed (nor its `.bak`) fails closed: nothing outside the
+   standard library loads.
+   **Later tasks run in a process no earlier model touched.** Everything
+   in a worker, the guard included, is reachable from the model code it
+   runs, so a model can switch the guard off; nothing inside a worker can
+   stop that carrying over to the next task in the same process. So while
+   anything the assistant wrote is tracked (or the state can't be read),
+   the server sends each task to the **fork server**: a parent process
+   that imported PsyNeuLink and the guard once, has run no model code and
+   reads nothing from the server but the word `FORK`. For each task it
+   forks a child on a pipe of its own, which reads its task, runs it,
+   answers with a token the server made for that task, and exits. The
+   parent copies the child's output to the server while the child runs and
+   for a fixed 0.2 s after it exits, however much is still coming, then
+   closes the pipe and ends the child's process group. The parent's own
+   messages (ready, the child's pid, the child's end) go on a separate
+   control pipe that every child closes before its task, so nothing a
+   child or a process it started writes can be read as one, and a timeout
+   ends only a pid that came on that pipe. A process the model started
+   inside the group ends with it. One that left the group (`setsid`, a
+   double fork) outlives the task: until its task's pipe is closed it can
+   write into that task's copy (which the server reads only for the
+   task's token, so it can't supply the answer), and afterwards it keeps
+   whatever else it holds, the user's files among them. A fork takes
+   milliseconds, so this is
+   as fast as the warm worker (faster, since a fresh child has nothing
+   cached to purge). Where forking isn't usable (no `fork` in the os
+   module, as on native Windows, which PsyNeuView doesn't support; or a
+   fork server that can't start a child), the server uses a **pool** of
+   workers started ahead instead (two by default,
+   `PSYNEUVIEW_WORKER_POOL_SIZE`), each used for one task and then ended
+   with its process group: the same guarantee, at the cost of a worker's
+   start when tasks come faster than the pool refills.
+   `PSYNEUVIEW_WORKER_ISOLATION=fork|pool` forces either (CI runs the
+   guard's tests under both), and the mode in use is logged. With nothing
+   tracked the warm worker runs task after task as before. The server
+   decides which from the state it reads itself.
+   While something is tracked, the model's own Python code in the worker
+   also may not write, move or remove the review record (the state file,
+   its `.bak` and `.tmp`), the guard's and the worker's own files, or code
+   that later processes import (the app's `backend/app`, PsyNeuLink's, the
+   installed packages'). **A process the model starts isn't held to any of
+   this** (`cp`, `rm`, `ln -s`): see below. During a task the record is read
+   again when it changes on disk, so a file the assistant writes while a
+   model runs is checked like any other.
+   **Tampering within a model's own task is not defended.**
+3. **Imports and loads** (`import_guard.py`): a finder first on
+   `sys.meta_path` (put back first before every task, so a finder a model
+   adds can't get ahead of it) for `import`, `importlib.import_module`,
+   `runpy.run_module`, packages, subfolders and folders on `sys.path`; and
+   a wrapper on `SourceFileLoader.get_code` for a file loaded by path
+   (`spec_from_file_location` + `exec_module`,
+   `SourceFileLoader(...).load_module()`). A tracked path is tracked
+   wherever it sits, a folder named `site-packages` included.
+4. **What else the runner can see** (an audit hook, #187). One rule: a
+   path that leads to an existing tracked file (by identity, under any
+   spelling) that isn't approved as it is now is refused. A path that leads
+   nowhere or to another file is left alone: the user's own same-named
+   file, a new file being written, a word that only looks like a name. The
+   hook applies it when model code:
+   - opens a file to read it (`exec(open(p).read())`, `Path(p).read_text()`,
+     `shutil.copy`); writing is not running;
+   - compiles a file under its own name (`runpy.run_path`,
+     `exec(compile(text, p, "exec"))`) or executes code compiled from it;
+   - renames, moves or hard-links a file;
+   - makes a symlink: refused if its target is such a file now; and from
+     then on in that task every path is resolved, so a link made ahead of
+     its target, or a link to a folder, is caught when the file is opened
+     through it;
+   - starts a process: every word of the command; for an interpreter
+     (`python`, `perl`, `ruby`, `node`, `sh`, `bash`, `zsh`, `awk` and the
+     like, found past wrappers such as `env`, `nice`, `xargs`, `sudo`,
+     `time`, `nohup`, `timeout`), every argument and the text after `-c`,
+     `-e` or `-E` in any case, path by path, following a `cd` in shell
+     text; `os.system` and `shell=True` text; the environment (`env=`,
+     `os.environ[...] =`); and a shell pattern anchored in a tracked file's
+     folder that matches its name (`cat models/hx_*`, not `rm -f outdir/*`).
+     Another command's options are its own: `grep -E notes.py` is a
+     pattern.
+
+   In the worker the hook acts on every thread of every task. In the
+   server it acts only on the thread of an in-process load (the converter)
+   and on `threading.Thread`s started from it, since the server reads
+   unapproved files to show them for review. It is added the first time a
+   refresh finds something tracked, so with nothing tracked nothing
+   changes. To stay cheap it resolves only paths whose folded file name is
+   a tracked file's.
+
+**Not covered**, said exactly:
+
+- **Text that doesn't come from the tracked file**: a model that runs code
+  written into itself, built from pieces, or fetched from the network.
+  That is the model's own code, which the user reviewed if the assistant
+  wrote the model.
+- **What a child process does**, beyond the paths its command, program
+  text and environment lead to. A child Python has no guard of its own,
+  `multiprocessing` included: a `spawn` child handed `runpy.run_path` and a
+  path through its pipe runs it. A name that doesn't lead to the file from
+  where the process starts gets through: a module name (`python -c "import
+  helper"`), a name relative to another folder, a name on stdin (`xargs
+  cat`), in a script file the model wrote, or built with shell escapes
+  (`$'\x68x.py'`), variables, `printf`, `base64` or brace expansion, or
+  matched by a regular expression (`find -regex`). Quotes and backslashes
+  inside a name, as in `cat h''x.py`, are taken out first, so those are
+  refused. Interpreters not on the list (`tclsh`, `osascript`, `lua` and
+  others) aren't read as interpreters. Starting processes isn't blocked,
+  since PsyNeuLink's own `show_graph` runs Graphviz.
+- **An open relative to another folder** (`os.open(name, dir_fd=d)`): the
+  audit event doesn't give the folder, and a name that doesn't lead to the
+  file from the working folder is left alone (checking every tracked file
+  of that name refused ordinary models, and a same-named decoy defeated it
+  anyway).
+- **Reading a file without Python's audit events**: `ctypes` calling the C
+  library's `open` and `read`, or a C extension doing the same.
+- **A model that tampers with the guard during its own task**: everything
+  in the worker is reachable from model code (`__main__._guard`), so a
+  model can switch the guard off for the rest of its own task. Later tasks
+  run in a fresh child of the fork server while anything is tracked
+  (above). Changes a model makes on disk beyond the review record and the
+  guard's files (the app's other code, the user's files) are the user's
+  program acting as the user, outside what the guard is for.
+- **The server's in-process converter runs model code in the server.** A
+  model converted to the standard format (`/model/convert`, the MDF
+  import's tidy-up) runs in the server's own process, so it can change the
+  server, including its decision to send tasks to the fork server. The
+  server's own decisions aren't protected against a model run there; the
+  converter runs only a model that passed the guard, and the audit hook is
+  active on its thread.
+- **In the server's in-process load**: a thread started with `_thread`
+  directly rather than `threading.Thread`, or by C code. The worker covers
+  every thread, and only the converter loads in-process.
+- **Links and caches set up beforehand**, by the user or by any program
+  they ran (a model included, outside a tracked period): a symlink or hard
+  link under another name, then opened and read as text (an import or load
+  of it is caught by its identity; the hook resolves a differently named
+  path only after a symlink is made in the same task); a
+  sourceless `.pyc`; a zip import. A `__pycache__` entry compiled from an
+  earlier approved text with the same size and whole-second mtime is what
+  Python runs, as it would for any file; it reaches only text that was
+  approved at the time.
+- **A stale copy of an approved file cached under the active PsyNeuLink
+  checkout**, if a user designates an assistant folder inside it: modules
+  under the checkout aren't purged between tasks, so an approved helper
+  edited afterwards is served as approved. It is never the unapproved text.
+
+Approving a model means trusting what it does; the review card says so.
+
+### What #311 must close
+
+The operating-system sandbox (#311) is what turns the guard into a
+boundary. It must close, at least:
+
+- **G1:** a model rewriting a module that later processes import
+  (`app/services/show_graph_guard.py`, any app, PsyNeuLink or installed
+  package module imported after the fork, a `.pth` file or `sitecustomize`
+  that pool workers would run). The guard refuses this from the model's
+  own Python code while something is tracked, but not from a process it
+  starts.
+- **G2:** a child process changing the review record (`cp` a forged one,
+  `rm` it and its `.bak`), so the next task runs an unapproved file.
+- **G3's survivors:** a process that leaves the process group (`setsid`,
+  a double fork) outlives its task and keeps the files and network the
+  user has, and can stall or write into any pipe it still holds.
+- **Writes through `dir_fd`** from a process the model starts (the
+  model's own Python calls are checked by the folder the fd names).
+- **The standard library folder** (a `sitecustomize.py` runs in every new
+  Python) and **the app's settings file** (`~/.psyneuview.json`): refused
+  to the model's own Python code while something is tracked, not to a
+  process it starts.
+- **G5:** a symlink chain made by a child process (`ln -s`), then read.
+- **F5:** `os.open(name, dir_fd=d)` relative to another folder.
+- **`ctypes`** and C extensions reading files without audit events.
+- **Child Pythons** (`multiprocessing` included), which have no guard.
+- **The converter's in-process run**, which runs model code in the server.
+
+### Every way code runs in the backend, and its guard
+
+Everything in `backend/app` that starts a process or loads or executes
+code. `test_assistant_runner_guard.py::test_every_spawn_and_exec_site_is_listed`
+counts these per file and fails when a count changes, and
+`test_no_spawn_or_load_name_is_imported_under_another_name` fails when one
+of those names is brought in under another name. Both are tripwires for
+reviewers, not boundaries.
+
+**Model code:**
+
+| Where | What runs | Reached from | Guard |
+|---|---|---|---|
+| `sandbox.py` warm worker (`--persistent`) | `sandbox_worker.py`, every task | `run_in_sandbox`: `/model/load`, open, preview, save and reload, undo and redo, `/model/run`, `/model/learn`, show graph, input nodes, MDF export and gaps, connection options and targets, the file watcher's reload (`ws.py`), the bundled-examples check | `require_runnable` in `run_in_sandbox`; the task carries `review_state` and the exempt roots; layers 2 to 4 in the worker; while anything is tracked, one task per process |
+| `sandbox.py` cold fallback (`_run_cold`) | `sandbox_worker.py`, one task | The warm worker failing | The same |
+| `jobs.py` | `sandbox_worker.py`, one Learn job | `POST /api/jobs` | `create_job` → `require_runnable` (409 at once, no job); the payload carries the same; layers 2 to 4 in the worker. A job the worker refuses ends in an error naming the file (`result.unreviewed_import`) |
+| `sandbox_worker.py` tasks: `introspect`, `run`, `learn`, `get_input_nodes`, `show_graph`, `export_mdf`, `mdf_gaps`, `connection_options`, `connection_targets` | The model, through `load_module` (and `load_module_resilient` after a failed load) | The three above | Layers 2 to 4, with the guard reset before each task; each task is tested started directly with no review state |
+| `converter.py` | The model, in the server's own process | `/model/convert`, the MDF import's tidy-up | `require_runnable` + `guard_imports()`: layer 3 with the server's view of the state, and layer 4 on that thread and the threads it starts; the guard's refusal is the review 409 even if `guard_imports()` is skipped |
+| `introspector.py`, `executor.py` (run, learn, input nodes) in-process | The model, in the server's own process | No route: only with `use_sandbox=False`, which tests use | `require_runnable` + `guard_imports()`, as the converter |
+| `sandbox_worker.py`, `introspector.py`, `executor.py`: a keyword's `compile` + `eval` | A keyword expression already in the loaded model | The loaders above | Only after the model passed the guard |
+
+**Not model code** (none of these runs a file the assistant can write):
+
+| Where | What runs |
+|---|---|
+| `sandbox_worker.py` start | `import_guard.py` itself, loaded by path |
+| `sandbox_worker.py` `task_introspect` | `compile` of the model's text to report a syntax error; never executed |
+| `quick_check.py` | Parse and `compile` of the text before a preview (#256); never executed. Its other match is the list of names it looks for |
+| `file_writer.py` | `compile` of a parameter value in `eval` mode, to check its syntax; never executed |
+| `locations.py` | `__import__` of an app module; `git` for a checkout's origin |
+| `api/routes.py`, `checkout_updates.py`, `clone_manager.py`, `settings_info.py` | `git` |
+| `github_auth.py` | `git`'s credential helper |
+| `install_manager.py` | `pip` or `uv`, and whether `uv` runs (#259) |
+| `running_from.py` | Which process runs the app |
+| `working_copies.py` | Which files are open |
+| `assistant/keys.py` | The Keychain's `security` tool |
+
 - **The state file** (`~/.psyneuview/assistant-review.json`) is the record
   of what is tracked. Deleting or truncating it reads as nothing tracked
-  (fail open). Accepted: only something already running as the user can
-  do that, the agent's tools can't reach it (hidden folder, app folder),
-  and a file that can't be parsed fails closed instead (its `.bak` is read
-  first).
+  (fail open); a file that can't be parsed fails closed instead (its
+  `.bak` is read first). The agent's tools can't reach it (hidden folder,
+  app folder). Model code can: while something is tracked, the model's
+  own Python code in the worker can't write, move or remove it (layer 2),
+  but a process the model starts can (`cp` a forged record, `rm` it and
+  its backup), and so can any program outside the worker. Only the
+  operating-system sandbox (#311) closes that.
 
 ## 8. Open items after the parts were joined
 
