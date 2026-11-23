@@ -4524,6 +4524,84 @@ def _run_persistent():
             _os._exit(0)
 
 
+def _read_line_unbuffered(fd: int) -> str | None:
+    """One line from ``fd`` a byte at a time, so nothing after the newline is
+    taken from the pipe (the fork server's parent must never read past its
+    own command into the task meant for its child). None at end of input."""
+    import os
+    data = bytearray()
+    while True:
+        b = os.read(fd, 1)
+        if not b:
+            return None if not data else data.decode("utf-8", "replace")
+        if b == b"\n":
+            return data.decode("utf-8", "replace")
+        data += b
+
+
+def _run_fork_server():
+    """Fork-server mode (#187): a clean parent that runs no model code.
+
+    The parent imports PsyNeuLink and the guard, signals ready, and then
+    reads only the word ``FORK`` from the server. For each, it forks a
+    child and waits for it. The child prints its pid, reads its task (the
+    parent never reads it), runs it, answers, and exits. The child runs in
+    its own process group, which the parent ends after the child exits, so
+    a process the model started doesn't outlive its task. A fork takes
+    milliseconds; nothing a child does reaches the parent or the next child.
+    """
+    import os
+    import signal
+
+    import psyneulink as pnl  # noqa: F401  (the expensive part, once)
+
+    print("###READY###", flush=True)
+    stdin_fd = sys.stdin.fileno()
+    while True:
+        command = _read_line_unbuffered(stdin_fd)
+        if command is None:
+            os._exit(0)
+        if command.strip() != "FORK":
+            continue  # nothing but FORK is ever acted on here
+        pid = os.fork()
+        if pid == 0:
+            _run_forked_child(stdin_fd)
+        try:
+            _, status = os.waitpid(pid, 0)
+        except ChildProcessError:
+            status = -1
+        try:
+            os.killpg(pid, signal.SIGKILL)
+        except OSError:
+            pass
+        print(f"###PSYNEUVIEW_CHILD_DONE### {status}", flush=True)
+
+
+def _run_forked_child(stdin_fd: int):
+    import os
+    try:
+        os.setpgrp()
+        _install_orphan_watchdog(use_signal_timer=False)
+        print(f"###PSYNEUVIEW_CHILD### {os.getpid()}", flush=True)
+        payload = _read_line_unbuffered(stdin_fd) or ""
+        # Nothing the model starts can read the next task from the parent's
+        # input: the child's own input is closed before the task runs.
+        devnull = os.open(os.devnull, os.O_RDONLY)
+        os.dup2(devnull, stdin_fd)
+        os.close(devnull)
+        result_str = _handle_one_task(payload)
+        print(RESULT_MARKER, flush=True)
+        print(result_str, flush=True)
+    except BaseException:
+        pass
+    finally:
+        try:
+            sys.stdout.flush()
+        except Exception:
+            pass
+        os._exit(0)
+
+
 def _learning_profile(comp, is_autodiff):
     """The Learn tab's per-composition profile (#997); never fails a load."""
     try:
@@ -4551,18 +4629,25 @@ def _run_oneshot():
 
 if __name__ == "__main__":
     persistent = "--persistent" in sys.argv
+    fork_server = "--fork-server" in sys.argv
     # Die if orphaned (#864) — installed before any task work so even a spin
     # during the first task can't outlive the parent. The SIGALRM half is armed
     # only for the persistent introspection worker (where pure-Python `while
     # True` spins are the concern); one-shot job workers run long training that a
     # stray SIGALRM would kill (#870), and the daemon-thread watch covers them.
-    _install_orphan_watchdog(use_signal_timer=persistent)
+    # The fork server's parent starts no thread, so forking it is safe; it
+    # notices the server has gone when its input ends, and each child
+    # watches for its own parent.
+    if not fork_server:
+        _install_orphan_watchdog(use_signal_timer=persistent)
     # Running as the worker, where model code runs: a tracked, unapproved
     # file is also refused when it is opened, compiled, executed, handed to a
     # new process, renamed or linked (#187). Not when a test imports this file.
     _guard.install_audit_hook(everywhere=True)
     _GUARD_FINGERPRINT = _guard.fingerprint()
-    if persistent:
+    if fork_server:
+        _run_fork_server()
+    elif persistent:
         _run_persistent()
     else:
         _run_oneshot()
