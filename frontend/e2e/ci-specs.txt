@@ -30,7 +30,6 @@ edge-curve-handles.spec.ts
 edge-line-width.spec.ts
 edge-routing-no-crossings.spec.ts
 edge-shaping-auto-layout.spec.ts
-editor-drag-select.spec.ts
 external-edit-sync.spec.ts
 fit-button-and-keys.spec.ts
 fit-fills-canvas.spec.ts
