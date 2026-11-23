@@ -89,7 +89,7 @@ class UnreviewedImport(BaseException):
     to reach the task boundary, where it becomes the 409.
     """
 
-    def __init__(self, path: str, *, state_unreadable: bool = False):
+    def __init__(self, path: str, *, state_unreadable: bool = False, imported: bool = True):
         self.path = path
         self.state_unreadable = state_unreadable
         if state_unreadable:
@@ -97,10 +97,15 @@ class UnreviewedImport(BaseException):
                 f"The AI assistant's review state can't be read, so it isn't known whether {os.path.basename(path)} "
                 f"was written by the assistant; nothing outside the standard library is imported until it is repaired."
             )
-        else:
+        elif imported:
             message = (
                 f"{os.path.basename(path)} was written by the AI assistant and hasn't been reviewed yet, and the model "
                 f"imports it. Review and approve it before running the model."
+            )
+        else:
+            message = (
+                f"{os.path.basename(path)} was written by the AI assistant and hasn't been reviewed yet, and it is "
+                f"named in a file, process or setting the model used. Review and approve it before running the model."
             )
         super().__init__(message)
 
@@ -255,13 +260,13 @@ def vet(path: str) -> None:
             raise UnreviewedImport(real, state_unreadable=True)
 
 
-def _check(key: str, path) -> None:
+def _check(key: str, path, *, imported: bool = True) -> None:
     """``key``'s entry against the content at ``path`` (the same file under
     whatever spelling was used)."""
     entry = _state.tracked.get(key) or {}
     approved = entry.get("approved")
     if approved is None or approved != _content_hash_of(path):
-        raise UnreviewedImport(key)
+        raise UnreviewedImport(key, imported=imported)
 
 
 check_model_path = vet
@@ -471,7 +476,7 @@ def _as_text(value) -> str | None:
 def _check_by_name(name: str) -> None:
     """Every tracked file with this folded file name, checked as itself."""
     for key in _state.index.by_name.get(name, ()):
-        _check(key, key)
+        _check(key, key, imported=False)
 
 
 def _vet_tracked(path, cwd: str | None = None, *, by_name: bool = True) -> None:
@@ -494,14 +499,18 @@ def _vet_tracked(path, cwd: str | None = None, *, by_name: bool = True) -> None:
     if not os.path.isabs(text):
         joined = os.path.join(cwd or os.getcwd(), text)
         key = _state.index.find(joined)
-        if key is None:
+        if key is not None:
+            _check(key, joined, imported=False)
+        elif not os.path.lexists(joined):
+            # Not a file from the working folder, so the name may be relative
+            # to another folder (``dir_fd``, which the event doesn't give):
+            # checked as the tracked file of that name. A file of that name
+            # that is there is the one opened, and the user's own.
             _check_by_name(name)
-            return
-        _check(key, joined)
         return
     key = _state.index.find(text)
     if key is not None:
-        _check(key, text)
+        _check(key, text, imported=False)
 
 
 def _process_words(args) -> list[str]:
@@ -526,48 +535,75 @@ def _process_words(args) -> list[str]:
 
 _GLOB_CHARS = ("*", "?", "[")
 
+#: Interpreters whose arguments are program text: every argument is read
+#: for a tracked file's full name or path, and ``-c``, ``-e`` or ``-E`` in
+#: any case marks the text that follows.
+_INTERPRETERS = frozenset({"python", "perl", "ruby", "node", "sh", "bash", "zsh", "dash", "ksh", "awk", "gawk", "mawk", "nawk"})
 
-def _vet_text(text: str | None) -> None:
-    """Text a shell or an interpreter will run (``sh -c``, ``python -c``,
-    ``os.system``) or a value handed to a process in its environment: it
-    mustn't mention a tracked, unapproved file, by name (folded, anywhere
-    in the text), by module name (the name without ``.py``, as a word), or
-    by a shell pattern that matches its name."""
+
+def _interpreter(word: str | None) -> bool:
+    import re
+    base = os.path.basename(word or "").lower()
+    return re.sub(r"[\d.]+$", "", base) in _INTERPRETERS
+
+
+def _vet_glob(word: str, cwd: str) -> None:
+    """A shell pattern counts only where it is anchored in a tracked file's
+    folder and matches that file's name: ``cat models/hx_*`` does,
+    ``rm -f outdir/*`` doesn't."""
+    import fnmatch
+    folder, pattern = os.path.split(word)
+    if not pattern or not any(c in pattern for c in _GLOB_CHARS) or any(c in folder for c in _GLOB_CHARS):
+        return
+    try:
+        where = fold(os.path.realpath(os.path.join(cwd, folder) if folder else cwd))
+    except (OSError, ValueError):
+        return
+    for key in _state.tracked:
+        if fold(os.path.dirname(os.path.realpath(key))) != where and fold(os.path.dirname(key)) != where:
+            continue
+        name = fold(os.path.basename(key))
+        if fnmatch.fnmatchcase(name, fold(pattern)):
+            _check(key, key, imported=False)
+
+
+def _vet_text(text: str | None, cwd: str | None = None) -> None:
+    """Text a shell or an interpreter will run, or a value handed to a
+    process in its environment: it mustn't contain a tracked, unapproved
+    file's full name (folded; a full path contains it), or a shell pattern
+    anchored in its folder that matches it. A module name alone (``data``
+    for ``data.py``) doesn't count: it is an ordinary word too often."""
     if not text:
         return
-    import fnmatch
     import re
     folded = fold(text)
     for name in _state.index.by_name:
-        stem = name[:-3] if name.endswith(".py") else ""
-        if name in folded or (stem and re.search(rf"(?<![\w.]){re.escape(stem)}(?!\w)", folded)):
+        if name in folded:
             _check_by_name(name)
     if any(c in text for c in _GLOB_CHARS):
-        for word in re.split(r"[\s<>|;&()'\"`]+", folded):
-            if not any(c in word for c in _GLOB_CHARS):
-                continue
-            pattern = os.path.basename(word) or word
-            for name in _state.index.by_name:
-                if fnmatch.fnmatchcase(name, pattern) or fnmatch.fnmatchcase(name, pattern + "*"):
-                    _check_by_name(name)
+        base = cwd or os.getcwd()
+        for word in re.split(r"[\s<>|;&()'\"`]+", text):
+            if any(c in word for c in _GLOB_CHARS):
+                _vet_glob(word, base)
 
 
 def _code_texts(words: list[str]) -> list[str]:
-    """The text after a ``-c`` (a shell's or Python's) or ``-e`` (other
-    interpreters'), however it was spelled (``-c``, ``-ccode``, ``-Bc``)."""
+    """The program text a command runs: after ``-c``, ``-e`` or ``-E`` (in
+    any case, however spelled: ``-c``, ``-ccode``, ``-Bc``), and, for a
+    known interpreter, every argument (``awk 'BEGIN {...}'``)."""
     texts = []
+    if words and _interpreter(words[0]):
+        texts.extend(words[1:])
     for i, word in enumerate(words):
         if word.startswith("-") and not word.startswith("--") and len(word) > 1:
             flags = word[1:]
-            for flag in ("c", "e"):
-                at = flags.find(flag)
-                if at >= 0:
-                    rest = flags[at + 1:]
-                    if rest:
-                        texts.append(rest)
-                    elif i + 1 < len(words):
-                        texts.append(words[i + 1])
-                    break
+            at = min((flags.find(f) for f in "cCeE" if f in flags), default=-1)
+            if at >= 0:
+                rest = flags[at + 1:]
+                if rest:
+                    texts.append(rest)
+                elif i + 1 < len(words):
+                    texts.append(words[i + 1])
     return texts
 
 
@@ -584,6 +620,8 @@ def _vet_process(event: str, args: tuple) -> None:
         raw = [_as_text(a) for a in argv] if isinstance(argv, (list, tuple)) else [_as_text(argv)]
         words = _process_words(argv) + ([_as_text(executable)] if _as_text(executable) else [])
         texts = _code_texts([w for w in raw if w is not None])
+        if _as_text(executable) and _interpreter(_as_text(executable)):
+            texts.extend(w for w in raw[1:] if w is not None)
         if isinstance(argv, (str, bytes)):
             texts.append(_as_text(argv))
     elif event == "os.system":
@@ -609,11 +647,38 @@ def _vet_process(event: str, args: tuple) -> None:
             name = fold(os.path.basename(part))
             if name in _state.index.by_name:
                 _check_by_name(name)
+            if any(c in part for c in _GLOB_CHARS):
+                _vet_glob(part, cwd)
     for text in texts:
-        _vet_text(text)
+        _vet_text(text, cwd)
     if isinstance(env, dict):
         for value in env.values():
-            _vet_text(_as_text(value))
+            _vet_text(_as_text(value), cwd)
+
+
+def _vet_symlink(src: str | None, dst: str | None) -> None:
+    """A link made during a task (src, the target; dst, the link). Refused,
+    for a tracked, unapproved file, when the target is that file, when the
+    target's own name is that file's name, whether or not the target exists
+    yet (a link made ahead of a folder link that completes it), or when the
+    target is a folder holding that file, at any depth."""
+    if not src:
+        return
+    if dst and not os.path.isabs(src):
+        src = os.path.join(os.path.dirname(os.path.abspath(dst)), src)
+    _vet_tracked(src, by_name=False)
+    name = fold(os.path.basename(src.rstrip(os.sep)))
+    if name in _state.index.by_name:
+        _check_by_name(name)
+    try:
+        target = fold(os.path.realpath(src)).rstrip(os.sep) + os.sep
+    except (OSError, ValueError):
+        return
+    for key in _state.tracked:
+        for spelled in (fold(key), fold(os.path.realpath(key))):
+            if spelled.startswith(target):
+                _check(key, key, imported=False)
+                break
 
 
 def _on_this_thread() -> bool:
@@ -647,11 +712,7 @@ def _audit(event: str, args: tuple) -> None:
         elif event == "compile":
             _vet_tracked(args[1] if len(args) > 1 else None)
         elif event == "os.symlink":
-            # (src, dst, dir_fd): a link to a tracked file, under any name.
-            src, dst = _as_text(args[0]), _as_text(args[1])
-            if src and dst and not os.path.isabs(src):
-                src = os.path.join(os.path.dirname(os.path.abspath(dst)), src)
-            _vet_tracked(src, by_name=False)
+            _vet_symlink(_as_text(args[0]), _as_text(args[1]))
         else:  # open, os.rename, os.link: the first argument is the file read
             if not isinstance(args[0], int):
                 _vet_tracked(args[0])
@@ -720,7 +781,8 @@ def reset_for_task() -> None:
 _FINGERPRINTED = (
     "vet", "_check", "check_model_path", "_content_hash_of", "TrackedIndex", "_State", "ReviewFinder",
     "_finder", "_keep_first", "_vetted_get_code", "_original_get_code", "install", "_audit", "_vet_tracked",
-    "_vet_process", "_vet_text", "_code_texts", "_process_words", "_check_by_name", "_on_this_thread",
+    "_vet_process", "_vet_text", "_vet_glob", "_vet_symlink", "_interpreter", "_code_texts", "_process_words",
+    "_check_by_name", "_on_this_thread",
     "refresh", "reset_for_task", "fingerprint", "read_state", "_parse", "default_state_path", "fold", "_identity",
     "_merge_states", "is_library_path", "_add_audit_hook_if_needed", "_audit_event_names",
 )
