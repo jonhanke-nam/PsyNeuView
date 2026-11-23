@@ -205,7 +205,7 @@ function ManagedCopyRow({ copy, onRemove }: { copy: ManagedCopy; onRemove: (name
   return (
     <div data-testid="managed-copy" data-name={copy.name} style={{ padding: "6px 0", borderBottom: "1px solid var(--pnv-surface-sunken)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontWeight: 500, fontFamily: "monospace" }}>{copy.repo ?? copy.name}</span>
+        <span style={{ fontWeight: 500, fontFamily: "var(--pnv-font-mono)" }}>{copy.repo ?? copy.name}</span>
         {copy.in_use && (
           <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-success)", border: "1px solid var(--pnv-success)", borderRadius: 3, padding: "0 4px" }}>
             in use
@@ -299,7 +299,7 @@ function KeptReleaseRow({ release, onRemove }: { release: KeptRelease; onRemove:
   return (
     <div data-testid="kept-release" data-version={release.version} style={{ padding: "4px 0", borderBottom: "1px solid var(--pnv-surface-sunken)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontWeight: 500, fontFamily: "monospace" }}>PsyNeuLink {release.version}</span>
+        <span style={{ fontWeight: 500, fontFamily: "var(--pnv-font-mono)" }}>PsyNeuLink {release.version}</span>
         {release.in_use && (
           <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-success)", border: "1px solid var(--pnv-success)", borderRadius: 3, padding: "0 4px" }}>in use</span>
         )}

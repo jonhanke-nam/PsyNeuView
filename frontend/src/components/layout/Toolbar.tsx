@@ -1720,6 +1720,9 @@ export function Toolbar() {
           cursor: "pointer",
           lineHeight: 1,
           flexShrink: 0,
+          // #109: as tall as its neighbours (Layout ▾, Open ▾), the glyph
+          // keeping its size: the toolbar's controls stand level.
+          alignSelf: "stretch",
         }}
         title="Settings"
         aria-label="Settings"
@@ -2684,7 +2687,7 @@ export function Toolbar() {
                     </div>
                     <div>
                       This model uses{" "}
-                      <span style={{ fontFamily: "monospace" }}>GraphStructureCondition</span>{" "}
+                      <span style={{ fontFamily: "var(--pnv-font-mono)" }}>GraphStructureCondition</span>{" "}
                       ({gscTypesInModel.join(", ")}). PsyNeuLink does not yet serialize
                       these to MDF — see{" "}
                       <a
@@ -2720,7 +2723,7 @@ export function Toolbar() {
                     <div>
                       This model contains nested Composition
                       {nestedCompsInModel.length > 1 ? "s" : ""} (
-                      <span style={{ fontFamily: "monospace" }}>
+                      <span style={{ fontFamily: "var(--pnv-font-mono)" }}>
                         {nestedCompsInModel.join(", ")}
                       </span>
                       ). PsyNeuLink's MDF export does not yet support nesting —
@@ -2772,7 +2775,7 @@ export function Toolbar() {
                       </div>
                       <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
                         {gap.items.map((item) => (
-                          <li key={item} style={{ fontFamily: "monospace" }}>{item}</li>
+                          <li key={item} style={{ fontFamily: "var(--pnv-font-mono)" }}>{item}</li>
                         ))}
                       </ul>
                     </div>
@@ -2780,7 +2783,7 @@ export function Toolbar() {
                 })}
                 <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", marginBottom: 16 }}>
                   {toServer ? "Writes: " : "Downloads: "}
-                  <span style={{ fontFamily: "monospace", color: "var(--pnv-text)" }}>
+                  <span style={{ fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-text)" }}>
                     {toServer ? `${saveAsDir || defaultSaveDir}/${exportFilename}` : exportFilename}
                   </span>
                 </div>
@@ -2920,7 +2923,7 @@ function FilePathChip({
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
-          fontFamily: "monospace",
+          fontFamily: "var(--pnv-font-mono)",
           minWidth: 0,
         }}
         onClick={onCopy}

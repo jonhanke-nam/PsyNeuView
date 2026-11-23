@@ -400,7 +400,7 @@ function LegendRow({
       </svg>
       {/* Label badge */}
       <span style={{
-        fontSize: "var(--pnv-fs-10)", fontWeight: 600, fontFamily: "monospace",
+        fontSize: "var(--pnv-fs-10)", fontWeight: 600, fontFamily: "var(--pnv-font-mono)",
         color: "var(--pnv-on-primary)", background: color,
         padding: "0 5px", borderRadius: 6, lineHeight: "15px",
         whiteSpace: "nowrap",

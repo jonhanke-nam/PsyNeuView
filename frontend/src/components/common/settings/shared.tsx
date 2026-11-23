@@ -157,7 +157,7 @@ export function PathBox({ path, label, testId }: { path: string; label?: string;
       }}
     >
       <span style={{ color: "var(--pnv-text-hint)", fontSize: "var(--pnv-fs-11)", flexShrink: 0 }}>{label ?? "Full path"}</span>
-      <code style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", color: "var(--pnv-text)", minWidth: 0, overflowWrap: "anywhere" }}>
+      <code style={{ fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-text)", minWidth: 0, overflowWrap: "anywhere" }}>
         {parts.map((part, i) => (
           <span key={i}>
             {part}
@@ -221,7 +221,7 @@ export function Row({
       <div
         style={{
           color: dimmed ? "var(--pnv-text-faint)" : "var(--pnv-text)",
-          fontFamily: mono ? "monospace" : undefined,
+          fontFamily: mono ? "var(--pnv-font-mono)" : undefined,
           textDecoration: struck ? "line-through" : undefined,
           // Words wrap at spaces; only a token too long for the line (a path, a
           // commit) breaks inside, instead of "boundarie / s" (#1290).

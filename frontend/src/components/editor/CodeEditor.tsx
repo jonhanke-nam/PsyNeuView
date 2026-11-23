@@ -1016,7 +1016,7 @@ export function CodeEditor() {
                 onChange={(e) => setSelectedBundleKind(e.target.value)}
                 style={{
                   fontSize: "var(--pnv-fs-11)",
-                  fontFamily: "monospace",
+                  fontFamily: "var(--pnv-font-mono)",
                   padding: "2px 4px",
                   border: "1px solid var(--pnv-border)",
                   borderRadius: 3,
@@ -1055,7 +1055,7 @@ export function CodeEditor() {
             <span
               title={filePath || undefined}
               style={{
-                fontFamily: filePath ? "monospace" : undefined,
+                fontFamily: filePath ? "var(--pnv-font-mono)" : undefined,
                 // #111: like the bundle picker, the name gives way first.
                 minWidth: 0,
                 overflow: "hidden",
@@ -1085,14 +1085,14 @@ export function CodeEditor() {
             <span style={{ color: "var(--pnv-unsaved)", fontSize: "var(--pnv-fs-16)", lineHeight: 1 }} title="Unsaved changes">*</span>
           )}
           {filePath && isSourceView && (
-            <span style={{ color: "var(--pnv-text-faint)", fontFamily: "monospace", fontSize: "var(--pnv-fs-10)", whiteSpace: "nowrap" }}>
+            <span style={{ color: "var(--pnv-text-faint)", fontFamily: "var(--pnv-font-mono)", fontSize: "var(--pnv-fs-10)", whiteSpace: "nowrap" }}>
               {headerCompact
                 ? `L${cursorInfo.line}·C${cursorInfo.col}${source ? ` · ${source.split("\n").length}L` : ""}`
                 : `Ln ${cursorInfo.line}, Col ${cursorInfo.col}${source ? ` / ${source.split("\n").length} lines` : ""}`}
             </span>
           )}
           {filePath && !isSourceView && sidecarContent !== null && (
-            <span style={{ color: "var(--pnv-text-faint)", fontFamily: "monospace", fontSize: "var(--pnv-fs-10)", whiteSpace: "nowrap" }}>
+            <span style={{ color: "var(--pnv-text-faint)", fontFamily: "var(--pnv-font-mono)", fontSize: "var(--pnv-fs-10)", whiteSpace: "nowrap" }}>
               {sidecarContent.split("\n").length}{headerCompact ? "L" : " lines · editable"}
             </span>
           )}

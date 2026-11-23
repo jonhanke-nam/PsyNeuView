@@ -264,7 +264,7 @@ export function InstallControls({
               onChange={(e) => setPath(e.target.value)}
               disabled={!!isRunning}
               placeholder="/path/to/PsyNeuLink"
-              style={{ ...inputStyle, fontFamily: "monospace" }}
+              style={{ ...inputStyle, fontFamily: "var(--pnv-font-mono)" }}
             />
             {/* A Finder folder picker inside the Mac app; in a browser, typing. */}
             {hasFileBridge() && (

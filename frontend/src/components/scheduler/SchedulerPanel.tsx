@@ -1,3 +1,4 @@
+import { Button } from "@/components/common/Button";
 import { useModelStore } from "@/stores/modelStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useTextScale } from "@/stores/textSizeStore";
@@ -96,8 +97,10 @@ export function SchedulerPanel() {
           <SchedulerModeToggle mode={schedulerConfig.mode} fontPx={s(11)} />
         )}
         <span style={{ marginLeft: "auto", display: "flex", gap: 2 }}>
-          <button onClick={zoomOut} title="Decrease font size" style={{ fontSize: "var(--pnv-fs-11)", padding: "1px 5px", border: "1px solid var(--pnv-border)", borderRadius: 3, background: "var(--pnv-surface-sunken)", cursor: "pointer", color: "var(--pnv-text-secondary)" }}>A-</button>
-          <button onClick={zoomIn} title="Increase font size" style={{ fontSize: "var(--pnv-fs-11)", padding: "1px 5px", border: "1px solid var(--pnv-border)", borderRadius: 3, background: "var(--pnv-surface-sunken)", cursor: "pointer", color: "var(--pnv-text-secondary)" }}>A+</button>
+          {/* #109: the same A- A+ as the Inspector's, a small Button each (they
+              were a darker grey box of their own). */}
+          <Button kind="small" onClick={zoomOut} title="Decrease font size">A-</Button>
+          <Button kind="small" onClick={zoomIn} title="Increase font size">A+</Button>
         </span>
       </div>
       <div style={{ fontSize: s(11), color: "var(--pnv-text-faint)", marginBottom: 14 }}>
@@ -132,10 +135,10 @@ export function SchedulerPanel() {
               background: i % 2 === 0 ? "var(--pnv-surface-muted)" : "var(--pnv-surface)",
               borderRadius: 4,
             }}>
-              <span style={{ fontSize: s(11), fontWeight: 700, color: "var(--pnv-text-faint)", minWidth: 28, fontFamily: "monospace" }}>
+              <span style={{ fontSize: s(11), fontWeight: 700, color: "var(--pnv-text-faint)", minWidth: 28, fontFamily: "var(--pnv-font-mono)" }}>
                 {i + 1}.
               </span>
-              <span style={{ fontSize: s(12), fontFamily: "monospace", color: "var(--pnv-text-body)" }}>
+              <span style={{ fontSize: s(12), fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-text-body)" }}>
                 {step.join(", ")}
               </span>
             </div>
@@ -169,7 +172,7 @@ export function SchedulerPanel() {
                 <span style={{ fontSize: s(11), fontWeight: 600, color: "var(--pnv-text-secondary)", minWidth: 60 }}>
                   {bc.owner}
                 </span>
-                <span style={{ fontSize: s(11), fontFamily: "monospace", color: "var(--pnv-primary)" }}>
+                <span style={{ fontSize: s(11), fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-primary)" }}>
                   {conditionToString(bc.condition)}
                 </span>
               </div>
@@ -209,7 +212,7 @@ export function SchedulerPanel() {
                 title={`Click to inspect ${gsc.type}`}
               >
                 <span style={{
-                  fontSize: s(10), fontWeight: 600, fontFamily: "monospace",
+                  fontSize: s(10), fontWeight: 600, fontFamily: "var(--pnv-font-mono)",
                   color: "var(--pnv-on-primary)", background: color, padding: "0 5px",
                   borderRadius: 6, lineHeight: "16px",
                 }}>

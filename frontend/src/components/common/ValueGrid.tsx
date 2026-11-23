@@ -125,7 +125,7 @@ export function GridLegend({ scale, testId }: { scale: GridScale; testId?: strin
     scale.kind === "diverging"
       ? "linear-gradient(to right, var(--pnv-grid-neg), var(--pnv-grid-mid), var(--pnv-grid-high))"
       : "linear-gradient(to right, var(--pnv-grid-low), var(--pnv-grid-high))";
-  const text: CSSProperties = { fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-hint)", fontFamily: "monospace" };
+  const text: CSSProperties = { fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-hint)", fontFamily: "var(--pnv-font-mono)" };
   return (
     <span
       data-testid={testId}

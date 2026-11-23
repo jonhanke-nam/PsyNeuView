@@ -18,6 +18,7 @@ developer-tests-loader.spec.ts
 diagnostics.spec.ts
 dialog-sweep.spec.ts
 drag-to-connect-stage2.spec.ts
+drag-to-connect-stage3.spec.ts
 drag-to-connect.spec.ts
 drop-new-model-file.spec.ts
 edge-line-width.spec.ts
@@ -35,6 +36,7 @@ graph-click-conventions.spec.ts
 graph-fills-window.spec.ts
 graph-hit-areas.spec.ts
 graph-legend.spec.ts
+graph-menus-in-window.spec.ts
 graph-pointer-hand-size.spec.ts
 graph-pointer-precise.spec.ts
 graph-pointer.spec.ts

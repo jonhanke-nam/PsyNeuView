@@ -4,8 +4,8 @@
  * Ports hidden, as by default: drag from a node's connector (shown on hover,
  * on its output side) to anywhere on another node. PsyNeuLink is asked what
  * that connects: a MappingProjection, into the input port chosen when there
- * are several; a control, gating or learning sender is refused with a reason
- * until stage 2.
+ * are several. A control mechanism asks which parameter instead (stage 3,
+ * drag-to-connect-stage3.spec.ts).
  */
 import { readOnlyTest as test, expect } from "./test-base";
 import { writeFileSync, mkdtempSync, readFileSync } from "fs";
@@ -101,12 +101,15 @@ test.describe("drag from one node to another to connect them (#253)", { tag: "@c
     await expect(page.locator(".react-flow__edge")).toHaveCount(edges + 1, { timeout: 30_000 });
   });
 
-  test("from a control mechanism: refused, with the reason, and nothing written", async ({ page }) => {
+  test("from a control mechanism: it asks which parameter, and Escape writes nothing", async ({ page }) => {
     const file = scratch();
     const changes = structuralChanges(page);
     await open(page, file);
     await dragConnect(page, "ctrl", "a");
-    await expect(page.getByText(/is a control mechanism/).first()).toBeVisible({ timeout: 30_000 });
+    const chooser = page.getByTestId("port-chooser");
+    await expect(chooser).toContainText("Control which parameter of", { timeout: 30_000 });
+    await page.keyboard.press("Escape");
+    await expect(chooser).toHaveCount(0);
     expect(changes).toEqual([]);
     expect(readFileSync(file, "utf8")).toBe(MODEL);
   });

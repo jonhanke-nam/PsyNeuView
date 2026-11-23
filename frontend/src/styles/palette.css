@@ -133,39 +133,44 @@
   /* The palette's flyout, beside the compact palette. */
   --pnv-shadow-flyout: 2px 0 8px rgba(0, 0, 0, 0.08);
 
-  /* Node roles, from docs/icon-ontology.md: the colour a mechanism's role
-     has in PsyNeuLink's own show_graph, as show_graph's own PDF and PNG draw
-     it. show_graph names its colours ("green", "red", "blue", "purple"), and
-     Graphviz draws each name with its X11 value: green is #00ff00 and purple
-     #a020f0 (a browser would read the same names in an SVG as #008000 and
-     #800080, so the app's show_graph tab is made to agree with the PDF, not
-     the other way round). Red, green and purple must match show_graph exactly
-     (#190). Their own set: a button is never "INPUT green", and a role is
-     never "the primary blue". */
-  --pnv-role-input: #00ff00;
-  --pnv-role-output: #ff0000;
-  --pnv-role-control: #0000ff;
-  /* show_graph's orange (#ffa500) and pink (#ffc0cb) are too pale on white
-     for an outline (2:1 and 1.5:1), so these are the nearest named orange and
-     pink that still read. */
-  --pnv-role-learning: #ff8c00;
-  --pnv-role-probe: #ff69b4;
-  --pnv-role-internal: #000;
+  /* Node roles: show_graph's colours, EXACTLY, by design (#306). PsyNeuLink's
+     show_graph is the gold standard for what colour a role is. Its defaults
+     (ShowGraph.__init__: input_color, output_color, ...) are colour names,
+     and Graphviz draws each name with its X11 value in show_graph's PDF and
+     PNG: green is #00ff00, purple #a020f0, orange #ffa500, pink #ffc0cb. (A
+     browser reads green and purple in an SVG as #008000 and #800080, so the
+     app's show_graph tab is redrawn to agree with the PDF, not the other way
+     round.) Two tests keep these in step: backend/tests/test_show_graph_palette.py
+     reads show_graph's defaults from PsyNeuLink itself and compares them with
+     the values here, and styles/showGraphColours.test.ts checks them against
+     its own checked-in table. Change a value here only when show_graph
+     changes. docs/icon-ontology.md has the table. Their own set: a button is
+     never "INPUT green", and a role is never "the primary blue". */
+  --pnv-role-input: #00ff00;        /* show_graph input_color green */
+  --pnv-role-output: #ff0000;       /* output_color red */
+  --pnv-role-control: #0000ff;      /* control_color blue */
+  --pnv-role-learning: #ffa500;     /* learning_color orange */
+  --pnv-role-probe: #ffc0cb;        /* probe_color pink */
+  --pnv-role-internal: #000000;     /* default_node_color black */
   /* The rest of show_graph's role colours: a node that is both INPUT and
      OUTPUT (brown), the composition's controller (and its objective,
      purple), a node that sends a feedback projection (black: show_graph gives
      it a shape, not a colour), and one in a cycle (black, like any ordinary
      node: show_graph marks a cycle with a double ring). */
-  --pnv-role-singleton: #a52a2a;
-  --pnv-role-controller: #a020f0;
-  --pnv-role-feedback-sender: #000;
-  --pnv-role-cycle: #000;
-  /* The same roles as text (a node's type tag) and behind white text (its
-     role tag), where the outline colour is too light to read: a darker green
-     (#00ff00 on white is 1.4:1, unreadable; this is CSS green, 5.1:1), red,
-     orange and pink. The other roles' outline colours read as text as they
-     are (controller purple is 5.3:1 on white, either way round: purple text
-     on white, or a white role tag on purple). ROLE_TEXT_COLORS in constants/pnlTypes.ts names these. */
+  --pnv-role-singleton: #a52a2a;    /* input_and_output_color brown */
+  --pnv-role-controller: #a020f0;   /* controller_color purple */
+  --pnv-role-feedback-sender: #000000; /* default_node_color black */
+  --pnv-role-cycle: #000000;        /* default_node_color black */
+  /* THE ONE EXCEPTION: the same roles drawn as TEXT (a node's type tag) or
+     behind white text (its role tag). show_graph draws no text in a role's
+     colour, so there is nothing to match, and four of its colours are
+     unreadable as text on white: green #00ff00 is 1.4:1, orange 2:1, pink
+     1.5:1. These keep each role's hue, darker, for legibility: CSS green
+     (5.1:1), a deeper red, a deep orange, a deep pink. The other roles'
+     outline colours read as text as they are (controller purple is 5.3:1 on
+     white, either way round). ROLE_TEXT_COLORS in constants/pnlTypes.ts
+     names these. They are the only role colours allowed to differ from
+     show_graph. */
   --pnv-role-input-text: #008000;
   --pnv-role-output-text: #dd0000;
   --pnv-role-learning-text: #e65100;
@@ -224,6 +229,13 @@
   /* Edges. A projection's own colour comes with its type; these are the rest. */
   --pnv-edge-default: #b1b1b7;      /* an edge with no type colour (React Flow's default) */
   --pnv-edge-hover: #5b9bd5;        /* an edge under the pointer: a light blue that reads on dark edges */
+  /* #253: where a connection being dragged can be dropped. Teal, so it reads
+     neither as the selection blue nor as a role's green or red: a pulsing
+     halo on each valid target, held steady on the one under the pointer,
+     and the rubber-band arrow being drawn. */
+  --pnv-connect-target: #00a3a3;
+  --pnv-connect-glow: rgba(0, 163, 163, 0.55);
+  --pnv-connect-tint: rgba(0, 163, 163, 0.22);
   --pnv-edge-bend-forced: #8a8f98;  /* a bend the router placed (a bend you placed is the primary blue) */
   --pnv-edge-label-bg: rgba(255, 255, 255, 0.95);
   --pnv-edge-legend: #888;          /* the legend's sample line for a data projection */
@@ -237,7 +249,7 @@
   --pnv-projection-control: #1565c0;
   --pnv-projection-learning: #e65100;
   --pnv-projection-autoassociative: #7b1fa2;
-  --pnv-projection-inactive: #c62828;
+  --pnv-projection-inactive: #ff0000; /* show_graph's inactive_projection_color red, exactly (#306) */
   --pnv-projection-cim: #888;
   --pnv-projection-dangling: #c62828;
   /* The banner across the canvas while you pick a node: for a scheduling
@@ -275,12 +287,16 @@
 
   /* Component types: each PsyNeuLink class's colour in the Components
      palette (its dot) and on its node when nodes are coloured by type
-     (constants/pnlTypes.ts names each one). Their own set, like the roles. */
+     (constants/pnlTypes.ts names each one). Their own set, like the roles.
+     Each is drawn as an icon or an outline, so each clears 3:1 against the
+     panel (--pnv-surface-muted) and a node's fill (--pnv-surface); the pale
+     ones were darkened to that, keeping their hue (#283).
+     styles/typeColourContrast.test.ts fails on one that does not. */
   /* Mechanisms */
   --pnv-type-transfer-mechanism: #1a73e8;
   --pnv-type-recurrent-transfer-mechanism: #7b1fa2;
   --pnv-type-kwta-mechanism: #9c27b0;
-  --pnv-type-lca-mechanism: #ef6c00;
+  --pnv-type-lca-mechanism: #ec6b01;
   --pnv-type-contrastive-hebbian-mechanism: #6a1b9a;
   --pnv-type-kohonen-mechanism: #4527a0;
   --pnv-type-processing-mechanism: #2e7d32;
@@ -297,10 +313,10 @@
   --pnv-type-agt-control-mechanism: #b71c1c;
   --pnv-type-lc-control-mechanism: #c62828;
   --pnv-type-gating-mechanism: #4a148c;
-  --pnv-type-learning-mechanism: #f9a825;
-  --pnv-type-auto-associative-learning-mechanism: #f57f17;
-  --pnv-type-kohonen-learning-mechanism: #ff8f00;
-  --pnv-type-em-storage-mechanism: #ffa000;
+  --pnv-type-learning-mechanism: #c78302;
+  --pnv-type-auto-associative-learning-mechanism: #e27202;
+  --pnv-type-kohonen-learning-mechanism: #d97902;
+  --pnv-type-em-storage-mechanism: #cd8004;
   /* Projections */
   --pnv-type-mapping-projection: #555;
   --pnv-type-masked-mapping-projection: #616161;
@@ -314,18 +330,18 @@
   --pnv-type-gru-composition: #546e7a;
   --pnv-type-em-composition: #607d8b;
   --pnv-type-parameter-estimation-composition: #78909c;
-  --pnv-type-composition-function-approximator: #90a4ae;
-  --pnv-type-regression-cfa: #b0bec5;
+  --pnv-type-composition-function-approximator: #80949e;
+  --pnv-type-regression-cfa: #86939a;
   /* Functions */
   --pnv-type-identity: #1565c0;
   --pnv-type-linear: #1976d2;
   --pnv-type-exponential: #1e88e5;
-  --pnv-type-logistic: #2196f3;
-  --pnv-type-tanh: #42a5f5;
-  --pnv-type-relu: #64b5f6;
-  --pnv-type-gaussian: #90caf9;
-  --pnv-type-gaussian-distort: #bbdefb;
-  --pnv-type-binomial-distort: #e3f2fd;
+  --pnv-type-logistic: #2095f2;
+  --pnv-type-tanh: #3197e5;
+  --pnv-type-relu: #4597d6;
+  --pnv-type-gaussian: #5e97c3;
+  --pnv-type-gaussian-distort: #7495b0;
+  --pnv-type-binomial-distort: #85939d;
   --pnv-type-softmax: #1e88e5;
   --pnv-type-transfer-with-costs: #1565c0;
   --pnv-type-angle: #0d47a1;
@@ -333,17 +349,17 @@
   --pnv-type-dropout: #0d47a1;
   --pnv-type-user-defined-function: #37474f;
   --pnv-type-linear-timer: #00838f;
-  --pnv-type-accelerating-timer: #00acc1;
-  --pnv-type-decelerating-timer: #26c6da;
-  --pnv-type-asymptotic-timer: #4dd0e1;
+  --pnv-type-accelerating-timer: #05a0b3;
+  --pnv-type-decelerating-timer: #06a0b1;
+  --pnv-type-asymptotic-timer: #02a0b0;
   --pnv-type-simple-integrator: #2e7d32;
   --pnv-type-accumulator-integrator: #388e3c;
   --pnv-type-adaptive-integrator: #43a047;
-  --pnv-type-dual-adaptive-integrator: #4caf50;
-  --pnv-type-drift-diffusion-integrator: #66bb6a;
-  --pnv-type-drift-on-a-sphere-integrator: #81c784;
-  --pnv-type-ornstein-uhlenbeck-integrator: #a5d6a7;
-  --pnv-type-leaky-competing-integrator: #c8e6c9;
+  --pnv-type-dual-adaptive-integrator: #41a546;
+  --pnv-type-drift-diffusion-integrator: #4ea353;
+  --pnv-type-drift-on-a-sphere-integrator: #5ca05f;
+  --pnv-type-ornstein-uhlenbeck-integrator: #6d9c70;
+  --pnv-type-leaky-competing-integrator: #7c987d;
   --pnv-type-fitz-hugh-nagumo-integrator: #388e3c;
   --pnv-type-interactive-activation-integrator: #1b5e20;
   --pnv-type-normal-dist: #6a1b9a;
@@ -351,14 +367,14 @@
   --pnv-type-exponential-dist: #8e24aa;
   --pnv-type-gamma-dist: #9c27b0;
   --pnv-type-wald-dist: #ab47bc;
-  --pnv-type-uniform-to-normal-dist: #ce93d8;
+  --pnv-type-uniform-to-normal-dist: #b67cc0;
   --pnv-type-drift-diffusion-analytical: #ba68c8;
-  --pnv-type-linear-combination: #f57c00;
-  --pnv-type-matrix-transform: #ef6c00;
+  --pnv-type-linear-combination: #e27203;
+  --pnv-type-matrix-transform: #ec6b01;
   --pnv-type-reduce: #e65100;
-  --pnv-type-concatenate: #ff9800;
-  --pnv-type-rearrange: #ffa726;
-  --pnv-type-combine-means: #ffb74d;
+  --pnv-type-concatenate: #d27d02;
+  --pnv-type-rearrange: #cb8102;
+  --pnv-type-combine-means: #c68303;
   --pnv-type-prediction-error-delta-function: #e65100;
   --pnv-type-stability: #d84315;
   --pnv-type-energy: #e64a19;
@@ -369,14 +385,14 @@
   --pnv-type-gaussian-process: #6d4c41;
   --pnv-type-pec-optimization-function: #795548;
   --pnv-type-one-hot: #795548;
-  --pnv-type-hebbian: #ff6f00;
-  --pnv-type-contrastive-hebbian: #ff8f00;
-  --pnv-type-kohonen: #ffa000;
-  --pnv-type-reinforcement: #ffb300;
-  --pnv-type-td-learning: #ffc107;
-  --pnv-type-back-propagation: #ffd54f;
-  --pnv-type-bayes-glm: #ffe082;
-  --pnv-type-em-storage: #ffecb3;
+  --pnv-type-hebbian: #ef6803;
+  --pnv-type-contrastive-hebbian: #d97902;
+  --pnv-type-kohonen: #cd8004;
+  --pnv-type-reinforcement: #c08602;
+  --pnv-type-td-learning: #b78a05;
+  --pnv-type-back-propagation: #b08d03;
+  --pnv-type-bayes-glm: #ac8e2b;
+  --pnv-type-em-storage: #a2905a;
   --pnv-type-buffer: #3e2723;
   --pnv-type-content-addressable-memory: #4e342e;
   --pnv-type-dictionary-memory: #5d4037;
@@ -413,4 +429,13 @@
   --pnv-fs-15: calc(15px * var(--pnv-text-scale));
   --pnv-fs-16: calc(16px * var(--pnv-text-scale));
   --pnv-fs-18: calc(18px * var(--pnv-text-scale));
+}
+
+/* The code font (#109): not a colour either. The Mac's own monospaced face
+   (SF Mono, then Menlo) wherever the app shows code, a name or a value in
+   code type. The bare generic "monospace" is Courier on macOS, a typewriter
+   face that looked out of place beside the system font; a component writes
+   `var(--pnv-font-mono)`, never "monospace" (styleConventions.test.ts). */
+:root {
+  --pnv-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }

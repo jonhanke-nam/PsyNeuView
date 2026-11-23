@@ -126,7 +126,7 @@ const classHeaderStyle: React.CSSProperties = {
 const rowItemStyle = (selected: boolean, disabled: boolean): React.CSSProperties => ({
   padding: "4px 10px 4px 34px",
   cursor: disabled ? "not-allowed" : "pointer",
-  fontFamily: "monospace",
+  fontFamily: "var(--pnv-font-mono)",
   fontSize: "var(--pnv-fs-12)",
   background: selected ? "var(--pnv-primary-tint)" : "transparent",
   color: disabled ? "var(--pnv-text-faint)" : "var(--pnv-text)",
@@ -299,7 +299,7 @@ export function DeveloperTestsModal({ onCancel, onExtracted }: DeveloperTestsMod
               style={{
                 fontSize: "var(--pnv-fs-11)",
                 color: "var(--pnv-text-hint)",
-                fontFamily: "monospace",
+                fontFamily: "var(--pnv-font-mono)",
                 maxWidth: 380,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -364,7 +364,7 @@ export function DeveloperTestsModal({ onCancel, onExtracted }: DeveloperTestsMod
                   flex: 1,
                   padding: "5px 8px",
                   fontSize: "var(--pnv-fs-13)",
-                  fontFamily: "monospace",
+                  fontFamily: "var(--pnv-font-mono)",
                   border: "1px solid var(--pnv-border)",
                   borderRadius: 4,
                 }}
