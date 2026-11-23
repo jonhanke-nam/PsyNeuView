@@ -215,8 +215,15 @@ test.describe("AI assistant, for real (#179)", { tag: "@ci" }, () => {
     folder = realpathSync(mkdtempSync(path.join(tmpdir(), "assistant179-real-")));
     model = path.join(folder, "two_mech_projection.py");
     writeFileSync(model, BASE);
-    marker = path.join(folder, "..", path.basename(folder) + "-ran.txt");
-    hostileMarker = path.join(folder, "..", path.basename(folder) + "-owned.txt");
+    // Outside the model's folder, in a folder of their own. Not at the top of
+    // the temporary folder: under the OS sandbox on Linux (#311) a declared
+    // output folder that holds a protected path (this run's review state is
+    // under it) takes no new files at its top, so the approved model's
+    // marker would be refused there, and the hostile one refused by the
+    // sandbox rather than by the assistant's own checks.
+    const markers = realpathSync(mkdtempSync(path.join(tmpdir(), "assistant179-markers-")));
+    marker = path.join(markers, path.basename(folder) + "-ran.txt");
+    hostileMarker = path.join(markers, path.basename(folder) + "-owned.txt");
     agent = await startFakeAgent(folder, marker, hostileMarker);
   });
 
