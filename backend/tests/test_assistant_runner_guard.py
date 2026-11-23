@@ -1607,3 +1607,26 @@ def test_the_standard_library_and_the_apps_settings_are_protected(st, tmp_path, 
     with pytest.raises(import_guard.UnreviewedImport):
         import_guard._guard_protected(str(app_config.LEGACY_CONFIG_FILE), "writing it")
     import_guard._guard_protected(str(tmp_path / "results.csv"), "writing it")  # anything else is fine
+
+
+@pytest.mark.parametrize("os_sandbox_mode", ["off", "on"])
+def test_a_model_using_tempfile_runs_while_something_is_tracked(st, os_sandbox_mode):
+    """``tempfile.NamedTemporaryFile`` opens through the temp folder's own
+    name, which here also holds the review record. Writing names a folder
+    without changing what is in it, so the guard lets it through; with the
+    OS sandbox, the temp folder is the task's own (#311)."""
+    from app.services import os_sandbox
+
+    if os_sandbox_mode == "on" and not os_sandbox.available():
+        pytest.skip(f"no OS sandbox here: {os_sandbox.capability().get('reason')}")
+    st["monkeypatch"].setattr(os_sandbox, "_FORCED", os_sandbox_mode)
+    out = st["tmp"] / f"tempfile_{os_sandbox_mode}.txt"
+    model = _plain_model(st["tmp"] / f"Temp_{os_sandbox_mode}", (
+        "import tempfile, os\n"
+        "with tempfile.NamedTemporaryFile('w') as f:\n    f.write('x')\n"
+        "with tempfile.TemporaryDirectory() as d:\n    open(os.path.join(d, 'a.txt'), 'w').write('x')\n"
+        "fd, p = tempfile.mkstemp()\nos.close(fd)\nos.remove(p)\n"
+        f"open({str(out)!r}, 'w').write('ok')\n"))
+    r = load(model)
+    assert _runs_normally(r), r.text[:400]
+    assert out.read_text() == "ok"

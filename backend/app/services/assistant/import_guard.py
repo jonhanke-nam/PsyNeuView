@@ -873,7 +873,12 @@ def _guard_protected(path, event: str) -> None:
         except (OSError, ValueError):
             continue
         # The file itself, or a folder that holds it (removing or moving it).
-        if target == spelled or spelled.startswith(target.rstrip(os.sep) + os.sep):
+        # Writing names a folder too, without changing what is in it:
+        # ``tempfile.NamedTemporaryFile`` opens through the temp folder's own
+        # name (its opener makes the file), so a folder counts only when it
+        # is removed or moved (#311).
+        holds = event != "writing it" and spelled.startswith(target.rstrip(os.sep) + os.sep)
+        if target == spelled or holds:
             hit = True
             break
     if not hit:
