@@ -384,3 +384,14 @@ html.pnv-busy * {
 .react-flow__node-compositionNode button {
   pointer-events: all;
 }
+
+/* #109: the Inspector's "customized · at default · reset on hover" legend
+   explains the purple bar on a customized row, so it shows only while one
+   is on screen. */
+.pnv-inspector-legend {
+  display: none;
+}
+body:has([data-pnv-customized="true"]) .pnv-inspector-legend {
+  display: flex;
+}
+
