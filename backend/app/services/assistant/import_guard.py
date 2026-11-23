@@ -817,6 +817,12 @@ def _protected_files() -> tuple[list[str], list[tuple[str, str]]]:
     for state in {_state._path, default_state_path()}:
         if state:
             paths += [state, state + ".bak", state + ".tmp"]
+    # The app's settings (~/.psyneuview.json, or the file the environment
+    # names, and the name it had first): what they say changes what runs.
+    config = os.environ.get("PSYNEUVIEW_CONFIG_FILE", "").strip()
+    home = os.path.expanduser("~")
+    paths += [os.path.expanduser(config) if config else os.path.join(home, ".psyneuview.json"),
+              os.path.join(home, ".psynewview.json")]
     sources = [os.path.abspath(__file__)]
     main = getattr(sys.modules.get("__main__"), "__file__", None)
     if main and os.path.basename(main) == "sandbox_worker.py":
@@ -830,11 +836,12 @@ def _protected_files() -> tuple[list[str], list[tuple[str, str]]]:
 def _code_roots() -> list[str]:
     """Code that later processes import: the app's own (``backend/app``),
     the active PsyNeuLink (its package folder and the checkout it may sit
-    in), and the installed packages. A model may not write there while
+    in), the installed packages, and the interpreter's standard library
+    (where a ``sitecustomize.py`` would run in every new Python). A model may not write there while
     something is tracked. Partial: a process the model starts isn't held
     to it (#311 closes that)."""
     roots = [os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))]
-    for key in ("purelib", "platlib"):
+    for key in ("purelib", "platlib", "stdlib", "platstdlib"):
         try:
             value = sysconfig.get_paths().get(key)
         except (KeyError, OSError):
@@ -999,6 +1006,7 @@ def install_audit_hook(everywhere: bool = False) -> None:
     if everywhere:
         _audit_everywhere = True
         _worker_mode = True
+        _wrap_dir_fd_calls()
     _audit_wanted = True
     _add_audit_hook_if_needed()
 
@@ -1008,6 +1016,80 @@ def _add_audit_hook_if_needed() -> None:
     if _audit_wanted and not _audit_installed and _state.tracked:
         sys.addaudithook(_audit)
         _audit_installed = True
+
+
+def _fd_folder(fd) -> str | None:
+    """The folder an open directory fd names (Linux /proc, macOS F_GETPATH)."""
+    if not isinstance(fd, int):
+        return None
+    try:
+        return os.readlink(f"/proc/self/fd/{fd}")
+    except OSError:
+        pass
+    try:
+        import fcntl
+        if hasattr(fcntl, "F_GETPATH"):
+            raw = fcntl.fcntl(fd, fcntl.F_GETPATH, bytes(1024))
+            return os.fsdecode(raw.split(b"\0", 1)[0])
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def _through_dir_fd(path, dir_fd, event: str) -> None:
+    """A write, remove or rename relative to an open folder (``dir_fd``),
+    which the audit events don't show: the folder is looked up from the fd
+    and the full path checked like any other; if it can't be, refused."""
+    if dir_fd is None or not _state.tracked or not _worker_mode:
+        return
+    text = _as_text(path)
+    if text is None:
+        return
+    if not os.path.isabs(text):
+        folder = _fd_folder(dir_fd)
+        if folder is None:
+            raise UnreviewedImport(text, message=(
+                f"The model tried to change {text} relative to a folder that can't be identified ({event}). "
+                f"That isn't allowed while assistant-written files are tracked."))
+        text = os.path.join(folder, text)
+    _guard_protected(text, event)
+
+
+def _wrap_dir_fd_calls() -> None:
+    """``os.open``, ``os.remove``, ``os.unlink``, ``os.rename`` and
+    ``os.replace`` with a ``dir_fd`` are checked by the folder it names."""
+    if getattr(os, "_psyneuview_dir_fd_wrapped", False):
+        return
+    original_open, original_remove, original_unlink = os.open, os.remove, os.unlink
+    original_rename, original_replace = os.rename, os.replace
+
+    def checked_open(path, flags, mode=0o777, *, dir_fd=None):
+        writes = (flags & os.O_ACCMODE) != os.O_RDONLY or bool(flags & (os.O_TRUNC | os.O_CREAT | os.O_APPEND))
+        if dir_fd is not None and writes:
+            _through_dir_fd(path, dir_fd, "writing it")
+        return original_open(path, flags, mode, dir_fd=dir_fd)
+
+    def checked_remove(path, *, dir_fd=None):
+        _through_dir_fd(path, dir_fd, "removing it")
+        return original_remove(path, dir_fd=dir_fd)
+
+    def checked_unlink(path, *, dir_fd=None):
+        _through_dir_fd(path, dir_fd, "removing it")
+        return original_unlink(path, dir_fd=dir_fd)
+
+    def checked_rename(src, dst, *, src_dir_fd=None, dst_dir_fd=None):
+        _through_dir_fd(src, src_dir_fd, "moving it")
+        _through_dir_fd(dst, dst_dir_fd, "replacing it")
+        return original_rename(src, dst, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
+
+    def checked_replace(src, dst, *, src_dir_fd=None, dst_dir_fd=None):
+        _through_dir_fd(src, src_dir_fd, "moving it")
+        _through_dir_fd(dst, dst_dir_fd, "replacing it")
+        return original_replace(src, dst, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
+
+    os.open, os.remove, os.unlink, os.rename, os.replace = (
+        checked_open, checked_remove, checked_unlink, checked_rename, checked_replace)
+    os._psyneuview_dir_fd_wrapped = True
 
 
 class active:
