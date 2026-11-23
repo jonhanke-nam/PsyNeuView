@@ -133,6 +133,7 @@ function saveLayoutDebounced(filePath: string, nodes: any[]) {
       ea.shaped,
       ea.waypoints,
       ea.overrides,
+      ea,
     );
     const body = usesFlatPositions()
       ? { file_path: filePath, flatPositions: merged, flatEdgeRoutes: routes }
@@ -1247,7 +1248,8 @@ export function GraphCanvas() {
             <EdgeContextMenu
               x={graphMenu.x}
               y={graphMenu.y}
-              shaped={(useEdgeAttach.getState().waypoints[graphMenu.edgeId]?.length ?? 0) > 0}
+              shaped={(useEdgeAttach.getState().waypoints[graphMenu.edgeId]?.length ?? 0) > 0
+                || !!useEdgeAttach.getState().handles[graphMenu.edgeId]}
               onSelectSender={() => { selectOnly([graphMenu.source]); setGraphMenu(null); }}
               onSelectReceiver={() => { selectOnly([graphMenu.target]); setGraphMenu(null); }}
               onResetShape={() => {

@@ -23,6 +23,8 @@
  * holds exactly.
  */
 
+import { SOFT_TENSION } from "@/utils/curveHandles";
+
 export interface Pt { x: number; y: number }
 /** Axis-aligned box, top-left origin. */
 export interface Rect { x: number; y: number; w: number; h: number }
@@ -48,6 +50,11 @@ export interface RouteOptions {
    * clip, so the no-crossing guarantee holds. 0 = no lane offset.
    */
   lateralOffset?: number;
+  /**
+   * #39: how far a spline's tangents reach (see curveHandles.SOFT_TENSION).
+   * Default the softer curve.
+   */
+  tension?: number;
 }
 
 const EPS = 1e-6;
@@ -98,18 +105,19 @@ export function routeAroundObstacles(
   const margin = opts.margin ?? 20;
   const style = opts.style ?? "spline";
   const off = opts.lateralOffset ?? 0;
+  const tension = opts.tension ?? SOFT_TENSION;
 
   const { vis, path } = solveRoute(s, t, obstacles, margin, off);
   // Direct line already clear (or no node anywhere near): bow it into its lane
   // if asked, else defer to the caller's own path.
   if (path === "clear") {
-    return off ? renderByStyle(bow([s, t], off, vis), style, vis) : null;
+    return off ? renderByStyle(bow([s, t], off, vis), style, vis, tension) : null;
   }
   if (!path) return null; // no route ⇒ let caller fall back
 
   // #944: bow the node-safe path into its lane (re-checked). #939: render the
   // (possibly bowed) waypoints in the caller's edge style.
-  return renderByStyle(off ? bow(path, off, vis) : path, style, vis);
+  return renderByStyle(off ? bow(path, off, vis) : path, style, vis, tension);
 }
 
 /** Obstacles overlapping the bounding box of `pts`, grown by `pad`. */
@@ -257,8 +265,8 @@ function line(path: Pt[]): string {
  * NO obstacle avoidance — a manually-shaped edge follows the user's exact path
  * (Replace, not Augment). Pass-through: the curve/steps go through every point.
  */
-export function renderStyledPath(points: Pt[], style: EdgeStyle): string {
-  return renderByStyle(points, style, []);
+export function renderStyledPath(points: Pt[], style: EdgeStyle, tension = SOFT_TENSION): string {
+  return renderByStyle(points, style, [], tension);
 }
 
 /**
@@ -295,7 +303,9 @@ export function expandedCorners(
   return out;
 }
 
-export function renderStyledPathSafe(points: Pt[], style: EdgeStyle, obstacles: Rect[]): string {
+export function renderStyledPathSafe(
+  points: Pt[], style: EdgeStyle, obstacles: Rect[], tension = SOFT_TENSION,
+): string {
   if (points.length < 2) return line(points);
   const expanded: Pt[] = [
     points[0],
@@ -303,14 +313,14 @@ export function renderStyledPathSafe(points: Pt[], style: EdgeStyle, obstacles: 
     points[points.length - 1],
   ];
   const vis = obstacles.map((o) => inflate(o, 19)); // margin(20) − 1, matches the router
-  return renderByStyle(expanded, style, vis);
+  return renderByStyle(expanded, style, vis, tension);
 }
 
 /** Render detour waypoints in the selected edge style (#939). */
-function renderByStyle(path: Pt[], style: EdgeStyle, vis: Rect[]): string {
+function renderByStyle(path: Pt[], style: EdgeStyle, vis: Rect[], tension: number): string {
   if (style === "straight") return line(path);
   if (style === "smoothstep") return orthogonalRounded(path, 12, vis);
-  return smooth(path, 0.8, vis); // spline
+  return smooth(path, tension, vis); // spline (#39: softer by default)
 }
 
 /**
