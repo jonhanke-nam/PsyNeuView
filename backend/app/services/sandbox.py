@@ -12,6 +12,7 @@ Communication is via newline-delimited JSON over stdin/stdout pipes.
 
 import json
 import logging
+import os
 import selectors
 import subprocess
 import sys
@@ -98,6 +99,7 @@ class WarmWorker:
     NAME = "Warm worker"
     #: A line that says the task's process ended (the fork server's child).
     DONE_MARKER: str | None = None
+    NEW_SESSION = False
 
     def _start(self):
         """Spawn the worker process and make it current."""
@@ -110,6 +112,9 @@ class WarmWorker:
         try:
             proc = subprocess.Popen(
                 [sys.executable, WORKER_PATH, self.MODE],
+                # A pool worker leads its own process group, so what its model
+                # started ends with it (#187).
+                start_new_session=self.NEW_SESSION,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -218,7 +223,7 @@ class WarmWorker:
         in a process no earlier model touched (#187). Decided here, from the
         state the server reads itself, never from anything in a worker."""
         if assistant_review.worker_must_be_fresh():
-            return _get_fork_server().send_task(task, params, timeout)
+            return _isolated_worker().send_task(task, params, timeout)
         with self._lock:
             if not self.is_alive():
                 self._restart()
@@ -380,8 +385,169 @@ class ForkServer(WarmWorker):
 # Global warm worker instance — started on first use
 _warm_worker: WarmWorker | None = None
 _warm_worker_lock = threading.Lock()
+class _PoolMember(WarmWorker):
+    """One pre-started worker that runs exactly one task. On any trouble it
+    is ended, never restarted in place: the pool starts a new one."""
+
+    NAME = "Pool worker"
+    NEW_SESSION = True
+
+    @staticmethod
+    def _kill(proc: subprocess.Popen | None) -> None:
+        """The worker and everything in its process group."""
+        if proc is None:
+            return
+        import signal
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except OSError:
+            pass
+        WarmWorker._kill(proc)
+
+    def __init__(self, proc: subprocess.Popen):
+        self._proc = proc
+        self._stderr_thread = None
+        self._lock = threading.Lock()
+        self._on_ready = None
+
+    def _restart(self):
+        self._kill(self._proc)
+        self._proc = None
+
+
+class WorkerPool:
+    """The fallback where forking isn't available or isn't safe (#187):
+    worker processes started ahead, each used for one task and then ended,
+    so a task still runs in a process no earlier model touched. ``size``
+    are kept ready (``PSYNEUVIEW_WORKER_POOL_SIZE``, default 2), so a burst
+    of tasks doesn't wait for PsyNeuLink's import; a task that finds none
+    ready starts one."""
+
+    NAME = "Worker pool"
+
+    def __init__(self, size: int | None = None):
+        try:
+            size = size or int(os.environ.get("PSYNEUVIEW_WORKER_POOL_SIZE", "2"))
+        except ValueError:
+            size = 2
+        self.size = max(1, min(size, 8))
+        self._ready: list[subprocess.Popen] = []
+        self._starting = 0
+        self._cond = threading.Condition()
+        self._lock = threading.Lock()
+        self._fill()
+
+    def _fill(self) -> None:
+        with self._cond:
+            wanted = self.size - len(self._ready) - self._starting
+            self._starting += max(0, wanted)
+        for _ in range(max(0, wanted)):
+            threading.Thread(target=self._start_one, daemon=True, name="worker-pool").start()
+
+    def _start_one(self) -> None:
+        proc = _spawn_worker_process()
+        with self._cond:
+            self._starting -= 1
+            if proc is not None:
+                self._ready.append(proc)
+            self._cond.notify_all()
+
+    def _take(self) -> subprocess.Popen | None:
+        deadline = time.time() + WORKER_READY_TIMEOUT
+        with self._cond:
+            while True:
+                while self._ready:
+                    proc = self._ready.pop(0)
+                    if proc.poll() is None:
+                        return proc
+                if self._starting == 0 or time.time() > deadline:
+                    break
+                self._cond.wait(timeout=0.5)
+        return _spawn_worker_process()
+
+    def send_task(self, task: str, params: dict, timeout: int) -> dict:
+        with self._lock:
+            proc = self._take()
+            self._fill()
+            if proc is None:
+                return {"error": f"{self.NAME} failed to start a worker"}
+            member = _PoolMember(proc)
+            try:
+                with member._lock:
+                    return member._send(task, params, timeout)
+            finally:
+                _PoolMember._kill(member._proc if member._proc is not None else proc)
+
+    def is_alive(self) -> bool:
+        return True
+
+    def restart(self) -> None:
+        """End every ready worker (they imported an earlier PsyNeuLink) and start new ones."""
+        with self._cond:
+            ready, self._ready = self._ready, []
+        for proc in ready:
+            _PoolMember._kill(proc)
+        self._fill()
+
+
+def _spawn_worker_process() -> subprocess.Popen | None:
+    """A persistent worker, ready, that has run no task."""
+    member = _PoolMember.__new__(_PoolMember)
+    member._on_ready = None
+    member._stderr_thread = None
+    return WarmWorker._spawn(member)
+
+
+def fork_is_usable() -> bool:
+    """Whether the fork server can be used here: the os module has ``fork`` (not on
+    native Windows) and the platform forks a process that has imported
+    PsyNeuLink safely (Linux, WSL2, containers, macOS, checked in #187). The
+    fork server's first child is the real check: if it can't start one,
+    the pool is used from then on."""
+    return hasattr(os, "fork") and sys.platform != "win32"
+
+
+def isolation_mode() -> str:
+    """``fork`` or ``pool``: how a task gets a process no earlier model
+    touched. ``PSYNEUVIEW_WORKER_ISOLATION`` forces one (tests run both)."""
+    forced = os.environ.get("PSYNEUVIEW_WORKER_ISOLATION", "").strip().lower()
+    if forced in ("fork", "pool"):
+        return forced
+    if _fork_failed:
+        return "pool"
+    return "fork" if fork_is_usable() else "pool"
+
+
 _fork_server: ForkServer | None = None
+_pool: WorkerPool | None = None
 _fork_server_lock = threading.Lock()
+_fork_failed = False
+_mode_logged: str | None = None
+
+
+class _IsolatedFallback:
+    """Sends to the fork server, and falls back to the pool for good if the
+    fork server can't start a child."""
+
+    def send_task(self, task: str, params: dict, timeout: int) -> dict:
+        global _fork_failed, _mode_logged
+        mode = isolation_mode()
+        if mode != _mode_logged:
+            logger.info(f"Assistant-written files are tracked: each task runs in a fresh process ({mode} mode)")
+            _mode_logged = mode
+        if mode == "fork":
+            result = _get_fork_server().send_task(task, params, timeout)
+            if result.get("error") in ("Worker did not start the task", "Worker process died before the task started",
+                                       f"{ForkServer.NAME} failed to start") and not os.environ.get("PSYNEUVIEW_WORKER_ISOLATION"):
+                logger.warning("The fork server couldn't start a task here; using a pool of fresh workers instead")
+                _fork_failed = True
+                return _get_pool().send_task(task, params, timeout)
+            return result
+        return _get_pool().send_task(task, params, timeout)
+
+
+def _isolated_worker() -> _IsolatedFallback:
+    return _IsolatedFallback()
 
 
 def _get_fork_server() -> ForkServer:
@@ -404,6 +570,14 @@ def _get_warm_worker(on_ready: Optional[Callable[[bool, float], None]] = None) -
         return _warm_worker
 
 
+def _get_pool() -> WorkerPool:
+    global _pool
+    with _fork_server_lock:
+        if _pool is None:
+            _pool = WorkerPool()
+        return _pool
+
+
 def restart_warm_worker() -> bool:
     """Restart the warm worker if one has been started. Returns whether it was.
 
@@ -418,10 +592,12 @@ def restart_warm_worker() -> bool:
     show_graph_cache.clear()
 
     with _fork_server_lock:
-        forks = _fork_server
+        forks, pool = _fork_server, _pool
+    # Both hold processes that imported the PsyNeuLink being replaced.
     if forks is not None:
-        # Its parent imported the PsyNeuLink that is being replaced.
         forks.restart()
+    if pool is not None:
+        pool.restart()
     with _warm_worker_lock:
         worker = _warm_worker
     if worker is None:
