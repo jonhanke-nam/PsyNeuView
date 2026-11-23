@@ -473,10 +473,10 @@ reviewers, not boundaries.
 | Where | What runs | Reached from | Guard |
 |---|---|---|---|
 | `sandbox.py` warm worker (`--persistent`) | `sandbox_worker.py`, every task | `run_in_sandbox`: `/model/load`, open, preview, save and reload, undo and redo, `/model/run`, `/model/learn`, show graph, input nodes, MDF export and gaps, connection options and targets, the file watcher's reload (`ws.py`), the bundled-examples check | `require_runnable` in `run_in_sandbox`; the task carries `review_state` and the exempt roots; layers 2 to 4 in the worker; while anything is tracked, one task per process |
-| `sandbox.py` cold fallback (`_run_cold`) | `sandbox_worker.py`, one task | The warm worker failing | The same |
+| `sandbox.py` cold fallback (`_run_cold`) | `sandbox_worker.py`, one task | The warm worker or the fork server failing (a model can kill its parent to get here) | The same; under the OS sandbox it starts with the policy and applies it first (#311) |
 | `jobs.py` | `sandbox_worker.py`, one Learn job | `POST /api/jobs` | `create_job` → `require_runnable` (409 at once, no job); the payload carries the same; layers 2 to 4 in the worker. A job the worker refuses ends in an error naming the file (`result.unreviewed_import`) |
 | `sandbox_worker.py` tasks: `introspect`, `run`, `learn`, `get_input_nodes`, `show_graph`, `export_mdf`, `mdf_gaps`, `connection_options`, `connection_targets` | The model, through `load_module` (and `load_module_resilient` after a failed load) | The three above | Layers 2 to 4, with the guard reset before each task; each task is tested started directly with no review state |
-| `converter.py` | The model, in the server's own process | `/model/convert`, the MDF import's tidy-up | `require_runnable` + `guard_imports()`: layer 3 with the server's view of the state, and layer 4 on that thread and the threads it starts; the guard's refusal is the review 409 even if `guard_imports()` is skipped |
+| `converter.py` | The model, in the server's own process; under the OS sandbox, in a sandboxed process of its own (`_standard_source_in_sandbox`, #311) | `/model/convert`, the MDF import's tidy-up | `require_runnable` + `guard_imports()`: layer 3 with the server's view of the state, and layer 4 on that thread and the threads it starts; the guard's refusal is the review 409 even if `guard_imports()` is skipped. Under the sandbox, the same inside a process that applied the policy first |
 | `introspector.py`, `executor.py` (run, learn, input nodes) in-process | The model, in the server's own process | No route: only with `use_sandbox=False`, which tests use | `require_runnable` + `guard_imports()`, as the converter |
 | `sandbox_worker.py`, `introspector.py`, `executor.py`: a keyword's `compile` + `eval` | A keyword expression already in the loaded model | The loaders above | Only after the model passed the guard |
 
@@ -489,6 +489,7 @@ reviewers, not boundaries.
 | `quick_check.py` | Parse and `compile` of the text before a preview (#256); never executed. Its other match is the list of names it looks for |
 | `file_writer.py` | `compile` of a parameter value in `eval` mode, to check its syntax; never executed |
 | `locations.py` | `__import__` of an app module; `git` for a checkout's origin |
+| `os_sandbox.py` | `os_sandbox_apply.py --probe`, once per server, to check a sandbox holds here (#311) |
 | `api/routes.py`, `checkout_updates.py`, `clone_manager.py`, `settings_info.py` | `git` |
 | `github_auth.py` | `git`'s credential helper |
 | `install_manager.py` | `pip` or `uv`, and whether `uv` runs (#259) |
