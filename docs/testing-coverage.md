@@ -1267,7 +1267,101 @@ Every unit and backend test, one by one, is in [the full list](testing-coverage-
 
 ## Coverage
 
-Not measured yet.
+Measured 2026-11-23 at commit `cafdb905f1`. Browser tests don't measure code coverage; the feature map above is their measure.
+
+| | Lines | Branches | Statements |
+|---|---|---|---|
+| Backend (`app/`, pytest) | 88.0% | 82.3% | 13233 |
+| Frontend (`src/`, vitest) | 26.3% | 84.3% | 40531 |
+
+The frontend's branch figure counts only branches in files the unit tests load, so it reads high; its line figure is the honest one. The React components are tested in the browser, which this number doesn't see.
+
+<details><summary>Backend by folder</summary>
+
+| Folder | Lines | Branches | Statements |
+|---|---|---|---|
+| `app` | 93.7% | 86.1% | 175 |
+| `app/api` | 85.4% | 68.2% | 1957 |
+| `app/models` | 0.0% | – | 38 |
+| `app/services` | 88.7% | 83.7% | 11063 |
+
+</details>
+
+<details><summary>Frontend by folder</summary>
+
+| Folder | Lines | Branches | Statements |
+|---|---|---|---|
+| `components` | 0.0% | 0.0% | 59 |
+| `components/common` | 6.0% | 67.0% | 9294 |
+| `components/editor` | 0.0% | 0.0% | 1680 |
+| `components/graph` | 2.0% | 72.6% | 6167 |
+| `components/inspector` | 1.8% | 71.8% | 6474 |
+| `components/layout` | 0.4% | 66.7% | 3232 |
+| `components/scheduler` | 0.0% | 0.0% | 178 |
+| `config` | 41.2% | – | 17 |
+| `constants` | 93.5% | 100.0% | 383 |
+| `hooks` | 19.3% | 69.0% | 762 |
+| `shortcuts` | 85.8% | 92.6% | 642 |
+| `src (top level)` | 10.2% | 86.7% | 305 |
+| `stores` | 67.7% | 79.1% | 3815 |
+| `utils` | 82.1% | 87.1% | 7523 |
+
+</details>
+
+### Least covered, of the larger modules
+
+The 20 modules with the lowest line coverage among the larger ones: backend modules of 150 statements or more, and frontend logic (stores, utils, hooks, shortcuts) of 100 or more. The React components under `components/` are left out: the browser tests exercise them, which this measure can't see, so nearly all of them read 0%.
+
+**Backend**
+
+| Module | Lines | Branches | Statements |
+|---|---|---|---|
+| `backend/app/services/pnl_updates.py` | 74.3% | 64.1% | 253 |
+| `backend/app/services/clone_manager.py` | 78.5% | 72.2% | 181 |
+| `backend/app/services/jobs.py` | 79.9% | 62.5% | 174 |
+| `backend/app/services/test_extractor.py` | 84.5% | 78.8% | 207 |
+| `backend/app/services/sandbox.py` | 84.6% | 80.0% | 221 |
+| `backend/app/services/sandbox_worker.py` | 85.1% | 81.8% | 2407 |
+| `backend/app/services/settings_info.py` | 85.6% | 79.2% | 174 |
+| `backend/app/services/working_copies.py` | 86.0% | 88.6% | 236 |
+| `backend/app/api/routes.py` | 86.5% | 68.5% | 1738 |
+| `backend/app/services/managed_layouts.py` | 86.8% | 84.7% | 310 |
+| `backend/app/services/pathway_learning.py` | 87.1% | 78.0% | 202 |
+| `backend/app/services/executor.py` | 87.5% | 78.2% | 361 |
+| `backend/app/services/introspector.py` | 87.8% | 82.1% | 491 |
+| `backend/app/services/checkout_updates.py` | 87.9% | 86.1% | 239 |
+| `backend/app/services/install_manager.py` | 89.5% | 89.3% | 531 |
+| `backend/app/services/pnl_releases.py` | 89.7% | 85.0% | 156 |
+| `backend/app/services/project_folder.py` | 89.8% | 87.5% | 167 |
+| `backend/app/services/watcher.py` | 91.3% | 81.8% | 241 |
+| `backend/app/services/file_writer.py` | 91.4% | 84.1% | 752 |
+| `backend/app/services/converter.py` | 92.0% | 85.4% | 287 |
+
+**Frontend**
+
+| Module | Lines | Branches | Statements |
+|---|---|---|---|
+| `frontend/src/utils/labels.ts` | 5.7% | – | 159 |
+| `frontend/src/utils/nodeActions.ts` | 6.0% | 94.1% | 249 |
+| `frontend/src/hooks/useFileWatcher.ts` | 10.5% | 83.3% | 200 |
+| `frontend/src/stores/edgeAttachStore.ts` | 25.0% | 37.5% | 104 |
+| `frontend/src/stores/modelStore.ts` | 51.5% | 58.8% | 1329 |
+| `frontend/src/hooks/useUndoRedo.ts` | 55.1% | 68.1% | 136 |
+| `frontend/src/stores/uiStore.ts` | 64.4% | 63.6% | 101 |
+| `frontend/src/stores/graphSettingsStore.ts` | 70.5% | 89.5% | 149 |
+| `frontend/src/utils/diagnostics.ts` | 77.7% | 62.3% | 287 |
+| `frontend/src/utils/edgeRouter.ts` | 82.3% | 86.2% | 249 |
+| `frontend/src/utils/edgeLanes.ts` | 85.3% | 78.9% | 170 |
+| `frontend/src/utils/activitySaver.ts` | 86.5% | 88.5% | 111 |
+| `frontend/src/stores/openMenuOrder.ts` | 88.3% | 81.8% | 111 |
+| `frontend/src/utils/importModelFiles.ts` | 88.4% | 78.9% | 146 |
+| `frontend/src/utils/tutorialGuard.ts` | 88.8% | 83.2% | 241 |
+| `frontend/src/utils/showGraphLayout.ts` | 92.5% | 83.6% | 507 |
+| `frontend/src/utils/lineDiff.ts` | 92.9% | 94.7% | 113 |
+| `frontend/src/stores/layoutStore.ts` | 93.0% | 94.9% | 229 |
+| `frontend/src/utils/activityLog.ts` | 93.5% | 96.9% | 138 |
+| `frontend/src/utils/runningFrom.ts` | 93.9% | 77.4% | 229 |
+
 ## Agreement with show_graph
 
 `e2e/show-graph-agreement.spec.ts` opens every bundled model in every view, lays it out Like show_graph, and scores the canvas against show_graph's own picture. Full batch measured 2026-11-23 at commit `44ce5d77d4`: **169 of 175** views agree fully on nodes, rows and order.
