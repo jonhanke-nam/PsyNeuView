@@ -387,6 +387,14 @@ def exempt_roots() -> list[str]:
     return roots
 
 
+def worker_must_be_fresh() -> bool:
+    """Whether each task must run in a worker process that has run no other
+    (#187): while anything the assistant wrote is tracked, or the state
+    can't be read. Decided here, from the state the server reads itself."""
+    state = _load()
+    return bool(state["files"]) or _broken
+
+
 def worker_payload_extras() -> dict:
     """What every task sent to a sandbox worker carries for the import
     guard: the state file's path and the roots never vetted."""

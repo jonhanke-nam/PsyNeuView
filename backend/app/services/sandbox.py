@@ -57,6 +57,13 @@ class WarmWorker:
         self._stderr_thread: threading.Thread | None = None
         self._lock = threading.Lock()
         self._on_ready = on_ready
+        #: Whether the current process has been sent a task (#187).
+        self._used = False
+        #: A fresh process started ahead, for the next task while something
+        #: the assistant wrote is tracked (see ``send_task``).
+        self._spare: subprocess.Popen | None = None
+        self._spare_thread: threading.Thread | None = None
+        self._spare_lock = threading.Lock()
         self._start()
 
     def _notify_ready(self, ok: bool, elapsed: float) -> None:
@@ -93,7 +100,13 @@ class WarmWorker:
             pass
 
     def _start(self):
-        """Spawn the worker process in persistent mode."""
+        """Spawn the worker process in persistent mode and make it current."""
+        self._proc = self._spawn()
+        self._used = False
+
+    def _spawn(self) -> subprocess.Popen | None:
+        """Start a worker process in persistent mode and wait until it is
+        ready. Returns it, or None if it couldn't be started."""
         t0 = time.time()
         try:
             proc = subprocess.Popen(
@@ -153,19 +166,79 @@ class WarmWorker:
                 except Exception:
                     pass
                 self._notify_ready(False, time.time() - t0)
-                return
+                return None
 
             elapsed = time.time() - t0
-            self._proc = proc
             if ready_line == "###READY###":
                 logger.info(f"[perf] Warm worker started in {elapsed:.2f}s (PID {proc.pid})")
             else:
                 logger.warning(f"Warm worker sent unexpected ready signal: {ready_line!r}")
             self._notify_ready(True, elapsed)
+            return proc
         except Exception as e:
             logger.error(f"Failed to start warm worker: {e}")
-            self._proc = None
             self._notify_ready(False, time.time() - t0)
+            return None
+
+    # ── One task per process while assistant-written files are tracked ──
+    #
+    # Everything in the worker, the import guard included, is reachable from
+    # the model code it runs, so a model could switch the guard off for the
+    # tasks that follow it. While anything the assistant wrote is tracked
+    # (or the review state can't be read), each task therefore runs in a
+    # process that has run no other task, and the process is ended after
+    # it (#187). The server decides this from the state it reads itself,
+    # never from anything in the worker. A spare is started ahead, so the
+    # next task usually finds one ready.
+
+    @staticmethod
+    def _kill(proc: subprocess.Popen | None) -> None:
+        if proc is None:
+            return
+        try:
+            proc.kill()
+            proc.wait(timeout=2)
+        except Exception:
+            pass
+
+    def _take_spare(self) -> subprocess.Popen | None:
+        thread = self._spare_thread
+        if thread is not None:
+            thread.join(WORKER_READY_TIMEOUT + 5)
+        with self._spare_lock:
+            spare, self._spare = self._spare, None
+            self._spare_thread = None
+        if spare is not None and spare.poll() is None:
+            return spare
+        self._kill(spare)
+        return None
+
+    def _start_spare(self) -> None:
+        def start():
+            proc = self._spawn()
+            with self._spare_lock:
+                old, self._spare = self._spare, proc
+            self._kill(old)
+
+        with self._spare_lock:
+            if self._spare_thread is not None or self._spare is not None:
+                return
+            self._spare_thread = threading.Thread(target=start, daemon=True, name="worker-spare")
+            self._spare_thread.start()
+
+    def _use_fresh(self) -> None:
+        """Make current a process that has run no task. Caller holds `self._lock`."""
+        self._kill(self._proc)
+        self._proc = self._take_spare() or self._spawn()
+        self._used = False
+
+    def _end_after_task(self) -> None:
+        """End the process that just ran a task, and start the next one
+        ahead. Caller holds `self._lock`."""
+        self._kill(self._proc)
+        self._proc = None
+        self._used = False
+        self._start_spare()
 
     def restart(self):
         """Kill and restart the worker, after any in-flight task finishes.
@@ -181,13 +254,10 @@ class WarmWorker:
     def _restart(self):
         """Kill and restart the worker. Caller must hold `self._lock`."""
         logger.info("Restarting warm worker...")
-        if self._proc:
-            try:
-                self._proc.kill()
-                self._proc.wait(timeout=2)
-            except Exception:
-                pass
+        self._kill(self._proc)
         self._proc = None
+        # A spare started before this restart may run an earlier PsyNeuLink.
+        self._kill(self._take_spare())
         self._start()
 
     def is_alive(self) -> bool:
@@ -196,71 +266,80 @@ class WarmWorker:
     def send_task(self, task: str, params: dict, timeout: int) -> dict:
         """Send a task to the warm worker and wait for the result."""
         with self._lock:
-            if not self.is_alive():
-                self._restart()
+            single_use = assistant_review.worker_must_be_fresh()
+            if not self.is_alive() or (single_use and self._used):
+                self._use_fresh()
             if not self.is_alive():
                 return {"error": "Warm worker failed to start"}
-
-            payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras()})
-            t0 = time.time()
-
             try:
-                # Send the task
-                self._proc.stdin.write(payload + "\n")
-                self._proc.stdin.flush()
+                return self._send(task, params, timeout)
+            finally:
+                if single_use or assistant_review.worker_must_be_fresh():
+                    self._end_after_task()
 
-                # Poll stdout with a short inner timeout so the deadline check
-                # actually fires when the worker is stuck and producing no output.
-                # Plain readline() is blocking, so the previous loop never
-                # re-checked the deadline once the worker stopped writing.
-                sel = selectors.DefaultSelector()
-                sel.register(self._proc.stdout, selectors.EVENT_READ)
+    def _send(self, task: str, params: dict, timeout: int) -> dict:
+        """Send one task to the current process. Caller holds `self._lock`."""
+        payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras()})
+        self._used = True
+        t0 = time.time()
 
-                output_lines = []
-                deadline = time.time() + timeout
-                try:
-                    while True:
-                        remaining = deadline - time.time()
-                        if remaining <= 0:
-                            logger.warning(
-                                f"Warm worker timed out after {timeout}s, restarting..."
-                            )
-                            self._restart()
-                            return {
-                                "error": f"Script execution timed out after {timeout} seconds. "
-                                f"This may indicate an infinite loop or a very long computation."
-                            }
+        try:
+            # Send the task
+            self._proc.stdin.write(payload + "\n")
+            self._proc.stdin.flush()
 
-                        if self._proc.poll() is not None:
-                            self._restart()
-                            return {"error": "Worker process died during execution"}
+            # Poll stdout with a short inner timeout so the deadline check
+            # actually fires when the worker is stuck and producing no output.
+            # Plain readline() is blocking, so the previous loop never
+            # re-checked the deadline once the worker stopped writing.
+            sel = selectors.DefaultSelector()
+            sel.register(self._proc.stdout, selectors.EVENT_READ)
 
-                        if not sel.select(timeout=min(0.5, remaining)):
-                            continue
+            output_lines = []
+            deadline = time.time() + timeout
+            try:
+                while True:
+                    remaining = deadline - time.time()
+                    if remaining <= 0:
+                        logger.warning(
+                            f"Warm worker timed out after {timeout}s, restarting..."
+                        )
+                        self._restart()
+                        return {
+                            "error": f"Script execution timed out after {timeout} seconds. "
+                            f"This may indicate an infinite loop or a very long computation."
+                        }
 
-                        line = self._proc.stdout.readline()
-                        if not line:
-                            self._restart()
-                            return {"error": "Worker closed connection"}
+                    if self._proc.poll() is not None:
+                        self._restart()
+                        return {"error": "Worker process died during execution"}
 
-                        line = line.rstrip("\n")
-                        if line == RESULT_MARKER:
-                            result_line = self._proc.stdout.readline().rstrip("\n")
-                            elapsed = time.time() - t0
-                            logger.info(f"[perf] warm worker {task}: {elapsed:.2f}s")
-                            try:
-                                return json.loads(result_line)
-                            except json.JSONDecodeError as e:
-                                return {"error": f"Failed to parse worker output: {e}"}
-                        else:
-                            output_lines.append(line)
-                finally:
-                    sel.close()
+                    if not sel.select(timeout=min(0.5, remaining)):
+                        continue
 
-            except (BrokenPipeError, OSError) as e:
-                logger.warning(f"Warm worker pipe error: {e}, restarting...")
-                self._restart()
-                return {"error": f"Worker communication error: {e}"}
+                    line = self._proc.stdout.readline()
+                    if not line:
+                        self._restart()
+                        return {"error": "Worker closed connection"}
+
+                    line = line.rstrip("\n")
+                    if line == RESULT_MARKER:
+                        result_line = self._proc.stdout.readline().rstrip("\n")
+                        elapsed = time.time() - t0
+                        logger.info(f"[perf] warm worker {task}: {elapsed:.2f}s")
+                        try:
+                            return json.loads(result_line)
+                        except json.JSONDecodeError as e:
+                            return {"error": f"Failed to parse worker output: {e}"}
+                    else:
+                        output_lines.append(line)
+            finally:
+                sel.close()
+
+        except (BrokenPipeError, OSError) as e:
+            logger.warning(f"Warm worker pipe error: {e}, restarting...")
+            self._restart()
+            return {"error": f"Worker communication error: {e}"}
 
 
 # Global warm worker instance — started on first use
