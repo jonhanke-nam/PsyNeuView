@@ -55,7 +55,8 @@ Later tasks are protected by a process no earlier model touched, not by
 anything in this module: everything here is reachable from the model code
 it guards. While anything is tracked the server sends each task to the
 fork server, whose parent has run no model code and forks one child per
-task (``sandbox.ForkServer``). Within one task, a model that tampers with
+task (``sandbox.ForkServer``), or, where forking isn't usable, to a pool of
+workers each used once (``sandbox.WorkerPool``). Within one task, a model that tampers with
 this module can switch it off for the rest of that task; that is not
 defended. The per-task reset and the fingerprint below are cheap extras.
 

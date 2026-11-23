@@ -264,8 +264,17 @@ only refuse more: there, `HX.py` is still taken for `hx.py`.
    parent then ends the child's process group, so a process the model
    started doesn't outlive the task. A fork takes milliseconds, so this is
    as fast as the warm worker (faster, since a fresh child has nothing
-   cached to purge). With nothing tracked the warm worker runs task after
-   task as before. The server decides which from the state it reads itself.
+   cached to purge). Where forking isn't usable (no `fork` in the os
+   module, as on native Windows, which PsyNeuView doesn't support; or a
+   fork server that can't start a child), the server uses a **pool** of
+   workers started ahead instead (two by default,
+   `PSYNEUVIEW_WORKER_POOL_SIZE`), each used for one task and then ended
+   with its process group: the same guarantee, at the cost of a worker's
+   start when tasks come faster than the pool refills.
+   `PSYNEUVIEW_WORKER_ISOLATION=fork|pool` forces either (CI runs the
+   guard's tests under both), and the mode in use is logged. With nothing
+   tracked the warm worker runs task after task as before. The server
+   decides which from the state it reads itself.
    While something is tracked, a model in the worker also may not write,
    move or remove the review record (the state file, its `.bak` and
    `.tmp`) or the guard's and the worker's own files: the next task, fresh
