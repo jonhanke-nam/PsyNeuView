@@ -203,10 +203,11 @@ def test_every_spawn_and_exec_site_is_listed():
         "services/introspector.py": (0, 4),      # in-process load (spec + exec_module): require_runnable + guard_imports(); one keyword compile + eval of a parameter
         "services/jobs.py": (2, 0),              # the job worker: create_job → require_runnable; payload carries the state
         "services/locations.py": (1, 1),         # git; a dynamic import of an app module
+        "services/os_sandbox.py": (1, 0),        # the sandbox's probe: os_sandbox_apply.py --probe, no model code (#311)
         "services/quick_check.py": (0, 2),       # not a load: the "exec(" and "eval(" it looks for in the text (#256), and a compile that is never run
         "services/running_from.py": (1, 0),      # which process runs the app
         "services/sandbox.py": (4, 0),           # warm worker + cold fallback: run_in_sandbox → require_runnable; payload carries the state
-        "services/sandbox_worker.py": (1, 12),   # the fork server's fork of a clean child per task (#187); the guard's own load (spec + exec_module); load_module (spec + exec_module) and load_module_resilient (spec, compile + exec): check_model_path + hooks; introspect's syntax compile; two keyword compile + eval
+        "services/sandbox_worker.py": (1, 14),   # the fork server's fork of a clean child per task (#187); the guard's own load (spec + exec_module); the OS sandbox's own load (spec + exec_module, #311); load_module (spec + exec_module) and load_module_resilient (spec, compile + exec): check_model_path + hooks; introspect's syntax compile; two keyword compile + eval
         "services/settings_info.py": (2, 0),     # git
         "services/working_copies.py": (2, 0),    # which files are open
     }
@@ -944,7 +945,11 @@ def test_an_open_relative_to_another_folder_is_not_covered(st):
         f"os.chdir('/')\nd = os.open({str(helper.parent)!r}, os.O_RDONLY)\n"
         f"fd = os.open({helper.name!r}, os.O_RDONLY, dir_fd=d)\nexec(os.read(fd, 1 << 20).decode())"))
     load(model)
-    assert marker2.exists()
+    from app.services import os_sandbox
+
+    # The guard doesn't cover it; the operating-system sandbox does (#311),
+    # since the kernel refuses reading the file whatever name reaches it.
+    assert marker2.exists() != os_sandbox.active()
 
 
 # ── 13. a task naming a state file that doesn't exist ───────────────────
@@ -1108,6 +1113,11 @@ def test_a_module_name_as_a_word_in_the_environment_runs(st):
 
 
 def test_a_bare_glob_elsewhere_runs(st):
+    # The guard's own judgement of shell text; under the OS sandbox no shell
+    # can be started at all (#311), so it is measured without it.
+    from app.services import os_sandbox
+
+    st["monkeypatch"].setattr(os_sandbox, "_FORCED", "off")
     _tracked_unapproved(st, "helper.py")
     out = st["tmp"] / "outdir"
     out.mkdir()

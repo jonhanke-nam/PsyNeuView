@@ -23,6 +23,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app.services import os_sandbox
 from app.services.assistant import review as assistant_review
 from app.services.sandbox import WORKER_PATH, RESULT_MARKER
 
@@ -181,7 +182,12 @@ class JobManager:
 
         # The import guard's state travels with every task (#179), as it does
         # for the warm worker; the worker checks the model's path itself too.
-        payload = json.dumps({"task": task, "params": task_params, **assistant_review.worker_payload_extras()})
+        # Under the operating-system sandbox (#311) the job's worker applies
+        # the policy before anything else; the task names it, so a worker
+        # without it refuses the job.
+        policy = os_sandbox.policy() if os_sandbox.active() else None
+        extras = {"os_sandbox_key": policy["key"]} if policy else {}
+        payload = json.dumps({"task": task, "params": task_params, **assistant_review.worker_payload_extras(), **extras})
         try:
             proc = subprocess.Popen(
                 [sys.executable, WORKER_PATH],
@@ -191,11 +197,20 @@ class JobManager:
                 text=True,
                 bufsize=1,
                 cwd=str(Path(task_params.get("file_path", ".")).parent),
+                env=os_sandbox.launch_env(policy) if policy else None,
             )
         except Exception as e:
+            if policy:
+                os_sandbox.discard_scratch(policy["scratch"])
             job.finish("error", error=f"Failed to start job worker: {e}")
             return
+        try:
+            self._watch(job, proc, payload)
+        finally:
+            if policy:
+                os_sandbox.discard_scratch(policy["scratch"])
 
+    def _watch(self, job: Job, proc: subprocess.Popen, payload: str) -> None:
         job._proc = proc
         job.status = "running"
         watchdog = threading.Timer(JOB_TIMEOUT, lambda: proc.poll() is None and proc.kill())

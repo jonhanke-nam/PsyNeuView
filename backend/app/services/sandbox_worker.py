@@ -7,6 +7,33 @@ This script is invoked by sandbox.py and should not be imported directly.
 import json
 import sys
 import importlib.util
+
+
+def _load_os_sandbox():
+    """The operating-system sandbox (#311), loaded by path like the import
+    guard: ``app`` doesn't resolve in this script."""
+    import os
+    spec = importlib.util.spec_from_file_location(
+        "psyneuview_os_sandbox_apply", os.path.join(os.path.dirname(os.path.abspath(__file__)), "os_sandbox_apply.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_os_sandbox = _load_os_sandbox()
+if __name__ == "__main__":
+    # A worker started for one task (a pool worker, a Learn job, the cold
+    # fallback) with a sandbox policy applies it before anything else is
+    # imported and before any thread starts (Landlock binds the thread that
+    # applies it and the threads it starts). If it can't be applied, the
+    # task is refused, never run unsandboxed.
+    try:
+        _os_sandbox.apply_from_env()
+    except _os_sandbox.SandboxUnavailable as _e:
+        print("###PSYNEUVIEW_RESULT###", flush=True)
+        print(json.dumps({"error": f"The model sandbox couldn't be applied, so nothing was run: {_e}",
+                          "os_sandbox_refused": True}), flush=True)
+        sys.exit(0)
 import re
 import warnings
 
@@ -4365,7 +4392,18 @@ def _handle_one_task(payload_str: str) -> str:
     task = payload.get("task")
     params = payload.get("params", {})
 
+    # A task the server sent to be sandboxed (#311) runs only in a process
+    # that applied that very policy: a worker started under another, or
+    # none, refuses it rather than run it unsandboxed.
+    required = payload.get("os_sandbox_key")
+    if required and (_os_sandbox.applied() or {}).get("key") != required:
+        return json.dumps({"error": "This task must run under the model sandbox, and this process isn't under "
+                                    "its policy; nothing was run.", "os_sandbox_refused": True})
+
     handler = TASKS.get(task)
+    if task == "__refused__":
+        return json.dumps({"error": "The model sandbox couldn't be applied, so nothing was run: "
+                                    f"{payload.get('os_sandbox_error')}", "os_sandbox_refused": True})
     if handler is None:
         result = {"error": f"Unknown task: {task}"}
     else:
@@ -4577,13 +4615,32 @@ def _run_fork_server():
         print(f"###PSYNEUVIEW_CHILD_DONE### {status}", flush=True)
 
 
+def _apply_task_sandbox(payload: str) -> str:
+    """Apply the sandbox policy the task carries (#311), before anything of
+    the model's is read. Each child applies its own, generated for its
+    task: the files nobody approved as they are now, and its own folder.
+    Returns the payload to run, or a refusal if the policy can't be applied."""
+    try:
+        policy = json.loads(payload).get("os_sandbox")
+    except (ValueError, AttributeError):
+        return payload
+    if not policy:
+        return payload
+    try:
+        _os_sandbox.apply(policy)
+    except _os_sandbox.SandboxUnavailable as e:
+        return json.dumps({"task": "__refused__", "os_sandbox_error": str(e)})
+    return payload
+
+
 def _run_forked_child(stdin_fd: int):
     import os
     try:
         os.setpgrp()
-        _install_orphan_watchdog(use_signal_timer=False)
         print(f"###PSYNEUVIEW_CHILD### {os.getpid()}", flush=True)
-        payload = _read_line_unbuffered(stdin_fd) or ""
+        payload = _apply_task_sandbox(_read_line_unbuffered(stdin_fd) or "")
+        # After the sandbox, so the watchdog's thread is inside it too.
+        _install_orphan_watchdog(use_signal_timer=False)
         # Nothing the model starts can read the next task from the parent's
         # input: the child's own input is closed before the task runs.
         devnull = os.open(os.devnull, os.O_RDONLY)

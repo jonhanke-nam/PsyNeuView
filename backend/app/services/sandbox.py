@@ -20,6 +20,7 @@ import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
+from app.services import os_sandbox
 from app.services.assistant import review as assistant_review
 from app.services.assistant.review import require_runnable
 from typing import Callable, Optional
@@ -112,6 +113,9 @@ class WarmWorker:
         try:
             proc = subprocess.Popen(
                 [sys.executable, WORKER_PATH, self.MODE],
+                # A pool worker started under the sandbox applies its policy
+                # before anything else (#311).
+                env=getattr(self, "_launch_env", None),
                 # A pool worker leads its own process group, so what its model
                 # started ends with it (#187).
                 start_new_session=self.NEW_SESSION,
@@ -222,7 +226,9 @@ class WarmWorker:
         can't be read), the task goes to the fork server instead, so it runs
         in a process no earlier model touched (#187). Decided here, from the
         state the server reads itself, never from anything in a worker."""
-        if assistant_review.worker_must_be_fresh():
+        # Under the operating-system sandbox too (#311): each task applies
+        # its own policy, which a process can do only once.
+        if assistant_review.worker_must_be_fresh() or os_sandbox.active():
             return _isolated_worker().send_task(task, params, timeout)
         with self._lock:
             if not self.is_alive():
@@ -238,9 +244,14 @@ class WarmWorker:
     def _on_timeout(self) -> None:
         self._restart()
 
+    def _sandbox_extras(self) -> dict:
+        """What the task carries for the operating-system sandbox (#311)."""
+        return {}
+
     def _send(self, task: str, params: dict, timeout: int) -> dict:
         """Send one task to the current process. Caller holds `self._lock`."""
-        payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras()})
+        payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras(),
+                              **self._sandbox_extras()})
         t0 = time.time()
 
         try:
@@ -327,6 +338,7 @@ class ForkServer(WarmWorker):
 
     def __init__(self):
         self._child_pid: int | None = None
+        self._task_policy: dict | None = None
         super().__init__()
 
     def send_task(self, task: str, params: dict, timeout: int) -> dict:
@@ -335,10 +347,20 @@ class ForkServer(WarmWorker):
                 self._restart()
             if not self.is_alive():
                 return {"error": f"{self.NAME} failed to start"}
+            # The child applies this task's own policy before reading the
+            # model (#311): the unapproved files as they are now, its own folder.
+            self._task_policy = os_sandbox.policy() if os_sandbox.active() else None
             try:
                 return self._send(task, params, timeout)
             finally:
                 self._child_pid = None
+                if self._task_policy:
+                    os_sandbox.discard_scratch(self._task_policy.get("scratch"))
+                self._task_policy = None
+
+    def _sandbox_extras(self) -> dict:
+        p = self._task_policy
+        return {"os_sandbox": p, "os_sandbox_key": p["key"]} if p else {}
 
     def _before_payload(self, deadline: float) -> dict | None:
         """Ask for a child and wait for its pid; the payload goes to it."""
@@ -410,6 +432,10 @@ class _PoolMember(WarmWorker):
         self._lock = threading.Lock()
         self._on_ready = None
 
+    def _sandbox_extras(self) -> dict:
+        p = getattr(self._proc, "_os_sandbox_policy", None)
+        return {"os_sandbox_key": p["key"]} if p else {}
+
     def _restart(self):
         self._kill(self._proc)
         self._proc = None
@@ -454,12 +480,19 @@ class WorkerPool:
 
     def _take(self) -> subprocess.Popen | None:
         deadline = time.time() + WORKER_READY_TIMEOUT
+        # A worker started under another sandbox policy (or none, or one when
+        # none is wanted) can't take this task: its policy was applied when
+        # it started (#311). It is ended unused.
+        want = os_sandbox.policy_key() if os_sandbox.active() else None
         with self._cond:
             while True:
                 while self._ready:
                     proc = self._ready.pop(0)
-                    if proc.poll() is None:
+                    have = (getattr(proc, "_os_sandbox_policy", None) or {}).get("key")
+                    if proc.poll() is None and have == want:
                         return proc
+                    _PoolMember._kill(proc)
+                    _discard_launch_scratch(proc)
                 if self._starting == 0 or time.time() > deadline:
                     break
                 self._cond.wait(timeout=0.5)
@@ -477,6 +510,7 @@ class WorkerPool:
                     return member._send(task, params, timeout)
             finally:
                 _PoolMember._kill(member._proc if member._proc is not None else proc)
+                _discard_launch_scratch(proc)
 
     def is_alive(self) -> bool:
         return True
@@ -491,11 +525,26 @@ class WorkerPool:
 
 
 def _spawn_worker_process() -> subprocess.Popen | None:
-    """A persistent worker, ready, that has run no task."""
+    """A persistent worker, ready, that has run no task. Under the sandbox
+    (#311) it is started with the policy as it is now, and applies it
+    before importing anything."""
     member = _PoolMember.__new__(_PoolMember)
     member._on_ready = None
     member._stderr_thread = None
-    return WarmWorker._spawn(member)
+    policy = os_sandbox.policy() if os_sandbox.active() else None
+    member._launch_env = os_sandbox.launch_env(policy) if policy else None
+    proc = WarmWorker._spawn(member)
+    if proc is not None:
+        proc._os_sandbox_policy = policy
+    elif policy:
+        os_sandbox.discard_scratch(policy["scratch"])
+    return proc
+
+
+def _discard_launch_scratch(proc: subprocess.Popen | None) -> None:
+    policy = getattr(proc, "_os_sandbox_policy", None)
+    if policy:
+        os_sandbox.discard_scratch(policy.get("scratch"))
 
 
 def fork_is_usable() -> bool:
@@ -702,18 +751,26 @@ def _raise_if_unreviewed_import(result: dict) -> None:
 
 def _run_cold(task: str, params: dict, timeout: int) -> dict:
     """Cold-start fallback: spawn a fresh subprocess (slow but reliable)."""
-    payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras()})
+    # Under the sandbox (#311) the one-shot worker applies the policy first thing.
+    policy = os_sandbox.policy() if os_sandbox.active() else None
+    extras = {"os_sandbox_key": policy["key"]} if policy else {}
+    payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras(), **extras})
     t0 = time.time()
 
     try:
-        result = subprocess.run(
-            [sys.executable, WORKER_PATH],
-            input=payload,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            cwd=str(Path(params.get("file_path", ".")).parent),
-        )
+        try:
+            result = subprocess.run(
+                [sys.executable, WORKER_PATH],
+                input=payload,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=str(Path(params.get("file_path", ".")).parent),
+                env=os_sandbox.launch_env(policy) if policy else None,
+            )
+        finally:
+            if policy:
+                os_sandbox.discard_scratch(policy["scratch"])
         elapsed = time.time() - t0
         logger.info(f"[perf] cold sandbox {task}: {elapsed:.2f}s")
 

@@ -346,7 +346,7 @@ def test_the_profile_denies_last(tmp_path):
          "exec_allow": ["/usr/bin/python3"], "network": False, "home": "/Users/u", "other_users_root": "/Users"}
     sb = os_sandbox_apply.render_sbpl(p)
     last_allow = max(sb.rfind("(allow file-read*"), sb.rfind("(allow file-write*"))
-    assert sb.rfind('(deny file-read* file-write* (subpath "/x/secret.py"))') > last_allow
+    assert sb.rfind('(deny file-read-data file-read-xattr file-write* (subpath "/x/secret.py"))') > last_allow
     assert "(deny network*)" in sb
     assert '"/bin/sh"' not in sb
 

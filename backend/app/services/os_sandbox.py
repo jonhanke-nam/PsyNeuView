@@ -343,6 +343,11 @@ def policy(scratch: str | None = None) -> dict:
     return p
 
 
+def policy_key() -> str:
+    """The key the next task's policy would have (its scratch folder aside)."""
+    return policy(scratch="-")["key"]
+
+
 def launch_env(p: dict) -> dict:
     """The environment for a worker started for one task with policy ``p``:
     it applies the policy first thing (``apply_from_env``)."""

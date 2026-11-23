@@ -1,6 +1,6 @@
 """Apply an operating-system sandbox to the current process (#311).
 
-The model runner (``sandbox_worker.py``) calls :func:`apply` on itself
+The model runner calls :func:`apply` on itself
 before any model code runs, with a policy the server built
 (``os_sandbox.py``). From then on the kernel, not Python, refuses what the
 policy doesn't allow, in this process and every process it starts:
@@ -112,9 +112,13 @@ def render_sbpl(policy: dict) -> str:
             f"(deny file-read* (regex {_sb_str('^' + _re_escape(root) + '/[^/]+/')}))",
             f"(allow file-read* (subpath {_sb_str(home)}) (subpath {_sb_str(root + '/Shared')}))",
         ]
+    # Their contents, not their metadata: stat still answers, so the import
+    # guard (in Python, first) still sees that the file is there and gives
+    # its "review this first" message; reading it is what the kernel refuses.
+    # A folder's listing is its content, so a denied folder can't be listed.
     if policy.get("read_deny"):
         lines += [";; Secrets, and files the assistant wrote that nobody has approved.",
-                  f"(deny file-read* {_sb_filters(policy['read_deny'])})"]
+                  f"(deny file-read-data file-read-xattr {_sb_filters(policy['read_deny'])})"]
     lines += [
         ";; Writing: only the task's own folder and the declared output folders.",
         "(allow file-write* " + _sb_filters(policy.get("write_allow") or []) + ")" if policy.get("write_allow") else ";; (no write folders)",
@@ -125,7 +129,7 @@ def render_sbpl(policy: dict) -> str:
                   f"(deny file-write* {_sb_filters(policy['write_deny'])})"]
     if policy.get("read_deny"):
         lines += [";; Last, so no allow above can give them back: not read, written, renamed or linked.",
-                  f"(deny file-read* file-write* {_sb_filters(policy['read_deny'])})"]
+                  f"(deny file-read-data file-read-xattr file-write* {_sb_filters(policy['read_deny'])})"]
     lines += [
         ";; Programs: forking is allowed (the runner forks, Graphviz is a child);",
         ";; starting a program is limited to Python and Graphviz. No shells.",
