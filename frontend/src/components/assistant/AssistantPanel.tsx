@@ -18,7 +18,8 @@ import { Button } from "../common/Button";
 import { SafeText } from "./SafeText";
 import { hasInvisible, showInvisible } from "@/utils/safeText";
 
-const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
+// Code type, the app's one token for it (#303).
+const MONO = "var(--pnv-font-mono)";
 
 export function AssistantPanel() {
   const items = useAssistantStore((s) => s.items);
