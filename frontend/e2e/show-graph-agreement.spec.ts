@@ -136,7 +136,7 @@ const viewSelect = (page: Page) =>
 async function openModel(page: Page, model: string) {
   const file = path.basename(model);
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(path.join(BACKEND_DIR, model));
   // The previous model stays drawn until this one's load returns.

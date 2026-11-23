@@ -375,7 +375,7 @@ export function RunPanel() {
     setModelWarnings(null);
       setResults(null);
       setSubmitted(null);
-      setStatus("Running model (this may take a few seconds)...");
+      setStatus("Running model (this may take a few seconds)…");
 
       const t0 = performance.now();
       // For the activity log (#1287): started now, finished in `finally` with

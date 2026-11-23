@@ -397,7 +397,7 @@ function ConvertButton({ filePath }: { filePath: string }) {
         disabled={converting}
         style={{ marginTop: 6 }}
       >
-        {converting ? "Converting..." : "Convert to Standard Format"}
+        {converting ? "Converting…" : "Convert to Standard Format"}
       </Button>
 
       {/* Confirmation modal */}

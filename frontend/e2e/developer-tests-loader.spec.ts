@@ -1,5 +1,5 @@
 /**
- * E2E smoke for the "Open ▾ → Developer / Tests..." modal
+ * E2E smoke for the "Open ▾ → Developer / Tests…" modal
  * (#274 / Phase 3 of #249).
  *
  * Mocks /api/dev/tests and /api/dev/extract-test so the test runs without
@@ -7,7 +7,7 @@
  * is covered by Python tests.
  *
  * What this verifies end-to-end:
- *   1. Developer-mode toggle reveals the "Developer / Tests..." entry.
+ *   1. Developer-mode toggle reveals the "Developer / Tests…" entry.
  *   2. Selecting a test posts to /api/dev/extract-test, then to
  *      /api/models/save-as, and the toolbar shows the resulting file.
  *   3. A 422 unextractable response greys the offending row inline
@@ -143,7 +143,7 @@ test.describe("@smoke developer tests loader", { tag: "@ci" }, () => {
     await expect(modal.getByText("(unextractable)")).toBeVisible();
   });
 
-  test("Developer / Tests... entry is hidden when developer mode is off", async ({
+  test("Developer / Tests… entry is hidden when developer mode is off", async ({
     page,
   }) => {
     await page.goto("/");

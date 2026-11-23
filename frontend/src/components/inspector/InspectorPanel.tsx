@@ -2900,7 +2900,7 @@ function SchedulingSection({
                     }
                   }}
                 >
-                  {adding ? "Adding..." : "Add"}
+                  {adding ? "Adding…" : "Add"}
                 </Button>
                 <Button kind="secondary" size="tall" style={{ fontSize: s(11) }} onClick={() => setShowAddForm(false)}>
                   Cancel
@@ -3277,7 +3277,7 @@ function ConditionBuilder({
           disabled={submitting || !specIsComplete(spec)}
           onClick={submit}
         >
-          {submitting ? "Saving..." : "Save"}
+          {submitting ? "Saving…" : "Save"}
         </Button>
         <Button kind="secondary" size="tall" style={{ fontSize: s(11) }} onClick={onDone}>
           Cancel
@@ -3514,7 +3514,7 @@ export function TerminationSection({
               disabled={submitting || (meta?.needsNode && !depNode)}
               onClick={handleAdd}
             >
-              {submitting ? "Saving..." : "Set"}
+              {submitting ? "Saving…" : "Set"}
             </Button>
             <Button kind="secondary" size="tall" style={{ fontSize: s(11) }} onClick={() => setShow(false)}>
               Cancel

@@ -144,7 +144,7 @@ test.describe("Diagnostics", { tag: "@ci" }, () => {
     expect(snap.actionLogging).toBe(true);
     const texts = snap.activity.map((e) => `${e.kind}: ${e.text}`);
     // The menu, from the one click listener, with the menu's name.
-    expect(texts).toContain("menu: Open › Open from path...");
+    expect(texts).toContain("menu: Open › Open from path…");
     // A bottom tab, and a node selected on the canvas.
     expect(texts).toContain("click: Bottom tabs › Run");
     expect(texts.some((t) => /^canvas: Selected node /.test(t))).toBe(true);
@@ -158,7 +158,7 @@ test.describe("Diagnostics", { tag: "@ci" }, () => {
     expect([...sources].sort()).toEqual(expect.arrayContaining(["action", "event", "page", "wait"]));
     expect(snap.timeline.map((l) => line(l))).toEqual(
       expect.arrayContaining([
-        "action: Open › Open from path...",
+        "action: Open › Open from path…",
         "action: Bottom tabs › Run",
         expect.stringMatching(/^wait: start · POST \/api\/model\/load · (likely )?from: Open › Open from path/),
         expect.stringMatching(/^wait: stop · POST \/api\/model\/load · [\d.]+ s · ok$/),
@@ -179,7 +179,7 @@ test.describe("Diagnostics", { tag: "@ci" }, () => {
     expect(snap.savedActivityError).toBeNull();
     await page.evaluate(() => window.dispatchEvent(new Event("pagehide")));
     const savedTexts = async () => ((await (await page.request.get("/api/activity-log")).json()).current as any[]).map((e) => e.text);
-    await expect.poll(savedTexts, { timeout: 10_000 }).toEqual(expect.arrayContaining(["Page loaded", "Open › Open from path...", "Bottom tabs › Run"]));
+    await expect.poll(savedTexts, { timeout: 10_000 }).toEqual(expect.arrayContaining(["Page loaded", "Open › Open from path…", "Bottom tabs › Run"]));
     const saved = await (await page.request.get("/api/activity-log")).json();
     expect(saved.current.every((e: any) => typeof e.page === "string" && e.page.length > 0)).toBe(true);
 
@@ -188,8 +188,8 @@ test.describe("Diagnostics", { tag: "@ci" }, () => {
     await page.reload();
     await page.waitForFunction(() => typeof (window as any).__pnvDiagnostics === "function");
     snap = await snapshot(page);
-    expect(snap.activity.map((e) => e.text)).not.toContain("Open › Open from path...");
-    expect(snap.timeline.map((l) => line(l))).toContain("action: Open › Open from path...");
+    expect(snap.activity.map((e) => e.text)).not.toContain("Open › Open from path…");
+    expect(snap.timeline.map((l) => line(l))).toContain("action: Open › Open from path…");
     // This page's, and the earlier one's (and any other test's in this server's launch).
     expect(snap.timeline.filter((l) => l.text === "Page loaded").length).toBeGreaterThanOrEqual(2);
 

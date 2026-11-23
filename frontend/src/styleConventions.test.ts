@@ -134,6 +134,16 @@ const BARE_MONOSPACE_PENDING = new Set([
   "components/graph/GraphCanvas.tsx",
 ]);
 
+/**
+ * Three dots where the app means an ellipsis (#109): a label or a status
+ * ends in "…", the one character, as macOS writes it (Open from path…,
+ * Saving…). The pattern is three dots after a word and before the end of a
+ * string, a tag or a line — not the spread operator. GraphCanvas.tsx keeps
+ * its three status lines until the canvas work in flight lands.
+ */
+const THREE_DOTS = /(?<=[A-Za-z0-9)\]}])\.\.\.(?=["'`<\s)}\]]|$)/m;
+const THREE_DOTS_PENDING = new Set(["components/graph/GraphCanvas.tsx"]);
+
 const rows = scan();
 const byFile = new Map(rows.map((r) => [r.file, r]));
 
@@ -203,6 +213,19 @@ describe("style conventions (#1302)", () => {
       expect(/["'`]monospace["'`]/.test(text), `${f} no longer writes "monospace"; take it off BARE_MONOSPACE_PENDING`).toBe(true);
     }
     expect(paletteTokens().has("--pnv-font-mono")).toBe(true);
+  });
+
+  it('writes an ellipsis as "…", never three dots (#109)', () => {
+    const src = path.dirname(new URL(import.meta.url).pathname);
+    for (const r of rows) {
+      if (THREE_DOTS_PENDING.has(r.file)) continue;
+      const text = readFileSync(path.join(src, r.file), "utf8");
+      const m = THREE_DOTS.exec(text);
+      expect(m && text.slice(Math.max(0, m.index - 30), m.index + 4), `${r.file} writes "..."; use "…"`).toBeNull();
+    }
+    for (const f of THREE_DOTS_PENDING) {
+      expect(THREE_DOTS.test(readFileSync(path.join(src, f), "utf8")), `${f} no longer writes "..."; take it off THREE_DOTS_PENDING`).toBe(true);
+    }
   });
 
   it("defines nothing twice in palette.css", () => {

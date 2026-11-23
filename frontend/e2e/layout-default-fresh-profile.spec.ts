@@ -32,7 +32,7 @@ test("an empty browser profile opens EGO Like show_graph @ci", async ({ page }) 
   if (await later.isVisible().catch(() => false)) await later.click();
 
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(EGO);
   await prompt.press("Enter");

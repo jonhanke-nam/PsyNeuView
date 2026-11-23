@@ -24,7 +24,7 @@ async function open(page: Page, colorScheme: "light" | "dark") {
   }, FAVOURITES);
   await page.goto("/");
   const palette = page.getByTestId("palette-sidebar");
-  await expect(palette.getByPlaceholder("Search components...")).toBeVisible();
+  await expect(palette.getByPlaceholder("Search components…")).toBeVisible();
   return palette;
 }
 

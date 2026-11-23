@@ -23,7 +23,7 @@ test("a first run opens models Like show_graph, the default in Settings @ci", as
   await page.goto("/");
   await expect(page.getByTestId("app-toolbar")).toBeVisible({ timeout: 30000 });
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(DEMO);
   await prompt.press("Enter");

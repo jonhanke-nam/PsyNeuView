@@ -132,7 +132,7 @@ test.describe("dialog sweep (#1289)", { tag: "@ci" }, () => {
 
     // From GitHub: a combobox's list inside it closes first, the dialog after.
     await page.getByTestId("open-menu").click();
-    await page.getByRole("button", { name: "From GitHub repo..." }).click();
+    await page.getByRole("button", { name: "From GitHub repo…" }).click();
     const github = page.getByTestId("github-file-loader-modal");
     await expect(github).toBeVisible();
     // The Branch combobox lists the stubbed branches; the Repo one lists only

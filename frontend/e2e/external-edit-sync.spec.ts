@@ -37,7 +37,7 @@ function scratchModel(): string {
 async function openFromPath(page: any, model: string) {
   await page.goto("/");
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(model);
   await prompt.press("Enter");
@@ -86,7 +86,7 @@ test("an external edit on top of unsaved edits blocks and asks (#926)", { tag: "
   // Nothing has been applied while the question is open.
   await expect(page.locator('.react-flow__node[data-id^="extra_mech"]')).toHaveCount(0);
 
-  // Keeping our changes leaves the buffer alone...
+  // Keeping our changes leaves the buffer alone…
   await page.getByTestId("external-change-keep-mine").click();
   await expect(modal).toHaveCount(0);
   await expect(editor).toContainText("edited in PsyNeuView, not saved");

@@ -281,7 +281,7 @@ export function ShowGraphPanel({ active }: ShowGraphPanelProps) {
             cursor: loading ? "default" : "pointer",
           }}
         >
-          {loading ? "Loading..." : "Refresh"}
+          {loading ? "Loading…" : "Refresh"}
         </button>
       </div>
 
@@ -358,7 +358,7 @@ export function ShowGraphPanel({ active }: ShowGraphPanelProps) {
       {/* SVG display with zoom/pan */}
       {loading && !svg && (
         <div style={{ padding: "12px 16px", color: "var(--pnv-text-hint)", fontSize: "var(--pnv-fs-12)" }}>
-          Rendering show_graph...
+          Rendering show_graph…
         </div>
       )}
       {svg && (

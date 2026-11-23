@@ -18,7 +18,7 @@ test.describe("run record YAML round-trip", { tag: "@ci" }, () => {
 
     // Load the smallest fixture (one input node) via Open ▾ → Open from path.
     await page.getByRole("button", { name: /Open/ }).first().click();
-    await page.getByRole("button", { name: "Open from path..." }).click();
+    await page.getByRole("button", { name: "Open from path…" }).click();
     const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
     await prompt.fill(fixturePath("single_transfer"));
     await prompt.press("Enter");

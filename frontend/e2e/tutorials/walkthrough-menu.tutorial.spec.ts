@@ -91,7 +91,7 @@ test.describe("Guided walkthroughs are discoverable", () => {
     await expect(page.getByTestId("tour-bar")).toHaveCount(0);
     await expect(page.getByTestId("tour-overlay")).toHaveCount(0);
 
-    // ...the space comes back...
+    // ...the space comes back…
     await page.waitForTimeout(300);
     expect((await canvas.boundingBox())!.height).toBeCloseTo(heightBefore, 0);
 

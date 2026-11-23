@@ -46,7 +46,7 @@ beforeEach(() => {
 
 describe("recording", () => {
   it("keeps entries in the order they were recorded, each with an ISO time", () => {
-    record("menu", "Open ▾ › Open from path...");
+    record("menu", "Open ▾ › Open from path…");
     record("model", "Opened /Users/someone/models/a.py");
     const entries = activityEntries();
     expect(entries.map((e) => e.kind)).toEqual(["menu", "model"]);

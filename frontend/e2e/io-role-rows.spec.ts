@@ -171,7 +171,7 @@ const layoutSelect = (page: Page) =>
 
 async function openModel(page: Page, file: string) {
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(path.join(BACKEND_DIR, "reference_models", file));
   await Promise.all([
@@ -436,7 +436,7 @@ function copyOf(file: string): string {
 async function openPath(page: Page, file: string): Promise<NodeInfo[]> {
   const captured = capture(page);
   await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path..." }).click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
   await prompt.fill(file);
   await Promise.all([loaded(page), prompt.press("Enter")]);

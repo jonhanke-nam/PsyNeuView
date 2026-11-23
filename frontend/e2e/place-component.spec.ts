@@ -32,7 +32,7 @@ async function open(page: Page, file: string = scratchModel()) {
 }
 
 async function item(page: Page, type: string) {
-  await page.getByPlaceholder("Search components...").fill(type);
+  await page.getByPlaceholder("Search components…").fill(type);
   const el = page.locator(`[data-testid="palette-item"][data-type="${type}"]`).first();
   await expect(el).toBeVisible();
   return el;

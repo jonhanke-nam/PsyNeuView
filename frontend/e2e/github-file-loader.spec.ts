@@ -1,5 +1,5 @@
 /**
- * E2E smoke for the "Open ▾ → From GitHub repo..." modal (#258).
+ * E2E smoke for the "Open ▾ → From GitHub repo…" modal (#258).
  *
  * Uses page.route() to mock the backend GitHub endpoints so the test
  * doesn't depend on network reachability or GitHub rate limits — the

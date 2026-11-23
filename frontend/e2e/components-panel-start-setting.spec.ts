@@ -22,30 +22,30 @@ test.describe("Components panel opening setting (#113)", { tag: "@ci" }, () => {
   test("Starts as the icon strip opens the strip after a reload", async ({ page }) => {
     await page.goto("/");
     const palette = page.getByTestId("palette-sidebar");
-    await expect(palette.getByPlaceholder("Search components...")).toBeVisible();
+    await expect(palette.getByPlaceholder("Search components…")).toBeVisible();
 
     await chooseComponentsStart(page, "strip");
-    // The choice shows straight away...
+    // The choice shows straight away…
     await expect(palette.getByTitle("Expand palette")).toBeVisible();
 
     // ...and is how the panel opens next time.
     await page.reload();
     await expect(palette).toBeVisible();
     await expect(palette.getByTitle("Expand palette")).toBeVisible();
-    await expect(palette.getByPlaceholder("Search components...")).toHaveCount(0);
+    await expect(palette.getByPlaceholder("Search components…")).toHaveCount(0);
   });
 
   test("◀ collapses it for the session only; a reload comes back open", async ({ page }) => {
     await page.goto("/");
     const palette = page.getByTestId("palette-sidebar");
-    await expect(palette.getByPlaceholder("Search components...")).toBeVisible();
+    await expect(palette.getByPlaceholder("Search components…")).toBeVisible();
 
     await palette.getByTitle("Compact mode").click();
-    await expect(palette.getByPlaceholder("Search components...")).toHaveCount(0);
+    await expect(palette.getByPlaceholder("Search components…")).toHaveCount(0);
 
     await page.reload();
     await expect(palette).toBeVisible();
-    await expect(palette.getByPlaceholder("Search components...")).toBeVisible();
+    await expect(palette.getByPlaceholder("Search components…")).toBeVisible();
     await expect(palette.getByTitle("Compact mode")).toBeVisible();
   });
 });

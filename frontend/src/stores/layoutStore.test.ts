@@ -153,7 +153,7 @@ describe("a walkthrough's layout (#189)", () => {
   it("keeps the layout from before when a walkthrough restarts after a reload", async () => {
     const { useLayoutStore } = await freshStore();
     useLayoutStore.getState().showEverythingForWalkthrough();
-    // A reload: the store comes back reading the tutorial layout from storage...
+    // A reload: the store comes back reading the tutorial layout from storage…
     const again = await freshStore();
     expect(again.useLayoutStore.getState().codeVisible).toBe(true);
     // ...the walkthrough starts over and must not remember *that* as the learner's.

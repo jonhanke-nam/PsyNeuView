@@ -22,7 +22,7 @@ text contents instead of providing `dataTransfer.files`.
 This is the only way to get the file PATH (not just contents) from a
 native macOS drag operation into WKWebView.
 
-**Workaround (current):** Use "Load Model → Open from path..." and paste
+**Workaround (current):** Use "Load Model → Open from path…" and paste
 the file path. This uses our custom PromptModal which works in WKWebView.
 
 ---

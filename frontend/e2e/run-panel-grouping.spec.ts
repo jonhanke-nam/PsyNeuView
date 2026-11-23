@@ -13,9 +13,9 @@ test.describe("run panel input grouping", { tag: "@ci" }, () => {
   test("toggles between by-node and by-trial layouts", async ({ page }) => {
     await page.goto("/");
 
-    // Load the two-input fixture via Open ▾ → Open from path...
+    // Load the two-input fixture via Open ▾ → Open from path…
     await page.getByRole("button", { name: /Open/ }).first().click();
-    await page.getByRole("button", { name: "Open from path..." }).click();
+    await page.getByRole("button", { name: "Open from path…" }).click();
     const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
     await prompt.fill(fixturePath("two_input_nodes"));
     await prompt.press("Enter");
