@@ -6,6 +6,8 @@
  *   - edit, click the orange dot: the change is shown, with its line counts;
  *   - save, open it from History: "No changes";
  *   - change the file outside PsyNeuView: the dialog says so at the top.
+ *
+ * Not in CI: should be added: passes locally in about 24 s (2026-11-23); never tagged.
  */
 import { mutatingTest as test, expect } from "./test-base";
 import { readFileSync, writeFileSync, mkdtempSync } from "fs";

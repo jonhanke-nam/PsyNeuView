@@ -16,6 +16,8 @@
  *
  * What is installed, the releases, the branches and the install job are
  * answered here: a real install takes minutes and changes the environment.
+ *
+ * Not in CI: should be added: passes locally in about 8 s (2026-11-23); never tagged.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 import { stubFolderCheck } from "./pnl-switch-stub";

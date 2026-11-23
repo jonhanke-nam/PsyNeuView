@@ -6,6 +6,8 @@
  * from the same commit before the run) agrees with the server: no warning.
  * The two other states — the Mac app's included copy, and a page older than
  * the server — are staged by answering `/api/settings/running` for the page.
+ *
+ * Not in CI: should be added: passes locally in about 2 s (2026-11-23); never tagged.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 

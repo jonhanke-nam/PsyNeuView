@@ -19,6 +19,8 @@
  * Real temporary model files, opened through Open ▸ Open from path….
  *
  * Screenshots land in `$SHOTS_DIR` when it is set, and are skipped otherwise.
+ *
+ * Not in CI: should be added: passes locally in about 24 s (2026-11-23); never tagged.
  */
 import type { Page } from "@playwright/test";
 import { readOnlyTest as test, expect } from "./test-base";

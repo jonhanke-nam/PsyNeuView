@@ -8,6 +8,8 @@ import { readOnlyTest as test, expect } from "./test-base";
 //
 // Skipped by default (it only logs — no assertions) so it never slows CI.
 // Run: PERF_MEASURE=1 npx playwright test e2e/_measure-load-latency.spec.ts
+//
+// Not in CI: measurement: it only logs load timings, with no assertions; run it with PERF_MEASURE=1 when measuring.
 
 const RUN = !!process.env.PERF_MEASURE;
 
