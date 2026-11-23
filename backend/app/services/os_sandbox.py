@@ -241,6 +241,25 @@ def _protected_from_writes() -> list[str]:
     out = [str(review.state_path().parent), str(review.state_path()), str(review.backup_path()),
            str(Path.home() / ".psyneuview.json"), str(Path(__file__).resolve().parents[3]),
            sys.prefix, sys.base_prefix, sys.exec_prefix]
+    # The app's settings file, which names the PsyNeuLink the fork server's
+    # parent imports, under its name now and its old one.
+    try:
+        from app.services import app_config
+        out += [str(app_config.app_config_path()), str(app_config.DEFAULT_CONFIG_FILE),
+                str(app_config.LEGACY_CONFIG_FILE)]
+    except Exception:  # noqa: BLE001
+        out += [str(Path.home() / ".psynewview.json")]
+    # The interpreter's own library folders: a sitecustomize.py or a module
+    # there would run in every Python (an admin user can write a
+    # python.org install's lib folder).
+    import sysconfig
+    for scheme_key in ("stdlib", "platstdlib", "purelib", "platlib", "include", "scripts", "data"):
+        try:
+            value = sysconfig.get_paths().get(scheme_key)
+        except (KeyError, OSError):
+            value = None
+        if value:
+            out.append(value)
     for var in ("PSYNEUVIEW_ASSISTANT_STATE_DIR", "PSYNEUVIEW_ASSISTANT_LOG", "PSYNEUVIEW_CONFIG_FILE"):
         if os.environ.get(var, "").strip():
             out.append(os.environ[var].strip())

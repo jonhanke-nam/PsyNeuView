@@ -487,6 +487,122 @@ def apply_from_env() -> dict | None:
     return apply(policy)
 
 
+# ── Processes that outlive their task ───────────────────────────────────────
+
+
+def become_subreaper() -> bool:
+    """Linux: make this process (the fork server's parent) the one orphans
+    of its children are handed to, even after ``setsid``, so
+    :func:`end_survivors` can find them. No-op elsewhere."""
+    if not sys.platform.startswith("linux"):
+        return False
+    try:
+        return _libc().prctl(36, 1, 0, 0, 0) == 0  # PR_SET_CHILD_SUBREAPER
+    except Exception:
+        return False
+
+
+class _ProcBsdInfo(ctypes.Structure):
+    _fields_ = [("pbi_flags", ctypes.c_uint32), ("pbi_status", ctypes.c_uint32), ("pbi_xstatus", ctypes.c_uint32),
+                ("pbi_pid", ctypes.c_uint32), ("pbi_ppid", ctypes.c_uint32), ("pbi_uid", ctypes.c_uint32),
+                ("pbi_gid", ctypes.c_uint32), ("pbi_ruid", ctypes.c_uint32), ("pbi_rgid", ctypes.c_uint32),
+                ("pbi_svuid", ctypes.c_uint32), ("pbi_svgid", ctypes.c_uint32), ("rfu_1", ctypes.c_uint32),
+                ("pbi_comm", ctypes.c_char * 16), ("pbi_name", ctypes.c_char * 32), ("pbi_nfiles", ctypes.c_uint32),
+                ("pbi_pgid", ctypes.c_uint32), ("pbi_pjobc", ctypes.c_uint32), ("e_tdev", ctypes.c_uint32),
+                ("e_tpgid", ctypes.c_uint32), ("pbi_nice", ctypes.c_int32), ("pbi_start_tvsec", ctypes.c_uint64),
+                ("pbi_start_tvusec", ctypes.c_uint64)]
+
+
+def _macos_survivors(since: float, programs: list[str]) -> list[int]:
+    """Processes a sandboxed task left behind: sandboxed, the user's own,
+    started since the task began, and running one of the only programs the
+    policy lets a task start (Python or Graphviz). Another app's sandboxed
+    process matches none of that together."""
+    try:
+        libproc = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
+        sb = _libsandbox()
+    except OSError:
+        return []
+    if sb is None:
+        return []
+    sb.sandbox_check.restype = ctypes.c_int
+    n = libproc.proc_listallpids(None, 0)
+    if n <= 0:
+        return []
+    arr = (ctypes.c_int * (n * 2))()
+    n = libproc.proc_listallpids(arr, ctypes.sizeof(arr))
+    uid, me = os.getuid(), os.getpid()
+    real = [os.path.realpath(p) for p in programs]
+    out = []
+    buf = ctypes.create_string_buffer(4096)
+    for pid in arr[:max(0, n)]:
+        if pid <= 1 or pid == me:
+            continue
+        info = _ProcBsdInfo()
+        if libproc.proc_pidinfo(pid, 3, ctypes.c_uint64(0), ctypes.byref(info), ctypes.sizeof(info)) != ctypes.sizeof(info):
+            continue
+        if info.pbi_uid != uid or info.pbi_start_tvsec + info.pbi_start_tvusec / 1e6 < since - 1:
+            continue
+        if sb.sandbox_check(pid, None, 0) != 1:  # not sandboxed
+            continue
+        if libproc.proc_pidpath(pid, buf, 4096) <= 0:
+            continue
+        exe = os.path.realpath(buf.value.decode("utf-8", "replace"))
+        if any(exe == r or exe.startswith(r.rstrip("/") + "/") for r in real):
+            out.append(pid)
+    return out
+
+
+def _linux_survivors() -> list[int]:
+    """This process's children (with :func:`become_subreaper`, orphans of
+    its children included, whatever session they moved to)."""
+    me, out = os.getpid(), []
+    try:
+        names = os.listdir("/proc")
+    except OSError:
+        return []
+    for name in names:
+        if not name.isdigit():
+            continue
+        try:
+            with open(f"/proc/{name}/stat", "rb") as f:
+                fields = f.read().rsplit(b")", 1)[1].split()
+            if int(fields[1]) == me:
+                out.append(int(name))
+        except (OSError, IndexError, ValueError):
+            continue
+    return out
+
+
+def end_survivors(since: float, programs: list[str] | None = None) -> int:
+    """End what a finished task left running (a ``setsid`` grandchild, a
+    daemon), so nothing it started outlives it. Called by the fork server's
+    parent, which is outside the sandbox, after each child exits. Returns
+    how many were ended."""
+    import signal
+
+    if sys.platform == "darwin":
+        pids = _macos_survivors(since, programs or [])
+    elif sys.platform.startswith("linux"):
+        pids = _linux_survivors()
+    else:
+        return 0
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except OSError:
+            pass
+    if sys.platform.startswith("linux"):
+        while True:
+            try:
+                done, _ = os.waitpid(-1, os.WNOHANG)
+            except ChildProcessError:
+                break
+            if not done:
+                break
+    return len(pids)
+
+
 # ── The probe ───────────────────────────────────────────────────────────────
 
 

@@ -4597,6 +4597,16 @@ def _run_fork_server():
     import signal
 
     import psyneulink as pnl  # noqa: F401  (the expensive part, once)
+    import shutil
+    import time as _time
+
+    # What a task left running is ended when it finishes (#311): on Linux
+    # this parent adopts its children's orphans, whatever session they
+    # moved to; on macOS they are found by being sandboxed and running one
+    # of the only programs a task may start.
+    _os_sandbox.become_subreaper()
+    programs = [os.path.realpath(sys.executable), sys.base_prefix]
+    programs += [shutil.which(n) for n in ("dot", "neato", "fdp", "sfdp", "circo", "twopi") if shutil.which(n)]
 
     print("###READY###", flush=True)
     stdin_fd = sys.stdin.fileno()
@@ -4609,6 +4619,7 @@ def _run_fork_server():
             continue  # nothing but FORK is ever acted on here
         token = parts[1] if len(parts) > 1 and parts[1].isalnum() else ""
         read_end, write_end = os.pipe()
+        started = _time.time()
         pid = os.fork()
         if pid == 0:
             os.close(read_end)
@@ -4623,6 +4634,10 @@ def _run_fork_server():
         try:
             os.killpg(pid, signal.SIGKILL)
         except OSError:
+            pass
+        try:
+            _os_sandbox.end_survivors(started, programs)
+        except Exception:  # noqa: BLE001 - never stop serving tasks over it
             pass
         print(f"###PSYNEUVIEW_CHILD_DONE### {status}", flush=True)
 

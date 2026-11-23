@@ -100,6 +100,10 @@ READS = {
         "import subprocess\n"
         f"exec(subprocess.run([sys.executable, '-c', 'print(open({str(h)!r}).read())'], capture_output=True, text=True, check=True).stdout)"),
     "hard_link": lambda h, t: f"os.link({str(h)!r}, {str(t / 'innocent.py')!r})\nexec(open({str(t / 'innocent.py')!r}).read())",
+    # Relative to a folder descriptor: the kernel sees the real path (round 5).
+    "dir_fd": lambda h, t: (
+        f"d = os.open({str(h.parent)!r}, os.O_RDONLY)\nos.chdir('/')\n"
+        f"exec(os.read(os.open({h.name!r}, os.O_RDONLY, dir_fd=d), 1 << 20).decode())"),
     "rename": lambda h, t: f"os.rename({str(h)!r}, {str(t / 'moved.py')!r})\nexec(open({str(t / 'moved.py')!r}).read())",
 }
 
@@ -216,19 +220,63 @@ def test_a_model_cant_add_a_pth_file(st):
 
 
 def test_a_grandchild_that_leaves_the_process_group_is_still_sandboxed(st):
+    """Round 4 G3: a process that leaves the task's process group (``setsid``)
+    can outlive the task. Under the sandbox it is still confined: it can't
+    read the unapproved file, write outside the allowed folders, or reach
+    the network."""
     marker, helper = _mk(st, "setsid")
-    got = st["tmp"] / "gc_read.txt"
-    gc = (f"import os, time\nos.setsid()\ntime.sleep(1.5)\n"
-          f"try:\n    open({str(got)!r}, 'w').write(open({str(helper)!r}).read())\n"
-          f"except OSError as e:\n    open({str(got)!r}, 'w').write('refused: ' + str(e))\n")
-    model = _model(st, "setsid", f"import subprocess\nsubprocess.Popen([sys.executable, '-c', {gc!r}])\n")
+    note = st["tmp"] / "gc_note.txt"
+    outside = Path.home() / ".zz_psyneuview_survivor"
+    gc = (
+        "import os, socket, time\nos.setsid()\nres = [str(os.getpid())]\n"
+        f"for name, fn in (('read', lambda: open({str(helper)!r}).read()),\n"
+        f"                 ('write', lambda: open({str(outside)!r}, 'w').write('x')),\n"
+        "                 ('net', lambda: socket.create_connection(('127.0.0.1', 9), timeout=2))):\n"
+        "    try:\n        fn()\n        res.append(name + ':ok')\n"
+        "    except PermissionError:\n        res.append(name + ':refused')\n"
+        "    except OSError as e:\n        res.append(name + ':' + type(e).__name__)\n"
+        f"open({str(note)!r}, 'w').write(' '.join(res))\ntime.sleep(60)\n")
+    model = _model(st, "setsid", (
+        "import subprocess, time\n"
+        f"subprocess.Popen([sys.executable, '-c', {gc!r}], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n"
+        f"t = time.time()\nwhile time.time() - t < 15 and not os.path.exists({str(note)!r}):\n    time.sleep(0.1)\n"))
+    try:
+        load(model)
+        words = note.read_text().split()
+        assert words[1:] == ["read:refused", "write:refused", "net:refused"], words
+        assert not outside.exists() and not marker.exists()
+    finally:
+        if outside.exists():
+            outside.unlink()
+
+
+def test_a_grandchild_that_leaves_the_process_group_is_ended_with_its_task(st):
+    """The fork server's parent ends what a sandboxed task left running."""
+    from app.services import sandbox
+
+    if sandbox.isolation_mode() != "fork":
+        pytest.skip("the pool ends a worker's process group only; a setsid survivor is confined, not ended")
+    note = st["tmp"] / "gc_pid.txt"
+    gc = f"import os, time\nos.setsid()\nopen({str(note)!r}, 'w').write(str(os.getpid()))\ntime.sleep(60)\n"
+    model = _model(st, "setsid_end", (
+        "import subprocess, time\n"
+        f"subprocess.Popen([sys.executable, '-c', {gc!r}], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n"
+        f"t = time.time()\nwhile time.time() - t < 15 and not os.path.exists({str(note)!r}):\n    time.sleep(0.1)\n"))
     load(model)
-    deadline = time.time() + 10
-    while time.time() < deadline and not got.exists():
-        threading.Event().wait(0.2)
-    assert got.exists(), "the grandchild never wrote (it was ended, which is also fine for this test)"
-    assert got.read_text().startswith("refused"), got.read_text()[:120]
-    assert not marker.exists()
+    pid = int(note.read_text())
+    deadline = time.time() + 5
+    alive = True
+    while time.time() < deadline and alive:
+        try:
+            os.kill(pid, 0)
+            threading.Event().wait(0.1)
+        except ProcessLookupError:
+            alive = False
+        except PermissionError:
+            break
+    if alive:
+        os.kill(pid, 9)
+    assert not alive, "the setsid grandchild outlived its task"
 
 
 def test_a_model_cant_reach_the_network(st):

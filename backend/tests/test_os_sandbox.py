@@ -301,6 +301,17 @@ def test_the_policy_protects_the_record_the_app_and_python(tmp_path, monkeypatch
     assert os.path.realpath(tmp_path / "st") in protected
     assert os.path.realpath(sys.prefix) in protected
     assert str(Path(os_sandbox.__file__).resolve().parents[3]) in protected
+    # Round 5: the interpreter's own library folders (a sitecustomize.py
+    # there runs in every Python) and the app's settings file, which names
+    # the PsyNeuLink the fork server's parent imports.
+    import sysconfig
+
+    from app.services import app_config
+
+    assert os.path.realpath(sysconfig.get_paths()["stdlib"]) in protected
+    assert os.path.realpath(sysconfig.get_paths()["platstdlib"]) in protected
+    assert os.path.realpath(app_config.DEFAULT_CONFIG_FILE) in protected
+    assert os.path.realpath(app_config.LEGACY_CONFIG_FILE) in protected
     assert p["network"] is False
     assert p["scratch"] in p["write_allow"]
     assert all(".ssh" not in w for w in p["write_allow"])
