@@ -1049,6 +1049,10 @@ def test_tampering_in_one_task_never_reaches_the_next(st, how):
 
 
 def test_each_task_runs_in_a_new_process_only_while_something_is_tracked(st):
+    # The warm worker serves only while the OS sandbox isn't wanted (#311);
+    # this is about the guard's own choice, so the sandbox follows the state.
+    from app.services import os_sandbox
+    st["monkeypatch"].setattr(os_sandbox, "_FORCED", "")
     from app.services import sandbox
     pid_model = st["tmp"] / "Pid" / "pid.py"
     pid_model.parent.mkdir()
@@ -1287,6 +1291,10 @@ def test_a_process_a_model_starts_doesnt_outlive_its_task(st):
 
 
 def test_nothing_tracked_keeps_the_warm_worker(st):
+    # The warm worker serves only while the OS sandbox isn't wanted (#311);
+    # this is about the guard's own choice, so the sandbox follows the state.
+    from app.services import os_sandbox
+    st["monkeypatch"].setattr(os_sandbox, "_FORCED", "")
     review.state_path().write_text(json.dumps({"files": {}}))
     out = st["tmp"] / "warm.txt"
     model = _plain_model(st["tmp"] / "Warm", f"open({str(out)!r}, 'a').write(str(os.getpid()) + chr(10))\n")

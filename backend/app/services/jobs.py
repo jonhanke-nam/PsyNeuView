@@ -216,6 +216,9 @@ class JobManager:
         # sandbox policy takes a moment, #311) found no process to end.
         if job._cancel_requested:
             proc.kill()
+            proc.wait()
+            job.finish("canceled")
+            return
         job.status = "running"
         watchdog = threading.Timer(JOB_TIMEOUT, lambda: proc.poll() is None and proc.kill())
         watchdog.daemon = True
