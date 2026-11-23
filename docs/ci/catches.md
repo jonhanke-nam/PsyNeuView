@@ -21,6 +21,33 @@ The file is the narrative record; the label is the filter. (We deliberately
 don't use a single GitHub issue as the ledger — it gets noisy and is awkward to
 format.) Tracked as a process in #709.
 
+## Two clicks near nodes' rims could add a projection (2026-11-23)
+
+**Caught by:** `e2e` → `graph-hit-areas.spec.ts`, "a click anywhere in a node
+selects it (ports shown)", failing its first attempt now and then: on #302's
+PR run, devel's run after it, and both of #316's runs (#317)
+
+The first attempt's page snapshot, in the middle of a test that only clicks
+inside nodes, showed "task_input is already connected to color_hidden" and
+"Adding projection: color_hidden_to_word_hidden…". React Flow's
+`connectOnClick` was on, as it is by default: a click on any handle starts a
+connection, and the next click on another handle finishes it. Every port dot
+is a handle, and so is each node's connector, which takes the pointer even
+while it is transparent. Run locally, the sweep landed on a handle at 27 of its
+points and asked the server about connecting 7 times, every run. The bug fired
+every time; the test only failed when the resulting reload happened to deselect
+the node it was checking, and that timing is why it looked intermittent. It was
+not #302's doing, whose runs were simply the first to show it. Fixed by turning
+`connectOnClick` off and requiring a drag of at least 4 px, as other drags on
+the graph do. `click-never-connects.spec.ts` replays the clicks, fails with the
+old setting and passes with the new.
+
+The same runs' first-attempt failure of `layered-wide-boxes.spec.ts`,
+"Layered with CIMs shown", was a race in the spec, not the product. It asked
+whether the view was in Custom as soon as the load answered, before the graph
+was rebuilt, so it could miss Custom and keep the saved positions, which put
+EGO's Output_CIM above the EM frame. It now asks once the graph has settled.
+
 ## An arrow into a frame lay over the nodes it passed (2026-11-18)
 
 **Caught by:** `e2e` → `graph-hit-areas.spec.ts`, "the sweep, at three zooms
