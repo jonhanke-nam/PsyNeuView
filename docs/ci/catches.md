@@ -21,6 +21,30 @@ The file is the narrative record; the label is the filter. (We deliberately
 don't use a single GitHub issue as the ledger — it gets noisy and is awkward to
 format.) Tracked as a process in #709.
 
+## The sandbox's sweep killed a Learn job that started during it (2026-11-23)
+
+**Caught by:** `Backend tests` → `backend pytest` (Python 3.13),
+`test_assistant_runner_guard.py`, "a job payload carries the review state",
+on the first CI run of the OS sandbox (#311) with devel (PR #186); the 3.14
+job and every local run passed
+
+After a sandboxed task, a sweep ends any processes it left behind, found by
+the task's mark. The sweep took the list of running tasks once, when it
+began, then went on for rounds of up to ten seconds. A Learn job started
+meanwhile carried an id the list didn't have, so a later round stopped and
+killed its worker, and the job ended in an error. The test asserted only the
+status, so the log didn't say which error; this race is the cause found by
+reading the code, and it fits a failure that needs a job to start within the
+previous one's sweep. A new test that starts a task between two rounds fails
+with the old sweep. Each round now asks which tasks are running when it
+looks, and the test now shows a failed job's error.
+
+The same run's `e2e` shard 1 failed `ai-assistant-real.spec.ts` on Linux
+only: the approved model's marker was written at the top of the temporary
+folder, which holds the run's review state, and on Linux a declared output
+folder that holds a protected path takes no new files at its top. The
+sandbox was right; the markers now go in a folder of their own.
+
 ## Two clicks near nodes' rims could add a projection (2026-11-23)
 
 **Caught by:** `e2e` → `graph-hit-areas.spec.ts`, "a click anywhere in a node
