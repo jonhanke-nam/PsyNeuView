@@ -34,10 +34,35 @@ export interface AssistantSettings {
   /** max_tokens: the tokens the agent's service reports, summed over the session. */
   limits: { tool_calls: number; minutes: number; max_tokens: number };
   keep_log: boolean;
+  /**
+   * The operating-system sandbox for model runs (#311). all_runs: every model
+   * run while the assistant is on, not only while something it wrote is
+   * tracked. require: the assistant won't turn on where no sandbox holds.
+   */
+  sandbox: { all_runs: boolean; require: boolean };
+}
+
+/**
+ * GET /api/assistant/sandbox (#311). `state`: "on" (runs are sandboxed),
+ * "unavailable" (wanted but can't be applied here: runs are NOT sandboxed),
+ * "available" (could be, not needed now), "off_unavailable" (not needed,
+ * and couldn't be).
+ */
+export interface SandboxStatus {
+  state: "on" | "unavailable" | "available" | "off_unavailable";
+  available: boolean;
+  wanted: boolean;
+  why: string;
+  mechanism: string | null;
+  platform: string;
+  enforced: string[];
+  not_enforced: string[];
+  reason: string | null;
+  forced: "on" | "off" | null;
 }
 
 /** The keys a PUT may carry: what the backend stores, and nothing it adds to a GET (`available`). */
-export const ASSISTANT_SETTINGS_KEYS = ["enabled", "agent", "folders", "autonomy", "saving", "visibility", "limits", "keep_log"] as const;
+export const ASSISTANT_SETTINGS_KEYS = ["enabled", "agent", "folders", "autonomy", "saving", "visibility", "limits", "keep_log", "sandbox"] as const;
 
 /** `settings` reduced to the keys the backend takes. */
 export function settingsBody(settings: AssistantSettings): AssistantSettings {
@@ -55,6 +80,7 @@ export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
   visibility: { model: true, selection: true, errors: true, results: false, files: false },
   limits: { tool_calls: 25, minutes: 10, max_tokens: 100000 },
   keep_log: true,
+  sandbox: { all_runs: true, require: true },
 };
 
 /**

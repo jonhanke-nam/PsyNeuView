@@ -23,6 +23,7 @@ import {
   type AssistantSettings,
   type ConversationItem,
   type Proposal,
+  type SandboxStatus,
 } from "./assistantTypes";
 
 export type TurnState = "idle" | "running" | "stopping";
@@ -70,8 +71,11 @@ interface AssistantState {
   /** Tokens the agent's service has reported for this session, against `limits.max_tokens`. */
   tokensUsed: number;
   reviewOffer: ReviewOffer | null;
+  /** Whether model runs are sandboxed by the operating system (#311); null until asked. */
+  sandbox: SandboxStatus | null;
 
   load: () => Promise<void>;
+  loadSandbox: () => Promise<void>;
   /** Save `next`. A raise is confirmed through `pendingRaise` first, unless `confirmRaise`. */
   save: (next: AssistantSettings, confirmRaise?: boolean) => Promise<boolean>;
   confirmRaise: () => Promise<boolean>;
@@ -133,6 +137,16 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
   lastDone: null,
   tokensUsed: 0,
   reviewOffer: null,
+  sandbox: null,
+
+  loadSandbox: async () => {
+    try {
+      const resp = await fetch("/api/assistant/sandbox");
+      if (resp.ok) set({ sandbox: (await readJson(resp)) as unknown as SandboxStatus });
+    } catch {
+      // The section says nothing rather than something wrong.
+    }
+  },
 
   load: async () => {
     try {
@@ -150,6 +164,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
         return;
       }
       set({ available: true, settings: fromBackend(body), loadError: null });
+      void get().loadSandbox();
       const key = await fetch("/api/assistant/key");
       if (key.ok) set({ keySet: Boolean(((await readJson(key)) as { set?: boolean }).set) });
     } catch (e) {
@@ -172,13 +187,16 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
       }
       if (!resp.ok) {
         const err = await readJson(resp);
-        set({ loadError: `Could not save: ${typeof err.detail === "string" ? err.detail : `HTTP ${resp.status}`}` });
+        const detail = err.detail as string | { message?: string } | undefined;
+        const message = typeof detail === "string" ? detail : detail && typeof detail.message === "string" ? detail.message : `HTTP ${resp.status}`;
+        set({ loadError: `Could not save: ${message}` });
         return false;
       }
       const saved = fromBackend((await readJson(resp)) as Partial<AssistantSettings>);
       const turnedOn = !get().settings.enabled && saved.enabled;
       set({ settings: saved, pendingRaise: null, loadError: null, explanation: turnedOn ? saved : get().explanation });
       record("assistant", turnedOn ? "Assistant turned on" : saved.enabled ? "Assistant settings changed" : "Assistant turned off");
+      void get().loadSandbox();
       return true;
     } catch (e) {
       set({ loadError: String(e) });
@@ -366,7 +384,11 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
 /** The settings as the backend sent them, without what it adds to a GET (`available`). */
 function fromBackend(body: Partial<AssistantSettings>): AssistantSettings {
   const merged = { ...DEFAULT_ASSISTANT_SETTINGS, ...body };
-  return settingsBody({ ...merged, limits: { ...DEFAULT_ASSISTANT_SETTINGS.limits, ...(merged.limits ?? {}) } });
+  return settingsBody({
+    ...merged,
+    limits: { ...DEFAULT_ASSISTANT_SETTINGS.limits, ...(merged.limits ?? {}) },
+    sandbox: { ...DEFAULT_ASSISTANT_SETTINGS.sandbox, ...(merged.sandbox ?? {}) },
+  });
 }
 
 async function fetchReviewStatus(path: string): Promise<Pick<ReviewOffer, "content" | "content_hash">> {

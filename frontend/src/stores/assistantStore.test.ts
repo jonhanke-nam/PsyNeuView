@@ -52,6 +52,20 @@ describe("assistantStore (#179)", () => {
     expect(s.keySet).toBe(true);
   });
 
+  it("says why the assistant can't turn on without a sandbox (#311)", async () => {
+    answers["PUT /api/assistant/settings"] = () =>
+      json({ detail: { reason: "sandbox_required", message: "The assistant can't be turned on: no Landlock" } }, 400);
+    expect(await useAssistantStore.getState().save({ ...DEFAULT_ASSISTANT_SETTINGS, enabled: true }, true)).toBe(false);
+    expect(useAssistantStore.getState().loadError).toContain("no Landlock");
+    expect(useAssistantStore.getState().settings.enabled).toBe(false);
+  });
+
+  it("loads whether model runs are sandboxed (#311)", async () => {
+    answers["GET /api/assistant/sandbox"] = () => json({ state: "unavailable", reason: "no Landlock in this kernel" });
+    await useAssistantStore.getState().loadSandbox();
+    expect(useAssistantStore.getState().sandbox?.state).toBe("unavailable");
+  });
+
   it("asks before a raise, then sends confirm_raise, and explains the first time it is on", async () => {
     answers["PUT /api/assistant/settings"] = (init) => {
       const body = JSON.parse(String(init?.body));
@@ -64,7 +78,8 @@ describe("assistantStore (#179)", () => {
     expect(useAssistantStore.getState().settings.enabled).toBe(false);
 
     expect(await useAssistantStore.getState().confirmRaise()).toBe(true);
-    const sent = JSON.parse(String(calls[calls.length - 1].init?.body));
+    const puts = calls.filter((c) => c.init?.method === "PUT");
+    const sent = JSON.parse(String(puts[puts.length - 1].init?.body));
     expect(sent.confirm_raise).toBe(true);
     const s = useAssistantStore.getState();
     expect(s.settings.enabled).toBe(true);
