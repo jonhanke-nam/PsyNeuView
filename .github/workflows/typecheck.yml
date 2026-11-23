@@ -36,7 +36,10 @@ jobs:
         env:
           # docs/settings-inventory.yaml: vitest checks it against the
           # Settings controls (#1279), so editing it alone must run vitest.
-          PATTERN: '^(frontend/|docs/settings-inventory\.yaml|\.github/workflows/typecheck\.yml)'
+          # backend/tests/, scripts/test_map.py and docs/testing-coverage*:
+          # the What's tested page is generated from every test file, so a
+          # change to any of them must check the page is current (#319).
+          PATTERN: '^(frontend/|backend/tests/|scripts/test_map\.py|docs/testing-coverage|docs/settings-inventory\.yaml|\.github/workflows/typecheck\.yml)'
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             # `github.sha` is the auto-generated merge commit, and its FIRST
@@ -140,3 +143,10 @@ jobs:
       - name: Style check (no hand-written colours)
         working-directory: frontend
         run: node scripts/style-report.mjs --check
+
+      # #319: docs/testing-coverage.md (What's tested) is generated from the
+      # test files. A test added, renamed or moved in or out of CI without
+      # regenerating it fails here; so does a browser spec left out of CI
+      # without a `Not in CI:` line saying why. Standard library only.
+      - name: What's tested page is current
+        run: python3 scripts/test_map.py --check
