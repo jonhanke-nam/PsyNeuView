@@ -1487,7 +1487,7 @@ SHELL_SPELLINGS = {
     "backslash_split": lambda d, n: ["sh", "-c", f"cd {d} && cat {n[:3]}\\{n[3:]}"],
     "double_quoted": lambda d, n: ["bash", "-c", f'cd {d} && cat "{n}"'],
     "redirect": lambda d, n: ["sh", "-c", f"cd {d} && cat <{n}"],
-    "find_name_glob": lambda d, n: ["sh", "-c", f"find {d} -name '{n[:6]}*' -exec cat {{}} \;"],
+    "find_name_glob": lambda d, n: ["sh", "-c", rf"find {d} -name '{n[:6]}*' -exec cat {{}} \;"],
     "shell_true": lambda d, n: f"cd {d} && cat {n[:3]}''{n[3:]}",
 }
 
