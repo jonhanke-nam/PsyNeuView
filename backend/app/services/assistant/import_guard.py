@@ -62,6 +62,7 @@ import os
 import sys
 import sysconfig
 import threading
+import unicodedata
 from typing import Callable
 
 #: The state file's default place; the server passes the real path with
@@ -161,8 +162,67 @@ def is_library_path(path: str) -> bool:
     return False
 
 
-def _tracked_entry(real: str) -> dict | None:
-    return _state.tracked.get(real)
+# ── One identity for a file, whatever spelling names it (#187) ──────────
+#
+# The state's keys are real paths as the app spelled them when it wrote the
+# file. The disk may name the same file differently: macOS volumes ignore
+# case (``HX.py`` is ``hx.py``) and hand back decomposed accents (NFD) where
+# the app wrote composed ones (NFC), and ``realpath`` changes neither. So a
+# path is matched to a tracked file two ways, and either is enough: its real
+# path with accents composed and case folded, or the file it is on disk
+# (device and inode, which also catches a hard link). Folding case on a
+# volume that is case-sensitive can only refuse more, never less.
+
+
+def fold(text: str) -> str:
+    """Composed accents and folded case: the one spelling compared."""
+    return unicodedata.normalize("NFC", text).casefold()
+
+
+def _identity(path: str):
+    try:
+        st = os.stat(path)
+    except (OSError, ValueError):
+        return None
+    return (st.st_dev, st.st_ino)
+
+
+class TrackedIndex:
+    """Lookups into a ``files`` mapping by folded real path, by the file's
+    identity on disk, and by folded file name."""
+
+    def __init__(self, files: dict):
+        self.files = files
+        self.by_spelling: dict = {}
+        self.by_identity: dict = {}
+        self.by_name: dict = {}
+        for key in files:
+            self.by_spelling[fold(key)] = key
+            try:
+                self.by_spelling.setdefault(fold(os.path.realpath(key)), key)
+            except (OSError, ValueError):
+                pass
+            ident = _identity(key)
+            if ident is not None:
+                self.by_identity[ident] = key
+            self.by_name.setdefault(fold(os.path.basename(key)), []).append(key)
+
+    def find(self, path) -> str | None:
+        """The tracked key ``path`` names, under any spelling, or None."""
+        if not self.files:
+            return None
+        try:
+            real = os.path.realpath(path)
+        except (OSError, ValueError):
+            return None
+        key = self.by_spelling.get(fold(real))
+        if key is not None:
+            return key
+        ident = _identity(real)
+        return self.by_identity.get(ident) if ident is not None else None
+
+
+_EMPTY_INDEX = TrackedIndex({})
 
 
 def vet(path: str) -> None:
@@ -172,18 +232,26 @@ def vet(path: str) -> None:
     state = _state
     if not state.tracked and not state.broken:
         return
-    try:
-        real = os.path.realpath(path)
-    except (OSError, ValueError):
+    key = state.index.find(path)
+    if key is not None:
+        _check(key, path)
         return
-    entry = state.tracked.get(real)
-    if entry is not None:
-        approved = entry.get("approved")
-        if approved is None or approved != _content_hash_of(real):
-            raise UnreviewedImport(real)
-        return
-    if state.broken and not is_library_path(real):
-        raise UnreviewedImport(real, state_unreadable=True)
+    if state.broken:
+        try:
+            real = os.path.realpath(path)
+        except (OSError, ValueError):
+            real = str(path)
+        if not is_library_path(real):
+            raise UnreviewedImport(real, state_unreadable=True)
+
+
+def _check(key: str, path) -> None:
+    """``key``'s entry against the content at ``path`` (the same file under
+    whatever spelling was used)."""
+    entry = _state.tracked.get(key) or {}
+    approved = entry.get("approved")
+    if approved is None or approved != _content_hash_of(path):
+        raise UnreviewedImport(key)
 
 
 check_model_path = vet
@@ -195,25 +263,31 @@ def _content_hash_of(path: str) -> str | None:
     try:
         with open(path, encoding="utf-8") as f:
             text = f.read()
-    except (OSError, UnicodeDecodeError):
+    except (OSError, UnicodeDecodeError, TypeError, ValueError):
         return None
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def _merge_states(*states: tuple[dict, bool]) -> tuple[dict, bool]:
+    files: dict = {}
+    broken = False
+    for tracked, bad in states:
+        broken = broken or bad
+        for key, entry in tracked.items():
+            files.setdefault(key, entry)
+    return files, broken
+
+
 class _State:
-    """What the finder consults. ``refresh`` re-reads the state file when it
-    changed; ``provider`` lets the server hand over its own view instead."""
+    """What the finder and the hook consult. ``refresh`` reads the state
+    again every time; ``provider`` lets the server hand over its own view."""
 
     def __init__(self):
         self.tracked: dict = {}
-        #: The tracked files' names, so the audit hook resolves only a path
-        #: that could be one of them (a symlink under another name can't be
-        #: made in the worker: the hook refuses it).
-        self.tracked_names: frozenset = frozenset()
+        self.index: TrackedIndex = _EMPTY_INDEX
         self.broken = False
         self.provider: Callable[[], tuple[dict, bool]] | None = None
         self._path: str | None = None
-        self._key: tuple | None = None
         #: Roots a task names as never vetted (the active PsyNeuLink checkout).
         self.extra_roots: tuple[str, ...] = ()
 
@@ -230,17 +304,19 @@ class _State:
         if self.provider is not None:
             self.tracked, self.broken = self.provider()
         else:
+            # Read every time, not only when the file's size or time changed:
+            # what a model did to this object during an earlier task must not
+            # carry over. The path a task names and the default path (or the
+            # override in the environment) are both read: a task naming a
+            # file that doesn't exist can't make the tracked files untracked.
             path = path or self._path or default_state_path()
             self._path = path
-            try:
-                st = os.stat(path)
-                key = (path, st.st_mtime_ns, st.st_size)
-            except OSError:
-                key = (path, None, None)
-            if key != self._key:
-                self.tracked, self.broken = read_state(path)
-                self._key = key
-        self.tracked_names = frozenset(os.path.basename(k) for k in self.tracked)
+            states = [read_state(path)]
+            default = default_state_path()
+            if os.path.realpath(default) != os.path.realpath(path):
+                states.append(read_state(default))
+            self.tracked, self.broken = _merge_states(*states)
+        self.index = TrackedIndex(self.tracked) if self.tracked else _EMPTY_INDEX
         # Every task, not only when the state file changed: a tracked file's
         # content can change without the state changing, and the cache must
         # not serve what was imported before. In the server too: its own
@@ -328,7 +404,7 @@ def install(provider: Callable[[], tuple[dict, bool]] | None = None) -> None:
         importlib.machinery.SourceFileLoader.get_code = _vetted_get_code
 
 
-# ── The worker's audit hook: other ways a tracked file's text gets run ────
+# ── The audit hook: other ways a tracked file's text gets run ────────────
 #
 # The finder and the loader wrapper see imports and loads. A model can also
 # reach a file's text without either: ``exec(open(p).read())``,
@@ -338,22 +414,35 @@ def install(provider: Callable[[], tuple[dict, bool]] | None = None) -> None:
 # be removed once added) sees the file being opened, compiled, executed,
 # passed to a new process, renamed or linked, and refuses each one for a
 # tracked, unapproved file, with the same 409. In the sandbox worker it
-# applies to everything, every thread, all the time. In the server it
-# applies only on the thread that is loading a model in-process (the
-# converter), inside ``active()``: the server itself reads unapproved files
-# to show them for review, and must go on doing so. Only tracked paths: the
-# unreadable-state rule is applied at every load and import already, and
-# applying it to every open would stop the worker reading its own files.
+# applies to every thread, all the time. In the server it applies only on
+# the thread that is loading a model in-process (the converter), inside
+# ``active()``, and on threads started from it: the server itself reads
+# unapproved files to show them for review, and must go on doing so. Only
+# tracked files: the unreadable-state rule is applied at every load and
+# import already, and applying it to every open would stop the worker
+# reading its own files.
 
-_AUDIT_EVENTS = frozenset({
-    "open", "compile", "exec", "os.rename", "os.link", "os.symlink",
-    "subprocess.Popen", "os.system", "os.exec", "os.posix_spawn", "os.spawn", "pty.spawn",
-})
-_PROCESS_EVENTS = frozenset({"subprocess.Popen", "os.system", "os.exec", "os.posix_spawn", "os.spawn", "pty.spawn"})
+
+def _audit_event_names():
+    return (
+        frozenset({
+            "open", "compile", "exec", "os.rename", "os.link", "os.symlink", "os.putenv",
+            "subprocess.Popen", "os.system", "os.exec", "os.posix_spawn", "os.spawn", "pty.spawn",
+            "_thread.start_new_thread", "_thread.start_joinable_thread",
+        }),
+        frozenset({"subprocess.Popen", "os.system", "os.exec", "os.posix_spawn", "os.spawn", "pty.spawn"}),
+    )
+
+
+_AUDIT_EVENTS, _PROCESS_EVENTS = _audit_event_names()
+_THREAD_EVENTS = frozenset({"_thread.start_new_thread", "_thread.start_joinable_thread"})
 _audit_local = threading.local()  # per thread: a model thread can't ride on another's check
 _audit_installed = False
 _audit_wanted = False
 _audit_everywhere = False  # True in the worker; in the server only inside active()
+_worker_mode = False
+#: Marked on a ``threading.Thread`` started from inside ``active()``.
+_ACTIVE_ATTR = "_psyneuview_review_active"
 
 
 def _as_text(value) -> str | None:
@@ -369,27 +458,37 @@ def _as_text(value) -> str | None:
     return None
 
 
+def _check_by_name(name: str) -> None:
+    """Every tracked file with this folded file name, checked as itself."""
+    for key in _state.index.by_name.get(name, ()):
+        _check(key, key)
+
+
 def _vet_tracked(path, cwd: str | None = None, *, by_name: bool = True) -> None:
-    """``vet`` for a path the audit hook saw, tracked paths only. With
-    ``by_name``, a path whose file name no tracked file has is passed without
-    resolving it: most of what a model opens and runs is PsyNeuLink's own."""
+    """``vet`` for a path the audit hook saw, tracked files only. With
+    ``by_name``, a path whose folded file name no tracked file has is passed
+    without resolving it: most of what a model opens and runs is PsyNeuLink's
+    own. A relative path whose name is a tracked file's but which doesn't
+    lead to that file from the working folder (``os.open(name,
+    dir_fd=...)``, whose folder the event doesn't say) is checked as that
+    tracked file."""
     text = _as_text(path)
     if not text or text.startswith("<") or "\0" in text:
         return
-    if by_name and os.path.basename(text) not in _state.tracked_names:
+    name = fold(os.path.basename(text))
+    if by_name and name not in _state.index.by_name:
         return
-    if cwd and not os.path.isabs(text):
-        text = os.path.join(cwd, text)
-    try:
-        real = os.path.realpath(text)
-    except (OSError, ValueError):
+    if not os.path.isabs(text):
+        joined = os.path.join(cwd or os.getcwd(), text)
+        key = _state.index.find(joined)
+        if key is None:
+            _check_by_name(name)
+            return
+        _check(key, joined)
         return
-    entry = _state.tracked.get(real)
-    if entry is None:
-        return
-    approved = entry.get("approved")
-    if approved is None or approved != _content_hash_of(real):
-        raise UnreviewedImport(real)
+    key = _state.index.find(text)
+    if key is not None:
+        _check(key, text)
 
 
 def _process_words(args) -> list[str]:
@@ -412,43 +511,124 @@ def _process_words(args) -> list[str]:
     return words
 
 
+_GLOB_CHARS = ("*", "?", "[")
+
+
+def _vet_text(text: str | None) -> None:
+    """Text a shell or an interpreter will run (``sh -c``, ``python -c``,
+    ``os.system``) or a value handed to a process in its environment: it
+    mustn't mention a tracked, unapproved file, by name (folded, anywhere
+    in the text), by module name (the name without ``.py``, as a word), or
+    by a shell pattern that matches its name."""
+    if not text:
+        return
+    import fnmatch
+    import re
+    folded = fold(text)
+    for name in _state.index.by_name:
+        stem = name[:-3] if name.endswith(".py") else ""
+        if name in folded or (stem and re.search(rf"(?<![\w.]){re.escape(stem)}(?!\w)", folded)):
+            _check_by_name(name)
+    if any(c in text for c in _GLOB_CHARS):
+        for word in re.split(r"[\s<>|;&()'\"`]+", folded):
+            if not any(c in word for c in _GLOB_CHARS):
+                continue
+            pattern = os.path.basename(word) or word
+            for name in _state.index.by_name:
+                if fnmatch.fnmatchcase(name, pattern) or fnmatch.fnmatchcase(name, pattern + "*"):
+                    _check_by_name(name)
+
+
+def _code_texts(words: list[str]) -> list[str]:
+    """The text after a ``-c`` (a shell's or Python's) or ``-e`` (other
+    interpreters'), however it was spelled (``-c``, ``-ccode``, ``-Bc``)."""
+    texts = []
+    for i, word in enumerate(words):
+        if word.startswith("-") and not word.startswith("--") and len(word) > 1:
+            flags = word[1:]
+            for flag in ("c", "e"):
+                at = flags.find(flag)
+                if at >= 0:
+                    rest = flags[at + 1:]
+                    if rest:
+                        texts.append(rest)
+                    elif i + 1 < len(words):
+                        texts.append(words[i + 1])
+                    break
+    return texts
+
+
 def _vet_process(event: str, args: tuple) -> None:
     """A new process that names a tracked, unapproved file anywhere in its
     command, by path from its working folder or by the file's name alone
-    (``cd sub && python helper.py``), isn't started."""
+    (``cd sub && python helper.py``), or whose shell or interpreter text or
+    environment mentions one (see ``_vet_text``), isn't started."""
+    env = None
+    texts: list[str] = []
     if event == "subprocess.Popen":
         executable, argv, cwd = args[0], args[1], _as_text(args[2]) if len(args) > 2 else None
+        env = args[3] if len(args) > 3 else None
+        raw = [_as_text(a) for a in argv] if isinstance(argv, (list, tuple)) else [_as_text(argv)]
         words = _process_words(argv) + ([_as_text(executable)] if _as_text(executable) else [])
+        texts = _code_texts([w for w in raw if w is not None])
+        if isinstance(argv, (str, bytes)):
+            texts.append(_as_text(argv))
     elif event == "os.system":
         cwd, words = None, _process_words(args[0])
+        texts = [_as_text(args[0])]
     elif event == "pty.spawn":
         cwd, words = None, _process_words(args[0])
+        texts = _code_texts(words)
     elif event == "os.spawn":
         cwd, words = None, [_as_text(args[1]) or ""] + _process_words(args[2])
+        env = args[3] if len(args) > 3 else None
+        texts = _code_texts(words)
     else:  # os.exec, os.posix_spawn: (path, argv, env)
         cwd, words = None, [_as_text(args[0]) or ""] + _process_words(args[1])
+        env = args[2] if len(args) > 2 else None
+        texts = _code_texts(words)
     cwd = cwd or os.getcwd()
-    names = {}
-    for real in _state.tracked:
-        names.setdefault(os.path.basename(real), []).append(real)
     for word in words:
         for part in {word, word.split("=", 1)[-1]}:
             if not part:
                 continue
             _vet_tracked(part, cwd)
-            for real in names.get(os.path.basename(part), ()):
-                _vet_tracked(real, by_name=False)
+            name = fold(os.path.basename(part))
+            if name in _state.index.by_name:
+                _check_by_name(name)
+    for text in texts:
+        _vet_text(text)
+    if isinstance(env, dict):
+        for value in env.values():
+            _vet_text(_as_text(value))
+
+
+def _on_this_thread() -> bool:
+    if _audit_everywhere or getattr(_audit_local, "active", 0):
+        return True
+    try:
+        return bool(getattr(threading.current_thread(), _ACTIVE_ATTR, False))
+    except Exception:
+        return False
 
 
 def _audit(event: str, args: tuple) -> None:
     if not _state.tracked or event not in _AUDIT_EVENTS or getattr(_audit_local, "busy", False):
         return
-    if not _audit_everywhere and not getattr(_audit_local, "active", 0):
+    if not _on_this_thread():
         return
     _audit_local.busy = True  # the check itself opens the file to hash it
     try:
-        if event in _PROCESS_EVENTS:
+        if event in _THREAD_EVENTS:
+            # A thread started from an in-process load carries the hook with
+            # it (the worker's hook covers every thread already).
+            started = getattr(args[0], "__self__", None) if args else None
+            if isinstance(started, threading.Thread):
+                setattr(started, _ACTIVE_ATTR, True)
+        elif event in _PROCESS_EVENTS:
             _vet_process(event, args)
+        elif event == "os.putenv":
+            _vet_text(_as_text(args[1]) if len(args) > 1 else None)
         elif event == "exec":
             _vet_tracked(getattr(args[0], "co_filename", None))
         elif event == "compile":
@@ -480,9 +660,10 @@ def install_audit_hook(everywhere: bool = False) -> None:
     finds something tracked, and at once if something already is. With
     nothing tracked it would have nothing to refuse, and leaving it out
     keeps every task as fast as before the assistant existed."""
-    global _audit_wanted, _audit_everywhere
+    global _audit_wanted, _audit_everywhere, _worker_mode
     if everywhere:
         _audit_everywhere = True
+        _worker_mode = True
     _audit_wanted = True
     _add_audit_hook_if_needed()
 
@@ -506,13 +687,58 @@ class active:
         return False
 
 
+def reset_for_task() -> None:
+    """Put the guard's own state back as it was installed, before a task in
+    the warm worker: what an earlier task's model set on these objects (a
+    flag, the tracked set, the event list) doesn't carry over to the next
+    model. The state is read again by the refresh that follows. A model
+    that replaces the guard's functions is caught by ``fingerprint`` and the
+    worker is restarted."""
+    global _audit_local, _AUDIT_EVENTS, _PROCESS_EVENTS, _audit_everywhere, _state
+    _audit_local = threading.local()
+    _AUDIT_EVENTS, _PROCESS_EVENTS = _audit_event_names()
+    _audit_everywhere = _worker_mode
+    provider, path = _state.provider, _state._path
+    _state = _State()
+    _state.provider, _state._path = provider, path
+    install()
+
+
+_FINGERPRINTED = (
+    "vet", "_check", "check_model_path", "_content_hash_of", "TrackedIndex", "_State", "ReviewFinder",
+    "_finder", "_keep_first", "_vetted_get_code", "_original_get_code", "install", "_audit", "_vet_tracked",
+    "_vet_process", "_vet_text", "_code_texts", "_process_words", "_check_by_name", "_on_this_thread",
+    "refresh", "reset_for_task", "fingerprint", "read_state", "_parse", "default_state_path", "fold", "_identity",
+    "_merge_states", "is_library_path", "_add_audit_hook_if_needed", "_audit_event_names",
+)
+
+
+def fingerprint() -> tuple:
+    """The identity of every function and class the guard runs on, and of
+    the loader wrapper in place. The worker compares it after each task; a
+    change means a model replaced part of the guard, and the worker exits
+    so the next task starts in a fresh one."""
+    g = globals()
+    return tuple(id(g.get(name)) for name in _FINGERPRINTED) + (
+        id(importlib.machinery.SourceFileLoader.get_code),
+        id(getattr(g.get("_audit"), "__code__", None)),
+        id(getattr(g.get("vet"), "__code__", None)),
+    )
+
+
 def refresh(path: str | None = None, exempt_roots=None) -> None:
-    """Read the state again if it changed (or ask the provider), put the
-    finder first again, drop cached user modules, and add the audit hook if
-    something is now tracked. Called by the worker before every task, and by
-    the server before an in-process load."""
+    """Read the state again (or ask the provider), put the finder first
+    again, drop cached user modules, and add the audit hook if something is
+    now tracked. Called by the worker before every task, and by the server
+    before an in-process load."""
     _state.refresh(path, exempt_roots)
     _add_audit_hook_if_needed()
+
+
+def find_tracked(files: dict, path) -> str | None:
+    """The key in ``files`` that ``path`` names, under any spelling (the
+    server's review module uses this, so both sides match files alike)."""
+    return TrackedIndex(files).find(path) if files else None
 
 
 def tracked_count() -> int:
