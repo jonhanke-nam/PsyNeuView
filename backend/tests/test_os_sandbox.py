@@ -452,3 +452,36 @@ def test_sandboxing_only_while_tracked_asks_first(tmp_path):
     cfg = tmp_path / "cfg.json"
     with pytest.raises(s.RaiseNeedsConfirmation, match="without the sandbox"):
         s.update_settings({"sandbox": {"all_runs": False}}, config_file=cfg)
+
+
+def test_a_sweep_never_ends_a_task_that_started_during_it(monkeypatch):
+    """A sweep goes on for rounds (up to ten seconds) after it begins. A task
+    started in that time, such as the Learn job after one that just finished,
+    is running, so no round may take it for a survivor. Each round asks which
+    tasks are running then, not which were when the sweep began (#311; a
+    Learn job was killed this way on a Linux CI run of PR #186)."""
+    found_new_as_survivor = []
+
+    def running_task_starts_between_rounds(find, time_limit=10.0, reap=False):
+        find()
+        with os_sandbox._live_lock:
+            os_sandbox._live_ids.add("started-mid-sweep")
+        found_new_as_survivor.extend(find())
+        return 0
+
+    def linux_marked(token, live_ids):
+        return [] if "started-mid-sweep" in live_ids else ["started-mid-sweep"]
+
+    def macos_marked(run, control, live_marks):
+        mark = os_sandbox._task_mark_path("started-mid-sweep")
+        return [] if mark in list(live_marks) else ["started-mid-sweep"]
+
+    monkeypatch.setattr(os_sandbox._apply, "end_processes", running_task_starts_between_rounds)
+    monkeypatch.setattr(os_sandbox._apply, "_linux_marked", linux_marked)
+    monkeypatch.setattr(os_sandbox._apply, "_macos_marked", macos_marked)
+    try:
+        os_sandbox._sweep_now()
+    finally:
+        with os_sandbox._live_lock:
+            os_sandbox._live_ids.discard("started-mid-sweep")
+    assert found_new_as_survivor == []

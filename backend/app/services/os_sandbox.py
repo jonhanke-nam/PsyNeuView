@@ -287,17 +287,40 @@ def clear_exec_bits() -> int:
     return changed
 
 
+class _LiveTasks:
+    """The running tasks' ids, read under the lock each time they're asked."""
+
+    def __contains__(self, task_id: object) -> bool:
+        with _live_lock:
+            return task_id in _live_ids
+
+    def marks(self) -> "_LiveMarks":
+        return _LiveMarks()
+
+
+class _LiveMarks:
+    """The running tasks' mark files, listed afresh each time they're read."""
+
+    def __iter__(self):
+        with _live_lock:
+            ids = list(_live_ids)
+        return iter([_task_mark_path(t) for t in ids])
+
+
 def _sweep_now() -> None:
     """End this server's finished tasks' processes, found only by the
     task's own mark (never by program, parent, group or session), so a
     process that isn't PsyNeuView's is never touched (#311, U1, U2)."""
     try:
-        with _live_lock:
-            live = set(_live_ids)
+        # Which tasks are running is asked as each process is looked at, not
+        # once when the sweep begins: a sweep goes on for rounds, and a task
+        # started meanwhile (its id is added before its worker starts) must
+        # never be taken for a survivor. A snapshot here killed a Learn job
+        # that started during the previous job's sweep.
+        live = _LiveTasks()
         if sys.platform == "darwin":
             run, control = _mark_paths()
-            live_paths = [_task_mark_path(t) for t in live]
-            _apply.end_processes(lambda: _apply._macos_marked(run, control, live_paths), time_limit=10.0)
+            _apply.end_processes(lambda: _apply._macos_marked(run, control, live.marks()), time_limit=10.0)
         elif sys.platform.startswith("linux"):
             _apply.end_processes(lambda: _apply._linux_marked(_RUN_TOKEN, live), time_limit=10.0)
     except Exception:  # noqa: BLE001 - never fail a task over it
