@@ -41,6 +41,12 @@ library only and loaded by path, like the import guard.
 | **Network** | Nothing | Every socket to another machine, to this one, and to local services (on macOS `(deny network*)`, on Linux `socket()` itself fails) |
 | **Other** | Signals within the sandbox | Mach services other than the logger, notifications and the security server (so no LaunchServices or Apple events, which could start a program outside); on Linux with Landlock ABI 6, signals to processes outside |
 
+On Linux, Landlock can only allow a whole folder and what is beneath it, so
+a declared folder that holds a protected path (a checkout of PsyNeuView
+inside an assistant folder, say) is allowed piece by piece around it: its
+files and other subfolders can be written, but no new file can be made
+directly in it. macOS has no such limit.
+
 "Declared output folders" are the assistant's read-write folders plus
 `PSYNEUVIEW_OS_SANDBOX_WRITE_FOLDERS`. A model that writes next to itself
 (`open("results.csv", "w")` in the model's own folder) is refused unless
