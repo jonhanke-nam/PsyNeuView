@@ -112,12 +112,29 @@ def normalised_hash(text: str) -> str:
 
 
 def _key(path: str) -> str:
-    # The real path, so a symlink or a case variant can't name a tracked file
-    # under a different key.
+    # The real path, as the key a new entry is stored under. It is not the
+    # identity a lookup uses: realpath keeps the spelling it was given, and a
+    # macOS volume ignores case and may hand back decomposed accents, so
+    # ``HX.py`` and ``hx.py`` are one file under two keys. Lookups go through
+    # ``_find`` (#187).
     try:
         return os.path.realpath(str(path))
     except OSError:
         return str(path)
+
+
+def _find(files: dict, path: str) -> str | None:
+    """The key in ``files`` that ``path`` names, under any spelling: folded
+    case, composed accents, or the same file on disk (a hard link included).
+    The import guard matches files the same way."""
+    if not files or not path:
+        return None
+    return import_guard.find_tracked(files, str(path))
+
+
+def _entry_key(files: dict, path: str) -> str:
+    """The key to update for ``path``: the one it already has, else a new one."""
+    return _find(files, path) or _key(path)
 
 
 def backup_path() -> Path:
@@ -187,13 +204,30 @@ def _save(state: dict) -> None:
     _cache, _cache_key = None, None
 
 
-def mark_unreviewed(path: str, text: str) -> None:
+def mark_unreviewed(path: str, text: str) -> tuple[str, dict | None]:
     """Record that the assistant wrote ``text`` to ``path``. Nothing at that
-    path runs until ``mark_reviewed`` is called with the content as it then is."""
+    path runs until ``mark_reviewed`` is called with the content as it then is.
+    Returns the key and the entry it replaced, for ``restore_entry`` when the
+    write this was recorded for doesn't happen. Raises if the state can't be
+    saved: the caller must not write then."""
     with _lock:
         state = _load()
         files = dict(state["files"])
-        files[_key(path)] = {"approved": None, "written": content_hash(text), "written_norm": normalised_hash(text)}
+        key = _entry_key(files, path)
+        previous = files.get(key)
+        files[key] = {"approved": None, "written": content_hash(text), "written_norm": normalised_hash(text)}
+        _save({"files": files})
+        return key, previous
+
+
+def restore_entry(key: str, previous: dict | None) -> None:
+    """Undo a ``mark_unreviewed`` whose write didn't happen."""
+    with _lock:
+        files = dict(_load()["files"])
+        if previous is None:
+            files.pop(key, None)
+        else:
+            files[key] = previous
         _save({"files": files})
 
 
@@ -203,15 +237,16 @@ def mark_reviewed(path: str, text: str) -> None:
     with _lock:
         state = _load()
         files = dict(state["files"])
-        entry = dict(files.get(_key(path)) or {})
+        key = _entry_key(files, path)
+        entry = dict(files.get(key) or {})
         entry["approved"] = content_hash(text)
-        files[_key(path)] = entry
+        files[key] = entry
         _save({"files": files})
 
 
 def is_tracked(path: str) -> bool:
     """True only for a file the assistant has written (the state's keys)."""
-    return _key(path) in _load()["files"]
+    return _find(_load()["files"], path) is not None
 
 
 def is_runnable(path: str, text: str) -> bool:
@@ -220,7 +255,8 @@ def is_runnable(path: str, text: str) -> bool:
     A path the assistant never wrote is always runnable; this is what keeps the
     app unchanged for anyone not using the assistant.
     """
-    entry = _load()["files"].get(_key(path))
+    files = _load()["files"]
+    entry = files.get(_find(files, path)) if files else None
     if entry is None:
         return True
     approved = entry.get("approved")
@@ -260,7 +296,8 @@ def refuse_unreviewed_text(path: str, text: str) -> None:
 
 def status(path: str) -> dict:
     """What the page needs to show: tracked, and runnable as the file is now."""
-    entry = _load()["files"].get(_key(path))
+    files = _load()["files"]
+    entry = files.get(_find(files, path)) if files else None
     if entry is None:
         return {"tracked": False, "runnable": True}
     try:

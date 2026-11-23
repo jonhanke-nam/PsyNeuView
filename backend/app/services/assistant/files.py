@@ -560,14 +560,30 @@ def write_model_file(path: str, text: str, *, base_hash: str | None) -> Path:
                 was = os.fstat(fd)
                 if (now.st_ino, now.st_dev) != (was.st_ino, was.st_dev) or now.st_nlink > 1:
                     raise PathRefused(path, "swapped", f"{name} was replaced while being written; look again.")
-            os.rename(tmp, name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+            # Recorded as unreviewed before the text lands (#187): if the
+            # record can't be saved, nothing is written, and there is no
+            # moment when the assistant's text is on disk untracked.
+            try:
+                marked = review.mark_unreviewed(str(real), text)
+            except Exception as e:
+                raise PathRefused(path, "cannot_record",
+                                  f"The review state couldn't be saved ({e}), so {name} wasn't written.")
+            try:
+                os.rename(tmp, name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+            except BaseException:
+                # Not written after all: the file is as it was, and so is its entry.
+                try:
+                    review.restore_entry(*marked)
+                except Exception:
+                    # Left tracked and unreviewed: the stricter side.
+                    pass
+                raise
         except BaseException:
             try:
                 os.unlink(tmp, dir_fd=parent_fd)
             except OSError:
                 pass
             raise
-        review.mark_unreviewed(str(real), text)
         return real
     finally:
         if fd is not None:
