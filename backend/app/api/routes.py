@@ -147,6 +147,9 @@ class SettingsInfoResponse(BaseModel):
     #: Whether PsyNeuLink is current, when that was checked, and the last
     #: automatic update (#1304); for Report a Problem. See /settings/pnl-updates.
     updates: Optional[dict] = None
+    #: Whether model runs are sandboxed by the operating system (#311):
+    #: {state: on|unavailable|available|off_unavailable, mechanism, reason, ...}.
+    os_sandbox: Optional[dict] = None
 
 
 class EditModeResponse(BaseModel):
