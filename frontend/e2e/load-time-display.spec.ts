@@ -2,9 +2,7 @@ import { readOnlyTest as test, expect } from "./test-base";
 
 // #874: model load time is surfaced in the UI. After a load, the Model
 // Diagnostics bar shows "loaded in X.Xs"; expanding it reveals the breakdown.
-//
-// Not in CI: should be added: passes locally in under 2 s (2026-11-23); never tagged.
-test("surfaces model load time in the Model Diagnostics bar", async ({ page }) => {
+test("surfaces model load time in the Model Diagnostics bar", { tag: "@ci" }, async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("app-toolbar")).toBeVisible({ timeout: 30000 });
 

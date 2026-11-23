@@ -10,8 +10,6 @@
  *
  * The backend's answers are stubbed: a real check talks to GitHub and a
  * real pull touches a checkout.
- *
- * Not in CI: should be added: passes locally in under 3 s, with the network answers stubbed (2026-11-23); never tagged.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 
@@ -81,7 +79,7 @@ async function openGeneral(page: Page) {
   await page.getByTestId("settings-section-general").click();
 }
 
-test("General: behind shows the count and when it was checked; Check now asks the backend; off removes the ready note", async ({ page }) => {
+test("General: behind shows the count and when it was checked; Check now asks the backend; off removes the ready note", { tag: "@ci" }, async ({ page }) => {
   const state = { installed: devel, updates: { ...base(devel), last_result: result(devel, { freshness: freshness(3) }), update_ready: true, ready_commit: "9ce038f" } };
   await stub(page, state);
   const posted: string[] = [];
@@ -116,7 +114,7 @@ test("General: behind shows the count and when it was checked; Check now asks th
   await expect(status.getByTestId("setting-pnl-auto-update")).toBeChecked();
 });
 
-test("General: up to date, and a failed automatic update is shown with the version kept", async ({ page }) => {
+test("General: up to date, and a failed automatic update is shown with the version kept", { tag: "@ci" }, async ({ page }) => {
   const failed = { at: checkedAt(), outcome: "failed", from_commit: "7a86e22", to_commit: null, detail: "The update failed; the PsyNeuLink in use stays. fatal: unable to access github.com" };
   await stub(page, { installed: devel, updates: { ...base(devel), last_result: result(devel, { freshness: freshness(0) }), last_install: failed } });
   await openGeneral(page);
@@ -126,7 +124,7 @@ test("General: up to date, and a failed automatic update is shown with the versi
   await expect(status.getByTestId("pnl-update-note")).toContainText("unable to access github.com");
 });
 
-test("General: an official release is told about a newer release, with no automatic-update switch", async ({ page }) => {
+test("General: an official release is told about a newer release, with no automatic-update switch", { tag: "@ci" }, async ({ page }) => {
   await stub(page, { installed: official, updates: { ...base(official), last_result: result(official, { newest_release: "0.21.0.0", release_available: true }) } });
   await openGeneral(page);
   const status = page.getByTestId("pnl-update-status");
@@ -136,7 +134,7 @@ test("General: an official release is told about a newer release, with no automa
   await expect(status).toContainText("never installed on its own");
 });
 
-test("Developer: each checkout has its two switches, off by default, naming the remote branch; a refused pull is said", async ({ page }) => {
+test("Developer: each checkout has its two switches, off by default, naming the remote branch; a refused pull is said", { tag: "@ci" }, async ({ page }) => {
   const clean = checkout({
     last_check: { checked_at: checkedAt(), fetched: true, status: "behind", behind_by: 2, ahead_by: 0, dirty_files: 0, upstream: "origin/devel", detail: "2 commits behind origin/devel." },
   });

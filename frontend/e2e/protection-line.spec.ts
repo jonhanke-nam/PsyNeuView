@@ -19,8 +19,6 @@
  * Real temporary model files, opened through Open ▸ Open from path….
  *
  * Screenshots land in `$SHOTS_DIR` when it is set, and are skipped otherwise.
- *
- * Not in CI: should be added: passes locally in about 24 s (2026-11-23); never tagged.
  */
 import type { Page } from "@playwright/test";
 import { readOnlyTest as test, expect } from "./test-base";
@@ -68,7 +66,7 @@ async function save(page: Page, model: string) {
   });
 }
 
-test("a protected file opens read only, unlocks from the tag, and stays unlocked after reopening (#1346)", async ({ page }) => {
+test("a protected file opens read only, unlocks from the tag, and stays unlocked after reopening (#1346)", { tag: "@ci" }, async ({ page }) => {
   test.setTimeout(180_000);
   const { model } = protectedModel("protected", "# PsyNeuView: protected");
   const original = readFileSync(model, "utf8");
@@ -110,7 +108,7 @@ test("a protected file opens read only, unlocks from the tag, and stays unlocked
   expect(saved.status(), await saved.text()).toBe(200);
 });
 
-test("a permanently protected file offers no unlock, refuses a save, and becomes editable when the line is removed on disk (#1346)", async ({ page }) => {
+test("a permanently protected file offers no unlock, refuses a save, and becomes editable when the line is removed on disk (#1346)", { tag: "@ci" }, async ({ page }) => {
   test.setTimeout(180_000);
   const { model } = protectedModel("permanent", "# PsyNeuView: protected permanently");
   const original = readFileSync(model, "utf8");
@@ -151,7 +149,7 @@ test("a permanently protected file offers no unlock, refuses a save, and becomes
   expect(saved.status(), await saved.text()).toBe(200);
 });
 
-test("Save a copy as… from a permanently protected file: the copy starts unprotected (#1346)", async ({ page }) => {
+test("Save a copy as… from a permanently protected file: the copy starts unprotected (#1346)", { tag: "@ci" }, async ({ page }) => {
   test.setTimeout(180_000);
   const { model } = protectedModel("copyfrom", "# PsyNeuView: protected permanently");
   const original = readFileSync(model, "utf8");

@@ -23,8 +23,6 @@
  *      gesture's, not the model's;
  *   3. dragging a selection out of the editor and dropping it on the canvas,
  *      where the app's file-drop handler lives.
- *
- * Not in CI: should be added: passes locally in about 26 s (2026-11-23); never tagged.
  */
 import type { Page } from "@playwright/test";
 import { readOnlyTest as test, expect } from "./test-base";
@@ -122,7 +120,7 @@ async function drag(page: Page, from: { x: number; y: number }, to: { x: number;
 
 const selectedText = (page: Page) => page.evaluate(() => window.getSelection()?.toString() ?? "");
 
-test("drag-selecting text, forwards and backwards, raises nothing (#1094)", async ({ page }) => {
+test("drag-selecting text, forwards and backwards, raises nothing (#1094)", { tag: "@ci" }, async ({ page }) => {
   test.setTimeout(120_000);
   await openModel(page, scratchModel());
   const traps = await armTraps(page);
@@ -143,7 +141,7 @@ test("drag-selecting text, forwards and backwards, raises nothing (#1094)", asyn
   await expectClean(page, traps);
 });
 
-test("dragging a selection to move it raises nothing (#1094)", async ({ page }) => {
+test("dragging a selection to move it raises nothing (#1094)", { tag: "@ci" }, async ({ page }) => {
   test.setTimeout(120_000);
   await openModel(page, scratchModel());
   const traps = await armTraps(page);
@@ -164,7 +162,7 @@ test("dragging a selection to move it raises nothing (#1094)", async ({ page }) 
   expect(text.split("# Mechanisms").length - 1).toBe(1);
 });
 
-test("dragging a selection out onto the canvas raises nothing (#1094)", async ({ page }) => {
+test("dragging a selection out onto the canvas raises nothing (#1094)", { tag: "@ci" }, async ({ page }) => {
   test.setTimeout(120_000);
   await openModel(page, scratchModel());
   const traps = await armTraps(page);

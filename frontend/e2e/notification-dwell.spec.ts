@@ -3,9 +3,7 @@ import { readOnlyTest as test, expect } from "./test-base";
 // #879: info/success toasts dwell long enough to read. The old flat 2s was too
 // fast; the floor is now 4s (scaling with message length). This asserts a load
 // success toast is still visible at 2.5s — it would have been gone under 2s.
-//
-// Not in CI: should be added: passes locally in about 4 s (2026-11-23); never tagged.
-test("success toast dwells past the old 2s window", async ({ page }) => {
+test("success toast dwells past the old 2s window", { tag: "@ci" }, async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("app-toolbar")).toBeVisible({ timeout: 30000 });
 

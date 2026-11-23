@@ -6,8 +6,6 @@
  *   - edit, click the orange dot: the change is shown, with its line counts;
  *   - save, open it from History: "No changes";
  *   - change the file outside PsyNeuView: the dialog says so at the top.
- *
- * Not in CI: should be added: passes locally in about 24 s (2026-11-23); never tagged.
  */
 import { mutatingTest as test, expect } from "./test-base";
 import { readFileSync, writeFileSync, mkdtempSync } from "fs";
@@ -47,7 +45,7 @@ async function replaceBuffer(page: Page, text: string) {
   await page.keyboard.insertText(text);
 }
 
-test.describe("Changes since save (#1348)", () => {
+test.describe("Changes since save (#1348)", { tag: "@ci" }, () => {
   test("edit, then the orange dot shows the change and its counts", async ({ page }) => {
     test.setTimeout(180_000);
     expect(BASE).toContain("function=pnl.Logistic()");
