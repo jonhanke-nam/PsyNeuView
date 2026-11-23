@@ -226,17 +226,20 @@ path to a tracked file by its real path with accents composed and case
 folded, or by the file it is on disk, so a case variant, a decomposed
 accent or a hard link names the same entry. An audit hook in the worker
 (and, on the loading thread and threads it starts, in the server's
-in-process converter) also refuses a tracked, unapproved file opened,
-compiled under its own name, executed, renamed, linked or symlinked, or
-whose full name is in a new process's command, program text or
-environment, which covers `exec(open(...).read())`, `runpy.run_path`,
-`python helper.py`, `sh -c 'cat helper.py'` and `python -c` naming the file
-(#187). While anything is tracked, each task runs in a worker process that
-has run no other, so nothing one model does to the worker reaches the
-next. What this doesn't cover: text a model didn't read from the tracked
-file, a child process beyond what its command, text and environment spell
-out, `ctypes`, and a model that tampers with the guard during its own
-task; the threat model's section 7 lists exactly what isn't covered. Approving a model means trusting what
+in-process converter) refuses a path that leads to an existing tracked,
+unapproved file when model code reads it, compiles or runs it under its
+name, renames, moves, links or symlinks it, or names it in a new process
+(its command, an interpreter's program text past wrappers such as `env`,
+`os.system` text, the environment, or a shell pattern anchored in its
+folder); a path that leads nowhere or to another file is left alone. This
+covers `exec(open(...).read())`, `runpy.run_path`, `python helper.py` and
+`sh -c 'cat helper.py'` (#187). While anything is tracked, each task runs
+in a child forked from a parent that has run no model code, so nothing one
+model does to its process reaches the next, and a model in the worker
+can't change the review record or the guard's files. The guard stops
+assistant-written code running by accident or through ordinary paths; it
+is not a sandbox against model code that deliberately acts as the user.
+The threat model's section 7 lists exactly what isn't covered. Approving a model means trusting what
 it does. Every place code is started or executed in `backend/app` is
 listed in the threat model with its guard, and a test fails if a new one
 appears unlisted. A route that would execute unreviewed content answers 409

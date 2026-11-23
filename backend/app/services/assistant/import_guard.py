@@ -27,18 +27,20 @@ Three hooks, one check:
 * a wrapper on ``SourceFileLoader.get_code``, for a file loaded by path
   (``spec_from_file_location`` + ``exec_module``, ``SourceFileLoader(...).load_module()``),
   which is also how PsyNeuView loads a model, so an agent could write it;
-* an audit hook (#187) for a tracked file's text reached without a loader:
-  the file opened (``exec(open(p).read())``, ``Path(p).read_text()``, a
-  copy), compiled under its own name (``runpy.run_path``,
-  ``exec(compile(text, p, "exec"))``), executed, renamed, hard-linked, or
-  symlinked (a link whose target's name is a tracked file's, even before
-  the target exists, or whose target is a folder holding one); or a new
-  process whose command names it, or whose program text (after ``-c``,
-  ``-e``, ``-E``, any argument of a known interpreter, ``os.system``) or
-  environment contains its full name, or a shell pattern anchored in its
-  folder that matches it. In the worker it acts on every thread; in the
-  server only on the thread of an in-process load and threads started from
-  it. It is added the first time something is tracked.
+* an audit hook (#187) with one rule: a path that leads to an existing
+  tracked file (by identity) that isn't approved as it is now is refused
+  when the model reads it (``exec(open(p).read())``, ``Path(p).read_text()``,
+  a copy), compiles or executes it under its own name (``runpy.run_path``),
+  renames, moves, links or symlinks it, or names it in a new process (its
+  command, an interpreter's arguments and ``-c``/``-e``/``-E`` text past
+  wrappers such as ``env``, ``os.system`` text, the environment) or in a
+  shell pattern anchored in its folder. A path that leads nowhere or to
+  another file is left alone. After a symlink is made in a task, every
+  path is resolved. In the worker it acts on every thread, and also stops
+  a model writing, moving or removing the review record or the guard's own
+  files; in the server only on the thread of an in-process load and
+  threads started from it. It is added the first time something is
+  tracked.
 
 A file is matched by its real path with accents composed and case folded,
 or by the file it is on disk (device and inode), so a case variant, a
@@ -46,29 +48,33 @@ decomposed accent or a hard link names the same tracked file. The worker
 also checks the model's own path itself, in its loaders, so a task started
 without the server's guard (an old or direct caller) is still refused. A
 tracked path is tracked wherever it sits: the state is consulted before any
-"library path" shortcut.
+"library path" shortcut. During a task the state is read again when it
+changes on disk.
 
-Later tasks are protected by a fresh process, not by anything in this
-module: everything here is reachable from the model code it guards, so
-while anything is tracked the server sends each task to a worker process
-that has run no other, and ends it afterwards (``sandbox.WarmWorker``).
-Within one task, a model that tampers with this module can switch it off
-for the rest of that task; that is not defended. The per-task reset and
-the fingerprint below are cheap extras for when nothing was tracked when
-a task began.
+Later tasks are protected by a process no earlier model touched, not by
+anything in this module: everything here is reachable from the model code
+it guards. While anything is tracked the server sends each task to the
+fork server, whose parent has run no model code and forks one child per
+task (``sandbox.ForkServer``). Within one task, a model that tampers with
+this module can switch it off for the rest of that task; that is not
+defended. The per-task reset and the fingerprint below are cheap extras.
+
+This guard stops assistant-written code running by accident or through
+ordinary paths. It is not a sandbox against model code that deliberately
+acts as the user (it can write files, start processes and use ``ctypes``);
+containment needs an operating-system sandbox, which is not built.
 
 What it doesn't cover, said plainly (the threat model's section 7 has the
 full list): text a model didn't read from the tracked file; a child
-process beyond what its command, program text and environment say (a
-child Python, ``multiprocessing`` included, has no guard of its own; a
-module name alone, a name on stdin, in a script file, or built with
-escapes, variables, ``printf``, ``base64``, brace expansion or a regular
-expression gets through); code that reads files without Python's audit
-events (``ctypes``, C extensions); tampering within a model's own task;
-links under another name made beforehand and then read as text (imported,
-they are caught); sourceless ``.pyc`` files and zip imports. Approving a
-model means trusting what it does. The guard is against accidental or
-agent-written imports, loads and the obvious ways around them.
+process beyond the paths its command, program text and environment lead
+to (a child Python, ``multiprocessing`` included, has no guard of its own;
+a module name, a name relative to another folder or ``dir_fd``, on stdin,
+in a script file, or built with escapes, variables, ``printf``, ``base64``,
+brace expansion or a regular expression gets through); code that reads
+files without Python's audit events (``ctypes``, C extensions); tampering
+within a model's own task; links under another name made beforehand and
+then read as text; sourceless ``.pyc`` files and zip imports. Approving a
+model means trusting what it does.
 """
 
 from __future__ import annotations
