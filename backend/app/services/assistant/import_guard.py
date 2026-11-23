@@ -37,8 +37,9 @@ Three hooks, one check:
   shell pattern anchored in its folder. A path that leads nowhere or to
   another file is left alone. After a symlink is made in a task, every
   path is resolved. In the worker it acts on every thread, and also stops
-  a model writing, moving or removing the review record or the guard's own
-  files; in the server only on the thread of an in-process load and
+  the model's own Python code writing, moving or removing the review
+  record, the guard's own files or code later tasks import (not a process
+  the model starts); in the server only on the thread of an in-process load and
   threads started from it. It is added the first time something is
   tracked.
 
@@ -59,6 +60,8 @@ task (``sandbox.ForkServer``), or, where forking isn't usable, to a pool of
 workers each used once (``sandbox.WorkerPool``). Within one task, a model that tampers with
 this module can switch it off for the rest of that task; that is not
 defended. The per-task reset and the fingerprint below are cheap extras.
+
+In-process protection covers memory only. A model that writes files (directly or through a child process) can affect later tasks; only the OS sandbox (#311) closes this. Until #311, don't turn the assistant on for untrusted use.
 
 This guard stops assistant-written code running by accident or through
 ordinary paths. It is not a sandbox against model code that deliberately

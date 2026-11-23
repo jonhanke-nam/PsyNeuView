@@ -318,9 +318,14 @@ class ForkServer(WarmWorker):
     new worker per task costs PsyNeuLink's import (seconds). Instead this
     parent imports PsyNeuLink and the guard once and runs no model code at
     all; it reads nothing from the server but the word ``FORK``. For each
-    task it forks a child, which tells us its pid, reads the task itself,
-    runs it, answers and exits. A fork takes milliseconds, and nothing a
-    child does reaches the parent or the next child.
+    task it forks a child on a pipe of its own, says the child's pid,
+    copies the child's output to us until the child exits, then closes the
+    pipe and ends the child's process group. The child reads its task,
+    runs it and answers with a token made for that task. A fork takes
+    milliseconds. Nothing a child does in memory reaches the parent or the
+    next child; a process it starts that leaves its process group
+    (``setsid``) can outlive the task, and files it writes stay written:
+    in-process protection covers memory only (#311 closes the rest).
     """
 
     MODE = "--fork-server"

@@ -235,10 +235,12 @@ folder); a path that leads nowhere or to another file is left alone. This
 covers `exec(open(...).read())`, `runpy.run_path`, `python helper.py` and
 `sh -c 'cat helper.py'` (#187). While anything is tracked, each task runs
 in a child forked from a parent that has run no model code, so nothing one
-model does to its process reaches the next, and a model in the worker
-can't change the review record or the guard's files. The guard stops
+model does to its process's memory reaches the next, and the model's own
+Python code in the worker can't change the review record, the guard's
+files or the code later tasks import (a process it starts can). The guard stops
 assistant-written code running by accident or through ordinary paths; it
 is not a sandbox against model code that deliberately acts as the user.
+**In-process protection covers memory only. A model that writes files (directly or through a child process) can affect later tasks; only the OS sandbox (#311) closes this. Until #311, don't turn the assistant on for untrusted use.**
 The threat model's section 7 lists exactly what isn't covered. Approving a model means trusting what
 it does. Every place code is started or executed in `backend/app` is
 listed in the threat model with its guard, and a test fails if a new one

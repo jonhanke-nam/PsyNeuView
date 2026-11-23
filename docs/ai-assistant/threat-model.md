@@ -218,6 +218,8 @@ containment rather than a better approval view.
 
 ## 7. What the execution guard does and doesn't cover
 
+**In-process protection covers memory only. A model that writes files (directly or through a child process) can affect later tasks; only the OS sandbox (#311) closes this. Until #311, don't turn the assistant on for untrusted use.**
+
 **What the guard is, and what it isn't.** The guard stops
 assistant-written code running by accident or through ordinary paths: an
 import, a load by path, a file read and run, a script handed to a process.
@@ -260,9 +262,13 @@ only refuse more: there, `HX.py` is still taken for `hx.py`.
    the server sends each task to the **fork server**: a parent process
    that imported PsyNeuLink and the guard once, has run no model code and
    reads nothing from the server but the word `FORK`. For each task it
-   forks a child, which reads its task, runs it, answers and exits; the
-   parent then ends the child's process group, so a process the model
-   started doesn't outlive the task. A fork takes milliseconds, so this is
+   forks a child on a pipe of its own, which reads its task, runs it,
+   answers with a token the server made for that task, and exits; the
+   parent copies the child's output to the server, then closes the pipe
+   and ends the child's process group. A process the model started inside
+   the group ends with it; one that left the group (`setsid`, a double
+   fork) outlives the task, though it can't answer for a later one. A fork
+   takes milliseconds, so this is
    as fast as the warm worker (faster, since a fresh child has nothing
    cached to purge). Where forking isn't usable (no `fork` in the os
    module, as on native Windows, which PsyNeuView doesn't support; or a
@@ -275,10 +281,12 @@ only refuse more: there, `HX.py` is still taken for `hx.py`.
    guard's tests under both), and the mode in use is logged. With nothing
    tracked the warm worker runs task after task as before. The server
    decides which from the state it reads itself.
-   While something is tracked, a model in the worker also may not write,
-   move or remove the review record (the state file, its `.bak` and
-   `.tmp`) or the guard's and the worker's own files: the next task, fresh
-   as it is, reads the record from disk. During a task the record is read
+   While something is tracked, the model's own Python code in the worker
+   also may not write, move or remove the review record (the state file,
+   its `.bak` and `.tmp`), the guard's and the worker's own files, or code
+   that later processes import (the app's `backend/app`, PsyNeuLink's, the
+   installed packages'). **A process the model starts isn't held to any of
+   this** (`cp`, `rm`, `ln -s`): see below. During a task the record is read
    again when it changes on disk, so a file the assistant writes while a
    model runs is checked like any other.
    **Tampering within a model's own task is not defended.**
@@ -383,6 +391,28 @@ only refuse more: there, `HX.py` is still taken for `hx.py`.
 
 Approving a model means trusting what it does; the review card says so.
 
+### What #311 must close
+
+The operating-system sandbox (#311) is what turns the guard into a
+boundary. It must close, at least:
+
+- **G1:** a model rewriting a module that later processes import
+  (`app/services/show_graph_guard.py`, any app, PsyNeuLink or installed
+  package module imported after the fork, a `.pth` file or `sitecustomize`
+  that pool workers would run). The guard refuses this from the model's
+  own Python code while something is tracked, but not from a process it
+  starts.
+- **G2:** a child process changing the review record (`cp` a forged one,
+  `rm` it and its `.bak`), so the next task runs an unapproved file.
+- **G3's survivors:** a process that leaves the process group (`setsid`,
+  a double fork) outlives its task and keeps the files and network the
+  user has.
+- **G5:** a symlink chain made by a child process (`ln -s`), then read.
+- **F5:** `os.open(name, dir_fd=d)` relative to another folder.
+- **`ctypes`** and C extensions reading files without audit events.
+- **Child Pythons** (`multiprocessing` included), which have no guard.
+- **The converter's in-process run**, which runs model code in the server.
+
 ### Every way code runs in the backend, and its guard
 
 Everything in `backend/app` that starts a process or loads or executes
@@ -424,11 +454,11 @@ reviewers, not boundaries.
   of what is tracked. Deleting or truncating it reads as nothing tracked
   (fail open); a file that can't be parsed fails closed instead (its
   `.bak` is read first). The agent's tools can't reach it (hidden folder,
-  app folder). Model code can: while something is tracked, a model in the
-  worker can't write, move or remove it (layer 2); outside the worker, or
-  with nothing tracked, any program the user runs can change it, as it can
-  change the app itself. That is outside what the guard is for (see the
-  start of this section).
+  app folder). Model code can: while something is tracked, the model's
+  own Python code in the worker can't write, move or remove it (layer 2),
+  but a process the model starts can (`cp` a forged record, `rm` it and
+  its backup), and so can any program outside the worker. Only the
+  operating-system sandbox (#311) closes that.
 
 ## 8. Open items after the parts were joined
 
