@@ -55,7 +55,12 @@ def _isolate_user_preferences(tmp_path, monkeypatch):
     """
     from app.services.app_config import CONFIG_ENV
 
-    monkeypatch.setenv(CONFIG_ENV, str(tmp_path / "user-prefs.json"))
+    # Beside the test's folder, not in it: the settings file is protected
+    # under the OS sandbox (#311), and on Linux a declared output folder
+    # holding a protected file takes no new files at its top.
+    prefs = Path(str(tmp_path.parent) + "-prefs") / tmp_path.name
+    prefs.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv(CONFIG_ENV, str(prefs / "user-prefs.json"))
     # And no PsyNeuLink update checks (#9). A test that starts the app with its
     # lifespan (TestClient) started the check scheduler, whose first check
     # finished a network round trip later, inside some other test, and wrote

@@ -310,6 +310,16 @@ def _secrets(home: str) -> list[str]:
     return [_real(p) for p in out]
 
 
+def _own_home() -> str:
+    """The user's home folder from the account, not ``$HOME`` (which a
+    test, or a launcher, may point elsewhere)."""
+    try:
+        import pwd
+        return pwd.getpwuid(os.getuid()).pw_dir
+    except (ImportError, KeyError, OSError):
+        return str(Path.home())
+
+
 def scratch_root() -> str:
     """This server's folder for task folders, made once, private to the user."""
     global _scratch_root
@@ -337,8 +347,10 @@ def policy(scratch: str | None = None) -> dict:
     """The policy for one task. ``key`` names everything but the scratch
     folder, so two tasks with the same key are sandboxed alike."""
     from app.services.assistant import review
-    home = _real(Path.home())
+    home = _real(_own_home())
     read_deny = _secrets(home) + unapproved_files()
+    if _real(Path.home()) != home:
+        read_deny += [os.path.join(_real(Path.home()), rel) for rel in HOME_SECRETS]
     if review.state_broken():
         # The record can't be read, so nobody knows what is approved: none of
         # the assistant's folders may be read (the import guard refuses
@@ -352,6 +364,9 @@ def policy(scratch: str | None = None) -> dict:
         "read_deny": sorted(set(read_deny)),
         "write_allow": sorted(set(write_allow)),
         "write_deny": _protected_from_writes(),
+        # Python, PsyNeuLink and the app stay readable wherever they are,
+        # another account's folder included.
+        "read_allow": _protected_from_writes(),
         "exec_allow": _programs(),
         "network": False,
     }

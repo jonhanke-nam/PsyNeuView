@@ -174,7 +174,8 @@ def test_key_never_in_responses_logs_settings_or_environment(client, tmp_path, f
     sid, events = run_turn(client, fake, [("hello", [("read_open_model", {})])])
     everything = json.dumps(events) + json.dumps(client.get("/api/assistant/settings").json())
     everything += json.dumps(client.get("/api/assistant/log").json())
-    everything += (tmp_path / "user-prefs.json").read_text()
+    from app.services.app_config import app_config_path
+    everything += app_config_path().read_text()
     assert SECRET not in everything
     assert SECRET not in json.dumps(dict(os.environ))
     assert SECRET not in repr(agents.AnthropicAgent(model="m", key=SECRET))

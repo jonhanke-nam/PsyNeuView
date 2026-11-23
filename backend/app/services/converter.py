@@ -247,7 +247,7 @@ except UnreviewedAssistantCode as e:
 except UnreviewedImport as e:
     out = {"unreviewed": e.path, "message": str(e), "state_unreadable": bool(e.state_unreadable)}
 except BaseException as e:
-    out = {"error": f"{type(e).__name__}: {e}"}
+    out = {"error": str(e), "type": type(e).__name__}
 print(%r + json.dumps(out), flush=True)
 """ % _SOURCE_MARKER
 
@@ -280,7 +280,11 @@ def _standard_source_in_sandbox(file_path: str) -> str:
         raise UnreviewedAssistantCode(out["unreviewed"], out.get("message"),
                                       reason=_review.REASON_UNREADABLE if out.get("state_unreadable") else None)
     if "error" in out:
-        raise RuntimeError(out["error"])
+        # The same kind of error as in-process, so callers and messages match.
+        kind = {"ValueError": ValueError, "SyntaxError": SyntaxError, "ImportError": ImportError,
+                "ModuleNotFoundError": ModuleNotFoundError, "NameError": NameError,
+                "PermissionError": PermissionError}.get(out.get("type"), RuntimeError)
+        raise kind(out["error"])
     return out["source"]
 
 

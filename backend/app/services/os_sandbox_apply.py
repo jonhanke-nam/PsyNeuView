@@ -112,6 +112,8 @@ def render_sbpl(policy: dict) -> str:
             f"(deny file-read* (regex {_sb_str('^' + _re_escape(root) + '/[^/]+/')}))",
             f"(allow file-read* (subpath {_sb_str(home)}) (subpath {_sb_str(root + '/Shared')}))",
         ]
+        if policy.get("read_allow"):
+            lines.append(f"(allow file-read* {_sb_filters(policy['read_allow'])})")
     # Their contents, not their metadata: stat still answers, so the import
     # guard (in Python, first) still sees that the file is there and gives
     # its "review this first" message; reading it is what the kernel refuses.

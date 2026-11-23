@@ -212,6 +212,10 @@ class JobManager:
 
     def _watch(self, job: Job, proc: subprocess.Popen, payload: str) -> None:
         job._proc = proc
+        # A cancel that came while the worker was being started (building the
+        # sandbox policy takes a moment, #311) found no process to end.
+        if job._cancel_requested:
+            proc.kill()
         job.status = "running"
         watchdog = threading.Timer(JOB_TIMEOUT, lambda: proc.poll() is None and proc.kill())
         watchdog.daemon = True
