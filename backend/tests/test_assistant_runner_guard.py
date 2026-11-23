@@ -1196,7 +1196,14 @@ def test_interpreter_program_text_naming_the_file_is_refused(st, how):
 # ── 16. the fork server: a clean parent, one child per task ──────────────
 
 
+def _isolation_mode() -> str:
+    from app.services import sandbox
+    return sandbox.isolation_mode()
+
+
 def test_tasks_run_in_children_of_one_clean_parent_while_something_is_tracked(st):
+    if _isolation_mode() != "fork":
+        pytest.skip("the fork server's test; the pool's is test_tasks_run_in_never_used_pool_workers")
     """While anything is tracked, each task runs in a new child of the fork
     server, whose parent stays the same and runs no model code."""
     from app.services import sandbox
@@ -1210,7 +1217,29 @@ def test_tasks_run_in_children_of_one_clean_parent_while_something_is_tracked(st
     assert int(rows[0][1]) == sandbox._get_fork_server()._proc.pid
 
 
+def test_tasks_run_in_never_used_pool_workers(st):
+    """The pool, where forking isn't usable: every task in a process that
+    was started ahead and had run nothing, and that ends after it."""
+    if _isolation_mode() != "pool":
+        pytest.skip("the pool's test")
+    out = st["tmp"] / "pool.txt"
+    model = _plain_model(st["tmp"] / "Pool", f"open({str(out)!r}, 'a').write(str(os.getpid()) + chr(10))\n")
+    for _ in range(3):
+        assert _runs_normally(load(model))
+    pids = [int(p) for p in out.read_text().split()]
+    assert len(set(pids)) == 3
+    for pid in pids:
+        try:
+            os.kill(pid, 0)
+            alive = True
+        except ProcessLookupError:
+            alive = False
+        assert not alive, "a pool worker was kept after its task"
+
+
 def test_a_child_that_kills_its_parent_doesnt_reach_the_next_task(st):
+    if _isolation_mode() != "fork":
+        pytest.skip("in the pool a task's parent is the server itself")
     """A model that ends the fork server's parent (or tampers with anything
     in its own process) leaves the next task to a freshly started parent:
     the next model's exec(open(...)) of an unapproved file is refused."""
