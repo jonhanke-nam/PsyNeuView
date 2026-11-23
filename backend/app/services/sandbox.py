@@ -241,6 +241,9 @@ class WarmWorker:
         """A step before the task is written; an error dict stops the task."""
         return None
 
+    def _is_result_marker(self, line: str) -> bool:
+        return line == RESULT_MARKER
+
     def _on_timeout(self) -> None:
         self._restart()
 
@@ -295,7 +298,7 @@ class WarmWorker:
                         return {"error": "Worker closed connection"}
 
                     line = line.rstrip("\n")
-                    if line == RESULT_MARKER:
+                    if self._is_result_marker(line):
                         result_line = self._proc.stdout.readline().rstrip("\n")
                         elapsed = time.time() - t0
                         logger.info(f"[perf] warm worker {task}: {elapsed:.2f}s")
@@ -326,9 +329,14 @@ class ForkServer(WarmWorker):
     new worker per task costs PsyNeuLink's import (seconds). Instead this
     parent imports PsyNeuLink and the guard once and runs no model code at
     all; it reads nothing from the server but the word ``FORK``. For each
-    task it forks a child, which tells us its pid, reads the task itself,
-    runs it, answers and exits. A fork takes milliseconds, and nothing a
-    child does reaches the parent or the next child.
+    task it forks a child on a pipe of its own, says the child's pid,
+    copies the child's output to us until the child exits, then closes the
+    pipe and ends the child's process group. The child reads its task,
+    runs it and answers with a token made for that task. A fork takes
+    milliseconds. Nothing a child does in memory reaches the parent or the
+    next child; a process it starts that leaves its process group
+    (``setsid``) can outlive the task, and files it writes stay written:
+    in-process protection covers memory only (#311 closes the rest).
     """
 
     MODE = "--fork-server"
@@ -339,7 +347,13 @@ class ForkServer(WarmWorker):
     def __init__(self):
         self._child_pid: int | None = None
         self._task_policy: dict | None = None
+        self._token = ""
         super().__init__()
+
+    def _is_result_marker(self, line: str) -> bool:
+        # Only the answer that carries this task's token: a line anything
+        # else wrote, with or without an old token, is not an answer.
+        return bool(self._token) and line == f"{RESULT_MARKER} {self._token}"
 
     def send_task(self, task: str, params: dict, timeout: int) -> dict:
         with self._lock:
@@ -363,8 +377,14 @@ class ForkServer(WarmWorker):
         return {"os_sandbox": p, "os_sandbox_key": p["key"]} if p else {}
 
     def _before_payload(self, deadline: float) -> dict | None:
-        """Ask for a child and wait for its pid; the payload goes to it."""
-        self._proc.stdin.write("FORK\n")
+        """Ask for a child and wait for its pid; the payload goes to it.
+
+        The pid comes from the parent, which runs no model code, before the
+        child has read its task; it is the one a timeout ends."""
+        import secrets
+        self._token = secrets.token_hex(16)
+        self._child_pid = None
+        self._proc.stdin.write(f"FORK {self._token}\n")
         self._proc.stdin.flush()
         sel = selectors.DefaultSelector()
         sel.register(self._proc.stdout, selectors.EVENT_READ)

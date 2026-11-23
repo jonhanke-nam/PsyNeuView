@@ -37,8 +37,9 @@ Three hooks, one check:
   shell pattern anchored in its folder. A path that leads nowhere or to
   another file is left alone. After a symlink is made in a task, every
   path is resolved. In the worker it acts on every thread, and also stops
-  a model writing, moving or removing the review record or the guard's own
-  files; in the server only on the thread of an in-process load and
+  the model's own Python code writing, moving or removing the review
+  record, the guard's own files or code later tasks import (not a process
+  the model starts); in the server only on the thread of an in-process load and
   threads started from it. It is added the first time something is
   tracked.
 
@@ -59,6 +60,8 @@ task (``sandbox.ForkServer``), or, where forking isn't usable, to a pool of
 workers each used once (``sandbox.WorkerPool``). Within one task, a model that tampers with
 this module can switch it off for the rest of that task; that is not
 defended. The per-task reset and the fingerprint below are cheap extras.
+
+In-process protection covers memory only. A model that writes files (directly or through a child process) can affect later tasks; only the OS sandbox (#311) closes this. Until #311, don't turn the assistant on for untrusted use.
 
 This guard stops assistant-written code running by accident or through
 ordinary paths. It is not a sandbox against model code that deliberately
@@ -85,6 +88,7 @@ import importlib.abc
 import importlib.machinery
 import json
 import os
+import re
 import sys
 import sysconfig
 import threading
@@ -673,6 +677,61 @@ def _vet_text(text: str | None, cwd: str | None = None) -> None:
         previous = token
 
 
+_SHELLS = frozenset({"sh", "bash", "zsh", "dash", "ksh"})
+
+
+def _check_by_name(name: str) -> None:
+    """Every tracked file with this folded file name, checked as itself."""
+    for key in _state.index.by_name.get(name, ()):
+        _check(key, key, imported=False)
+
+
+def _shell_texts(words: list[str]) -> list[str]:
+    """The command text a shell runs (``sh -c '...'``, past wrappers)."""
+    at = _interpreter_at(words)
+    if at is None or _program_name(words[at]) not in _SHELLS:
+        return []
+    rest = words[at + 1:]
+    for i, word in enumerate(rest):
+        if word.startswith("-") and not word.startswith("--") and "c" in word[1:] and i + 1 < len(rest):
+            return [rest[i + 1]]
+    return []
+
+
+def _vet_shell_text(text: str | None, cwd: str | None = None) -> None:
+    """Shell command text, read as the shell would: each word with its
+    quotes and escapes taken out (``hx''_q.py`` and ``hx\\_q.py`` are
+    ``hx_q.py``), then refused if its file name is a tracked, unapproved
+    file's (by name, since the shell may ``cd`` first), or if it is a shell
+    pattern anchored in a tracked file's folder, or one with a literal
+    start that matches a tracked file's name (``find -name 'hx_*'``). A
+    pattern that is only wildcards, or starts with one (``*``, ``*.py``),
+    is too broad to mean a file."""
+    if not text:
+        return
+    import fnmatch
+    import shlex
+    try:
+        words = shlex.split(text)
+    except ValueError:
+        words = text.split()
+    base = cwd or os.getcwd()
+    for word in words:
+        for part in re.split(r"[<>|;&()]+", word):
+            part = part.strip()
+            if not part:
+                continue
+            name = fold(os.path.basename(part.rstrip(os.sep)))
+            if any(c in part for c in _GLOB_CHARS):
+                _vet_glob(part, base)
+                if os.sep not in part and part[:1] not in _GLOB_CHARS:
+                    for tracked_name in list(_state.index.by_name):
+                        if fnmatch.fnmatchcase(tracked_name, name):
+                            _check_by_name(tracked_name)
+            elif name in _state.index.by_name:
+                _check_by_name(name)
+
+
 def _code_texts(words: list[str]) -> list[str]:
     """The program text a command runs, for a known interpreter (past
     wrappers such as ``env``): every argument after it, and the text after
@@ -700,6 +759,7 @@ def _vet_process(event: str, args: tuple) -> None:
     it, isn't started."""
     env = None
     texts: list[str] = []
+    shell_texts: list[str] = []
     if event == "subprocess.Popen":
         executable, argv, cwd = args[0], args[1], _as_text(args[2]) if len(args) > 2 else None
         env = args[3] if len(args) > 3 else None
@@ -707,11 +767,13 @@ def _vet_process(event: str, args: tuple) -> None:
         raw = [w for w in raw if w is not None]
         words = _process_words(argv) + ([_as_text(executable)] if _as_text(executable) else [])
         texts = _code_texts(raw)
+        shell_texts = _shell_texts(raw)
         if isinstance(argv, (str, bytes)):
             texts.append(_as_text(argv))
     elif event == "os.system":
         cwd, words = None, _process_words(args[0])
         texts = [_as_text(args[0])]
+        shell_texts = [_as_text(args[0])]
     elif event == "pty.spawn":
         cwd, words = None, _process_words(args[0])
         texts = _code_texts(words)
@@ -734,6 +796,8 @@ def _vet_process(event: str, args: tuple) -> None:
                 _vet_existing(part, cwd, by_name=False)
     for text in texts:
         _vet_text(text, cwd)
+    for text in shell_texts:
+        _vet_shell_text(text, cwd)
     if isinstance(env, dict):
         for value in env.values():
             _vet_text(_as_text(value), cwd)
@@ -761,6 +825,27 @@ def _protected_files() -> tuple[list[str], list[tuple[str, str]]]:
     compiled = [(os.path.join(os.path.dirname(src), "__pycache__"), os.path.splitext(os.path.basename(src))[0] + ".")
                 for src in sources]
     return paths, compiled
+
+
+def _code_roots() -> list[str]:
+    """Code that later processes import: the app's own (``backend/app``),
+    the active PsyNeuLink (its package folder and the checkout it may sit
+    in), and the installed packages. A model may not write there while
+    something is tracked. Partial: a process the model starts isn't held
+    to it (#311 closes that)."""
+    roots = [os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))]
+    for key in ("purelib", "platlib"):
+        try:
+            value = sysconfig.get_paths().get(key)
+        except (KeyError, OSError):
+            value = None
+        if value:
+            roots.append(os.path.realpath(value))
+    pnl = sys.modules.get("psyneulink")
+    if pnl is not None and getattr(pnl, "__file__", None):
+        roots.append(os.path.realpath(os.path.dirname(pnl.__file__)))
+    roots.extend(_state.extra_roots)
+    return [fold(r).rstrip(os.sep) for r in roots if r]
 
 
 def _guard_protected(path, event: str) -> None:
@@ -791,12 +876,17 @@ def _guard_protected(path, event: str) -> None:
             if fold(os.path.dirname(target)) == where and os.path.basename(target).startswith(fold(prefix)):
                 hit = True
                 break
+    if not hit:
+        for root in _code_roots():
+            if target == root or target.startswith(root + os.sep):
+                hit = True
+                break
     if hit:
         raise UnreviewedImport(
             text, message=(
-                f"The model tried to change {os.path.basename(text)}, which is the AI assistant's review record "
-                f"or part of the guard that keeps unreviewed code from running ({event}). That isn't allowed while "
-                f"assistant-written files are tracked."
+                f"The model tried to change {text} ({event}), which is the AI assistant's review record, part of "
+                f"the guard, or code that later tasks import (the app's, PsyNeuLink's or an installed package's). "
+                f"That isn't allowed while assistant-written files are tracked."
             ))
 
 
@@ -955,7 +1045,8 @@ _FINGERPRINTED = (
     "_vet_process", "_vet_text", "_vet_glob", "_vet_symlink", "_code_texts", "_process_words",
     "_on_this_thread",
     "refresh", "reset_for_task", "fingerprint", "_vet_existing", "_guard_protected", "_protected_files",
-    "_write_intent", "_read_intent", "_interpreter_at", "_program_name", "read_state", "_parse", "default_state_path", "fold", "_identity",
+    "_write_intent", "_read_intent", "_interpreter_at", "_program_name", "_code_roots", "_vet_shell_text",
+    "_shell_texts", "_check_by_name", "read_state", "_parse", "default_state_path", "fold", "_identity",
     "_merge_states", "is_library_path", "_add_audit_hook_if_needed", "_audit_event_names",
 )
 

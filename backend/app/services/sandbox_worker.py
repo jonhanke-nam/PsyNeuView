@@ -4581,12 +4581,17 @@ def _run_fork_server():
     """Fork-server mode (#187): a clean parent that runs no model code.
 
     The parent imports PsyNeuLink and the guard, signals ready, and then
-    reads only the word ``FORK`` from the server. For each, it forks a
-    child and waits for it. The child prints its pid, reads its task (the
-    parent never reads it), runs it, answers, and exits. The child runs in
-    its own process group, which the parent ends after the child exits, so
-    a process the model started doesn't outlive its task. A fork takes
-    milliseconds; nothing a child does reaches the parent or the next child.
+    reads only ``FORK <token>`` lines from the server. For each it makes a
+    new pipe, forks a child whose output goes only to that pipe, says the
+    child's pid itself, and copies the child's output to the server until
+    the child exits; then it closes the pipe and ends the child's process
+    group. The child reads its task (the parent never reads it), runs it,
+    and answers with the token, which the server checks. No child, nor any
+    process a child starts, ever holds the server's own output pipe, so
+    nothing it leaves running can write into a later task's answer. A
+    process the model started that left the process group (``setsid``, a
+    double fork) can outlive the task; containing that needs the operating
+    system's sandbox (#311).
     """
     import os
     import signal
@@ -4599,15 +4604,22 @@ def _run_fork_server():
         command = _read_line_unbuffered(stdin_fd)
         if command is None:
             os._exit(0)
-        if command.strip() != "FORK":
+        parts = command.split()
+        if not parts or parts[0] != "FORK":
             continue  # nothing but FORK is ever acted on here
+        token = parts[1] if len(parts) > 1 and parts[1].isalnum() else ""
+        read_end, write_end = os.pipe()
         pid = os.fork()
         if pid == 0:
-            _run_forked_child(stdin_fd)
+            os.close(read_end)
+            _run_forked_child(stdin_fd, write_end, token)
+        os.close(write_end)
         try:
-            _, status = os.waitpid(pid, 0)
-        except ChildProcessError:
-            status = -1
+            os.setpgid(pid, pid)
+        except OSError:
+            pass  # the child has done it already
+        print(f"###PSYNEUVIEW_CHILD### {pid}", flush=True)
+        status = _relay_child_output(pid, read_end)
         try:
             os.killpg(pid, signal.SIGKILL)
         except OSError:
@@ -4633,11 +4645,51 @@ def _apply_task_sandbox(payload: str) -> str:
     return payload
 
 
-def _run_forked_child(stdin_fd: int):
+def _relay_child_output(pid: int, read_end: int) -> int:
+    """Copy the child's output to the server, as it comes, until the child
+    has exited and its pipe is drained; then close the pipe, so whatever the
+    child left running can't write to the server through it. Returns the
+    child's exit status."""
+    import os
+    import select
+    import time as _time
+
+    status = None
+    stop_at = None
+    out = sys.stdout.fileno()
+    while True:
+        ready, _, _ = select.select([read_end], [], [], 0.1)
+        if ready:
+            data = os.read(read_end, 65536)
+            if not data:
+                break
+            view = memoryview(data)
+            while view:
+                view = view[os.write(out, view):]
+            continue
+        if status is None:
+            done, raw = os.waitpid(pid, os.WNOHANG)
+            if done:
+                status = raw
+                stop_at = _time.monotonic() + 0.2
+        elif _time.monotonic() > stop_at:
+            break
+    os.close(read_end)
+    if status is None:
+        try:
+            _, status = os.waitpid(pid, 0)
+        except ChildProcessError:
+            status = -1
+    return status
+
+
+def _run_forked_child(stdin_fd: int, write_end: int, token: str):
     import os
     try:
         os.setpgrp()
-        print(f"###PSYNEUVIEW_CHILD### {os.getpid()}", flush=True)
+        # This child's output is its own pipe, never the server's.
+        os.dup2(write_end, sys.stdout.fileno())
+        os.close(write_end)
         payload = _apply_task_sandbox(_read_line_unbuffered(stdin_fd) or "")
         # After the sandbox, so the watchdog's thread is inside it too.
         _install_orphan_watchdog(use_signal_timer=False)
@@ -4647,7 +4699,7 @@ def _run_forked_child(stdin_fd: int):
         os.dup2(devnull, stdin_fd)
         os.close(devnull)
         result_str = _handle_one_task(payload)
-        print(RESULT_MARKER, flush=True)
+        print(f"{RESULT_MARKER} {token}", flush=True)
         print(result_str, flush=True)
     except BaseException:
         pass
@@ -4702,6 +4754,10 @@ if __name__ == "__main__":
     # new process, renamed or linked (#187). Not when a test imports this file.
     _guard.install_audit_hook(everywhere=True)
     _GUARD_FINGERPRINT = _guard.fingerprint()
+    # The worker never writes compiled files: while something is tracked the
+    # guard refuses writes under the app's code and the installed packages,
+    # and a model mustn't be able to pass a forged one off as Python's own.
+    sys.dont_write_bytecode = True
     if fork_server:
         _run_fork_server()
     elif persistent:

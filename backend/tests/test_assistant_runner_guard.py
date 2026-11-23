@@ -1257,7 +1257,10 @@ def test_a_child_that_kills_its_parent_doesnt_reach_the_next_task(st):
     helper = st["models"] / "hx_parent.py"
     helper.write_text(_helper(marker2))
     review.mark_unreviewed(str(helper), helper.read_text())
-    first = _plain_model(st["tmp"] / "KillParent", "import __main__, signal\n__main__._guard._state.tracked = {}\nos.kill(os.getppid(), signal.SIGKILL)\n")
+    # Only the fork server's parent: if the server falls back to a one-shot
+    # worker for the retry, that worker's parent is this test process.
+    first = _plain_model(st["tmp"] / "KillParent", "import __main__, signal\n__main__._guard._state.tracked = {}\n"
+                         f"if os.getppid() != {os.getpid()}:\n    os.kill(os.getppid(), signal.SIGKILL)\n")
     load(first)
     second = _plain_model(st["tmp"] / "After", f"exec(open({str(helper)!r}).read())\n")
     assert unreviewed(load(second))
@@ -1433,3 +1436,83 @@ def test_a_helper_the_assistant_writes_while_a_model_loads_is_refused(tmp_path, 
         assert not marker2.exists()
     finally:
         files.set_folders_provider(files._folders_from_settings)
+
+
+# ── 18. the fourth round of review of PR #310 ───────────────────────────
+
+
+def test_a_leftover_process_cannot_forge_a_later_tasks_answer(st):
+    """G3: a process the model starts that leaves the process group
+    (``setsid``) outlives the task. In the fork server it never holds the
+    server's output pipe, and an answer must carry the task's token, so it
+    can't answer for a later task: the next model still gets its 409, and
+    the three tasks after that still get their own answers."""
+    marker2 = st["tmp"] / "forge_ran.txt"
+    helper = st["models"] / "hx_forge_out.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    alive = st["tmp"] / "gc_alive.txt"
+    fake = json.dumps({"compositions": [], "forged": True})
+    gc = ("import os, time, sys\nos.setsid()\ntime.sleep(2.5)\n"
+          f"open({str(alive)!r}, 'w').write('alive')\n"
+          "for fd in (1, 2):\n"
+          "    try:\n"
+          f"        os.write(fd, ('###PSYNEUVIEW_CHILD### 1\\n###PSYNEUVIEW_RESULT###\\n' + {fake!r} + '\\n').encode())\n"
+          "    except OSError:\n"
+          "        pass\n")
+    first = _plain_model(st["tmp"] / "G3a", f"import subprocess\nsubprocess.Popen([sys.executable, '-c', {gc!r}])\n")
+    assert _runs_normally(load(first))
+    second = _plain_model(st["tmp"] / "G3b", f"import time\ntime.sleep(4)\nexec(open({str(helper)!r}).read())\n")
+    r = load(second)
+    assert unreviewed(r), r.text[:300]
+    assert "forged" not in r.text
+    assert not marker2.exists()
+    for i in range(3):
+        model = _plain_model(st["tmp"] / f"G3c{i}", f"comp_name_{i} = 'c{i}'\n")
+        r = load(model)
+        assert _runs_normally(r), r.text[:300]
+        assert "forged" not in r.text
+
+
+SHELL_SPELLINGS = {
+    "quoted_split": lambda d, n: ["sh", "-c", f"cd {d} && cat {n[:3]}''{n[3:]}"],
+    "backslash_split": lambda d, n: ["sh", "-c", f"cd {d} && cat {n[:3]}\\{n[3:]}"],
+    "double_quoted": lambda d, n: ["bash", "-c", f'cd {d} && cat "{n}"'],
+    "redirect": lambda d, n: ["sh", "-c", f"cd {d} && cat <{n}"],
+    "find_name_glob": lambda d, n: ["sh", "-c", f"find {d} -name '{n[:6]}*' -exec cat {{}} \;"],
+    "shell_true": lambda d, n: f"cd {d} && cat {n[:3]}''{n[3:]}",
+}
+
+
+@pytest.mark.parametrize("how", list(SHELL_SPELLINGS))
+def test_shell_text_spellings_of_an_unreviewed_file_are_refused(st, how):
+    """G4: in shell command text, a name is read as the shell reads it,
+    quotes and escapes taken out, and a pattern with a literal start that
+    matches a tracked, unapproved file's name counts."""
+    marker2 = st["tmp"] / f"g4_ran_{how}.txt"
+    helper = st["models"] / f"hx_g4_{how}.py"
+    helper.write_text(_helper(marker2))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    argv = SHELL_SPELLINGS[how](str(helper.parent), helper.name)
+    shell = ", shell=True" if isinstance(argv, str) else ""
+    model = _plain_model(st["tmp"] / f"G4_{how}", f"import subprocess\nexec(subprocess.run({argv!r}{shell}, capture_output=True, text=True).stdout)\n")
+    assert unreviewed(load(model))
+    assert not marker2.exists()
+
+
+def test_a_model_cannot_write_code_that_later_tasks_import(st):
+    """G1, partly: while something is tracked, a model in the worker can't
+    write, move or remove the app's code, PsyNeuLink's or an installed
+    package's (a process it starts can; #311 closes that)."""
+    import psyneulink
+    target = APP_DIR / "services" / "show_graph_guard.py"
+    before = target.read_text()
+    pnl_file = Path(psyneulink.__file__)
+    for stmt in (f"open({str(target)!r}, 'a').write('# changed')\n",
+                 f"open({str(APP_DIR / 'services' / 'new_module.py')!r}, 'w').write('x = 1')\n",
+                 f"open({str(pnl_file.parent / 'zz_planted.py')!r}, 'w').write('x = 1')\n"):
+        r = load(_plain_model(st["tmp"] / f"G1_{abs(hash(stmt))}", stmt))
+        assert unreviewed(r), r.text[:300]
+    assert target.read_text() == before
+    assert not (APP_DIR / "services" / "new_module.py").exists()
+    assert not (pnl_file.parent / "zz_planted.py").exists()
