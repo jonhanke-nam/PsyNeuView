@@ -7,6 +7,37 @@ This script is invoked by sandbox.py and should not be imported directly.
 import json
 import sys
 import importlib.util
+
+
+def _load_os_sandbox():
+    """The operating-system sandbox (#311), loaded by path like the import
+    guard: ``app`` doesn't resolve in this script."""
+    import os
+    spec = importlib.util.spec_from_file_location(
+        "psyneuview_os_sandbox_apply", os.path.join(os.path.dirname(os.path.abspath(__file__)), "os_sandbox_apply.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_os_sandbox = _load_os_sandbox()
+if __name__ == "__main__":
+    # A worker started for one task (a pool worker, a Learn job, the cold
+    # fallback) with a sandbox policy applies it before anything else is
+    # imported and before any thread starts (Landlock binds the thread that
+    # applies it and the threads it starts). If it can't be applied, the
+    # task is refused, never run unsandboxed.
+    try:
+        if _os_sandbox.apply_from_env() is not None:
+            # Linux: every orphan of this task's processes, whatever session
+            # or environment it has, becomes this worker's child, and is
+            # ended when the task is (#311, V3).
+            _os_sandbox.become_subreaper()
+    except _os_sandbox.SandboxUnavailable as _e:
+        print("###PSYNEUVIEW_RESULT###", flush=True)
+        print(json.dumps({"error": f"The model sandbox couldn't be applied, so nothing was run: {_e}",
+                          "os_sandbox_refused": True}), flush=True)
+        sys.exit(0)
 import re
 import warnings
 
@@ -4598,7 +4629,27 @@ def _handle_one_task(payload_str: str) -> str:
     task = payload.get("task")
     params = payload.get("params", {})
 
+    # A task the server sent to be sandboxed (#311) runs only in a process
+    # that applied that very policy: a worker started under another, or
+    # none, refuses it rather than run it unsandboxed.
+    # A pool worker on macOS applies the task's own policy when the task
+    # comes (Seatbelt binds the whole process, threads and all), before
+    # anything of the model's is read (#311).
+    if payload.get("os_sandbox") and _os_sandbox.applied() is None and sys.platform == "darwin":
+        try:
+            _os_sandbox.apply(payload["os_sandbox"])
+        except _os_sandbox.SandboxUnavailable as e:
+            return json.dumps({"error": f"The model sandbox couldn't be applied, so nothing was run: {e}",
+                               "os_sandbox_refused": True})
+    required = payload.get("os_sandbox_key")
+    if required and (_os_sandbox.applied() or {}).get("key") != required:
+        return json.dumps({"error": "This task must run under the model sandbox, and this process isn't under "
+                                    "its policy; nothing was run.", "os_sandbox_refused": True})
+
     handler = TASKS.get(task)
+    if task == "__refused__":
+        return json.dumps({"error": "The model sandbox couldn't be applied, so nothing was run: "
+                                    f"{payload.get('os_sandbox_error')}", "os_sandbox_refused": True})
     if handler is None:
         result = {"error": f"Unknown task: {task}"}
     else:
@@ -4645,6 +4696,9 @@ def _handle_one_task(payload_str: str) -> str:
                 for w in caught
             ]
 
+    if isinstance(result, dict):
+        # The proof the server checks: the policy this process applied (#311).
+        result["os_sandbox_applied"] = (_os_sandbox.applied() or {}).get("key")
     return json.dumps(result, default=str)
 
 
@@ -4749,6 +4803,10 @@ def _run_persistent():
         result_str = _handle_one_task(line)
         print(RESULT_MARKER, flush=True)
         print(result_str, flush=True)
+        if _os_sandbox.applied() is not None:
+            # After answering, so the server never waits on a survivor
+            # (#311, V3): the task's orphans, adopted here, are ended.
+            _os_sandbox.end_own_children(time_limit=1.0)
         if _guard_was_replaced():
             # The next task starts in a fresh worker, with a guard nobody
             # has touched; the server restarts a worker that has exited.
@@ -4814,6 +4872,16 @@ def _run_fork_server():
     import signal
 
     import psyneulink as pnl  # noqa: F401  (the expensive part, once)
+    import shutil
+    import time as _time
+
+    # What a task left running is ended when it finishes (#311): on Linux
+    # this parent adopts its children's orphans, whatever session they
+    # moved to; on macOS they are found by being sandboxed and running one
+    # of the only programs a task may start.
+    _os_sandbox.become_subreaper()
+    programs = [os.path.realpath(sys.executable), sys.base_prefix]
+    programs += [shutil.which(n) for n in ("dot", "neato", "fdp", "sfdp", "circo", "twopi") if shutil.which(n)]
 
     control = _control_fd()
     if control is None:
@@ -4830,6 +4898,7 @@ def _run_fork_server():
             continue  # nothing but FORK is ever acted on here
         token = parts[1] if len(parts) > 1 and parts[1].isalnum() else ""
         read_end, write_end = os.pipe()
+        started = _time.time()
         pid = os.fork()
         if pid == 0:
             os.close(read_end)
@@ -4846,12 +4915,36 @@ def _run_fork_server():
             os.killpg(pid, signal.SIGKILL)
         except OSError:
             pass
+        try:
+            # Bounded, since the next task waits for this parent; what's still
+            # there after is ended by the server's own sweep.
+            _os_sandbox.end_own_children(time_limit=1.0)
+        except Exception:  # noqa: BLE001 - never stop serving tasks over it
+            pass
         _say(control, f"###PSYNEUVIEW_CHILD_DONE### {status}")
 
 
 #: How long the parent goes on copying a child's output after the child has
 #: exited (what it wrote just before), whatever else is still arriving.
 RELAY_GRACE = 0.2
+
+
+def _apply_task_sandbox(payload: str) -> str:
+    """Apply the sandbox policy the task carries (#311), before anything of
+    the model's is read. Each child applies its own, generated for its
+    task: the files nobody approved as they are now, and its own folder.
+    Returns the payload to run, or a refusal if the policy can't be applied."""
+    try:
+        policy = json.loads(payload).get("os_sandbox")
+    except (ValueError, AttributeError):
+        return payload
+    if not policy:
+        return payload
+    try:
+        _os_sandbox.apply(policy)
+    except _os_sandbox.SandboxUnavailable as e:
+        return json.dumps({"task": "__refused__", "os_sandbox_error": str(e)})
+    return payload
 
 
 def _relay_child_output(pid: int, read_end: int) -> int:
@@ -4900,8 +4993,9 @@ def _run_forked_child(stdin_fd: int, write_end: int, token: str):
         # This child's output is its own pipe, never the server's.
         os.dup2(write_end, sys.stdout.fileno())
         os.close(write_end)
+        payload = _apply_task_sandbox(_read_line_unbuffered(stdin_fd) or "")
+        # After the sandbox, so the watchdog's thread is inside it too.
         _install_orphan_watchdog(use_signal_timer=False)
-        payload = _read_line_unbuffered(stdin_fd) or ""
         # Nothing the model starts can read the next task from the parent's
         # input: the child's own input is closed before the task runs.
         devnull = os.open(os.devnull, os.O_RDONLY)
@@ -4942,7 +5036,10 @@ def _run_oneshot():
     payload = sys.stdin.read()
     result_str = _handle_one_task(payload)
     print(RESULT_MARKER)
-    print(result_str)
+    print(result_str, flush=True)
+    if _os_sandbox.applied() is not None:
+        # After answering (#311, V3): the task's orphans, adopted here, are ended.
+        _os_sandbox.end_own_children(time_limit=1.0)
 
 
 if __name__ == "__main__":

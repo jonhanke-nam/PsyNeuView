@@ -52,7 +52,8 @@ REASON = "assistant_code_unreviewed"
 #: The reason when the review state itself can't be read (every guard fails closed).
 REASON_UNREADABLE = "assistant_review_state_unreadable"
 
-_lock = threading.Lock()
+# Re-entrant: _load takes it too, and is called from inside it (#311).
+_lock = threading.RLock()
 _cache: dict | None = None
 _cache_key: tuple | None = None
 #: Set when the state file exists but can't be read, and nor can its backup.
@@ -154,16 +155,32 @@ def _load() -> dict:
     fails too the state is unknown (``state_broken()``), which every
     execution guard treats as "refuse"."""
     global _cache, _cache_key, _broken
+    with _lock:
+        return _load_locked()
+
+
+def _load_locked() -> dict:
+    global _cache, _cache_key, _broken
     p = state_path()
     try:
         st = p.stat()
-        key = (str(p), st.st_mtime_ns, st.st_size)
+        # The inode too: every save replaces the file, so a rewrite of the
+        # same size within a coarse timestamp still reads as changed (#311).
+        key = (str(p), st.st_mtime_ns, st.st_size, st.st_ino, st.st_ctime_ns)
     except OSError:
-        key = (str(p), None, None)
+        key = (str(p), None, None, None, None)
     if _cache is not None and key == _cache_key:
         return _cache
     files: dict = {}
     broken = False
+    if key[1] is None:
+        # No record. Its backup, or the marker the assistant leaves once it
+        # has written files, say one existed: read the backup, or fail closed
+        # (#311, T4, U5).
+        files, broken = import_guard.read_state(str(p))
+        if broken:
+            logger.error("assistant review state missing (%s) though the assistant has written files; refusing to "
+                         "run models until it is restored from its backup or reset", p)
     if key[1] is not None:
         # The same reader the sandbox worker uses, so both see one state.
         files, broken = import_guard.read_state(str(p))
@@ -173,6 +190,15 @@ def _load() -> dict:
             logger.warning("assistant review state unreadable; using its backup (%s)", backup_path())
     _cache, _cache_key, _broken = {"files": files}, key, broken
     return _cache
+
+
+def _kept_versions_exist() -> bool:
+    try:
+        from app.services.assistant import files as assistant_files
+        d = assistant_files.previous_versions_dir()
+        return d.is_dir() and any(d.iterdir())
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def state_broken() -> bool:
@@ -204,6 +230,21 @@ def _save(state: dict) -> None:
     _cache, _cache_key = None, None
 
 
+def written_marker_path() -> Path:
+    """Left beside the record the first time the assistant writes a file
+    (#311, U5): with it there, a record missing along with its backup
+    reads as unknown (every guard refuses), not as nothing tracked."""
+    p = state_path()
+    return p.with_name(p.name + ".written")
+
+
+def _note_written() -> None:
+    m = written_marker_path()
+    if not m.exists():
+        m.parent.mkdir(parents=True, exist_ok=True)
+        m.write_text("The AI assistant has written files; see assistant-review.json.\n", encoding="utf-8")
+
+
 def mark_unreviewed(path: str, text: str) -> tuple[str, dict | None]:
     """Record that the assistant wrote ``text`` to ``path``. Nothing at that
     path runs until ``mark_reviewed`` is called with the content as it then is.
@@ -217,6 +258,10 @@ def mark_unreviewed(path: str, text: str) -> tuple[str, dict | None]:
         previous = files.get(key)
         files[key] = {"approved": None, "written": content_hash(text), "written_norm": normalised_hash(text)}
         _save({"files": files})
+        try:
+            _note_written()
+        except OSError:
+            logger.warning("couldn't leave the marker that the assistant has written files beside %s", state_path())
         return key, previous
 
 

@@ -9,6 +9,7 @@ is a question about the file system, not about PsyNeuLink. Uses tmp_path only.
 from __future__ import annotations
 
 import pytest
+from pathlib import Path
 from fastapi.testclient import TestClient
 
 from app.api import ws
@@ -39,7 +40,9 @@ def marker_model(marker) -> str:
 
 @pytest.fixture
 def state(tmp_path, monkeypatch):
-    monkeypatch.setenv(review.STATE_ENV, str(tmp_path / "state" / "review.json"))
+    # Beside the test's folder: on Linux a folder holding a protected path
+    # (the review state) takes no new files at its top under the sandbox (#311).
+    monkeypatch.setenv(review.STATE_ENV, str(Path(str(tmp_path) + "-state") / "review.json"))
     model = tmp_path / "Models" / "assistant_wrote.py"
     model.parent.mkdir()
     marker = tmp_path / "ran.txt"

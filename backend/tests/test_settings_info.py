@@ -320,7 +320,10 @@ def test_settings_info_endpoint_shape():
         "deployment",
         # How current PsyNeuLink is, for Report a Problem (#1304).
         "updates",
+        # Whether model runs are sandboxed by the operating system (#311).
+        "os_sandbox",
     }
+    assert data["os_sandbox"]["state"] in ("on", "unavailable", "available", "off_unavailable")
 
     pnl = data["psyneulink"]
     assert set(pnl.keys()) == {"version", "source", "branch", "repo", "commit", "path"}

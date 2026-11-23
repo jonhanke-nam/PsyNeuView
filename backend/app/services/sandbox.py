@@ -20,6 +20,7 @@ import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
+from app.services import os_sandbox
 from app.services.assistant import review as assistant_review
 from app.services.assistant.review import require_runnable
 from typing import Callable, Optional
@@ -112,6 +113,9 @@ class WarmWorker:
         try:
             proc = subprocess.Popen(
                 [sys.executable, WORKER_PATH, self.MODE],
+                # A pool worker started under the sandbox applies its policy
+                # before anything else (#311).
+                env=getattr(self, "_launch_env", None),
                 # A pool worker leads its own process group, so what its model
                 # started ends with it (#187).
                 start_new_session=self.NEW_SESSION,
@@ -121,6 +125,9 @@ class WarmWorker:
                 text=True,
                 bufsize=1,  # line-buffered
             )
+            started_cb = getattr(self, "_on_popen", None)
+            if started_cb is not None:
+                started_cb(proc)
             # Drain stderr from the moment the worker starts (it writes [perf]
             # import lines to stderr during startup) so its pipe never fills.
             self._stderr_thread = threading.Thread(
@@ -222,7 +229,9 @@ class WarmWorker:
         can't be read), the task goes to the fork server instead, so it runs
         in a process no earlier model touched (#187). Decided here, from the
         state the server reads itself, never from anything in a worker."""
-        if assistant_review.worker_must_be_fresh():
+        # Under the operating-system sandbox too (#311): each task applies
+        # its own policy, which a process can do only once.
+        if assistant_review.worker_must_be_fresh() or os_sandbox.active():
             return _isolated_worker().send_task(task, params, timeout)
         with self._lock:
             if not self.is_alive():
@@ -236,14 +245,28 @@ class WarmWorker:
         return None
 
     def _is_result_marker(self, line: str) -> bool:
-        return line == RESULT_MARKER
+        # At the end of a line: what a leftover wrote without a newline may
+        # sit in front of it (#311, V1).
+        return line.endswith(RESULT_MARKER)
 
     def _on_timeout(self) -> None:
         self._restart()
 
+    def _sandbox_extras(self) -> dict:
+        """What the task carries for the operating-system sandbox (#311)."""
+        return {}
+
+    def _raw_lines(self) -> "_Lines":
+        """A raw line reader for the current process's output, kept with it."""
+        if getattr(self, "_raw", None) is None or self._raw_for is not self._proc:
+            self._raw = _Lines(self._proc.stdout.fileno())
+            self._raw_for = self._proc
+        return self._raw
+
     def _send(self, task: str, params: dict, timeout: int) -> dict:
         """Send one task to the current process. Caller holds `self._lock`."""
-        payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras()})
+        payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras(),
+                              **self._sandbox_extras()})
         t0 = time.time()
 
         try:
@@ -254,59 +277,63 @@ class WarmWorker:
             self._proc.stdin.write(payload + "\n")
             self._proc.stdin.flush()
 
-            # Poll stdout with a short inner timeout so the deadline check
-            # actually fires when the worker is stuck and producing no output.
-            # Plain readline() is blocking, so the previous loop never
-            # re-checked the deadline once the worker stopped writing.
-            sel = selectors.DefaultSelector()
-            sel.register(self._proc.stdout, selectors.EVENT_READ)
-
+            # Raw bytes from the fd, lines built here with caps, the deadline
+            # and the process checked on every pass: a leftover holding the
+            # pipe and writing without newlines can't hold this thread (and
+            # the pool's lock) in a readline (#311, V1).
+            lines = self._raw_lines()
             output_lines = []
+            kept = 0
             deadline = time.time() + timeout
-            try:
-                while True:
-                    remaining = deadline - time.time()
-                    if remaining <= 0:
-                        logger.warning(f"{self.NAME} timed out after {timeout}s")
-                        self._on_timeout()
-                        return {
-                            "error": f"Script execution timed out after {timeout} seconds. "
-                            f"This may indicate an infinite loop or a very long computation."
-                        }
-
+            while True:
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    logger.warning(f"{self.NAME} timed out after {timeout}s")
+                    self._on_timeout()
+                    return {
+                        "error": f"Script execution timed out after {timeout} seconds. "
+                        f"This may indicate an infinite loop or a very long computation."
+                    }
+                try:
+                    line = lines.next(min(deadline, time.time() + 0.5))
+                except EOFError:
+                    self._restart()
+                    return {"error": "Worker closed connection"}
+                if line is None:
                     if self._proc.poll() is not None:
                         self._restart()
                         return {"error": "Worker process died during execution"}
-
-                    if not sel.select(timeout=min(0.5, remaining)):
-                        continue
-
-                    line = self._proc.stdout.readline()
-                    if not line:
+                    continue
+                if self._is_result_marker(line):
+                    try:
+                        result_line = lines.next(deadline)
+                    except EOFError:
+                        result_line = None
+                    if result_line is None:
                         self._restart()
                         return {"error": "Worker closed connection"}
-
-                    line = line.rstrip("\n")
-                    if self._is_result_marker(line):
-                        result_line = self._proc.stdout.readline().rstrip("\n")
-                        elapsed = time.time() - t0
-                        logger.info(f"[perf] warm worker {task}: {elapsed:.2f}s")
-                        try:
-                            return json.loads(result_line)
-                        except json.JSONDecodeError as e:
-                            return {"error": f"Failed to parse worker output: {e}"}
-                    elif self.DONE_MARKER and line.startswith(self.DONE_MARKER):
-                        # The task's own process ended without an answer.
-                        return {"error": "Worker process died during execution"}
-                    else:
+                    elapsed = time.time() - t0
+                    logger.info(f"[perf] warm worker {task}: {elapsed:.2f}s")
+                    try:
+                        return json.loads(result_line)
+                    except json.JSONDecodeError as e:
+                        return {"error": f"Failed to parse worker output: {e}"}
+                elif self.DONE_MARKER and line.startswith(self.DONE_MARKER):
+                    # The task's own process ended without an answer.
+                    return {"error": "Worker process died during execution"}
+                else:
+                    kept += len(line)
+                    if kept < 16 * 1024 * 1024:  # bounded by size (#311, U4)
                         output_lines.append(line)
-            finally:
-                sel.close()
 
         except (BrokenPipeError, OSError) as e:
             logger.warning(f"Warm worker pipe error: {e}, restarting...")
             self._restart()
             return {"error": f"Worker communication error: {e}"}
+
+
+#: The longest line read from a worker; an answer is one line of JSON.
+_MAX_LINE = 64 * 1024 * 1024
 
 
 class _Lines:
@@ -322,6 +349,10 @@ class _Lines:
         import os
         import select
         while b"\n" not in self.buf:
+            if len(self.buf) > _MAX_LINE:
+                # A line longer than any answer: what a leftover writes.
+                # Dropped, so it can't grow without end (#311, V1).
+                self.buf = b""
             remaining = deadline - time.time()
             if remaining <= 0:
                 return None
@@ -372,6 +403,7 @@ class ForkServer(WarmWorker):
 
     def __init__(self):
         self._child_pid: int | None = None
+        self._task_policy: dict | None = None
         self._token = ""
         self._control: _Lines | None = None
         self._out: _Lines | None = None
@@ -387,6 +419,9 @@ class ForkServer(WarmWorker):
                 [sys.executable, WORKER_PATH, self.MODE, "--control-fd", str(control_w)],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 pass_fds=(control_w,), bufsize=0,
+                # Its own session: a task's processes can't join one of the
+                # user's process groups (#311, U1).
+                start_new_session=True,
             )
         except Exception as e:
             logger.error(f"Failed to start the fork server: {e}")
@@ -434,11 +469,23 @@ class ForkServer(WarmWorker):
             if not self.is_alive():
                 self.failures += 1
                 return {"error": f"{self.NAME} failed to start"}
+            # The child applies this task's own policy before reading the
+            # model (#311): the unapproved files as they are now, its own folder.
+            self._task_policy = os_sandbox.policy(model_path=params.get("file_path")) if os_sandbox.active() else None
             try:
-                result = self._send(task, params, timeout)
+                result = os_sandbox.check_applied(self._send(task, params, timeout), self._task_policy)
+                _note_model_folder(result, self._task_policy)
             finally:
                 self._child_pid = None
+                if self._task_policy:
+                    os_sandbox.discard_scratch(self._task_policy.get("scratch"))
+                    os_sandbox.sweep_survivors()
+                self._task_policy = None
             return result
+
+    def _sandbox_extras(self) -> dict:
+        p = self._task_policy
+        return {"os_sandbox": p, "os_sandbox_key": p["key"]} if p else {}
 
     def _write(self, text: str) -> None:
         self._proc.stdin.write(text.encode())
@@ -446,7 +493,8 @@ class ForkServer(WarmWorker):
 
     def _send(self, task: str, params: dict, timeout: int) -> dict:
         import secrets
-        payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras()})
+        payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras(),
+                              **self._sandbox_extras()})
         self._token = secrets.token_hex(16)
         self._child_pid = None
         deadline = time.time() + timeout
@@ -576,6 +624,13 @@ class _PoolMember(WarmWorker):
         self._lock = threading.Lock()
         self._on_ready = None
 
+    def _sandbox_extras(self) -> dict:
+        task_policy = getattr(self, "_task_policy", None)
+        if task_policy:
+            return {"os_sandbox": task_policy, "os_sandbox_key": task_policy["key"]}
+        p = getattr(self._proc, "_os_sandbox_policy", None)
+        return {"os_sandbox_key": p["key"]} if p else {}
+
     def _restart(self):
         self._kill(self._proc)
         self._proc = None
@@ -599,6 +654,8 @@ class WorkerPool:
         self.size = max(1, min(size, 8))
         self._ready: list[subprocess.Popen] = []
         self._starting = 0
+        #: Spares being started: (their process once it exists, when they began).
+        self._inflight: dict[int, list] = {}
         self._cond = threading.Condition()
         self._lock = threading.Lock()
         self._fill()
@@ -611,8 +668,16 @@ class WorkerPool:
             threading.Thread(target=self._start_one, daemon=True, name="worker-pool").start()
 
     def _start_one(self) -> None:
-        proc = _spawn_worker_process()
+        # Linux: a pool worker's policy is set when it starts, and doesn't open
+        # any model's folder, so a ready worker fits every task (a worker per
+        # model folder made the next task wait on a start, #311).
+        token = object()
+        entry = [None, time.time()]
         with self._cond:
+            self._inflight[id(token)] = entry
+        proc = _spawn_worker_process(None, on_popen=lambda p: entry.__setitem__(0, p))
+        with self._cond:
+            self._inflight.pop(id(token), None)
             self._starting -= 1
             if proc is not None:
                 self._ready.append(proc)
@@ -620,29 +685,58 @@ class WorkerPool:
 
     def _take(self) -> subprocess.Popen | None:
         deadline = time.time() + WORKER_READY_TIMEOUT
+        # A worker started under another sandbox policy (or none, or one when
+        # none is wanted) can't take this task: its policy was applied when
+        # it started (#311). It is ended unused.
+        model_path = getattr(self, "_model_path", None)
+        # macOS: workers start unsandboxed and take each task's own policy
+        # (so any ready worker will do); Linux: the policy is set at start.
+        want = os_sandbox.policy_key(None) if (os_sandbox.active() and not _POOL_PER_TASK) else None
         with self._cond:
             while True:
                 while self._ready:
                     proc = self._ready.pop(0)
-                    if proc.poll() is None:
+                    have = (getattr(proc, "_os_sandbox_policy", None) or {}).get("key")
+                    if proc.poll() is None and have == want and not _older_than_model_folder(proc, model_path):
                         return proc
-                if self._starting == 0 or time.time() > deadline:
+                    _PoolMember._kill(proc)
+                    _discard_launch_scratch(proc)
+                # A spare still starting that can't fit this task (Linux: it
+                # began before the model's folder last changed) isn't waited
+                # for: it is ended, so it doesn't take the CPU from the
+                # task's own worker, which starts at once (#311).
+                stale = [e for e in self._inflight.values() if _started_before_model_folder(e[1], model_path)]
+                for entry in stale:
+                    if entry[0] is not None:
+                        _PoolMember._kill(entry[0])
+                if self._starting == 0 or len(stale) >= self._starting or time.time() > deadline:
                     break
                 self._cond.wait(timeout=0.5)
-        return _spawn_worker_process()
+        return _spawn_worker_process(None)
 
     def send_task(self, task: str, params: dict, timeout: int) -> dict:
         with self._lock:
+            self._model_path = params.get("file_path")
             proc = self._take()
             self._fill()
             if proc is None:
                 return {"error": f"{self.NAME} failed to start a worker"}
             member = _PoolMember(proc)
+            task_policy = (os_sandbox.policy(model_path=params.get("file_path"))
+                           if _POOL_PER_TASK and os_sandbox.active() else None)
+            member._task_policy = task_policy
             try:
                 with member._lock:
-                    return member._send(task, params, timeout)
+                    return os_sandbox.check_applied(member._send(task, params, timeout),
+                                                    task_policy or getattr(proc, "_os_sandbox_policy", None))
             finally:
                 _PoolMember._kill(member._proc if member._proc is not None else proc)
+                if task_policy:
+                    os_sandbox.discard_scratch(task_policy.get("scratch"))
+                launched = getattr(proc, "_os_sandbox_policy", None)
+                _discard_launch_scratch(proc)  # no longer a running task's, before the sweep looks
+                if task_policy or launched:
+                    os_sandbox.sweep_survivors()
 
     def is_alive(self) -> bool:
         return True
@@ -656,12 +750,80 @@ class WorkerPool:
         self._fill()
 
 
-def _spawn_worker_process() -> subprocess.Popen | None:
-    """A persistent worker, ready, that has run no task."""
+def _spawn_worker_process(model_path: str | None = None, on_popen=None) -> subprocess.Popen | None:
+    """A persistent worker, ready, that has run no task. Under the sandbox
+    (#311) it is started with the policy as it is now, and applies it
+    before importing anything."""
     member = _PoolMember.__new__(_PoolMember)
     member._on_ready = None
     member._stderr_thread = None
-    return WarmWorker._spawn(member)
+    # Its policy is set when it starts, so it is made for the model the pool
+    # last ran: the same model again (the live preview) finds one ready.
+    policy = os_sandbox.policy(model_path=model_path) if (os_sandbox.active() and not _POOL_PER_TASK) else None
+    member._launch_env = os_sandbox.launch_env(policy) if policy else None
+    member._on_popen = on_popen
+    started = time.time()
+    proc = WarmWorker._spawn(member)
+    if proc is not None:
+        proc._os_sandbox_policy = policy
+        proc._os_sandbox_started = started
+    elif policy:
+        os_sandbox.discard_scratch(policy["scratch"])
+    return proc
+
+
+def _note_model_folder(result, policy: dict | None) -> None:
+    """Say so when the model's own folder couldn't be opened for writing
+    (#311): it is, holds or sits in a protected place."""
+    note = (policy or {}).get("model_dir_note")
+    if not note or not isinstance(result, dict):
+        return
+    message = f"Sandbox: {note}; the model can write only in its task folder and the declared output folders."
+    result["os_sandbox_notice"] = message
+    model = result.get("model") if isinstance(result.get("model"), dict) else result
+    notices = model.get("notices")
+    if isinstance(notices, list):
+        notices.append(message)
+    else:
+        model["notices"] = [message]
+    logger.info(message)
+
+
+#: macOS pool workers apply each task's policy when it comes (#311).
+_POOL_PER_TASK = sys.platform == "darwin"
+
+
+def _started_before_model_folder(started: float, model_path: str | None) -> bool:
+    if not sys.platform.startswith("linux") or not model_path or not os_sandbox.active():
+        return False
+    folder = os.path.dirname(os.path.abspath(model_path))
+    try:
+        newest = max([os.stat(folder).st_mtime] + [e.stat().st_mtime for e in os.scandir(folder)])
+    except OSError:
+        return True
+    return newest >= started
+
+
+def _older_than_model_folder(proc, model_path: str | None) -> bool:
+    """Linux: Landlock's rules are fixed when a worker starts, and a file
+    made since in a folder that holds a protected file isn't covered, so a
+    pool worker started before the model's folder last changed can't be
+    trusted to read it (#311). macOS rules follow paths."""
+    if not sys.platform.startswith("linux") or not model_path or not getattr(proc, "_os_sandbox_policy", None):
+        return False
+    started = getattr(proc, "_os_sandbox_started", 0.0)
+    folder = os.path.dirname(os.path.abspath(model_path))
+    try:
+        newest = max([os.stat(folder).st_mtime] + [e.stat().st_mtime for e in os.scandir(folder)])
+    except OSError:
+        return True
+    return newest >= started
+
+
+def _discard_launch_scratch(proc: subprocess.Popen | None) -> None:
+    policy = getattr(proc, "_os_sandbox_policy", None)
+    if policy:
+        os_sandbox.discard_scratch(policy.get("scratch"))
 
 
 def fork_is_usable() -> bool:
@@ -833,6 +995,12 @@ def run_in_sandbox(task: str, params: dict, timeout: int | None = None) -> dict:
     # Every task that executes a model file names it here. Assistant-written
     # content runs only once reviewed (#179); a user's own file costs one lookup.
     require_runnable(params.get("file_path"))
+    refused = os_sandbox.refusal()
+    if refused:
+        raise os_sandbox.SandboxRefused(refused)
+    # Nothing an earlier task left running may see this one (#311, T3).
+    if os_sandbox.active():
+        os_sandbox.sweep_survivors()
 
     if timeout is None:
         # introspect with developer_mode=True actually runs the script's
@@ -872,18 +1040,25 @@ def _raise_if_unreviewed_import(result: dict) -> None:
 
 def _run_cold(task: str, params: dict, timeout: int) -> dict:
     """Cold-start fallback: spawn a fresh subprocess (slow but reliable)."""
-    payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras()})
+    # Under the sandbox (#311) the one-shot worker applies the policy first thing.
+    policy = os_sandbox.policy(model_path=params.get("file_path")) if os_sandbox.active() else None
+    extras = {"os_sandbox_key": policy["key"]} if policy else {}
+    payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras(), **extras})
     t0 = time.time()
 
     try:
-        result = subprocess.run(
-            [sys.executable, WORKER_PATH],
-            input=payload,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            cwd=str(Path(params.get("file_path", ".")).parent),
-        )
+        try:
+            # Output read with a cap, and not past the worker's own exit (#311, U4).
+            from app.services import bounded_run
+            result = bounded_run.run([sys.executable, WORKER_PATH], input=payload, timeout=timeout,
+                                     cwd=str(Path(params.get("file_path", ".")).parent),
+                                     env=os_sandbox.launch_env(policy) if policy else None)
+            if result.timed_out:
+                raise subprocess.TimeoutExpired([WORKER_PATH], timeout)
+        finally:
+            if policy:
+                os_sandbox.discard_scratch(policy["scratch"])
+                os_sandbox.sweep_survivors()
         elapsed = time.time() - t0
         logger.info(f"[perf] cold sandbox {task}: {elapsed:.2f}s")
 
@@ -918,7 +1093,7 @@ def _run_cold(task: str, params: dict, timeout: int) -> dict:
         else:
             json_str = stdout
 
-        return json.loads(json_str)
+        return os_sandbox.check_applied(json.loads(json_str), policy)
 
     except subprocess.TimeoutExpired:
         return {

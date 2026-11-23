@@ -159,7 +159,30 @@ def read_state(path: str) -> tuple[dict, bool]:
     be parsed is read from its ``.bak``; if that fails too, ``broken`` is
     True and the caller fails closed."""
     if not os.path.exists(path):
+        # Gone, but its backup is there: the record was deleted (by hand, a
+        # cleaner, a test session's tidy-up), not never written. The backup
+        # is the last good record; nothing tracked is assumed only when
+        # neither exists (#311, T4).
+        if os.path.exists(path + ".bak"):
+            files = _parse(path + ".bak")
+            return (files, False) if files is not None else ({}, True)
+        # The assistant has written files (it leaves this beside the record
+        # when it first does): a record gone with its backup is unknown,
+        # not empty (#311, U5).
+        if os.path.exists(path + ".written"):
+            return {}, True
         return {}, False
+    # There but not readable: under the OS sandbox on Linux, a record the
+    # app replaced during the task (a new file the task's rules don't
+    # cover). Its backup is the record as it was, so it isn't used:
+    # unknown, and every guard refuses (#311).
+    try:
+        with open(path, "rb"):
+            pass
+    except PermissionError:
+        return {}, True
+    except OSError:
+        pass
     files = _parse(path)
     if files is not None:
         return files, False
@@ -873,7 +896,12 @@ def _guard_protected(path, event: str) -> None:
         except (OSError, ValueError):
             continue
         # The file itself, or a folder that holds it (removing or moving it).
-        if target == spelled or spelled.startswith(target.rstrip(os.sep) + os.sep):
+        # Writing names a folder too, without changing what is in it:
+        # ``tempfile.NamedTemporaryFile`` opens through the temp folder's own
+        # name (its opener makes the file), so a folder counts only when it
+        # is removed or moved (#311).
+        holds = event != "writing it" and spelled.startswith(target.rstrip(os.sep) + os.sep)
+        if target == spelled or holds:
             hit = True
             break
     if not hit:

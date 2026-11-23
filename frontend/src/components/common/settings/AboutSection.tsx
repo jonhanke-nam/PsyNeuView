@@ -70,6 +70,7 @@ export function AboutSection({ info, loadError }: { info: SettingsInfo | null; l
           <Row label="PsyNeuLink" value={formatPsyNeuLinkLine(info.psyneulink)} />
           <Row label="ModECI MDF" value={info.modeci_mdf.version ?? "not installed"} />
           <Row label="GitHub sign-in" value={formatGithubAuth(info.github_auth)} />
+          {info.os_sandbox && <Row label="Model sandbox" value={formatOsSandbox(info.os_sandbox)} />}
         </div>
       )}
       <div style={{ marginTop: 10, fontSize: "var(--pnv-fs-12)" }}>
@@ -334,4 +335,21 @@ function formatGithubAuth(auth: GithubAuthInfo): string {
         : `via ${auth.source}`;
   const scopeNote = auth.has_repo_scope ? "repo scope" : "no repo scope";
   return `${auth.user} ${sourceLabel} (${scopeNote})`;
+}
+
+/** Whether model runs are sandboxed (#311), in one line: never silently unsandboxed. */
+export function formatOsSandbox(s: NonNullable<SettingsInfo["os_sandbox"]>): string {
+  const by = s.mechanism ? ` (${s.mechanism})` : "";
+  switch (s.state) {
+    case "on":
+      return `On${by}`;
+    case "unavailable":
+      return `NOT sandboxed: ${s.reason ?? "no sandbox can be applied here"}`;
+    case "available":
+      return `Available${by}, not in use: ${s.why ?? ""}`.trim();
+    case "off_unavailable":
+      return `Not available here: ${s.reason ?? "unknown"}`;
+    default:
+      return "Unknown";
+  }
 }

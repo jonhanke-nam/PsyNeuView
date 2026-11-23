@@ -179,6 +179,22 @@ jobs:
           PSYNEUVIEW_WORKER_ISOLATION: pool
         run: .venv/bin/python -m pytest tests/test_assistant_runner_guard.py -q -ra -n auto
 
+      # The operating-system sandbox for model runs (#311): Landlock and
+      # seccomp on Linux. It must be available on ubuntu-latest, so its tests
+      # can't pass by skipping; then the guard's and the sandbox's tests run
+      # with every model run sandboxed, under both isolation modes.
+      - name: The model sandbox can be applied here
+        working-directory: backend
+        run: .venv/bin/python -c "from app.services import os_sandbox as o; c = o.capability(); print(c); assert c.get('ok'), c"
+
+      - name: Run the runner guard and the sandbox's attacks with every run sandboxed
+        working-directory: backend
+        env:
+          PSYNEUVIEW_OS_SANDBOX: "on"
+        run: |
+          .venv/bin/python -m pytest tests/test_assistant_runner_guard.py tests/test_os_sandbox.py tests/test_os_sandbox_routes.py -q -ra -n auto
+          PSYNEUVIEW_WORKER_ISOLATION=pool .venv/bin/python -m pytest tests/test_os_sandbox_routes.py -q -ra -n auto
+
   # 3.14 run (#979). Kept as its own job rather than a matrix on backend-tests:
   # a matrix would rename that check to "backend pytest (3.13)" and the
   # required-check config on devel would stop seeing it, blocking every PR.

@@ -58,9 +58,22 @@ async def put_settings(body: dict = Body(...)):
         new = assistant_settings.update_settings(body, confirm_raise=confirm)
     except assistant_settings.RaiseNeedsConfirmation as e:
         raise HTTPException(status_code=409, detail={"reason": "confirm_raise", "raised": e.raised, "message": str(e)})
+    except assistant_settings.SandboxRequired as e:
+        raise HTTPException(status_code=400, detail={"reason": "sandbox_required", "message": str(e)})
     except assistant_settings.SettingsError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {**new, "available": True}
+
+
+@router.get("/sandbox")
+async def get_sandbox():
+    """Whether model runs are sandboxed by the operating system (#311), for
+    Settings ▸ AI assistant: ``state`` is ``on``, ``unavailable`` (wanted
+    but can't be applied, so runs are NOT sandboxed), ``available`` or
+    ``off_unavailable``; ``reason`` says why one can't be applied."""
+    from app.services import os_sandbox
+
+    return os_sandbox.status()
 
 
 @router.get("/key")

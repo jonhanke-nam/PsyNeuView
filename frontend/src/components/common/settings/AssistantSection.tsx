@@ -15,7 +15,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 import { useAssistantStore } from "@/stores/assistantStore";
-import type { AssistantSettings, Autonomy, AgentType, FolderAccess, Saving } from "@/stores/assistantTypes";
+import type { AssistantSettings, Autonomy, AgentType, FolderAccess, SandboxStatus, Saving } from "@/stores/assistantTypes";
 import { VISIBILITY_WORDS, whereDataGoes } from "@/utils/assistantProposals";
 import { Button } from "../Button";
 import { Group, SettingLabel, errorStyle, inputStyle, mutedStyle, selectStyle } from "./shared";
@@ -44,6 +44,7 @@ export function AssistantSection() {
   const loadError = useAssistantStore((s) => s.loadError);
   const pendingRaise = useAssistantStore((s) => s.pendingRaise);
   const explanation = useAssistantStore((s) => s.explanation);
+  const sandbox = useAssistantStore((s) => s.sandbox);
 
   const change = (patch: Partial<AssistantSettings>) => void save({ ...settings, ...patch });
   const visibility = (key: keyof AssistantSettings["visibility"], value: boolean) =>
@@ -68,6 +69,12 @@ export function AssistantSection() {
           own access can't be limited by PsyNeuView: what it does with what it receives is between you and that
           service.
         </Check>
+        {settings.enabled && sandbox?.state === "unavailable" && (
+          <div data-testid="assistant-sandbox-warning" style={{ ...warningBoxStyle, marginTop: 10 }}>
+            Model runs are not sandboxed on this system, so code in a model can get round the rule that nothing the
+            assistant writes runs before you approve it. {sandbox.reason}
+          </div>
+        )}
       </Group>
 
       <Group id="assistant-agent" title="Agent">
@@ -169,6 +176,23 @@ export function AssistantSection() {
         <Check input={<input data-testid="setting-assistant-visibility-files" type="checkbox" checked={settings.visibility.files} disabled={saving} onChange={(e) => visibility("files", e.target.checked)} style={{ marginTop: 3 }} />} title="Model files in the allowed folders (list and read, never run)" />
       </Group>
 
+      <Group id="assistant-sandbox" title="Sandbox for model runs">
+        <SandboxState status={sandbox} />
+        <Check
+          input={<input data-testid="setting-assistant-sandbox-all-runs" type="checkbox" checked={settings.sandbox.all_runs} disabled={saving} onChange={(e) => change({ sandbox: { ...settings.sandbox, all_runs: e.target.checked } })} style={{ marginTop: 3 }} />}
+          title="Sandbox every model run while the assistant is on"
+        >
+          Opening any model runs its code, so every run is sandboxed, not only while files the assistant wrote are
+          waiting for review (those always are). The sandbox costs no noticeable time.
+        </Check>
+        <Check
+          input={<input data-testid="setting-assistant-sandbox-require" type="checkbox" checked={settings.sandbox.require} disabled={saving} onChange={(e) => change({ sandbox: { ...settings.sandbox, require: e.target.checked } })} style={{ marginTop: 3 }} />}
+          title="Require the sandbox"
+        >
+          The assistant doesn't turn on where model runs can't be sandboxed.
+        </Check>
+      </Group>
+
       <Group
         id="assistant-limits"
         title="Limits and log"
@@ -228,6 +252,46 @@ export function AssistantSection() {
           </Check>
         </div>
       </Group>
+    </div>
+  );
+}
+
+const warningBoxStyle = {
+  border: "1px solid var(--pnv-warning)",
+  background: "var(--pnv-warning-tint)",
+  borderRadius: 6,
+  padding: "8px 10px",
+  maxWidth: 560,
+} as const;
+
+const MECHANISM_WORDS: Record<string, string> = {
+  seatbelt: "the macOS sandbox (Seatbelt)",
+};
+
+function mechanismWords(mechanism: string | null): string {
+  if (!mechanism) return "the operating system";
+  if (MECHANISM_WORDS[mechanism]) return MECHANISM_WORDS[mechanism];
+  if (mechanism.startsWith("landlock")) return "Linux's Landlock and seccomp";
+  return mechanism;
+}
+
+/**
+ * Whether model runs are sandboxed now (#311): never silently unsandboxed.
+ * "unavailable" is the case that matters, so it is the one shown as a warning.
+ */
+function SandboxState({ status }: { status: SandboxStatus | null }) {
+  if (!status) return null;
+  const by = mechanismWords(status.mechanism);
+  let text: string;
+  if (status.state === "on") text = `Model runs are sandboxed by ${by}: no network, no reading files the assistant wrote before you approve them, no writing outside the task's folder and the assistant's read-write folders.`;
+  else if (status.state === "unavailable") text = `Model runs are NOT sandboxed: ${status.reason ?? "no sandbox can be applied here"}.`;
+  else if (status.state === "available") text = `Available here (${by}). Not in use now: ${status.why}.`;
+  else text = `This system can't sandbox model runs: ${status.reason ?? "no sandbox is available"}.`;
+  const warn = status.state === "unavailable" || status.state === "off_unavailable";
+  return (
+    <div data-testid="assistant-sandbox-status" data-state={status.state} style={warn ? warningBoxStyle : { ...mutedStyle, maxWidth: 560 }}>
+      {text}
+      {status.forced && <div style={{ marginTop: 4 }}>Set by PSYNEUVIEW_OS_SANDBOX={status.forced} when PsyNeuView started.</div>}
     </div>
   );
 }

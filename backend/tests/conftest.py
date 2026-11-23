@@ -1,6 +1,7 @@
 """Shared test utilities."""
 
 import os
+from pathlib import Path
 import re
 
 import pytest
@@ -54,7 +55,12 @@ def _isolate_user_preferences(tmp_path, monkeypatch):
     """
     from app.services.app_config import CONFIG_ENV
 
-    monkeypatch.setenv(CONFIG_ENV, str(tmp_path / "user-prefs.json"))
+    # Beside the test's folder, not in it: the settings file is protected
+    # under the OS sandbox (#311), and on Linux a declared output folder
+    # holding a protected file takes no new files at its top.
+    prefs = _beside(tmp_path, "prefs")
+    prefs.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv(CONFIG_ENV, str(prefs / "user-prefs.json"))
     # And no PsyNeuLink update checks (#9). A test that starts the app with its
     # lifespan (TestClient) started the check scheduler, whose first check
     # finished a network round trip later, inside some other test, and wrote
@@ -101,14 +107,39 @@ def _guard_real_preferences_file(request):
     )
 
 
+def _beside(tmp_path, kind: str) -> Path:
+    """A folder for this test beside its tmp_path, inside the session's
+    temporary root (``<basetemp>/<kind>/<test>``). Not a sibling of the root
+    itself: another pytest session started by the same user removes
+    ``pytest-*`` folders it doesn't recognise, which took the review record
+    away mid-test (#311, T4)."""
+    return tmp_path.parent / f"zz-{kind}" / tmp_path.name
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _sandboxed_models_may_write_in_test_folders(tmp_path_factory):
+    """Under the operating-system sandbox (#311) a model may write only in
+    its task folder and the declared output folders. Tests' models write
+    markers in their temporary folders, so those are declared; the review
+    state inside them stays unwritable (it is protected by name)."""
+    from app.services import os_sandbox
+
+    os.environ[os_sandbox.WRITE_FOLDERS_ENV] = str(tmp_path_factory.getbasetemp().resolve())
+
+
 @pytest.fixture(autouse=True)
 def _isolate_assistant_state(tmp_path, monkeypatch):
     """The AI assistant's state (#179) lives under ``~/.psyneuview`` by default:
     the review state, previous versions of files it wrote, and its log. Every
     test gets its own, so no test writes there."""
-    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_REVIEW_FILE", str(tmp_path / "assistant-state" / "review.json"))
-    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_STATE_DIR", str(tmp_path / "assistant-state"))
-    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_LOG", str(tmp_path / "assistant-state" / "log.jsonl"))
+    # Beside the test's folder, not in it: under the OS sandbox (#311) the
+    # test folders are declared output folders, and on Linux a folder that
+    # holds a protected path (the review state) can't have new files made
+    # directly in it, which is where tests' models write their markers.
+    state = _beside(tmp_path, "assistant-state")
+    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_REVIEW_FILE", str(state / "review.json"))
+    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_STATE_DIR", str(state))
+    monkeypatch.setenv("PSYNEUVIEW_ASSISTANT_LOG", str(state / "log.jsonl"))
 
 
 @pytest.fixture(autouse=True)

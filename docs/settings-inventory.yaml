@@ -878,6 +878,27 @@ settings:
     notes: >-
       Local only (GET /api/assistant/log). Prompts, replies and source stay out of problem reports.
 
+  - id: assistant-sandbox-all-runs
+    label: AI assistant ▸ Sandbox for model runs ▸ Sandbox every model run while the assistant is on
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/os-sandbox.md); never this browser
+    control: setting-assistant-sandbox-all-runs
+    notes: >-
+      Default on (#311). Off: runs are sandboxed only while files the assistant wrote are tracked. Turning it
+      off asks for confirmation. The state (on, unavailable and why) is shown above it from GET
+      /api/assistant/sandbox; PSYNEUVIEW_OS_SANDBOX=on|off overrides it.
+
+  - id: assistant-sandbox-require
+    label: AI assistant ▸ Sandbox for model runs ▸ Require the sandbox
+    home: settings
+    section: assistant
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/os-sandbox.md); never this browser
+    control: setting-assistant-sandbox-require
+    notes: >-
+      Default on (#311): the assistant refuses to turn on where no sandbox can be applied (native Windows, a
+      Linux kernel without Landlock). Turning it off asks for confirmation.
+
 # Remembered choices whose one control lives outside Settings. Settings has no
 # control for these (a second control would break "one control per setting");
 # they are listed here so the inventory says where each one lives. The check in

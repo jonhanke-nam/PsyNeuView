@@ -150,7 +150,7 @@ def test_a_normal_learn_job_for_the_users_own_file_works_as_before(st):
     r = client.post("/api/jobs", json=_job_body(model))
     assert r.status_code == 200, r.text
     snap = _wait_job(r.json()["job"]["id"] if "job" in r.json() else r.json()["id"])
-    assert snap["status"] == "done", snap
+    assert snap["status"] == "done", snap.get("error")
     assert marker.exists()
 
 
@@ -195,7 +195,7 @@ def test_every_spawn_and_exec_site_is_listed():
         "services/assistant/keys.py": (3, 0),    # the Keychain's `security` tool
         "services/checkout_updates.py": (1, 0),  # git
         "services/clone_manager.py": (3, 0),     # git
-        "services/converter.py": (0, 2),         # in-process load (spec + exec_module): require_runnable + guard_imports()
+        "services/converter.py": (0, 2),         # in-process load (spec + exec_module): require_runnable + guard_imports(); under the OS sandbox, the same in a sandboxed process (#311)
         "services/executor.py": (0, 8),          # in-process run, learn, input nodes (spec + exec_module each): require_runnable + guard_imports(); one keyword compile + eval of a parameter
         "services/file_writer.py": (0, 1),       # compile of a parameter value in "eval" mode to check its syntax; never run
         "services/github_auth.py": (1, 0),       # git credential helper
@@ -203,10 +203,12 @@ def test_every_spawn_and_exec_site_is_listed():
         "services/introspector.py": (0, 4),      # in-process load (spec + exec_module): require_runnable + guard_imports(); one keyword compile + eval of a parameter
         "services/jobs.py": (2, 0),              # the job worker: create_job → require_runnable; payload carries the state
         "services/locations.py": (1, 1),         # git; a dynamic import of an app module
+        "services/bounded_run.py": (2, 0),       # a worker's process, its output read with a cap (#311, U4)
+        "services/os_sandbox.py": (1, 0),        # the sandbox's probe: os_sandbox_apply.py --probe, no model code (#311)
         "services/quick_check.py": (0, 2),       # not a load: the "exec(" and "eval(" it looks for in the text (#256), and a compile that is never run
         "services/running_from.py": (1, 0),      # which process runs the app
         "services/sandbox.py": (6, 0),           # warm worker + cold fallback + the fork server (#187): run_in_sandbox → require_runnable; payload carries the state
-        "services/sandbox_worker.py": (1, 12),   # the fork server's fork of a clean child per task (#187); the guard's own load (spec + exec_module); load_module (spec + exec_module) and load_module_resilient (spec, compile + exec): check_model_path + hooks; introspect's syntax compile; two keyword compile + eval
+        "services/sandbox_worker.py": (1, 14),   # the fork server's fork of a clean child per task (#187); the guard's own load (spec + exec_module); the OS sandbox's own load (spec + exec_module, #311); load_module (spec + exec_module) and load_module_resilient (spec, compile + exec): check_model_path + hooks; introspect's syntax compile; two keyword compile + eval
         "services/settings_info.py": (2, 0),     # git
         "services/working_copies.py": (2, 0),    # which files are open
     }
@@ -404,7 +406,9 @@ def test_a_source_checkout_is_not_purged_or_re_imported(st):
     (Each task now runs in a fresh process while something is tracked, so
     the count is checked within one task, where the worker's loaders
     refresh the guard again.)"""
-    checkout = st["tmp"] / "sources" / "psyneulink-checkout"
+    # Beside the test's folder: the active checkout is protected under the
+    # OS sandbox, and on Linux its parent then takes no new files (#311).
+    checkout = Path(str(st["tmp"]) + "-sources") / "psyneulink-checkout"
     pkg = checkout / "fakepnl"
     pkg.mkdir(parents=True)
     count = st["tmp"] / "import_count.txt"
@@ -944,7 +948,11 @@ def test_an_open_relative_to_another_folder_is_not_covered(st):
         f"os.chdir('/')\nd = os.open({str(helper.parent)!r}, os.O_RDONLY)\n"
         f"fd = os.open({helper.name!r}, os.O_RDONLY, dir_fd=d)\nexec(os.read(fd, 1 << 20).decode())"))
     load(model)
-    assert marker2.exists()
+    from app.services import os_sandbox
+
+    # The guard doesn't cover it; the operating-system sandbox does (#311),
+    # since the kernel refuses reading the file whatever name reaches it.
+    assert marker2.exists() != os_sandbox.active()
 
 
 # ── 13. a task naming a state file that doesn't exist ───────────────────
@@ -1044,6 +1052,10 @@ def test_tampering_in_one_task_never_reaches_the_next(st, how):
 
 
 def test_each_task_runs_in_a_new_process_only_while_something_is_tracked(st):
+    # The warm worker serves only while the OS sandbox isn't wanted (#311);
+    # this is about the guard's own choice, so the sandbox follows the state.
+    from app.services import os_sandbox
+    st["monkeypatch"].setattr(os_sandbox, "_FORCED", "")
     from app.services import sandbox
     pid_model = st["tmp"] / "Pid" / "pid.py"
     pid_model.parent.mkdir()
@@ -1108,6 +1120,11 @@ def test_a_module_name_as_a_word_in_the_environment_runs(st):
 
 
 def test_a_bare_glob_elsewhere_runs(st):
+    # The guard's own judgement of shell text; under the OS sandbox no shell
+    # can be started at all (#311), so it is measured without it.
+    from app.services import os_sandbox
+
+    st["monkeypatch"].setattr(os_sandbox, "_FORCED", "off")
     _tracked_unapproved(st, "helper.py")
     out = st["tmp"] / "outdir"
     out.mkdir()
@@ -1138,6 +1155,10 @@ def test_a_refusal_that_isnt_an_import_says_so(st):
 
 
 def test_a_symlink_chain_made_during_the_task_is_refused(st):
+    # The guard's own judgement: under the OS sandbox on macOS no .py file can
+    # be made in a writable folder at all (#311), so it is measured without it.
+    from app.services import os_sandbox
+    st["monkeypatch"].setattr(os_sandbox, "_FORCED", "off")
     marker2 = st["tmp"] / "chain_ran.txt"
     helper = st["models"] / "hx_chain.py"
     helper.write_text(_helper(marker2))
@@ -1277,6 +1298,10 @@ def test_a_process_a_model_starts_doesnt_outlive_its_task(st):
 
 
 def test_nothing_tracked_keeps_the_warm_worker(st):
+    # The warm worker serves only while the OS sandbox isn't wanted (#311);
+    # this is about the guard's own choice, so the sandbox follows the state.
+    from app.services import os_sandbox
+    st["monkeypatch"].setattr(os_sandbox, "_FORCED", "")
     review.state_path().write_text(json.dumps({"files": {}}))
     out = st["tmp"] / "warm.txt"
     model = _plain_model(st["tmp"] / "Warm", f"open({str(out)!r}, 'a').write(str(os.getpid()) + chr(10))\n")
@@ -1338,6 +1363,10 @@ def test_a_symlink_to_the_users_own_same_named_file_runs(st):
 
 
 def test_a_script_writing_a_same_named_output_runs(st):
+    # The guard's own judgement: under the OS sandbox on macOS no .py file can
+    # be made in a writable folder at all (#311), so it is measured without it.
+    from app.services import os_sandbox
+    st["monkeypatch"].setattr(os_sandbox, "_FORCED", "off")
     _tracked_unapproved(st, "report.py")
     script = st["tmp"] / "gen.py"
     script.write_text("import sys\nopen(sys.argv[2], 'w').write('# generated')\n")
@@ -1422,7 +1451,11 @@ def test_a_helper_the_assistant_writes_while_a_model_loads_is_refused(tmp_path, 
         t.start()
         r = load(own)
         t.join()
-        assert unreviewed(r), r.text[:300]
+        # Under the OS sandbox on Linux the record the app replaced during the
+        # task is a new file the task's rules don't cover: the guard can't
+        # read it, and refuses as for an unreadable record (#311).
+        unreadable = r.status_code == 409 and r.json().get("reason") == review.REASON_UNREADABLE
+        assert unreviewed(r) or (sys.platform.startswith("linux") and unreadable), r.text[:300]
         assert not marker2.exists()
     finally:
         files.set_folders_provider(files._folders_from_settings)
@@ -1469,7 +1502,7 @@ SHELL_SPELLINGS = {
     "backslash_split": lambda d, n: ["sh", "-c", f"cd {d} && cat {n[:3]}\\{n[3:]}"],
     "double_quoted": lambda d, n: ["bash", "-c", f'cd {d} && cat "{n}"'],
     "redirect": lambda d, n: ["sh", "-c", f"cd {d} && cat <{n}"],
-    "find_name_glob": lambda d, n: ["sh", "-c", f"find {d} -name '{n[:6]}*' -exec cat {{}} \;"],
+    "find_name_glob": lambda d, n: ["sh", "-c", rf"find {d} -name '{n[:6]}*' -exec cat {{}} \;"],
     "shell_true": lambda d, n: f"cd {d} && cat {n[:3]}''{n[3:]}",
 }
 
@@ -1525,14 +1558,26 @@ def test_a_noisy_leftover_process_doesnt_stall_or_steer_later_tasks(st):
               f"        os.write(1, b'noise\\n###PSYNEUVIEW_CHILD### {victim.pid}\\n###PSYNEUVIEW_CHILD_DONE### 0\\n')\n"
               "    except OSError:\n        break\n"
               "    time.sleep(0.02)\n")
+        # A control: the same kind of load (a new model folder each time)
+        # without a leftover, so the cost of starting a worker on this
+        # machine isn't blamed on the leftover (#311).
+        controls = []
+        for i in range(2):
+            model = _plain_model(st["tmp"] / f"H1ctl{i}", f"comp_name_{i} = 'c{i}'\n")
+            t0 = time.time()
+            assert _runs_normally(load(model))
+            controls.append(time.time() - t0)
+        control = max(controls)
         first = _plain_model(st["tmp"] / "H1a", f"import subprocess\nsubprocess.Popen([sys.executable, '-c', {gc!r}])\n")
         assert _runs_normally(load(first))
         for i in range(3):
             model = _plain_model(st["tmp"] / f"H1b{i}", f"comp_name_{i} = 'c{i}'\n")
             t0 = time.time()
             r = load(model)
+            took = time.time() - t0
             assert _runs_normally(r), r.text[:300]
-            assert time.time() - t0 < 10, "a task waited on the leftover process"
+            print(f"[timing] task after a noisy leftover: {took:.2f} s (control {control:.2f} s)")
+            assert took < control + 3 and took < 30, f"a task waited on the leftover process: {took:.2f} s, control {control:.2f} s"
         marker2 = st["tmp"] / "h1_ran.txt"
         helper = st["models"] / "hx_h1.py"
         helper.write_text(_helper(marker2))
@@ -1589,3 +1634,26 @@ def test_the_standard_library_and_the_apps_settings_are_protected(st, tmp_path, 
     with pytest.raises(import_guard.UnreviewedImport):
         import_guard._guard_protected(str(app_config.LEGACY_CONFIG_FILE), "writing it")
     import_guard._guard_protected(str(tmp_path / "results.csv"), "writing it")  # anything else is fine
+
+
+@pytest.mark.parametrize("os_sandbox_mode", ["off", "on"])
+def test_a_model_using_tempfile_runs_while_something_is_tracked(st, os_sandbox_mode):
+    """``tempfile.NamedTemporaryFile`` opens through the temp folder's own
+    name, which here also holds the review record. Writing names a folder
+    without changing what is in it, so the guard lets it through; with the
+    OS sandbox, the temp folder is the task's own (#311)."""
+    from app.services import os_sandbox
+
+    if os_sandbox_mode == "on" and not os_sandbox.available():
+        pytest.skip(f"no OS sandbox here: {os_sandbox.capability().get('reason')}")
+    st["monkeypatch"].setattr(os_sandbox, "_FORCED", os_sandbox_mode)
+    out = st["tmp"] / f"tempfile_{os_sandbox_mode}.txt"
+    model = _plain_model(st["tmp"] / f"Temp_{os_sandbox_mode}", (
+        "import tempfile, os\n"
+        "with tempfile.NamedTemporaryFile('w') as f:\n    f.write('x')\n"
+        "with tempfile.TemporaryDirectory() as d:\n    open(os.path.join(d, 'a.txt'), 'w').write('x')\n"
+        "fd, p = tempfile.mkstemp()\nos.close(fd)\nos.remove(p)\n"
+        f"open({str(out)!r}, 'w').write('ok')\n"))
+    r = load(model)
+    assert _runs_normally(r), r.text[:400]
+    assert out.read_text() == "ok"

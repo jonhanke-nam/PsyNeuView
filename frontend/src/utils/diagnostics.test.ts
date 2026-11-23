@@ -40,6 +40,7 @@ const INFO: SettingsInfo = {
   deployment: { mode: "local" },
   health: { ok: true },
   updates: { status: "current", last_check_at: 1760000000 },
+  os_sandbox: { state: "on", mechanism: "seatbelt", reason: null },
 };
 
 const MODEL = {
@@ -146,6 +147,7 @@ describe("collectDiagnostics", () => {
       features: { debugger_hook: true, level: "full" },
       githubAuth: { source: "gh_cli", hasRepoScope: true },
       updates: { status: "current", last_check_at: 1760000000 },
+      osSandbox: { state: "on", mechanism: "seatbelt", reason: null },
     });
     expect(JSON.stringify(snap)).not.toContain("a-real-person");
     expect(JSON.stringify(snap)).not.toContain("/Users/");

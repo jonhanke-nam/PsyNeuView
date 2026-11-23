@@ -42,9 +42,29 @@ is. The rules behind it are in issue #179; the threat model is in
   "saving": "always_ask",
   "visibility": {"model": true, "selection": true, "errors": true, "results": false, "files": false},
   "limits": {"tool_calls": 25, "minutes": 10, "max_tokens": 100000},
-  "keep_log": true
+  "keep_log": true,
+  "sandbox": {"all_runs": true, "require": true}
 }
 ```
+
+- `sandbox.all_runs`: every model run is sandboxed while the assistant is
+  on, not only while something it wrote is tracked (those always are).
+  Turning it off is a raise.
+- `sandbox.require`: turning the assistant on fails with 400
+  `{"reason": "sandbox_required", "message"}` where no sandbox can be
+  applied. Turning it off is a raise.
+- `GET /api/assistant/sandbox`: `{state: on | unavailable | available |
+  off_unavailable, available, wanted, why, mechanism, platform,
+  landlock_abi, enforced, not_enforced, reason, forced, all_runs, require}`.
+  `unavailable` means runs are wanted sandboxed and are NOT. The same
+  summary is in `/api/settings/info` as `os_sandbox`.
+- A run that must be sandboxed (the assistant on, or anything it wrote
+  tracked) where no sandbox can be applied answers 409
+  `{"reason": "sandbox_required", "detail"}` and nothing runs, unless
+  `sandbox.require` is off or the server was started with
+  `PSYNEUVIEW_OS_SANDBOX_ALLOW_UNSANDBOXED=1`. A sandboxed run may write in
+  the model's own folder (not code or the assistant's files); when that
+  folder can't be opened, the model's `notices` say why.
 
 - `agent.type`: `none`, `anthropic`, `openai_compatible`. `base_url` must be
   `https`, or `http` to this machine only.
@@ -240,8 +260,18 @@ Python code in the worker can't change the review record, the guard's
 files or the code later tasks import (a process it starts can). The guard stops
 assistant-written code running by accident or through ordinary paths; it
 is not a sandbox against model code that deliberately acts as the user.
-**In-process protection covers memory only. A model that writes files (directly or through a child process) can affect later tasks; only the OS sandbox (#311) closes this. Until #311, don't turn the assistant on for untrusted use.**
-The threat model's section 7 lists exactly what isn't covered. Approving a model means trusting what
+**In-process protection covers memory only.** Behind it is the
+**operating-system sandbox** (#311, `os-sandbox.md`): while anything is
+tracked, and for every run while the assistant is on (`sandbox.all_runs`),
+each task's process applies a policy before any model code runs, so the
+kernel refuses reading unapproved files and secrets, writing outside the
+task's folder and the declared output folders (never the review record,
+the app, PsyNeuLink, the settings file or the Python install), starting
+anything but Python and Graphviz, and the network, in that process and
+every process it starts. Converting a model runs it in a sandboxed process
+too. Where no sandbox can be applied, `GET /api/assistant/sandbox` and
+About say so, and with `sandbox.require` (the default) the assistant
+doesn't turn on. The threat model's section 7 lists exactly what isn't covered. Approving a model means trusting what
 it does. Every place code is started or executed in `backend/app` is
 listed in the threat model with its guard, and a test fails if a new one
 appears unlisted. A route that would execute unreviewed content answers 409
