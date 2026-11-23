@@ -160,6 +160,17 @@ def read_state(path: str) -> tuple[dict, bool]:
     True and the caller fails closed."""
     if not os.path.exists(path):
         return {}, False
+    # There but not readable: under the OS sandbox on Linux, a record the
+    # app replaced during the task (a new file the task's rules don't
+    # cover). Its backup is the record as it was, so it isn't used:
+    # unknown, and every guard refuses (#311).
+    try:
+        with open(path, "rb"):
+            pass
+    except PermissionError:
+        return {}, True
+    except OSError:
+        pass
     files = _parse(path)
     if files is not None:
         return files, False

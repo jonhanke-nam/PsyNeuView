@@ -450,7 +450,7 @@ class ForkServer(WarmWorker):
             # model (#311): the unapproved files as they are now, its own folder.
             self._task_policy = os_sandbox.policy(model_path=params.get("file_path")) if os_sandbox.active() else None
             try:
-                result = self._send(task, params, timeout)
+                result = os_sandbox.check_applied(self._send(task, params, timeout), self._task_policy)
                 _note_model_folder(result, self._task_policy)
             finally:
                 self._child_pid = None
@@ -658,7 +658,7 @@ class WorkerPool:
                 while self._ready:
                     proc = self._ready.pop(0)
                     have = (getattr(proc, "_os_sandbox_policy", None) or {}).get("key")
-                    if proc.poll() is None and have == want:
+                    if proc.poll() is None and have == want and not _older_than_model_folder(proc, model_path):
                         return proc
                     _PoolMember._kill(proc)
                     _discard_launch_scratch(proc)
@@ -677,9 +677,12 @@ class WorkerPool:
             member = _PoolMember(proc)
             try:
                 with member._lock:
-                    return member._send(task, params, timeout)
+                    return os_sandbox.check_applied(member._send(task, params, timeout),
+                                                    getattr(proc, "_os_sandbox_policy", None))
             finally:
                 _PoolMember._kill(member._proc if member._proc is not None else proc)
+                if getattr(proc, "_os_sandbox_policy", None):
+                    os_sandbox.sweep_survivors()
                 _discard_launch_scratch(proc)
 
     def is_alive(self) -> bool:
@@ -705,9 +708,11 @@ def _spawn_worker_process(model_path: str | None = None) -> subprocess.Popen | N
     # last ran: the same model again (the live preview) finds one ready.
     policy = os_sandbox.policy(model_path=model_path) if os_sandbox.active() else None
     member._launch_env = os_sandbox.launch_env(policy) if policy else None
+    started = time.time()
     proc = WarmWorker._spawn(member)
     if proc is not None:
         proc._os_sandbox_policy = policy
+        proc._os_sandbox_started = started
     elif policy:
         os_sandbox.discard_scratch(policy["scratch"])
     return proc
@@ -728,6 +733,22 @@ def _note_model_folder(result, policy: dict | None) -> None:
     else:
         model["notices"] = [message]
     logger.info(message)
+
+
+def _older_than_model_folder(proc, model_path: str | None) -> bool:
+    """Linux: Landlock's rules are fixed when a worker starts, and a file
+    made since in a folder that holds a protected file isn't covered, so a
+    pool worker started before the model's folder last changed can't be
+    trusted to read it (#311). macOS rules follow paths."""
+    if not sys.platform.startswith("linux") or not model_path or not getattr(proc, "_os_sandbox_policy", None):
+        return False
+    started = getattr(proc, "_os_sandbox_started", 0.0)
+    folder = os.path.dirname(os.path.abspath(model_path))
+    try:
+        newest = max([os.stat(folder).st_mtime] + [e.stat().st_mtime for e in os.scandir(folder)])
+    except OSError:
+        return True
+    return newest >= started
 
 
 def _discard_launch_scratch(proc: subprocess.Popen | None) -> None:
@@ -905,6 +926,9 @@ def run_in_sandbox(task: str, params: dict, timeout: int | None = None) -> dict:
     # Every task that executes a model file names it here. Assistant-written
     # content runs only once reviewed (#179); a user's own file costs one lookup.
     require_runnable(params.get("file_path"))
+    refused = os_sandbox.refusal()
+    if refused:
+        raise os_sandbox.SandboxRefused(refused)
 
     if timeout is None:
         # introspect with developer_mode=True actually runs the script's
@@ -964,6 +988,7 @@ def _run_cold(task: str, params: dict, timeout: int) -> dict:
         finally:
             if policy:
                 os_sandbox.discard_scratch(policy["scratch"])
+                os_sandbox.sweep_survivors()
         elapsed = time.time() - t0
         logger.info(f"[perf] cold sandbox {task}: {elapsed:.2f}s")
 
@@ -998,7 +1023,7 @@ def _run_cold(task: str, params: dict, timeout: int) -> dict:
         else:
             json_str = stdout
 
-        return json.loads(json_str)
+        return os_sandbox.check_applied(json.loads(json_str), policy)
 
     except subprocess.TimeoutExpired:
         return {

@@ -245,6 +245,16 @@ async def _pnl_file_is_protected(request, exc: pnl_source_guard.PsyNeuLinkFileIs
         "path": exc.path, "kind": exc.ownership["kind"], "root": exc.ownership["root"],
     })
 
+from app.services import os_sandbox as _os_sandbox  # noqa: E402
+
+
+@app.exception_handler(_os_sandbox.SandboxRefused)
+async def _sandbox_refused(request, exc: _os_sandbox.SandboxRefused):
+    """A run that must be sandboxed and can't be (#311): refused, never run
+    unsandboxed, with the reason."""
+    return JSONResponse(status_code=409, content={"detail": str(exc), "reason": "sandbox_required"})
+
+
 @app.exception_handler(edit_lock.ModelIsViewOnly)
 async def _model_is_view_only(request, exc: edit_lock.ModelIsViewOnly):
     """A generated write refused because the model is locked (#1116, #1309).

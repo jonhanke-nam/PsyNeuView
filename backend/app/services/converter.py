@@ -219,6 +219,9 @@ def convert_to_standard_format(
     # model converted here is held to the same boundary as one loaded.
     from app.services import os_sandbox
 
+    refused = os_sandbox.refusal()
+    if refused and not os.environ.get(_IN_SANDBOX_ENV):
+        raise os_sandbox.SandboxRefused(refused)
     if os_sandbox.active() and not os.environ.get(_IN_SANDBOX_ENV):
         new_source = _standard_source_in_sandbox(file_path)
     else:
@@ -240,6 +243,7 @@ os_sandbox_apply.apply_from_env()
 from app.services.converter import standard_source
 from app.services.assistant.review import UnreviewedAssistantCode
 from app.services.assistant.import_guard import UnreviewedImport
+applied = (os_sandbox_apply.applied() or {}).get("key")
 try:
     out = {"source": standard_source(sys.argv[1])}
 except UnreviewedAssistantCode as e:
@@ -248,6 +252,7 @@ except UnreviewedImport as e:
     out = {"unreviewed": e.path, "message": str(e), "state_unreadable": bool(e.state_unreadable)}
 except BaseException as e:
     out = {"error": str(e), "type": type(e).__name__}
+out["os_sandbox_applied"] = applied
 print(%r + json.dumps(out), flush=True)
 """ % _SOURCE_MARKER
 
@@ -270,11 +275,14 @@ def _standard_source_in_sandbox(file_path: str) -> str:
                               cwd=str(Path(file_path).parent))
     finally:
         os_sandbox.discard_scratch(policy["scratch"])
+        os_sandbox.sweep_survivors()
     lines = [ln for ln in (proc.stdout or "").splitlines() if ln.startswith(_SOURCE_MARKER)]
     if not lines:
         tail = (proc.stderr or "").strip().splitlines()[-1:] or ["no output"]
         raise RuntimeError(f"the sandboxed conversion didn't finish: {tail[0]}")
     out = json.loads(lines[-1][len(_SOURCE_MARKER):])
+    if out.get("os_sandbox_applied") != policy.get("key"):
+        raise os_sandbox.SandboxRefused("The conversion should have run sandboxed and its process didn't prove it was.")
     if out.get("unreviewed"):
         from app.services.assistant import review as _review
         raise UnreviewedAssistantCode(out["unreviewed"], out.get("message"),

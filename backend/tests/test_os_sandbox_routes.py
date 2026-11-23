@@ -113,7 +113,10 @@ def test_a_model_that_switches_the_guard_off_still_cant_read_the_unapproved_file
     marker, helper = _mk(st, how)
     r = load(_model(st, how, READS[how](helper, st["tmp"])))
     assert not marker.exists(), f"{how}: the unapproved file ran: {r.text[:300]}"
-    assert helper.exists()
+    if sys.platform == "darwin" or how != "rename":
+        # On Linux an unapproved file in a writable folder can be moved
+        # (never read: it carries no read right wherever it goes).
+        assert helper.exists()
 
 
 def test_a_learn_job_that_switches_the_guard_off_cant_read_it_either(st):
@@ -464,7 +467,13 @@ def test_a_model_cant_overwrite_an_unapproved_file_beside_it(st):
     review.mark_unreviewed(str(helper), helper.read_text())
     model = _model_in(folder, f"try:\n    open({str(helper)!r}, 'w').write('X = 2\\n')\nexcept OSError:\n    pass\n")
     load(model)
-    assert helper.read_text() == "X = 1\n"
+    if sys.platform == "darwin":
+        assert helper.read_text() == "X = 1\n"
+    else:
+        # On Linux an unapproved file in a writable folder can be overwritten
+        # (Landlock allows only whole folders, and the folder must stay
+        # writable); what is there then is the model's text, still unapproved.
+        assert not review.is_runnable(str(helper), helper.read_text())
 
 
 def test_a_model_cant_write_the_review_state_in_its_folder(st):
@@ -520,3 +529,186 @@ def test_the_notice_says_why_the_models_folder_wasnt_opened(st, monkeypatch):
     sandbox._note_model_folder(result, {"model_dir_note": "the model's folder (/x) is or holds part of PsyNeuLink"})
     assert "PsyNeuLink" in result["model"]["notices"][0]
     assert "task folder" in result["os_sandbox_notice"]
+
+
+# ── The independent review of #312 (S1–S6), with the guard switched off ────
+
+#: The reviewer's guard-off preamble: every part of the in-process guard a
+#: model can reach is switched off, so only the OS sandbox stands.
+GUARD_OFF = (
+    "import __main__, sys as _s, importlib.machinery as _im\n"
+    "_g = getattr(__main__, '_guard', None)\n"
+    "if _g is not None:\n"
+    "    _g._State.refresh = lambda self, *a, **k: None\n"
+    "    _g.TrackedIndex.find = lambda self, p: None\n"
+    "    _g._state.tracked = {}\n"
+    "    _g._state.index = _g._EMPTY_INDEX\n"
+    "    _g._state.broken = False\n"
+    "    _g._audit_local.busy = True\n"
+    "    _g.vet = lambda p: None\n"
+    "    _g._check = lambda *a, **k: None\n"
+    "    _im.SourceFileLoader.get_code = _g._original_get_code\n"
+    "    _s.meta_path[:] = [f for f in _s.meta_path if f is not getattr(_g, '_finder', None)]\n"
+)
+
+
+def _guard_off_model(folder: Path, body: str) -> Path:
+    folder.mkdir(parents=True, exist_ok=True)
+    model = folder / "attack.py"
+    model.write_text(GUARD_OFF + "import os, sys\n" + body + "\n" + PSY)
+    return model
+
+
+def test_s1_an_earlier_version_the_assistant_kept_cant_be_read(st):
+    from app.services.assistant import files as assistant_files
+
+    marker = st["tmp"] / "ran_prev.txt"
+    kept = assistant_files.previous_versions_dir() / "abcd1234" / "helper.py.20261123.bak"
+    kept.parent.mkdir(parents=True, exist_ok=True)
+    kept.write_text(_helper(marker))
+    model = _guard_off_model(st["tmp"] / "S1", f"exec(open({str(kept)!r}).read())")
+    load(model)
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize("where", ["declared", "model_folder"])
+@pytest.mark.parametrize("level", ["parent", "grandparent"])
+def test_s2_moving_a_folder_that_holds_an_unapproved_file_doesnt_free_it(st, where, level):
+    root = Path(os.path.realpath(st["tmp"])) / f"S2_{where}_{level}"
+    held = root / "outer" / "inner"
+    held.mkdir(parents=True)
+    marker = st["tmp"] / f"ran_s2_{where}_{level}.txt"
+    helper = held / "hx_held.py"
+    helper.write_text(_helper(marker))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    if where == "model_folder":
+        _no_declared_folders(st)
+        model_dir = root
+    else:
+        model_dir = st["tmp"] / f"S2m_{level}"
+    moving = held if level == "parent" else held.parent
+    moved = moving.parent / (moving.name + "_moved")
+    new_helper = (moved / "hx_held.py") if level == "parent" else (moved / "inner" / "hx_held.py")
+    model = _guard_off_model(model_dir, (
+        f"try:\n    os.rename({str(moving)!r}, {str(moved)!r})\nexcept OSError:\n    pass\n"
+        f"try:\n    exec(open({str(new_helper)!r}).read())\nexcept OSError:\n    pass\n"))
+    load(model)
+    assert not marker.exists()
+    if sys.platform == "darwin":
+        assert helper.exists(), "the folder was moved"
+
+
+def test_s3_a_deep_chain_of_survivors_is_ended_and_cant_run_a_later_file(st):
+    later = st["models"] / "later.py"
+    marker = st["tmp"] / "ran_later.txt"
+    pids = st["tmp"] / "chain_pids.txt"
+    # A chain 12 deep, each in a session of its own; the deepest waits for
+    # a file the assistant writes after the task, then tries to run it.
+    chain = st["tmp"] / "chain.py"
+    chain.write_text(
+        "import os, subprocess, sys, time\n"
+        "depth = int(sys.argv[1])\nos.setsid()\n"
+        f"open({str(pids)!r}, 'a').write(str(os.getpid()) + chr(10))\n"
+        "if depth:\n    subprocess.Popen([sys.executable, __file__, str(depth - 1)]).wait()\n"
+        "else:\n    t = time.time()\n    while time.time() - t < 15:\n"
+        f"        try:\n            exec(open({str(later)!r}).read()); break\n"
+        "        except OSError:\n            time.sleep(0.2)\n")
+    model = _guard_off_model(st["tmp"] / "S3", (
+        "import subprocess, time\n"
+        f"subprocess.Popen([sys.executable, {str(chain)!r}, '12'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n"
+        f"t = time.time()\nwhile time.time() - t < 20 and (len(open({str(pids)!r}).read().split()) if os.path.exists({str(pids)!r}) else 0) < 13:\n"
+        "    time.sleep(0.1)\n"))
+    load(model)
+    # (The model may run twice: a load, then the resilient load after it.)
+    assert pids.exists() and len(pids.read_text().split()) >= 13, "the chain didn't start"
+    # The assistant writes later.py after the task.
+    review.mark_unreviewed(str(later), _helper(marker))
+    later.write_text(_helper(marker))
+    deadline = time.time() + 6
+    alive = []
+    while time.time() < deadline:
+        alive = []
+        for pid in map(int, pids.read_text().split()):
+            try:
+                os.kill(pid, 0)
+                alive.append(pid)
+            except (ProcessLookupError, PermissionError):
+                pass
+        if not alive:
+            break
+        threading.Event().wait(0.2)
+    for pid in alive:
+        try:
+            os.kill(pid, 9)
+        except OSError:
+            pass
+    assert not alive, f"{len(alive)} of the chain outlived the task"
+    assert not marker.exists()
+
+
+def test_s4_a_run_that_must_be_sandboxed_is_refused_when_it_cant_be(st, monkeypatch):
+    monkeypatch.setattr(os_sandbox, "_probe_result", {"ok": False, "reason": "probe failed for the test",
+                                                      "_at": time.monotonic()})
+    monkeypatch.setattr(os_sandbox, "_FORCED", "")
+    out = st["tmp"] / "s4_ran.txt"
+    model = _guard_off_model(st["tmp"] / "S4", f"open({str(out)!r}, 'w').write('ran')")
+    r = load(model)
+    assert r.status_code == 409 and r.json().get("reason") == "sandbox_required", r.text[:300]
+    assert not out.exists()
+    monkeypatch.setattr(os_sandbox, "_ALLOW_UNSANDBOXED", True)
+    assert load(model).status_code == 200
+    assert out.exists()
+
+
+def test_s4_a_result_without_the_sandboxs_proof_is_refused():
+    policy = {"key": "abc"}
+    assert os_sandbox.check_applied({"model": {}}, policy).get("os_sandbox_refused")
+    assert os_sandbox.check_applied({"model": {}, "os_sandbox_applied": None}, policy).get("os_sandbox_refused")
+    assert not os_sandbox.check_applied({"model": {}, "os_sandbox_applied": "abc"}, policy).get("os_sandbox_refused")
+    assert os_sandbox.check_applied({"model": {}}, None) == {"model": {}}
+
+
+def test_s4_every_sandboxed_load_carries_its_proof(st):
+    model = _guard_off_model(st["tmp"] / "S4p", "")
+    r = load(model)
+    assert r.status_code == 200, r.text[:300]
+
+
+def test_s5_no_hidden_or_auto_run_files_in_writable_folders(st):
+    if sys.platform != "darwin":
+        pytest.skip("refusing files by name needs Seatbelt's path rules (macOS); Landlock can't tell files apart by name")
+    _no_declared_folders(st)
+    folder = Path(os.path.realpath(st["tmp"])) / "S5"
+    names = [".git/hooks/pre-commit", ".envrc", ".vscode/settings.json", "Makefile", "conftest.py",
+             "pyproject.toml", "package.json", "x.pth", "sub/.bashrc"]
+    body = ("here = os.path.dirname(os.path.abspath(__file__))\n"
+            f"for name in {names!r}:\n"
+            "    try:\n        os.makedirs(os.path.dirname(os.path.join(here, name)), exist_ok=True)\n"
+            "        open(os.path.join(here, name), 'w').write('x')\n    except OSError:\n        pass\n"
+            "for name in ('a.csv', 'b.png', 'c.npy', 'd.pkl', 'e.json', 'f.txt', 'sub/g.csv'):\n"
+            "    os.makedirs(os.path.dirname(os.path.join(here, name)), exist_ok=True)\n"
+            "    open(os.path.join(here, name), 'w').write('ok')\n")
+    model = _guard_off_model(folder, body)
+    r = load(model)
+    assert r.status_code == 200, r.text[:300]
+    for name in names:
+        assert not (folder / name).is_file(), name
+    for name in ("a.csv", "b.png", "c.npy", "d.pkl", "e.json", "f.txt", "sub/g.csv"):
+        assert (folder / name).read_text() == "ok", name
+
+
+def test_s6_the_dynamic_loader_cant_start_another_program(st):
+    if not sys.platform.startswith("linux"):
+        pytest.skip("the loader trick is Linux's")
+    import glob
+
+    loader = next(iter(sorted(glob.glob("/lib*/ld-linux*") + glob.glob("/lib/*/ld-linux*"))), None)
+    if not loader:
+        pytest.skip("no dynamic loader found")
+    out = st["tmp"] / "s6.txt"
+    model = _guard_off_model(st["tmp"] / "S6", (
+        "import subprocess\n"
+        f"r = subprocess.run([{loader!r}, '/bin/sh', '-c', 'echo ran'], capture_output=True, text=True)\n"
+        f"open({str(out)!r}, 'w').write(r.stdout)\n"))
+    load(model)
+    assert "ran" not in (out.read_text() if out.exists() else "")

@@ -32,6 +32,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import uuid
 from pathlib import Path
 
@@ -49,6 +50,12 @@ _FORCED = os.environ.get(FORCE_ENV, "").strip().lower()
 WRITE_FOLDERS_ENV = "PSYNEUVIEW_OS_SANDBOX_WRITE_FOLDERS"
 
 APPLY_PATH = str(Path(_apply.__file__).resolve())
+
+#: Set to 1 when the server starts to let runs go ahead unsandboxed where
+#: the sandbox is wanted but can't be applied (read once; a model can't
+#: change it, since every model run is out of the server's process).
+ALLOW_UNSANDBOXED_ENV = "PSYNEUVIEW_OS_SANDBOX_ALLOW_UNSANDBOXED"
+_ALLOW_UNSANDBOXED = os.environ.get(ALLOW_UNSANDBOXED_ENV, "").strip() == "1"
 
 #: Places nothing a model runs may read: keys, tokens, the Keychain,
 #: browser profiles, mail. Relative to the home folder.
@@ -83,7 +90,10 @@ def capability(refresh: bool = False) -> dict:
     holds (``os_sandbox_apply.probe``); once per server, about 60 ms."""
     global _probe_result
     with _probe_lock:
-        if _probe_result is not None and not refresh:
+        # A success holds for the server's life; a failure is checked again
+        # after a minute (#311, S4): it may have been passing trouble.
+        if _probe_result is not None and not refresh and (
+                _probe_result.get("ok") or time.monotonic() - _probe_result.get("_at", 0) < 60):
             return _probe_result
         result: dict
         if not (sys.platform == "darwin" or sys.platform.startswith("linux")):
@@ -101,6 +111,7 @@ def capability(refresh: bool = False) -> dict:
                 result = {"ok": False, "reason": f"the sandbox check couldn't run: {e}"}
             finally:
                 shutil.rmtree(work, ignore_errors=True)
+        result["_at"] = time.monotonic()
         _probe_result = result
         if result.get("ok"):
             logger.info("Model runs can be sandboxed here (%s)", result.get("mechanism"))
@@ -142,6 +153,54 @@ def wanted() -> tuple[bool, str]:
     if s.get("enabled") and (s.get("sandbox") or {}).get("all_runs", True):
         return True, "the assistant is on and every model run is sandboxed"
     return False, "the assistant is off and nothing it wrote is tracked"
+
+
+class SandboxRefused(RuntimeError):
+    """A run that must be sandboxed and can't be (#311, S4)."""
+
+
+def refusal() -> str | None:
+    """Why a run must not go ahead now, or None. While the sandbox is
+    wanted (the assistant on, or anything it wrote tracked) and it can't be
+    applied, runs are refused, unless "Require the sandbox" is off or the
+    server was started with ``PSYNEUVIEW_OS_SANDBOX_ALLOW_UNSANDBOXED=1``."""
+    want, why = wanted()
+    if not want or available():
+        return None
+    if _ALLOW_UNSANDBOXED:
+        return None
+    if not (_assistant_settings().get("sandbox") or {}).get("require", True):
+        return None
+    reason = capability().get("reason") or "no sandbox can be applied here"
+    return (f"Model runs must be sandboxed ({why}), and the sandbox can't be applied here: {reason}. "
+            f"Nothing was run. Turn off \"Require the sandbox\" in Settings to run without it.")
+
+
+def check_applied(result, policy: dict | None) -> dict:
+    """The worker's proof that it ran under ``policy`` (#311, S4). A result
+    from a run that should have been sandboxed and doesn't carry the
+    policy's key is refused, whatever the cause."""
+    if not policy or not isinstance(result, dict):
+        return result
+    if result.get("os_sandbox_refused") or result.get("os_sandbox_applied") == policy.get("key"):
+        return result
+    if "error" in result and "os_sandbox_applied" not in result:
+        return result  # the process ended before answering; already an error
+    logger.error("A task meant to be sandboxed answered without the sandbox's proof; its result is refused")
+    return {"error": "This run should have been sandboxed and its process didn't prove it was, so its result "
+                     "isn't used.", "os_sandbox_refused": True}
+
+
+def sweep_survivors() -> None:
+    """End sandboxed processes a finished task left behind (#311, S3). The
+    server calls it after Learn jobs, pool and one-shot tasks and
+    conversions; the fork server's parent does it after each of its own."""
+    if not available():
+        return
+    try:
+        _apply.end_survivors(0.0, _programs(), own_children=False, time_limit=3.0)
+    except Exception:  # noqa: BLE001 - never fail a task over it
+        logger.exception("Couldn't sweep processes left by a sandboxed task")
 
 
 def active() -> bool:
@@ -349,6 +408,24 @@ CODE_SUFFIXES = (".py", ".pyc", ".pyo", ".pyw", ".pth", ".so", ".dylib", ".pyd")
 CODE_NAMES = ("sitecustomize", "usercustomize")
 
 
+def assistant_stores() -> list[str]:
+    """Everywhere the assistant keeps text it wrote, besides the files
+    themselves: earlier versions of files it changed (which may be
+    unapproved text), and its log. No model may read them (#311, S1)."""
+    out = []
+    try:
+        from app.services.assistant import files as assistant_files
+        out.append(str(assistant_files.previous_versions_dir()))
+    except Exception:  # noqa: BLE001
+        out.append(str(Path(_own_home()) / ".psyneuview" / "assistant" / "previous"))
+    try:
+        from app.services.assistant import log as assistant_log
+        out.append(str(assistant_log.log_path()))
+    except Exception:  # noqa: BLE001
+        pass
+    return [_real(p) for p in out]
+
+
 def tracked_files() -> list[str]:
     """Every file the assistant wrote that is on disk, approved or not."""
     from app.services.assistant import review
@@ -388,6 +465,7 @@ def policy(scratch: str | None = None, model_path: str | None = None) -> dict:
     read_deny = _secrets(home) + unapproved_files()
     if _real(Path.home()) != home:
         read_deny += [os.path.join(_real(Path.home()), rel) for rel in HOME_SECRETS]
+    read_deny += assistant_stores()
     if review.state_broken():
         # The record can't be read, so nobody knows what is approved: none of
         # the assistant's folders may be read (the import guard refuses
@@ -411,6 +489,9 @@ def policy(scratch: str | None = None, model_path: str | None = None) -> dict:
         # No new code beside the model (macOS): a .py, .pth or
         # sitecustomize there would run in a later Python unreviewed.
         "no_code_in": [folder] if folder else [],
+        # No hidden files or folders, nor files other tools run on their own
+        # (a Makefile, .git/hooks, a .pth), in any writable folder (macOS).
+        "no_autorun_in": sorted(set(write_allow)),
         "model_dir": folder,
         "model_dir_note": note,
         # Python, PsyNeuLink and the app stay readable wherever they are,
@@ -419,11 +500,32 @@ def policy(scratch: str | None = None, model_path: str | None = None) -> dict:
         "exec_allow": _programs(),
         "network": False,
     }
+    # The folders that hold a protected file can't be renamed or removed
+    # either (macOS matches paths, so moving the folder would move the file
+    # out from under its rule): every folder from the file up to the
+    # writable folder that holds it (#311, S2).
+    p["no_move"] = _folders_above(p["read_deny"] + p["write_deny"] + p["write_deny_files"], p["write_allow"])
     p["key"] = hashlib.sha256(json.dumps(p, sort_keys=True).encode()).hexdigest()[:16]
     scratch = scratch or new_scratch()
     p["scratch"] = scratch
     p["write_allow"] = sorted(set(p["write_allow"]) | {scratch})
     return p
+
+
+def _folders_above(paths: list[str], roots: list[str]) -> list[str]:
+    out = set()
+    for root in roots:
+        r = root.rstrip(os.sep)
+        for p in paths:
+            if not p.startswith(r + os.sep):
+                continue
+            d = os.path.dirname(p)
+            while d.startswith(r + os.sep) or d == r:
+                out.add(d)
+                if d == r:
+                    break
+                d = os.path.dirname(d)
+    return sorted(out)
 
 
 def policy_key(model_path: str | None = None) -> str:

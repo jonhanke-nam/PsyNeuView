@@ -185,6 +185,10 @@ class JobManager:
         # Under the operating-system sandbox (#311) the job's worker applies
         # the policy before anything else; the task names it, so a worker
         # without it refuses the job.
+        refused = os_sandbox.refusal()
+        if refused:
+            job.finish("error", error=refused)
+            return
         policy = os_sandbox.policy(model_path=task_params.get("file_path")) if os_sandbox.active() else None
         extras = {"os_sandbox_key": policy["key"]} if policy else {}
         payload = json.dumps({"task": task, "params": task_params, **assistant_review.worker_payload_extras(), **extras})
@@ -205,12 +209,13 @@ class JobManager:
             job.finish("error", error=f"Failed to start job worker: {e}")
             return
         try:
-            self._watch(job, proc, payload)
+            self._watch(job, proc, payload, policy)
         finally:
             if policy:
                 os_sandbox.discard_scratch(policy["scratch"])
+                os_sandbox.sweep_survivors()
 
-    def _watch(self, job: Job, proc: subprocess.Popen, payload: str) -> None:
+    def _watch(self, job: Job, proc: subprocess.Popen, payload: str, policy: dict | None = None) -> None:
         job._proc = proc
         # A cancel that came while the worker was being started (building the
         # sandbox policy takes a moment, #311) found no process to end.
@@ -261,7 +266,7 @@ class JobManager:
             return
 
         try:
-            result = json.loads(result_str)
+            result = os_sandbox.check_applied(json.loads(result_str), policy)
         except json.JSONDecodeError as e:
             job.finish("error", error=f"Failed to parse job result: {e}")
             return

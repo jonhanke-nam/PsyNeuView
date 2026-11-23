@@ -415,7 +415,7 @@ def test_the_cover_allows_everything_but_the_excluded(tmp_path):
 
 
 def test_the_state_says_why_when_unavailable(monkeypatch):
-    monkeypatch.setattr(os_sandbox, "_probe_result", {"ok": False, "reason": "no Landlock in this kernel"})
+    monkeypatch.setattr(os_sandbox, "_probe_result", {"ok": False, "reason": "no Landlock in this kernel", "_at": __import__("time").monotonic()})
     monkeypatch.setattr(os_sandbox, "_FORCED", "on")
     st = os_sandbox.status()
     assert st["state"] == "unavailable"
@@ -426,7 +426,7 @@ def test_the_state_says_why_when_unavailable(monkeypatch):
 def test_the_assistant_wont_turn_on_without_a_sandbox_unless_allowed(tmp_path, monkeypatch):
     from app.services.assistant import settings as s
 
-    monkeypatch.setattr(os_sandbox, "_probe_result", {"ok": False, "reason": "no Landlock in this kernel"})
+    monkeypatch.setattr(os_sandbox, "_probe_result", {"ok": False, "reason": "no Landlock in this kernel", "_at": __import__("time").monotonic()})
     cfg = tmp_path / "cfg.json"
     with pytest.raises(s.SandboxRequired, match="Landlock"):
         s.update_settings({"enabled": True}, confirm_raise=True, config_file=cfg)

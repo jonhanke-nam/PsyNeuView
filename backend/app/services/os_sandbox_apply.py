@@ -132,6 +132,21 @@ def render_sbpl(policy: dict) -> str:
     if policy.get("write_deny_files"):
         lines += [";; Files the assistant wrote, approved or not: not changed by a model.",
                   f"(deny file-write* {_sb_filters(policy['write_deny_files'])})"]
+    if policy.get("no_move"):
+        lines += [";; The folders holding a protected file: not renamed or removed (a move would",
+                  ";; carry the file out from under its rule).",
+                  "(deny file-write-unlink file-write-mode file-write-owner file-write-flags "
+                  + " ".join(f"(literal {_sb_str(d)})" for d in policy["no_move"]) + ")",
+                  "(deny file-write-create " + " ".join(f"(literal {_sb_str(d)})" for d in policy["no_move"]) + ")"]
+    for folder in policy.get("no_autorun_in") or []:
+        if folder == policy.get("scratch"):
+            continue
+        base = "^" + _re_escape(folder.rstrip("/")) + "/"
+        names = "|".join(_re_escape(n) for n in AUTORUN_NAMES)
+        lines += [";; No hidden files or folders, nor files tools run by themselves.",
+                  f"(deny file-write* (regex {_sb_str(base + '(.*/)?[.][^/]*(/.*)?$')}))",
+                  f"(deny file-write* (regex {_sb_str(base + '(.*/)?(' + names + ')$')}))",
+                  f"(deny file-write* (regex {_sb_str(base + '.*[.]pth$')}))"]
     for folder in policy.get("no_code_in") or []:
         base = "^" + _re_escape(folder.rstrip("/")) + "/"
         lines += [";; No new code beside the model: a later Python could run it unreviewed.",
@@ -159,6 +174,12 @@ def render_sbpl(policy: dict) -> str:
         "(deny network*)",
     ]
     return "\n".join(lines) + "\n"
+
+
+#: Files other tools run on their own when they meet them.
+AUTORUN_NAMES = ("Makefile", "makefile", "GNUmakefile", "justfile", "Justfile", "package.json", "conftest.py",
+                 "setup.py", "setup.cfg", "pyproject.toml", "tox.ini", "noxfile.py", "sitecustomize.py",
+                 "usercustomize.py", "Rakefile", "Gemfile", "Taskfile.yml", "Dockerfile", "docker-compose.yml")
 
 
 def _re_escape(s: str) -> str:
@@ -239,6 +260,10 @@ LL_NET_BIND_TCP = 1 << 0  # ABI 4
 LL_NET_CONNECT_TCP = 1 << 1
 LL_SCOPE_ABSTRACT_UNIX = 1 << 0  # ABI 6
 LL_SCOPE_SIGNAL = 1 << 1
+
+#: Folders whose programs a model can't read (so the loader can't start them).
+LINUX_PROGRAM_DIRS = ("/bin", "/sbin", "/usr/bin", "/usr/sbin", "/usr/local/bin", "/usr/local/sbin",
+                      "/usr/libexec", "/usr/lib/git-core")
 
 _LL_FILE_RIGHTS = LL_EXECUTE | LL_WRITE_FILE | LL_READ_FILE | LL_TRUNCATE
 _LL_READ = LL_READ_FILE | LL_READ_DIR
@@ -373,6 +398,11 @@ def _apply_linux(policy: dict) -> dict:
 
     try:
         read_deny = [os.path.realpath(p) for p in policy.get("read_deny") or []]
+        # The folders of programs aren't readable: the dynamic loader must be
+        # allowed to run (the kernel runs it for every program), and given a
+        # readable program it would start it (``ld-linux.so /bin/sh``). The
+        # allowed programs get their own read right below.
+        read_deny += sorted({os.path.realpath(d) for d in LINUX_PROGRAM_DIRS if os.path.isdir(d)})
         whole, ancestors = cover("/", read_deny)
         for p in whole:
             add(p, _LL_READ)
@@ -598,37 +628,82 @@ def _linux_survivors() -> list[int]:
     return out
 
 
-def end_survivors(since: float, programs: list[str] | None = None) -> int:
-    """End what a finished task left running (a ``setsid`` grandchild, a
-    daemon), so nothing it started outlives it. Called by the fork server's
-    parent, which is outside the sandbox, after each child exits. Returns
-    how many were ended."""
+def _linux_orphans(programs: list[str]) -> list[int]:
+    """Sandboxed processes of this user whose parent is gone (adopted by
+    init): seccomp filtering and no_new_privs on, running one of the only
+    programs a task may start."""
+    uid, out = os.getuid(), []
+    real = [os.path.realpath(p) for p in programs]
+    try:
+        names = os.listdir("/proc")
+    except OSError:
+        return []
+    for name in names:
+        if not name.isdigit():
+            continue
+        try:
+            with open(f"/proc/{name}/status") as f:
+                st = dict(line.rstrip("\n").split(":\t", 1) for line in f if ":\t" in line)
+            if st.get("PPid", "").strip() != "1" or st.get("State", "").startswith("Z"):
+                continue
+            if int(st.get("Uid", "-1").split()[0]) != uid:
+                continue
+            if st.get("NoNewPrivs", "").strip() != "1" or st.get("Seccomp", "").strip() != "2":
+                continue
+            exe = os.path.realpath(f"/proc/{name}/exe")
+            if any(exe == r or exe.startswith(r.rstrip("/") + "/") for r in real):
+                out.append(int(name))
+        except (OSError, ValueError):
+            continue
+    return out
+
+
+def end_survivors(since: float = 0.0, programs: list[str] | None = None, *, own_children: bool = True,
+                  time_limit: float = 5.0) -> int:
+    """End what finished tasks left running (``setsid`` grandchildren,
+    daemons, chains of them), so nothing a task started outlives it, and
+    nothing from an earlier task waits to run files written later. Rounds
+    repeat until none is found (ending one orphans what it started), within
+    ``time_limit`` seconds. Not limited to the task just finished: any
+    orphaned sandboxed Python or Graphviz of this user is a survivor of some
+    task. ``own_children`` (Linux, the fork server's parent, a subreaper):
+    also this process's own remaining children. Returns how many were ended."""
     import signal
+    import time
 
     if not (sys.platform == "darwin" or sys.platform.startswith("linux")):
         return 0
     ended = 0
-    # A few rounds: ending one survivor orphans whatever it started.
-    for _ in range(5):
-        pids = _macos_survivors(since, programs or []) if sys.platform == "darwin" else _linux_survivors()
+    deadline = time.monotonic() + time_limit
+    while time.monotonic() < deadline:
+        if sys.platform == "darwin":
+            pids = _macos_survivors(0.0, programs or [])
+        else:
+            pids = (_linux_survivors() if own_children else []) + _linux_orphans(programs or [])
         if not pids:
             break
-        for pid in pids:
+        for pid in set(pids):
             try:
                 os.kill(pid, signal.SIGKILL)
                 ended += 1
             except OSError:
                 pass
-        if sys.platform == "darwin":
-            import time
-            time.sleep(0.02)  # let launchd take the newly orphaned
-        else:
-            for pid in pids:  # reap them, so they aren't found again
-                try:
-                    os.waitpid(pid, 0)
-                except ChildProcessError:
-                    pass
+        time.sleep(0.02)  # let the newly orphaned be adopted
+        if sys.platform.startswith("linux") and own_children:
+            _reap_children()
+    if sys.platform.startswith("linux") and own_children:
+        _reap_children()
     return ended
+
+
+def _reap_children() -> None:
+    while True:
+        try:
+            done, _ = os.waitpid(-1, os.WNOHANG)
+        except ChildProcessError:
+            return
+        if not done:
+            return
 
 
 # ── The probe ───────────────────────────────────────────────────────────────

@@ -405,7 +405,9 @@ def test_a_source_checkout_is_not_purged_or_re_imported(st):
     (Each task now runs in a fresh process while something is tracked, so
     the count is checked within one task, where the worker's loaders
     refresh the guard again.)"""
-    checkout = st["tmp"] / "sources" / "psyneulink-checkout"
+    # Beside the test's folder: the active checkout is protected under the
+    # OS sandbox, and on Linux its parent then takes no new files (#311).
+    checkout = Path(str(st["tmp"]) + "-sources") / "psyneulink-checkout"
     pkg = checkout / "fakepnl"
     pkg.mkdir(parents=True)
     count = st["tmp"] / "import_count.txt"
@@ -1440,7 +1442,11 @@ def test_a_helper_the_assistant_writes_while_a_model_loads_is_refused(tmp_path, 
         t.start()
         r = load(own)
         t.join()
-        assert unreviewed(r), r.text[:300]
+        # Under the OS sandbox on Linux the record the app replaced during the
+        # task is a new file the task's rules don't cover: the guard can't
+        # read it, and refuses as for an unreadable record (#311).
+        unreadable = r.status_code == 409 and r.json().get("reason") == review.REASON_UNREADABLE
+        assert unreviewed(r) or (sys.platform.startswith("linux") and unreadable), r.text[:300]
         assert not marker2.exists()
     finally:
         files.set_folders_provider(files._folders_from_settings)

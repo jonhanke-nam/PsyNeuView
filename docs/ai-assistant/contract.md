@@ -58,6 +58,13 @@ is. The rules behind it are in issue #179; the threat model is in
   landlock_abi, enforced, not_enforced, reason, forced, all_runs, require}`.
   `unavailable` means runs are wanted sandboxed and are NOT. The same
   summary is in `/api/settings/info` as `os_sandbox`.
+- A run that must be sandboxed (the assistant on, or anything it wrote
+  tracked) where no sandbox can be applied answers 409
+  `{"reason": "sandbox_required", "detail"}` and nothing runs, unless
+  `sandbox.require` is off or the server was started with
+  `PSYNEUVIEW_OS_SANDBOX_ALLOW_UNSANDBOXED=1`. A sandboxed run may write in
+  the model's own folder (not code or the assistant's files); when that
+  folder can't be opened, the model's `notices` say why.
 
 - `agent.type`: `none`, `anthropic`, `openai_compatible`. `base_url` must be
   `https`, or `http` to this machine only.

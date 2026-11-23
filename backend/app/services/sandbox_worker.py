@@ -4683,6 +4683,9 @@ def _handle_one_task(payload_str: str) -> str:
                 for w in caught
             ]
 
+    if isinstance(result, dict):
+        # The proof the server checks: the policy this process applied (#311).
+        result["os_sandbox_applied"] = (_os_sandbox.applied() or {}).get("key")
     return json.dumps(result, default=str)
 
 

@@ -454,14 +454,27 @@ process it starts. Against the list above:
 | The converter's in-process run | **Closed under the sandbox**: converting runs the model in a sandboxed process of its own, which hands back the new source | `test_a_model_converted_to_the_standard_format_is_sandboxed_too` |
 | Links set up beforehand | **Closed on Linux** (Landlock checks files, not names); **on macOS**, a hard link made before the file was tracked, under another name, is still readable (Seatbelt matches paths) | — |
 
+| Earlier versions the assistant kept (S1, first review of #312) | **Closed**: not readable by any model | `test_s1_…` |
+| Moving the folder that holds an unapproved file (S2) | **Closed**: on macOS those folders can't be moved; on Linux the rules follow the file | `test_s2_…` |
+| A deep chain of survivors running a file written later (S3) | **Closed**: the sweep repeats until none is left and covers every earlier task and every kind of run | `test_s3_…` (12 deep) |
+| Runs going ahead unsandboxed when the sandbox fails (S4) | **Closed**: refused with `sandbox_required`; every sandboxed result must prove its policy | `test_s4_…` |
+| Hidden folders and auto-run files in writable folders (S5) | **Closed on macOS; open on Linux** (no rules by name) | `test_s5_…` |
+| The Linux loader starting other programs (S6) | **Closed**: program folders aren't readable | `test_s6_…` |
+
+The model's own folder is writable (the user's decision): results and
+figures beside the model, with the assistant's files, the review record,
+settings and (on macOS) new code still refused there, and folders that are
+or hold protected places, or the home folder, not opened.
+
 What remains with the sandbox in use:
 
 - **Where no sandbox can be applied** (native Windows, a Linux kernel
   without Landlock, a container runtime that refuses it), none of the above
   is closed: the guard is all there is, and the state says so.
-- **The task's own folder and the declared output folders** are writable,
-  so a model can leave files there (not in the record, the app or Python).
-  A model that writes next to itself is refused instead.
+- **The task's own folder, the model's own folder and the declared output
+  folders** are writable, so a model can leave data files there (not in
+  the record, the app or Python). On Linux, also hidden files, auto-run
+  names and new `.py` files there (no rules by name).
 - **The warm worker** isn't sandboxed: it runs only while the sandbox
   isn't wanted (assistant off, nothing tracked).
 - **The fork server's parent** isn't sandboxed (it runs no model code).

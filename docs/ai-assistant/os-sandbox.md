@@ -53,6 +53,33 @@ anywhere readable, but it can be overwritten or removed, which leaves the
 model's own text there, still unapproved by its hash (denying that too
 would leave no new file possible in the assistant's own folder).
 
+**The model's own folder is writable** (the user's decision on #312), so
+results and figures saved beside a model just work: create, change and
+delete, in it and its subfolders. Inside it, still: no file the assistant
+wrote can be changed (approved ones neither), the review record and the
+settings file stay protected if they live there, and, on macOS, no new code
+(`.py`, `.pyc`, `.pth`, compiled modules, `sitecustomize`, `usercustomize`)
+can be made, since a later Python could run it without review. A folder
+that is, holds or sits inside the app, PsyNeuLink, the Python install or
+the review record, or that is the home folder, isn't opened: the task
+writes only in its own folder, and the result's notices say why. Pool
+workers are started for the model the pool last ran.
+
+**Never written in any writable folder (macOS):** hidden files and folders
+(`.git/hooks`, `.vscode`, `.envrc`, `.bashrc`), `.pth` files, and files
+other tools run by themselves (`Makefile`, `justfile`, `package.json`,
+`conftest.py`, `setup.py`, `pyproject.toml`, `sitecustomize.py` and the
+like). **On Linux these name rules don't exist** (Landlock can't tell files
+apart by name); that is open.
+
+**Folders holding a protected file can't be moved (macOS):** every folder
+from an unapproved, tracked or protected file up to the writable folder
+that holds it can't be renamed, removed or replaced, since Seatbelt's rules
+follow paths. On Linux rules follow the file itself.
+
+**Never read:** besides the above, the assistant's earlier versions of
+files it changed (`~/.psyneuview/assistant/previous`) and its log.
+
 "Declared output folders" are the assistant's read-write folders plus
 `PSYNEUVIEW_OS_SANDBOX_WRITE_FOLDERS`. A model that writes next to itself
 (`open("results.csv", "w")` in the model's own folder) is refused unless
@@ -159,6 +186,30 @@ approved one (an approved file edited afterwards is unapproved again).
 Files written **during** a task (the assistant writing while a model is
 loading) are covered by the import guard for that task and by the sandbox
 from the next one.
+
+### Proof, refusal and survivors
+
+- **Every run meant to be sandboxed proves it was.** The worker puts the key
+  of the policy it applied into its answer; the server refuses an answer
+  without it. So a run that somehow went unsandboxed fails closed.
+- **Refused, not run, when it can't be.** While the sandbox is wanted (the
+  assistant on, or anything it wrote tracked) and can't be applied, runs
+  answer 409 `sandbox_required` with the reason, unless "Require the
+  sandbox" is off or the server was started with
+  `PSYNEUVIEW_OS_SANDBOX_ALLOW_UNSANDBOXED=1`. A failed check is retried
+  after a minute; a success holds for the server's life.
+- **Survivors are ended.** After each task the fork server's parent ends
+  what is left. The server does the same after Learn jobs, pool and
+  one-shot tasks and conversions. A survivor is a sandboxed Python or
+  Graphviz of this user whose parent has gone: on macOS found by its
+  sandbox and parent, on Linux by its seccomp and no_new_privs state (and,
+  in the fork server, as an adopted child). The sweep repeats until none is
+  left, within five seconds, and ends survivors of any earlier task, not
+  only the last.
+- **Linux program folders are unreadable.** The dynamic loader has to be
+  allowed to run, since the kernel runs it for every program. Given a
+  readable program it would start it, so `/bin`, `/usr/bin` and the like
+  can't be read; the allowed programs can.
 
 ### When no sandbox can be applied
 
