@@ -11,13 +11,36 @@
  * them.
  */
 
-import type { Pt } from "@/stores/edgeAttachStore";
+import type { Pt, Waypoint } from "@/stores/edgeAttachStore";
+import { LEGACY_TENSION, SOFT_TENSION, type EndHandles } from "@/utils/curveHandles";
 
 export interface EdgeRoute {
-  waypoints?: Pt[];
+  /** Bends; a bend's `h` is its pinned handle (#39). */
+  waypoints?: Waypoint[];
   /** Per-end attachment angles in radians (#947). */
   ends?: { s?: number; t?: number };
+  /** #39: pinned handles at the two ends (offsets). */
+  handles?: EndHandles;
+  /**
+   * #39: the spline tension the route is drawn with. Written with every route
+   * that has bends or handles since the softer default; a route saved before
+   * has none and is drawn with LEGACY_TENSION, as it was then.
+   */
+  tension?: number;
 }
+
+/** #39: the curve state beside the bends, as the edge store holds it. */
+export interface CurveState {
+  handles?: Record<string, EndHandles>;
+  tension?: Record<string, number>;
+}
+
+const copyPt = (p: Pt): Pt => ({ x: p.x, y: p.y });
+const copyWaypoint = (p: Waypoint): Waypoint => (p.h ? { x: p.x, y: p.y, h: copyPt(p.h) } : copyPt(p));
+const copyHandles = (h: EndHandles): EndHandles => ({
+  ...(h.s ? { s: copyPt(h.s) } : {}),
+  ...(h.t ? { t: copyPt(h.t) } : {}),
+});
 
 export type EdgeRouteMap = Record<string, EdgeRoute>;
 
@@ -61,8 +84,9 @@ export function ambiguousKeys(edges: RoutableEdge[]): Set<string> {
 export function serializeRoutes(
   edges: RoutableEdge[],
   shaped: Record<string, true>,
-  waypoints: Record<string, Pt[]>,
+  waypoints: Record<string, Waypoint[]>,
   overrides: Record<string, { s?: number; t?: number }>,
+  curves: CurveState = {},
 ): EdgeRouteMap {
   const skip = ambiguousKeys(edges);
   const out: EdgeRouteMap = {};
@@ -72,10 +96,13 @@ export function serializeRoutes(
     if (skip.has(key)) continue;
     const route: EdgeRoute = {};
     const wps = waypoints[edge.id];
-    if (wps?.length) route.waypoints = wps.map((p) => ({ x: p.x, y: p.y }));
+    if (wps?.length) route.waypoints = wps.map(copyWaypoint);
     const ends = overrides[edge.id];
     if (ends && (ends.s !== undefined || ends.t !== undefined)) route.ends = { ...ends };
-    if (route.waypoints || route.ends) out[key] = route;
+    const hs = curves.handles?.[edge.id];
+    if (hs && (hs.s || hs.t)) route.handles = copyHandles(hs);
+    if (route.waypoints || route.handles) route.tension = curves.tension?.[edge.id] ?? SOFT_TENSION;
+    if (route.waypoints || route.ends || route.handles) out[key] = route;
   }
   return out;
 }
@@ -85,14 +112,18 @@ export function hydrateRoutes(
   edges: RoutableEdge[],
   saved: EdgeRouteMap | null | undefined,
 ): {
-  waypoints: Record<string, Pt[]>;
+  waypoints: Record<string, Waypoint[]>;
   overrides: Record<string, { s?: number; t?: number }>;
   shaped: Record<string, true>;
+  handles: Record<string, EndHandles>;
+  tension: Record<string, number>;
 } {
-  const waypoints: Record<string, Pt[]> = {};
+  const waypoints: Record<string, Waypoint[]> = {};
   const overrides: Record<string, { s?: number; t?: number }> = {};
   const shaped: Record<string, true> = {};
-  if (!saved) return { waypoints, overrides, shaped };
+  const handles: Record<string, EndHandles> = {};
+  const tension: Record<string, number> = {};
+  if (!saved) return { waypoints, overrides, shaped, handles, tension };
 
   const skip = ambiguousKeys(edges);
   for (const edge of edges) {
@@ -100,13 +131,20 @@ export function hydrateRoutes(
     if (skip.has(key)) continue;
     const route = saved[key];
     if (!route) continue;
-    if (route.waypoints?.length) waypoints[edge.id] = route.waypoints.map((p) => ({ ...p }));
+    if (route.waypoints?.length) waypoints[edge.id] = route.waypoints.map(copyWaypoint);
     if (route.ends) overrides[edge.id] = { ...route.ends };
+    if (route.handles && (route.handles.s || route.handles.t)) handles[edge.id] = copyHandles(route.handles);
+    // #39: a curve keeps the tension it was saved with; one saved before the
+    // softer default was drawn with the old one, and still is.
+    if (waypoints[edge.id] || handles[edge.id]) {
+      const t = typeof route.tension === "number" ? route.tension : LEGACY_TENSION;
+      if (t !== SOFT_TENSION) tension[edge.id] = t;
+    }
     // Restored shaping is still shaping: a later save must not drop it just
     // because this session has not touched the edge yet.
     shaped[edge.id] = true;
   }
-  return { waypoints, overrides, shaped };
+  return { waypoints, overrides, shaped, handles, tension };
 }
 
 /**
@@ -125,7 +163,15 @@ export function sameRoutes(a: EdgeRouteMap | undefined, b: EdgeRouteMap | undefi
     if (!x) return false;
     const [wx, wy] = [x.waypoints ?? [], y.waypoints ?? []];
     if (wx.length !== wy.length) return false;
-    if (!wx.every((p, i) => Math.abs(p.x - wy[i].x) < 0.5 && Math.abs(p.y - wy[i].y) < 0.5)) return false;
+    const near = (p?: Pt, q?: Pt) =>
+      (!p && !q) || (!!p && !!q && Math.abs(p.x - q.x) < 0.5 && Math.abs(p.y - q.y) < 0.5);
+    if (!wx.every((p, i) => near(p, wy[i]) && near(p.h, wy[i].h))) return false;
+    // #39: a handle drag is a reshape of its own.
+    if (!near(x.handles?.s, y.handles?.s) || !near(x.handles?.t, y.handles?.t)) return false;
+    // A route with no tension was saved before #39 and is drawn with the old one.
+    const tensionOf = (r: EdgeRoute) =>
+      r.tension ?? (r.waypoints?.length || r.handles ? LEGACY_TENSION : undefined);
+    if (!close(tensionOf(x), tensionOf(y))) return false;
     return close(x.ends?.s, y.ends?.s) && close(x.ends?.t, y.ends?.t);
   });
 }

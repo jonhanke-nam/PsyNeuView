@@ -77,7 +77,7 @@ export function recordAction(description: string, opts?: RecordActionOptions) {
     // Undo puts an arrow's shape back.
     edgeRoutes: (() => {
       const ea = useEdgeAttach.getState();
-      return serializeRoutes(edges as unknown as RoutableEdge[], ea.shaped, ea.waypoints, ea.overrides);
+      return serializeRoutes(edges as unknown as RoutableEdge[], ea.shaped, ea.waypoints, ea.overrides, ea);
     })(),
     ...(opts?.moves ? { moves: true } : {}),
     ...(opts?.reshapes ? { reshapes: true } : {}),

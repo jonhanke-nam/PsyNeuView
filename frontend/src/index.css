@@ -147,6 +147,14 @@ button:hover {
   cursor: var(--graph-pointer-point-pressed-cursor, var(--graph-pointer-point-cursor, default));
 }
 
+/* #39: a curve's tangent handle grows under the pointer, as a bend handle does. */
+.pnv-curve-handle .pnv-curve-handle-dot {
+  transition: transform 0.1s;
+}
+.pnv-curve-handle:hover .pnv-curve-handle-dot {
+  transform: scale(1.5);
+}
+
 /* Allotment sash styling */
 .sash {
   background: var(--pnv-border-faint) !important;
