@@ -218,15 +218,16 @@ containment rather than a better approval view.
 
 ## 7. What the execution guard does and doesn't cover
 
-**In-process protection covers memory only. A model that writes files (directly or through a child process) can affect later tasks; only the OS sandbox (#311) closes this. Until #311, don't turn the assistant on for untrusted use.**
+**In-process protection covers memory only. A model that writes files (directly or through a child process) can affect later tasks; the OS sandbox (#311, `os-sandbox.md`) closes this where it can be applied. Where it can't, Settings and About say "NOT sandboxed", and the assistant doesn't turn on unless the user allows it.**
 
 **What the guard is, and what it isn't.** The guard stops
 assistant-written code running by accident or through ordinary paths: an
 import, a load by path, a file read and run, a script handed to a process.
 It is not a sandbox against model code that deliberately acts as the user:
 a model can write files, start processes and use `ctypes`, as any program
-the user runs can. Containment against deliberate model code needs an
-operating-system sandbox, which is not built (Phase 4, `containment.md`).
+the user runs can. Containment against deliberate model code is the
+operating-system sandbox (#311, `os-sandbox.md`), described below under
+"What the sandbox closes".
 
 The guard has four layers. Each is checked against the same review state,
 and each refuses a tracked file whose text isn't the approved text with the
@@ -413,6 +414,51 @@ boundary. It must close, at least:
 - **Child Pythons** (`multiprocessing` included), which have no guard.
 - **The converter's in-process run**, which runs model code in the server.
 
+### What the sandbox closes (#311), and what remains
+
+With the sandbox in use (always while anything is tracked; for every run
+while the assistant is on), each task's process applies a policy before
+any model code runs (`os-sandbox.md`): no reading the contents of any
+tracked file that isn't approved as it is now, or of secrets; writing only
+in the task's own folder and the declared output folders, never in the
+review record, the app, PsyNeuLink, the settings file or the Python install
+(stdlib and `site-packages` included); starting only Python and Graphviz;
+no network. The kernel enforces it in the model's process and every
+process it starts. Against the list above:
+
+| Gap | With the sandbox | Test |
+|---|---|---|
+| G1: rewriting or adding a module later processes import, a `.pth`, `sitecustomize` | **Closed**: writes to the app, PsyNeuLink, `site-packages` and the stdlib are refused, from any process | `test_os_sandbox.py` (`rewrite_*`, `new_module_in_services`, `write_pth`), `test_os_sandbox_routes.py::test_a_model_cant_rewrite_or_add_a_module_later_processes_import`, `::test_a_model_cant_add_a_pth_file` |
+| G2: a child process changing the review record | **Closed**: the record's folder is unwritable, and `cp`, `rm` and shells can't be started | `test_a_model_cant_change_the_review_record_for_the_next_task` (5 ways), `test_an_approval_forged_by_a_child_process_doesnt_land` |
+| G3's survivors | **Confined, and ended**: a survivor is inside the same sandbox (no unapproved file, no writes outside, no network), and the fork server's parent ends it when its task finishes | `test_a_grandchild_that_leaves_the_process_group_is_still_sandboxed`, `..._is_ended_with_its_task` |
+| G5: a symlink chain by a child process | **Closed**: `ln` can't be started, and a chain made in Python still reaches the file's real path, which is denied | `READS[ln_chain_by_child]`, `READS[symlink_chain]` |
+| F5: `os.open(name, dir_fd=d)` | **Closed**: the kernel checks the file, not the name | `READS[dir_fd]`; the guard's own test now expects it refused under the sandbox |
+| `ctypes` and C extensions | **Closed** | `READS[ctypes]`, `read_unapproved_ctypes` |
+| Child Pythons, `multiprocessing` | **Closed**: they inherit the sandbox | `READS[python_child]`, `read_unapproved_child_python`, `read_unapproved_child_ctypes` |
+| Tampering with the guard within the task | **Contained**: the model can switch the Python guard off, and the kernel still refuses; every route test switches it off first | `test_os_sandbox_routes.py` |
+| Killing the fork server's parent to be retried outside | **Closed**: the retry (a one-shot worker), the pool and Learn jobs start under the policy; on macOS (and Linux from Landlock ABI 6) the model can't signal the parent at all | `test_a_model_that_kills_its_parent_is_still_sandboxed_when_the_task_is_retried`, `test_a_sandboxed_model_cant_kill_the_fork_servers_parent` |
+| The converter's in-process run | **Closed under the sandbox**: converting runs the model in a sandboxed process of its own, which hands back the new source | `test_a_model_converted_to_the_standard_format_is_sandboxed_too` |
+| Links set up beforehand | **Closed on Linux** (Landlock checks files, not names); **on macOS**, a hard link made before the file was tracked, under another name, is still readable (Seatbelt matches paths) | — |
+
+What remains with the sandbox in use:
+
+- **Where no sandbox can be applied** (native Windows, a Linux kernel
+  without Landlock, a container runtime that refuses it), none of the above
+  is closed: the guard is all there is, and the state says so.
+- **The task's own folder and the declared output folders** are writable,
+  so a model can leave files there (not in the record, the app or Python).
+  A model that writes next to itself is refused instead.
+- **The warm worker** isn't sandboxed: it runs only while the sandbox
+  isn't wanted (assistant off, nothing tracked).
+- **The fork server's parent** isn't sandboxed (it runs no model code).
+- **Time and memory** aren't limited by the sandbox; the task timeout is.
+- **On Linux below Landlock ABI 6** a model can signal the user's other
+  processes, and the names (not contents) in a folder above a denied file
+  can be listed.
+- **A file the assistant writes while a model is running** is caught by
+  the guard during that task and by the sandbox from the next one.
+- **`sandbox_init` is deprecated by Apple** (it works on macOS 26).
+
 ### Every way code runs in the backend, and its guard
 
 Everything in `backend/app` that starts a process or loads or executes
@@ -457,8 +503,9 @@ reviewers, not boundaries.
   app folder). Model code can: while something is tracked, the model's
   own Python code in the worker can't write, move or remove it (layer 2),
   but a process the model starts can (`cp` a forged record, `rm` it and
-  its backup), and so can any program outside the worker. Only the
-  operating-system sandbox (#311) closes that.
+  its backup), and so can any program outside the worker. The
+  operating-system sandbox (#311) closes that for model runs; programs the
+  user runs outside PsyNeuView can still change it.
 
 ## 8. Open items after the parts were joined
 
