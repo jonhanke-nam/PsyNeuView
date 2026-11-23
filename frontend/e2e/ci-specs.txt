@@ -125,6 +125,7 @@ tutorial-known-state.spec.ts
 tutorial-resume.spec.ts
 tutorials-hide-course.spec.ts
 tutorials-menu-folding.spec.ts
+ui-text-equivalence.spec.ts
 undo-depth.spec.ts
 undo-notices.spec.ts
 value-grid.spec.ts
