@@ -4628,6 +4628,15 @@ def _handle_one_task(payload_str: str) -> str:
     # A task the server sent to be sandboxed (#311) runs only in a process
     # that applied that very policy: a worker started under another, or
     # none, refuses it rather than run it unsandboxed.
+    # A pool worker on macOS applies the task's own policy when the task
+    # comes (Seatbelt binds the whole process, threads and all), before
+    # anything of the model's is read (#311).
+    if payload.get("os_sandbox") and _os_sandbox.applied() is None and sys.platform == "darwin":
+        try:
+            _os_sandbox.apply(payload["os_sandbox"])
+        except _os_sandbox.SandboxUnavailable as e:
+            return json.dumps({"error": f"The model sandbox couldn't be applied, so nothing was run: {e}",
+                               "os_sandbox_refused": True})
     required = payload.get("os_sandbox_key")
     if required and (_os_sandbox.applied() or {}).get("key") != required:
         return json.dumps({"error": "This task must run under the model sandbox, and this process isn't under "
@@ -4899,7 +4908,9 @@ def _run_fork_server():
         except OSError:
             pass
         try:
-            _os_sandbox.end_survivors(started, programs)
+            # Bounded, since the next task waits for this parent; what's still
+            # there after is ended by the server's own sweep.
+            _os_sandbox.end_survivors(started, programs, time_limit=1.0)
         except Exception:  # noqa: BLE001 - never stop serving tasks over it
             pass
         _say(control, f"###PSYNEUVIEW_CHILD_DONE### {status}")

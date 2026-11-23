@@ -509,7 +509,7 @@ def write_model_file(path: str, text: str, *, base_hash: str | None) -> Path:
     # the assistant writes now (#311, T3): end any first.
     try:
         from app.services import os_sandbox
-        os_sandbox.sweep_survivors()
+        os_sandbox.sweep_survivors(wait=True)
     except Exception:  # noqa: BLE001 - the write's own checks follow
         pass
     return _write_model_file(path, text, base_hash=base_hash)

@@ -215,6 +215,19 @@ from the next one.
   new session at every fork may slip between rounds, and on a Linux desktop
   an orphan that `systemd --user` adopts is ended only by the fork server's
   own sweep.
+- **No task waits on a sweep.** Sweeps after and before tasks run in the
+  background; only the one before the assistant writes a file runs at once
+  (it must finish before the file exists). The fork server's parent spends
+  at most a second on its own after each task. Measured, the task after a
+  noisy `setsid` leftover: 0.3 s (fork) and 0.2 to 1.6 s (pool) on macOS;
+  0.3 s (fork) and 2.9 s (pool, which starts a worker per model folder on
+  Linux) on Linux.
+- **macOS pool workers take each task's own policy** when the task comes
+  (Seatbelt binds the whole process), so any ready worker will do; on Linux
+  a pool worker's policy is set when it starts (Landlock binds threads).
+- **On Linux, orphans** go to init or a user's `systemd`; their child lists
+  are read directly, so a process that forks every few milliseconds is
+  still seen.
 - **The proof is defence in depth, not the barrier.** Model code can read
   the policy's key, so it could forge an answer; the barrier is the
   worker's own refusal to run a task whose policy it hasn't applied. The

@@ -191,12 +191,43 @@ def check_applied(result, policy: dict | None) -> dict:
                      "isn't used.", "os_sandbox_refused": True}
 
 
-def sweep_survivors() -> None:
-    """End sandboxed processes a finished task left behind (#311, S3). The
-    server calls it after Learn jobs, pool and one-shot tasks and
-    conversions; the fork server's parent does it after each of its own."""
+_sweep_lock = threading.Lock()
+_sweep_again = False
+
+
+def sweep_survivors(wait: bool = False) -> None:
+    """End sandboxed processes finished tasks left behind (#311, S3 and T3).
+
+    Runs in the background, so a task never waits on a survivor: after
+    Learn jobs, pool and one-shot tasks and conversions, and before every
+    task. ``wait`` (before the assistant writes a file) runs it now, so no
+    survivor is there to read what is written; bounded to ten seconds. The
+    fork server's parent sweeps its own after each of its tasks."""
     if not available():
         return
+    if wait:
+        _sweep_now()
+        return
+    global _sweep_again
+    if not _sweep_lock.acquire(blocking=False):
+        _sweep_again = True  # one is running; it goes round once more
+        return
+
+    def run():
+        global _sweep_again
+        try:
+            while True:
+                _sweep_again = False
+                _sweep_now()
+                if not _sweep_again:
+                    break
+        finally:
+            _sweep_lock.release()
+
+    threading.Thread(target=run, daemon=True, name="sandbox-sweep").start()
+
+
+def _sweep_now() -> None:
     try:
         _apply.end_survivors(0.0, _programs(), own_children=False, time_limit=10.0)
     except Exception:  # noqa: BLE001 - never fail a task over it

@@ -601,6 +601,9 @@ class _PoolMember(WarmWorker):
         self._on_ready = None
 
     def _sandbox_extras(self) -> dict:
+        task_policy = getattr(self, "_task_policy", None)
+        if task_policy:
+            return {"os_sandbox": task_policy, "os_sandbox_key": task_policy["key"]}
         p = getattr(self._proc, "_os_sandbox_policy", None)
         return {"os_sandbox_key": p["key"]} if p else {}
 
@@ -652,7 +655,9 @@ class WorkerPool:
         # none is wanted) can't take this task: its policy was applied when
         # it started (#311). It is ended unused.
         model_path = getattr(self, "_model_path", None)
-        want = os_sandbox.policy_key(model_path) if os_sandbox.active() else None
+        # macOS: workers start unsandboxed and take each task's own policy
+        # (so any ready worker will do); Linux: the policy is set at start.
+        want = os_sandbox.policy_key(model_path) if (os_sandbox.active() and not _POOL_PER_TASK) else None
         with self._cond:
             while True:
                 while self._ready:
@@ -675,13 +680,18 @@ class WorkerPool:
             if proc is None:
                 return {"error": f"{self.NAME} failed to start a worker"}
             member = _PoolMember(proc)
+            task_policy = (os_sandbox.policy(model_path=params.get("file_path"))
+                           if _POOL_PER_TASK and os_sandbox.active() else None)
+            member._task_policy = task_policy
             try:
                 with member._lock:
                     return os_sandbox.check_applied(member._send(task, params, timeout),
-                                                    getattr(proc, "_os_sandbox_policy", None))
+                                                    task_policy or getattr(proc, "_os_sandbox_policy", None))
             finally:
                 _PoolMember._kill(member._proc if member._proc is not None else proc)
-                if getattr(proc, "_os_sandbox_policy", None):
+                if task_policy:
+                    os_sandbox.discard_scratch(task_policy.get("scratch"))
+                if task_policy or getattr(proc, "_os_sandbox_policy", None):
                     os_sandbox.sweep_survivors()
                 _discard_launch_scratch(proc)
 
@@ -706,7 +716,7 @@ def _spawn_worker_process(model_path: str | None = None) -> subprocess.Popen | N
     member._stderr_thread = None
     # Its policy is set when it starts, so it is made for the model the pool
     # last ran: the same model again (the live preview) finds one ready.
-    policy = os_sandbox.policy(model_path=model_path) if os_sandbox.active() else None
+    policy = os_sandbox.policy(model_path=model_path) if (os_sandbox.active() and not _POOL_PER_TASK) else None
     member._launch_env = os_sandbox.launch_env(policy) if policy else None
     started = time.time()
     proc = WarmWorker._spawn(member)
@@ -733,6 +743,10 @@ def _note_model_folder(result, policy: dict | None) -> None:
     else:
         model["notices"] = [message]
     logger.info(message)
+
+
+#: macOS pool workers apply each task's policy when it comes (#311).
+_POOL_PER_TASK = sys.platform == "darwin"
 
 
 def _older_than_model_folder(proc, model_path: str | None) -> bool:

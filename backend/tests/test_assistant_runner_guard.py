@@ -1564,6 +1564,7 @@ def test_a_noisy_leftover_process_doesnt_stall_or_steer_later_tasks(st):
             t0 = time.time()
             r = load(model)
             assert _runs_normally(r), r.text[:300]
+            print(f"[timing] task after a noisy leftover: {time.time() - t0:.2f} s")
             assert time.time() - t0 < 10, "a task waited on the leftover process"
         marker2 = st["tmp"] / "h1_ran.txt"
         helper = st["models"] / "hx_h1.py"

@@ -575,6 +575,8 @@ class _ProcBsdInfo(ctypes.Structure):
 #: The process group each process was in when the table was last read,
 #: so a group can be ended after the process that showed it has gone.
 _PGID: dict[int, int] = {}
+#: Processes that adopt orphans in place of init (a user's ``systemd``).
+_ADOPTERS: set[int] = set()
 
 
 def _process_table(programs: list[str]) -> dict[int, tuple[int, bool]]:
@@ -633,8 +635,11 @@ def _process_table(programs: list[str]) -> dict[int, tuple[int, bool]]:
                     _PGID[int(name)] = int(f.read().rsplit(b")", 1)[1].split()[2])
             except (OSError, IndexError, ValueError):
                 pass
-            ours = (int(st.get("Uid", "-1").split()[0]) == uid and st.get("NoNewPrivs", "").strip() == "1"
+            same_user = int(st.get("Uid", "-1").split()[0]) == uid
+            ours = (same_user and st.get("NoNewPrivs", "").strip() == "1"
                     and st.get("Seccomp", "").strip() == "2" and is_program(f"/proc/{name}/exe"))
+            if same_user and st.get("Name", "").strip() == "systemd":
+                _ADOPTERS.add(int(name))  # a user's systemd adopts orphans in a desktop session
             table[int(name)] = (ppid, ours)
         except (OSError, ValueError):
             continue
@@ -650,6 +655,11 @@ def survivors(programs: list[str], keep: set[int] = frozenset(), adopter: bool =
     processes come and go, or which task started it doesn't matter."""
     table = _process_table(programs)
     me, out = os.getpid(), []
+    if sys.platform.startswith("linux"):
+        # A process that forks and exits every few milliseconds is gone
+        # before a full scan reaches it. The adopters' own child lists are
+        # one read each, so look there too, at once (#311, T3).
+        out.extend(_adopted_now(programs))
     for pid, (ppid, ours) in table.items():
         if not ours or pid in keep:
             continue
@@ -658,7 +668,7 @@ def survivors(programs: list[str], keep: set[int] = frozenset(), adopter: bool =
             seen += 1
             if p in keep:
                 break
-            if p in (0, 1) or (adopter and p == me):
+            if p in (0, 1) or p in _ADOPTERS or (adopter and p == me):
                 out.append(pid)
                 break
             if p == me:
@@ -724,6 +734,32 @@ def end_survivors(since: float = 0.0, programs: list[str] | None = None, *, own_
     if sys.platform.startswith("linux") and own_children:
         _reap_children()
     return ended
+
+
+def _adopted_now(programs: list[str]) -> list[int]:
+    real = [os.path.realpath(p) for p in programs]
+    uid, out = os.getuid(), []
+    for adopter in {1, *_ADOPTERS}:
+        try:
+            with open(f"/proc/{adopter}/task/{adopter}/children") as f:
+                kids = [int(x) for x in f.read().split()]
+        except (OSError, ValueError):
+            continue
+        for pid in kids:
+            try:
+                with open(f"/proc/{pid}/stat", "rb") as f:
+                    pgid = int(f.read().rsplit(b")", 1)[1].split()[2])
+                with open(f"/proc/{pid}/status") as f:
+                    st = dict(line.rstrip("\n").split(":\t", 1) for line in f if ":\t" in line)
+                if (int(st.get("Uid", "-1").split()[0]) == uid and st.get("Seccomp", "").strip() == "2"
+                        and st.get("NoNewPrivs", "").strip() == "1"):
+                    exe = os.path.realpath(f"/proc/{pid}/exe")
+                    if any(exe == r or exe.startswith(r.rstrip("/") + "/") for r in real):
+                        _PGID[pid] = pgid
+                        out.append(pid)
+            except (OSError, ValueError, IndexError):
+                continue
+    return out
 
 
 def _linux_children() -> list[int]:
