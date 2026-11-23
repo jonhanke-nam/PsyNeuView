@@ -9,6 +9,8 @@
  *
  * A file already at the destination gets the same question the `.py` gets:
  * the backend answers 409 naming the file, and the app asks before overwriting.
+ *
+ * Not in CI: should be added: passes locally in about 21 s (2026-11-23); never tagged.
  */
 import type { Page } from "@playwright/test";
 import { mutatingTest as test, expect, canvasNode } from "./test-base";

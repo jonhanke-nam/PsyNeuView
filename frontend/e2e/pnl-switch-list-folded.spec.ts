@@ -8,6 +8,8 @@
  * PsyNeuLink in use starts open. The data is a developer's real Settings
  * (pnl-switch-stub.ts): a managed Princeton clone on devel in use, six of
  * its branches, three of a fork, one checkout, nine releases.
+ *
+ * Not in CI: should be added: passes locally in about 3 s (2026-11-23); never tagged.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 import { CHECKOUT, FORK, FORK_BRANCHES, PRINCETON, openDeveloper, stubSwitchBackend } from "./pnl-switch-stub";

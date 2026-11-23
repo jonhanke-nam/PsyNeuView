@@ -8,6 +8,8 @@
  * genuine editor rather than a test.
  *
  * Run: npx playwright test e2e/pycharm-live.local.spec.ts
+ *
+ * Not in CI: local only: it drives a real PyCharm on macOS, which the runners don't have; external-edit-sync.spec.ts is the CI version.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 import { execFileSync } from "child_process";

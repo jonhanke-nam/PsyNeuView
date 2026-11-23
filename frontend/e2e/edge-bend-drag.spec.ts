@@ -13,6 +13,8 @@
  *
  * The assertion that matters is the viewport transform: if it changes during an
  * edge-shaping drag, the canvas stole the gesture and the feature is broken.
+ *
+ * Not in CI: should be added: passes locally in about 15 s (2026-11-23); never tagged. edge-shaping-auto-layout.spec.ts covers part of it in CI.
  */
 import { mutatingTest as test, expect } from "./test-base";
 import path from "path";

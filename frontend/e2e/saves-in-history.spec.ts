@@ -15,6 +15,8 @@
  *   - with autosave on, the marker says automatic.
  *
  * Screenshots land in `$SHOTS_DIR` when it is set.
+ *
+ * Not in CI: should be added: passes locally in about 33 s (2026-11-23); never tagged.
  */
 import { mutatingTest as test, expect } from "./test-base";
 import { readFileSync, writeFileSync, mkdtempSync } from "fs";

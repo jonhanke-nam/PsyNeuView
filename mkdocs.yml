@@ -77,6 +77,8 @@ nav:
       - Guided walkthroughs (PsyNeuLink Tutorials): tutorials/17-psyneulink-tutorials.md
   - Developer:
       - Testing: testing.md
+      - What's tested: testing-coverage.md
+      - What's tested (every test): testing-coverage-tests.md
       - Writing a guided walkthrough: guided-walkthroughs.md
       - File conventions: file-conventions.md
       - File handling: file-handling.md

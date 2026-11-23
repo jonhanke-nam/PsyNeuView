@@ -10,6 +10,8 @@
  *
  * The backend's answers are stubbed: a real check talks to GitHub and a
  * real pull touches a checkout.
+ *
+ * Not in CI: should be added: passes locally in under 3 s, with the network answers stubbed (2026-11-23); never tagged.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 

@@ -2,6 +2,8 @@ import { readOnlyTest as test, expect } from "./test-base";
 
 // #37: the delay typed in Settings must take effect however Settings is
 // closed, not only after Enter.
+//
+// Not in CI: should be added: passes locally in under 1 s (2026-11-23); never tagged.
 test("autosave delay typed in Settings is kept when Settings closes with Escape", async ({ page }) => {
   await page.request.post("/api/settings/autosave", { data: { enabled: false, seconds: 10 } });
   await page.goto("/");

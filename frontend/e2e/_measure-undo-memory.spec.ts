@@ -11,6 +11,8 @@
  * utils/history.ts) with a fresh copy of the graph each, as a code edit that
  * rebuilds the model gives; heap is read through the DevTools protocol after
  * a forced garbage collection.
+ *
+ * Not in CI: measurement: it only logs heap use, with no assertions; run it with PERF_MEASURE=1 when measuring.
  */
 import { mutatingTest as test, expect } from "./test-base";
 import { copyFileSync, mkdtempSync, readFileSync } from "fs";

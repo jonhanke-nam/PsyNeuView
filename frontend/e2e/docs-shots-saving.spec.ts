@@ -19,6 +19,8 @@
  *   DOCS_SHOTS=1 npx playwright test e2e/docs-shots-saving.spec.ts
  *
  * The window is Playwright's default 1280 × 720, as the originals were.
+ *
+ * Not in CI: pictures only: it retakes the docs' pictures; the behaviour is tested by saves-in-history and changes-since-save.
  */
 import { mutatingTest as test, expect } from "./test-base";
 import { readFileSync, writeFileSync, mkdtempSync } from "fs";

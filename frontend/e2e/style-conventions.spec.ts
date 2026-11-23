@@ -12,6 +12,8 @@
  * And the Close rule: Settings' only way out is closing, so Close is the
  * default button and Return closes it — but not from a text field, and not
  * while a dialog is open on top.
+ *
+ * Not in CI: broken: two tests fail on devel (2026-11-23), expecting 13px buttons that the default Text size (1.1, since #111) draws at 14.3px. Fix, then add.
  */
 import { mutatingTest, readOnlyTest, expect } from "./test-base";
 import { readFileSync, mkdtempSync, mkdirSync, realpathSync } from "fs";

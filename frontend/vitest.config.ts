@@ -12,5 +12,14 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    // `npm run test:coverage` (#319): line and branch coverage of src/ for
+    // docs/testing-coverage.md. Only the summary is kept.
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/*.test.ts", "src/**/*.d.ts"],
+      reporter: ["text-summary", "json-summary"],
+      reportsDirectory: "coverage",
+    },
   },
 });

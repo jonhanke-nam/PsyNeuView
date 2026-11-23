@@ -12,6 +12,8 @@
  * (`/api/settings/install/check-folder`, which only reads the disk). What is
  * installed, the known sources and the install job itself are answered here,
  * so nothing is downloaded or installed.
+ *
+ * Not in CI: should be added: passes locally in about 8 s, nothing downloaded (2026-11-23); never tagged.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";

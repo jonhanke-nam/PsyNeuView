@@ -23,6 +23,8 @@
  *      gesture's, not the model's;
  *   3. dragging a selection out of the editor and dropping it on the canvas,
  *      where the app's file-drop handler lives.
+ *
+ * Not in CI: should be added: passes locally in about 26 s (2026-11-23); never tagged.
  */
 import type { Page } from "@playwright/test";
 import { readOnlyTest as test, expect } from "./test-base";
