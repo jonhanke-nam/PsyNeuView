@@ -240,6 +240,12 @@ test.describe("AI assistant, for real (#179)", { tag: "@ci" }, () => {
     await expect(page.getByTestId("assistant-explanation")).toContainText("What is shared:");
     await page.getByTestId("assistant-explanation-ok").click();
     await expect(page.getByTestId("setting-assistant-enabled")).toBeChecked();
+    // Model runs are sandboxed by the operating system now (#311): macOS and
+    // Linux (CI) both have one, so the state is "on" and there is no warning.
+    await expect(page.getByTestId("assistant-sandbox-status")).toHaveAttribute("data-state", "on");
+    await expect(page.getByTestId("assistant-sandbox-warning")).toHaveCount(0);
+    await expect(page.getByTestId("setting-assistant-sandbox-all-runs")).toBeChecked();
+    await expect(page.getByTestId("setting-assistant-sandbox-require")).toBeChecked();
 
     // The agent: an OpenAI-compatible server on this machine.
     // Where messages go is a raise, confirmed with the real destination shown.

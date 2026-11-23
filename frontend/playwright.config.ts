@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import { execFileSync } from "child_process";
-import { mkdtempSync } from "fs";
+import { mkdtempSync, realpathSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -103,6 +103,11 @@ const harnessEnv: Record<string, string> = {
   PSYNEUVIEW_ASSISTANT_STATE_DIR: path.join(sessionTmp, "assistant"),
   PSYNEUVIEW_ASSISTANT_LOG: path.join(sessionTmp, "assistant", "log.jsonl"),
   PSYNEUVIEW_ASSISTANT_KEY_STORE: "memory",
+  // The operating-system sandbox for model runs (#311) lets a model write
+  // only in its task folder and the declared output folders. Test models
+  // write markers in the system temp folder, so it is declared here; the
+  // review state and the app inside it stay protected by name.
+  PSYNEUVIEW_OS_SANDBOX_WRITE_FOLDERS: realpathSync(tmpdir()),
 };
 
 const prodWebServer = {

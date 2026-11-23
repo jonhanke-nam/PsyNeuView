@@ -123,6 +123,8 @@ t("dns", lambda: socket.getaddrinfo("example.com", 80))
 t("udp", lambda: socket.socket(socket.AF_INET, socket.SOCK_DGRAM).sendto(b"x", ("127.0.0.1", A["port"])))
 if A.get("ssh"):
     t("read_ssh", lambda: os.listdir(A["ssh"]))
+    if A.get("ssh_file"):
+        t("read_ssh_file", lambda: open(A["ssh_file"], "rb").close())
 # What must keep working.
 t("ok_read_approved", lambda: open(OK_FILE).read())
 t("ok_write_scratch", lambda: write(os.path.join(SCRATCH, "w.txt")))
@@ -195,6 +197,8 @@ def attacked(tmp_path_factory):
             "site_packages": site.getsitepackages()[0], "pnl_dir": str(Path(psyneulink.__file__).parent),
             "home": str(Path.home()), "port": listener.getsockname()[1], "variants": variants,
             "ssh": str(ssh) if ssh.is_dir() else None, "dot": shutil.which("dot"),
+            # A file in it, found from here (only its name is used).
+            "ssh_file": next((str(f) for f in sorted(ssh.rglob("*")) if f.is_file()), None) if ssh.is_dir() else None,
         }
         state_before = state.read_bytes()
         proc = subprocess.run([sys.executable, "-I", "-c", ATTACKS, json.dumps(args)],
@@ -275,7 +279,12 @@ def test_another_spelling_of_the_unapproved_file_is_refused(attacked):
 def test_secrets_in_the_home_folder_are_refused(attacked):
     if "read_ssh" not in attacked:
         pytest.skip("no ~/.ssh on this machine")
-    assert attacked["read_ssh"][0] == "refused", attacked["read_ssh"]
+    if "read_ssh_file" in attacked:
+        assert attacked["read_ssh_file"][0] == "refused", attacked["read_ssh_file"]
+    if sys.platform == "darwin":
+        # On Linux the names in a denied folder can be listed (Landlock's
+        # listing right is inherited from the folder above); never contents.
+        assert attacked["read_ssh"][0] == "refused", attacked["read_ssh"]
 
 
 @needs_sandbox
