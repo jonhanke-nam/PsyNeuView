@@ -929,6 +929,9 @@ def run_in_sandbox(task: str, params: dict, timeout: int | None = None) -> dict:
     refused = os_sandbox.refusal()
     if refused:
         raise os_sandbox.SandboxRefused(refused)
+    # Nothing an earlier task left running may see this one (#311, T3).
+    if os_sandbox.active():
+        os_sandbox.sweep_survivors()
 
     if timeout is None:
         # introspect with developer_mode=True actually runs the script's

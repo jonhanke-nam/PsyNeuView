@@ -189,6 +189,8 @@ class JobManager:
         if refused:
             job.finish("error", error=refused)
             return
+        if os_sandbox.active():
+            os_sandbox.sweep_survivors()
         policy = os_sandbox.policy(model_path=task_params.get("file_path")) if os_sandbox.active() else None
         extras = {"os_sandbox_key": policy["key"]} if policy else {}
         payload = json.dumps({"task": task, "params": task_params, **assistant_review.worker_payload_extras(), **extras})

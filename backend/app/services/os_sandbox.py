@@ -198,7 +198,7 @@ def sweep_survivors() -> None:
     if not available():
         return
     try:
-        _apply.end_survivors(0.0, _programs(), own_children=False, time_limit=3.0)
+        _apply.end_survivors(0.0, _programs(), own_children=False, time_limit=10.0)
     except Exception:  # noqa: BLE001 - never fail a task over it
         logger.exception("Couldn't sweep processes left by a sandboxed task")
 
@@ -238,6 +238,28 @@ def _spellings(path: str) -> list[str]:
         except OSError:
             pass
     return out
+
+
+def canonical(path: str) -> str:
+    """``path`` as the file system spells it: the real path, and on macOS the
+    spelling the volume stores (case and accent form), from ``F_GETPATH``
+    on the opened file or folder. Every path a policy compares goes through
+    this, so a case- or accent-changed spelling names the same rules (#311)."""
+    real = _real(path)
+    if sys.platform == "darwin":
+        try:
+            import fcntl
+            fd = os.open(real, os.O_RDONLY | os.O_CLOEXEC)
+            try:
+                raw = fcntl.fcntl(fd, 50, b"\0" * 1024)  # F_GETPATH
+                spelled = raw.split(b"\0", 1)[0].decode("utf-8", "surrogateescape")
+                if spelled:
+                    return spelled
+            finally:
+                os.close(fd)
+        except OSError:
+            pass
+    return real
 
 
 def _approved_hash_of(path: str) -> str | None:
@@ -283,6 +305,10 @@ def _designated_folders() -> list[dict]:
         return []
 
 
+def _canon_list(paths) -> list[str]:
+    return sorted({canonical(p) if os.path.exists(p) else _real(p) for p in paths})
+
+
 def output_folders() -> list[str]:
     """Where a sandboxed model may write besides its own task folder: the
     assistant's read-write folders and any declared in
@@ -290,7 +316,7 @@ def output_folders() -> list[str]:
     (:func:`_protected_from_writes`) stay unwritable even inside them."""
     out = [_real(f["path"]) for f in _designated_folders() if f.get("access") == "read_write"]
     out += [_real(p) for p in os.environ.get(WRITE_FOLDERS_ENV, "").split(os.pathsep) if p.strip()]
-    return sorted(set(out))
+    return _canon_list(out)
 
 
 def _protected_from_writes() -> list[str]:
@@ -444,7 +470,7 @@ def model_folder(model_path: str | None) -> tuple[str | None, str | None]:
     scratch folder and the declared output folders."""
     if not model_path:
         return None, None
-    folder = _real(os.path.dirname(os.path.abspath(model_path)))
+    folder = canonical(os.path.dirname(os.path.abspath(model_path)))
     home = _real(_own_home())
     if folder in ("/", home) or folder.count(os.sep) < 2:
         return None, f"the model's folder ({folder}) is too broad to open for writing"
@@ -488,7 +514,7 @@ def policy(scratch: str | None = None, model_path: str | None = None) -> dict:
         "write_deny_files": tracked_files(),
         # No new code beside the model (macOS): a .py, .pth or
         # sitecustomize there would run in a later Python unreviewed.
-        "no_code_in": [folder] if folder else [],
+        "no_code_in": sorted(set(write_allow)),
         # No hidden files or folders, nor files other tools run on their own
         # (a Makefile, .git/hooks, a .pth), in any writable folder (macOS).
         "no_autorun_in": sorted(set(write_allow)),
@@ -504,7 +530,9 @@ def policy(scratch: str | None = None, model_path: str | None = None) -> dict:
     # either (macOS matches paths, so moving the folder would move the file
     # out from under its rule): every folder from the file up to the
     # writable folder that holds it (#311, S2).
-    p["no_move"] = _folders_above(p["read_deny"] + p["write_deny"] + p["write_deny_files"], p["write_allow"])
+    p["no_move"] = _folders_above([canonical(x) if os.path.exists(x) else x for x in
+                                   p["read_deny"] + p["write_deny"] + p["write_deny_files"]],
+                                  [canonical(r) if os.path.exists(r) else r for r in p["write_allow"]])
     p["key"] = hashlib.sha256(json.dumps(p, sort_keys=True).encode()).hexdigest()[:16]
     scratch = scratch or new_scratch()
     p["scratch"] = scratch

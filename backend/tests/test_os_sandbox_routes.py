@@ -712,3 +712,156 @@ def test_s6_the_dynamic_loader_cant_start_another_program(st):
         f"open({str(out)!r}, 'w').write(r.stdout)\n"))
     load(model)
     assert "ran" not in (out.read_text() if out.exists() else "")
+
+
+# ── The second independent review of #312 (T1–T6), guard switched off ──────
+
+
+def _held(st, name: str, base: Path | None = None) -> tuple[Path, Path]:
+    """An unapproved helper two folders down, and its marker."""
+    base = base or (st["models"] / name)
+    sub = base / "outer" / "sub"
+    sub.mkdir(parents=True)
+    marker = st["tmp"] / f"ran_{name}.txt"
+    helper = sub / f"hx_{name}.py"
+    helper.write_text(_helper(marker))
+    review.mark_unreviewed(str(helper), helper.read_text())
+    return marker, helper
+
+
+@pytest.mark.parametrize("level", ["parent", "grandparent"])
+@pytest.mark.parametrize("call", ["clonefile", "fclonefileat"])
+def test_t1_cloning_a_folder_that_holds_an_unapproved_file_is_refused(st, level, call):
+    if sys.platform != "darwin":
+        pytest.skip("clonefile is macOS's")
+    marker, helper = _held(st, f"t1_{call}_{level}")
+    src = helper.parent if level == "parent" else helper.parent.parent
+    dst = Path(str(src) + "_c")
+    inside = (dst / helper.name) if level == "parent" else (dst / "sub" / helper.name)
+    if call == "clonefile":
+        do = f"lc.clonefile({str(src).encode()!r}, {str(dst).encode()!r}, 0)"
+    else:
+        do = (f"fd = os.open({str(src)!r}, os.O_RDONLY)\n"
+              f"lc.fclonefileat(fd, -2, {str(dst).encode()!r}, 0)")
+    model = _guard_off_model(st["tmp"] / f"T1_{call}_{level}", (
+        f"import ctypes\nlc = ctypes.CDLL(None, use_errno=True)\n{do}\n"
+        f"try:\n    exec(open({str(inside)!r}).read())\nexcept OSError:\n    pass\n"))
+    load(model)
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize("variant", ["case", "nfd"])
+def test_t2_a_case_or_accent_changed_model_path_keeps_the_folder_protections(st, variant):
+    if sys.platform != "darwin":
+        pytest.skip("case and accent variants are the same folder only on macOS volumes")
+    import unicodedata
+
+    _no_declared_folders(st)
+    folder = Path(os.path.realpath(st["tmp"])) / unicodedata.normalize("NFC", "modèles_t2")
+    marker, helper = _held(st, f"t2_{variant}", base=folder)
+    model = folder / "m.py"
+    model.write_text(GUARD_OFF + "import os\n"
+                     f"try:\n    os.rename({str(helper.parent)!r}, {str(helper.parent) + '_m'!r})\nexcept OSError:\n    pass\n"
+                     f"try:\n    exec(open({str(helper.parent) + '_m/' + helper.name!r}).read())\nexcept OSError:\n    pass\n" + PSY)
+    spelled = (str(model).replace("modèles_t2", "MODÈLES_T2") if variant == "case"
+               else str(model).replace("modèles_t2", unicodedata.normalize("NFD", "modèles_t2")))
+    load(spelled)
+    assert not marker.exists()
+    assert helper.exists(), "the folder was moved"
+
+
+def test_t3_a_fast_fork_racer_is_ended_and_never_runs_a_later_file(st):
+    later = st["models"] / "later_racer.py"
+    marker = st["tmp"] / "ran_racer.txt"
+    beat = st["tmp"] / "racer_beat.txt"
+    racer = ("import os, time\nos.setsid()\nend = time.time() + 40\nn = 0\n"
+             "while time.time() < end:\n"
+             f"    try:\n        exec(open({str(later)!r}).read()); break\n    except OSError:\n        pass\n"
+             "    if os.fork():\n        os._exit(0)\n"
+             "    n += 1\n"
+             f"    if n % 50 == 0:\n        open({str(beat)!r}, 'w').write(str(n))\n"
+             "    time.sleep(0.002)\n")
+    model = _guard_off_model(st["tmp"] / "T3", (
+        "import subprocess, time\n"
+        f"subprocess.Popen([sys.executable, '-c', {racer!r}], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n"
+        f"t = time.time()\nwhile time.time() - t < 5 and not os.path.exists({str(beat)!r}):\n    time.sleep(0.05)\n"))
+    load(model)
+    assert beat.exists(), "the racer never started"
+    # The assistant writes later.py through its own write, which sweeps first.
+    from app.services.assistant import files as assistant_files
+    st["monkeypatch"].setattr(assistant_files, "folders_provider", lambda: [{"path": str(st["models"]), "access": "read_write"}])
+    assistant_files.write_model_file(str(later), _helper(marker), base_hash=None)
+    stamp = beat.stat().st_mtime
+    deadline = time.time() + 4
+    while time.time() < deadline and not marker.exists():
+        threading.Event().wait(0.2)
+    assert not marker.exists()
+    assert beat.stat().st_mtime == stamp, "the racer is still running"
+
+
+def test_t4_a_deleted_review_record_fails_closed_when_its_backup_is_there(st):
+    marker, helper = _mk(st, "t4")
+    review.mark_reviewed(str(st["agent_file"]), st["agent_file"].read_text())  # a second save: a backup exists
+    sp = review.state_path()
+    sp.unlink()
+    review._cache = None
+    assert review.is_tracked(str(helper)), "the backup wasn't read"
+    # The guard (not switched off here) still refuses by the backup...
+    plain = st["tmp"] / "Own" / "t4_plain.py"
+    plain.parent.mkdir(exist_ok=True)
+    plain.write_text(_model_importing(f"exec(open({str(helper)!r}).read())"))
+    r = load(plain)
+    assert r.status_code == 409, r.text[:300]
+    # ...and with it switched off, the sandbox's policy still denies the file.
+    load(_model(st, "t4", f"exec(open({str(helper)!r}).read())"))
+    assert not marker.exists()
+
+
+def test_t4_the_test_records_survive_another_pytest_session(st, tmp_path_factory):
+    sp = review.state_path()
+    assert sp.exists()
+    empty = tmp_path_factory.mktemp("empty_session") / "test_empty.py"
+    empty.write_text("def test_nothing():\n    pass\n")
+    import subprocess
+    subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", str(empty)],
+                   capture_output=True, timeout=120, cwd=str(empty.parent))
+    assert sp.exists(), "another pytest session removed this test's review record"
+
+
+def test_t5_no_new_code_in_any_writable_folder(st):
+    if sys.platform != "darwin":
+        pytest.skip("refusing files by name needs Seatbelt's path rules (macOS)")
+    rw = Path(os.path.realpath(st["tmp"])) / "AssistantRW"
+    rw.mkdir()
+    st["monkeypatch"].setattr(files_mod(), "folders_provider", lambda: [{"path": str(rw), "access": "read_write"}])
+    model = _guard_off_model(st["tmp"] / "T5", (
+        f"for name in ('planted.py', 'pkg/__init__.py', 'x.so'):\n"
+        f"    try:\n        os.makedirs(os.path.dirname(os.path.join({str(rw)!r}, name)), exist_ok=True)\n"
+        f"        open(os.path.join({str(rw)!r}, name), 'w').write('X = 1')\n    except OSError:\n        pass\n"
+        f"open(os.path.join({str(rw)!r}, 'data.csv'), 'w').write('1')\n"))
+    load(model)
+    assert (rw / "data.csv").exists()
+    for name in ("planted.py", "pkg/__init__.py", "x.so"):
+        assert not (rw / name).exists(), name
+
+
+def files_mod():
+    from app.services.assistant import files as assistant_files
+    return assistant_files
+
+
+def test_t6_runnable_files_are_refused_and_pickles_still_work(st):
+    if sys.platform != "darwin":
+        pytest.skip("refusing files by name needs Seatbelt's path rules (macOS)")
+    _no_declared_folders(st)
+    folder = Path(os.path.realpath(st["tmp"])) / "T6"
+    names = ["run.command", "go.sh", "bundle.zip", "app.pyz", "CMakeLists.txt", "build.gradle", "RUN.COMMAND"]
+    model = _guard_off_model(folder, (
+        "here = os.path.dirname(os.path.abspath(__file__))\n"
+        f"for name in {names!r}:\n"
+        "    try:\n        open(os.path.join(here, name), 'w').write('x')\n    except OSError:\n        pass\n"
+        "import pickle\npickle.dump({'a': 1}, open(os.path.join(here, 'out.pkl'), 'wb'))\n"))
+    load(model)
+    assert (folder / "out.pkl").exists()
+    for name in names:
+        assert not (folder / name).exists(), name

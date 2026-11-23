@@ -1154,6 +1154,10 @@ def test_a_refusal_that_isnt_an_import_says_so(st):
 
 
 def test_a_symlink_chain_made_during_the_task_is_refused(st):
+    # The guard's own judgement: under the OS sandbox on macOS no .py file can
+    # be made in a writable folder at all (#311), so it is measured without it.
+    from app.services import os_sandbox
+    st["monkeypatch"].setattr(os_sandbox, "_FORCED", "off")
     marker2 = st["tmp"] / "chain_ran.txt"
     helper = st["models"] / "hx_chain.py"
     helper.write_text(_helper(marker2))
@@ -1358,6 +1362,10 @@ def test_a_symlink_to_the_users_own_same_named_file_runs(st):
 
 
 def test_a_script_writing_a_same_named_output_runs(st):
+    # The guard's own judgement: under the OS sandbox on macOS no .py file can
+    # be made in a writable folder at all (#311), so it is measured without it.
+    from app.services import os_sandbox
+    st["monkeypatch"].setattr(os_sandbox, "_FORCED", "off")
     _tracked_unapproved(st, "report.py")
     script = st["tmp"] / "gen.py"
     script.write_text("import sys\nopen(sys.argv[2], 'w').write('# generated')\n")

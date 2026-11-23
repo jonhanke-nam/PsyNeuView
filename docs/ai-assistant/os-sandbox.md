@@ -59,7 +59,9 @@ delete, in it and its subfolders. Inside it, still: no file the assistant
 wrote can be changed (approved ones neither), the review record and the
 settings file stay protected if they live there, and, on macOS, no new code
 (`.py`, `.pyc`, `.pth`, compiled modules, `sitecustomize`, `usercustomize`)
-can be made, since a later Python could run it without review. A folder
+can be made, since a later Python could run it without review. The same
+holds in every writable folder, the assistant's read-write folders and the
+declared output folders included, not only the model's own. A folder
 that is, holds or sits inside the app, PsyNeuLink, the Python install or
 the review record, or that is the home folder, isn't opened: the task
 writes only in its own folder, and the result's notices say why. Pool
@@ -72,10 +74,13 @@ other tools run by themselves (`Makefile`, `justfile`, `package.json`,
 like). **On Linux these name rules don't exist** (Landlock can't tell files
 apart by name); that is open.
 
-**Folders holding a protected file can't be moved (macOS):** every folder
-from an unapproved, tracked or protected file up to the writable folder
-that holds it can't be renamed, removed or replaced, since Seatbelt's rules
-follow paths. On Linux rules follow the file itself.
+**Folders holding a protected file can't be moved or cloned (macOS):** every
+folder from an unapproved, tracked or protected file up to the writable
+folder that holds it can't be renamed, removed, replaced or cloned
+(`clonefile`), since Seatbelt's rules follow paths. Every path compared is
+the file system's own spelling, so a model loaded by a case- or
+accent-changed path gets the same rules. On Linux rules follow the file
+itself.
 
 **Never read:** besides the above, the assistant's earlier versions of
 files it changed (`~/.psyneuview/assistant/previous`) and its log.
@@ -199,17 +204,28 @@ from the next one.
   `PSYNEUVIEW_OS_SANDBOX_ALLOW_UNSANDBOXED=1`. A failed check is retried
   after a minute; a success holds for the server's life.
 - **Survivors are ended.** After each task the fork server's parent ends
-  what is left. The server does the same after Learn jobs, pool and
-  one-shot tasks and conversions. A survivor is a sandboxed Python or
-  Graphviz of this user whose parent has gone: on macOS found by its
-  sandbox and parent, on Linux by its seccomp and no_new_privs state (and,
-  in the fork server, as an adopted child). The sweep repeats until none is
-  left, within five seconds, and ends survivors of any earlier task, not
-  only the last.
+  what is left; the server does the same after Learn jobs, pool and
+  one-shot tasks and conversions, before every task, and before every file
+  the assistant writes. A survivor is a sandboxed Python or Graphviz of this
+  user (on macOS found by its sandbox, on Linux by its seccomp and
+  no_new_privs state) whose parents lead to init or to the fork server's
+  parent rather than to a worker running a task now. Each round stops, then
+  kills, whole process groups, and rounds go on until three in a row find
+  nothing, within ten seconds. **Not guaranteed:** a process that makes a
+  new session at every fork may slip between rounds, and on a Linux desktop
+  an orphan that `systemd --user` adopts is ended only by the fork server's
+  own sweep.
+- **The proof is defence in depth, not the barrier.** Model code can read
+  the policy's key, so it could forge an answer; the barrier is the
+  worker's own refusal to run a task whose policy it hasn't applied. The
+  proof catches a run that went unsandboxed by mistake.
 - **Linux program folders are unreadable.** The dynamic loader has to be
   allowed to run, since the kernel runs it for every program. Given a
   readable program it would start it, so `/bin`, `/usr/bin` and the like
-  can't be read; the allowed programs can.
+  can't be read; the allowed programs can. **Not closed:** the loader can
+  still start a program the model writes into a writable folder, or one
+  under `/opt` or another readable folder; such a program runs inside the
+  same sandbox (no network, the same reads and writes).
 
 ### When no sandbox can be applied
 

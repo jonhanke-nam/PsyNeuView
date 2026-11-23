@@ -159,6 +159,13 @@ def read_state(path: str) -> tuple[dict, bool]:
     be parsed is read from its ``.bak``; if that fails too, ``broken`` is
     True and the caller fails closed."""
     if not os.path.exists(path):
+        # Gone, but its backup is there: the record was deleted (by hand, a
+        # cleaner, a test session's tidy-up), not never written. The backup
+        # is the last good record; nothing tracked is assumed only when
+        # neither exists (#311, T4).
+        if os.path.exists(path + ".bak"):
+            files = _parse(path + ".bak")
+            return (files, False) if files is not None else ({}, True)
         return {}, False
     # There but not readable: under the OS sandbox on Linux, a record the
     # app replaced during the task (a new file the task's rules don't

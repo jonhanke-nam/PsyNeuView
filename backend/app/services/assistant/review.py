@@ -164,6 +164,14 @@ def _load() -> dict:
         return _cache
     files: dict = {}
     broken = False
+    if key[1] is None:
+        # No record. Its backup, or earlier versions the assistant kept, say
+        # one existed: read the backup, or fail closed (#311, T4).
+        files, broken = import_guard.read_state(str(p))
+        if not files and not broken and _kept_versions_exist():
+            logger.error("assistant review state missing (%s) though the assistant has written files; refusing to "
+                         "run models until it is restored from its backup or reset", p)
+            broken = True
     if key[1] is not None:
         # The same reader the sandbox worker uses, so both see one state.
         files, broken = import_guard.read_state(str(p))
@@ -173,6 +181,15 @@ def _load() -> dict:
             logger.warning("assistant review state unreadable; using its backup (%s)", backup_path())
     _cache, _cache_key, _broken = {"files": files}, key, broken
     return _cache
+
+
+def _kept_versions_exist() -> bool:
+    try:
+        from app.services.assistant import files as assistant_files
+        d = assistant_files.previous_versions_dir()
+        return d.is_dir() and any(d.iterdir())
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def state_broken() -> bool:
