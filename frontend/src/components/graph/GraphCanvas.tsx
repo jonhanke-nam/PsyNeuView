@@ -8,7 +8,7 @@ import { CanvasContextMenu, EdgeContextMenu } from "./GraphMenus";
 import { arrowShaped, reshapeDescription, startShapingArrow } from "@/utils/arrowShapes";
 import { PortChooser, type ConnectionOption } from "./PortChooser";
 import { ConnectionLine } from "./ConnectionLine";
-import { CONNECT_HANDLE, NODE_TARGET_HANDLE } from "./connectHandles";
+import { CONNECT_GESTURE, CONNECT_HANDLE, NODE_TARGET_HANDLE } from "./connectHandles";
 import { useConnectTargets } from "@/stores/connectTargetsStore";
 import { registerVisibleCentre } from "@/utils/graphViewport";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -1194,6 +1194,8 @@ export function GraphCanvas() {
               onConnect={onConnect}
               onConnectStart={onConnectStart}
               onConnectEnd={onConnectEnd}
+              // #317: a click never connects; a drag past a few pixels does.
+              {...CONNECT_GESTURE}
               connectionLineComponent={ConnectionLine}
               onNodeClick={(e, n) => (isMacSecondaryClick(e) ? onNodeContextMenu(e, n) : onNodeClick(e, n))}
               onNodeContextMenu={onNodeContextMenu}
