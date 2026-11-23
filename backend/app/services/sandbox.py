@@ -309,6 +309,37 @@ class WarmWorker:
             return {"error": f"Worker communication error: {e}"}
 
 
+class _Lines:
+    """Lines read from a raw fd without blocking past a deadline (no text
+    buffering between ``select`` and the read, so nothing is hidden)."""
+
+    def __init__(self, fd: int):
+        self.fd = fd
+        self.buf = b""
+
+    def next(self, deadline: float) -> str | None:
+        """The next line, or None at the deadline; raises EOFError at the end."""
+        import os
+        import select
+        while b"\n" not in self.buf:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                return None
+            ready, _, _ = select.select([self.fd], [], [], min(0.5, remaining))
+            if not ready:
+                continue
+            data = os.read(self.fd, 65536)
+            if not data:
+                raise EOFError
+            self.buf += data
+        line, _, self.buf = self.buf.partition(b"\n")
+        return line.decode("utf-8", "replace")
+
+    def ready(self) -> bool:
+        import select
+        return b"\n" in self.buf or bool(select.select([self.fd], [], [], 0)[0])
+
+
 class ForkServer(WarmWorker):
     """A clean parent that forks one child per task (#187).
 
@@ -317,84 +348,199 @@ class ForkServer(WarmWorker):
     guard included, is reachable from the model code it runs. Starting a
     new worker per task costs PsyNeuLink's import (seconds). Instead this
     parent imports PsyNeuLink and the guard once and runs no model code at
-    all; it reads nothing from the server but the word ``FORK``. For each
-    task it forks a child on a pipe of its own, says the child's pid,
-    copies the child's output to us until the child exits, then closes the
-    pipe and ends the child's process group. The child reads its task,
-    runs it and answers with a token made for that task. A fork takes
+    all; it reads nothing from the server but ``FORK <token>``. For each
+    task it forks a child on a pipe of its own and copies the child's
+    output to our output pipe while the child runs, and for a short fixed
+    time after, then closes it. The parent's own messages (ready, the
+    child's pid, the child's end) come on a separate control pipe that no
+    child holds, so nothing a child or a process it started writes can be
+    taken for one; a timeout ends only a pid from that pipe. The child's
+    answer must carry the token made for that task. A fork takes
     milliseconds. Nothing a child does in memory reaches the parent or the
-    next child; a process it starts that leaves its process group
-    (``setsid``) can outlive the task, and files it writes stay written:
-    in-process protection covers memory only (#311 closes the rest).
+    next child. A process it starts that leaves its process group
+    (``setsid``) can outlive the task and write into that task's copy until
+    it is closed, and files it writes stay written: in-process protection
+    covers memory only (#311 closes the rest).
     """
 
     MODE = "--fork-server"
     NAME = "Fork server"
     CHILD_MARKER = "###PSYNEUVIEW_CHILD###"
     DONE_MARKER = "###PSYNEUVIEW_CHILD_DONE###"
+    #: After this many tasks in a row the parent couldn't run, the pool is used instead.
+    MAX_FAILURES = 3
 
     def __init__(self):
         self._child_pid: int | None = None
         self._token = ""
+        self._control: _Lines | None = None
+        self._out: _Lines | None = None
+        self.failures = 0
         super().__init__()
 
-    def _is_result_marker(self, line: str) -> bool:
-        # Only the answer that carries this task's token: a line anything
-        # else wrote, with or without an old token, is not an answer.
-        return bool(self._token) and line == f"{RESULT_MARKER} {self._token}"
+    def _spawn(self) -> subprocess.Popen | None:
+        import os
+        t0 = time.time()
+        control_r, control_w = os.pipe()
+        try:
+            proc = subprocess.Popen(
+                [sys.executable, WORKER_PATH, self.MODE, "--control-fd", str(control_w)],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                pass_fds=(control_w,), bufsize=0,
+            )
+        except Exception as e:
+            logger.error(f"Failed to start the fork server: {e}")
+            os.close(control_r)
+            os.close(control_w)
+            return None
+        os.close(control_w)
+        threading.Thread(target=self._drain_stderr, args=(proc.stderr,), daemon=True).start()
+        control = _Lines(control_r)
+        try:
+            line = control.next(time.time() + WORKER_READY_TIMEOUT)
+        except EOFError:
+            line = None
+        if line != "###READY###":
+            logger.error("The fork server did not signal ready; ending it")
+            self._kill(proc)
+            os.close(control_r)
+            return None
+        self._close_channels()
+        self._control = control
+        self._out = _Lines(proc.stdout.fileno())
+        logger.info(f"[perf] Fork server started in {time.time() - t0:.2f}s (PID {proc.pid})")
+        return proc
+
+    def _close_channels(self) -> None:
+        import os
+        if self._control is not None:
+            try:
+                os.close(self._control.fd)
+            except OSError:
+                pass
+        self._control = None
+        self._out = None
+
+    def _restart(self):
+        self._kill(self._proc)
+        self._proc = None
+        self._close_channels()
+        self._start()
 
     def send_task(self, task: str, params: dict, timeout: int) -> dict:
         with self._lock:
             if not self.is_alive():
                 self._restart()
             if not self.is_alive():
+                self.failures += 1
                 return {"error": f"{self.NAME} failed to start"}
             try:
-                return self._send(task, params, timeout)
+                result = self._send(task, params, timeout)
             finally:
                 self._child_pid = None
+            return result
 
-    def _before_payload(self, deadline: float) -> dict | None:
-        """Ask for a child and wait for its pid; the payload goes to it.
+    def _write(self, text: str) -> None:
+        self._proc.stdin.write(text.encode())
+        self._proc.stdin.flush()
 
-        The pid comes from the parent, which runs no model code, before the
-        child has read its task; it is the one a timeout ends."""
+    def _send(self, task: str, params: dict, timeout: int) -> dict:
         import secrets
+        payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras()})
         self._token = secrets.token_hex(16)
         self._child_pid = None
-        self._proc.stdin.write(f"FORK {self._token}\n")
-        self._proc.stdin.flush()
-        sel = selectors.DefaultSelector()
-        sel.register(self._proc.stdout, selectors.EVENT_READ)
+        deadline = time.time() + timeout
+        t0 = time.time()
         try:
-            limit = min(deadline, time.time() + 30)
-            while time.time() < limit:
-                if self._proc.poll() is not None:
-                    self._restart()
-                    return {"error": "Worker process died before the task started"}
-                if not sel.select(timeout=0.5):
+            self._write(f"FORK {self._token}\n")
+            # The child's pid, from the parent, before the child reads its task.
+            line = self._control.next(min(deadline, time.time() + 30))
+            if line is None or not line.startswith(self.CHILD_MARKER):
+                self.failures += 1
+                self._restart()
+                return {"error": "Worker did not start the task"}
+            self._child_pid = int(line.split()[1])
+            self._write(payload + "\n")
+            result = None
+            expected = f"{RESULT_MARKER} {self._token}"
+            while True:
+                if self._control.ready():
+                    done = self._control.next(time.time() + 1)
+                    if done is not None and done.startswith(self.DONE_MARKER):
+                        # The child has ended: its answer, if any, is already
+                        # in our output pipe.
+                        result = self._answer_in_hand(expected)
+                        break
+                line = self._out.next(min(deadline, time.time() + 0.2))
+                if line is None:
+                    if time.time() >= deadline:
+                        return self._timed_out(timeout)
                     continue
-                line = self._proc.stdout.readline()
-                if not line:
-                    self._restart()
-                    return {"error": "Worker closed connection"}
-                if line.startswith(self.CHILD_MARKER):
+                if result is None and line == expected:
+                    answer = self._out.next(deadline)
+                    if answer is None:
+                        return self._timed_out(timeout)
                     try:
-                        self._child_pid = int(line.split()[1])
-                    except (IndexError, ValueError):
-                        self._child_pid = None
-                    return None
+                        result = json.loads(answer)
+                    except json.JSONDecodeError as e:
+                        result = {"error": f"Failed to parse worker output: {e}"}
+                    # The child's end follows on the control pipe; wait a
+                    # little for it so the next task starts in step.
+                    self._wait_done(time.time() + 5)
+                    break
+            self.failures = 0
+            logger.info(f"[perf] fork server {task}: {time.time() - t0:.2f}s")
+            return result if result is not None else {"error": "Worker process died during execution"}
+        except (BrokenPipeError, OSError, EOFError, ValueError) as e:
+            self.failures += 1
+            logger.warning(f"Fork server channel error: {e}; restarting it")
             self._restart()
-            return {"error": "Worker did not start the task"}
-        finally:
-            sel.close()
+            return {"error": f"Worker communication error: {e}"}
+
+    def _answer_in_hand(self, expected: str) -> dict | None:
+        """The answer among what is already waiting on our output pipe."""
+        while self._out.ready():
+            line = self._out.next(time.time() + 0.5)
+            if line is None:
+                return None
+            if line == expected:
+                answer = self._out.next(time.time() + 1)
+                try:
+                    return json.loads(answer) if answer is not None else None
+                except json.JSONDecodeError as e:
+                    return {"error": f"Failed to parse worker output: {e}"}
+        return None
+
+    def _wait_done(self, until: float) -> bool:
+        """Wait for the parent to say the child has ended, reading and
+        dropping whatever else is copied meanwhile, so the parent is never
+        held up writing to a full pipe."""
+        while time.time() < until:
+            if self._control.ready():
+                line = self._control.next(until)
+                if line is not None and line.startswith(self.DONE_MARKER):
+                    return True
+                continue
+            self._out.next(min(until, time.time() + 0.05))
+        return False
+
+    def _timed_out(self, timeout: int) -> dict:
+        logger.warning(f"{self.NAME} task timed out after {timeout}s")
+        self._on_timeout()
+        if not self._wait_done(time.time() + 5):
+            # The parent is stuck: start a new one.
+            self.failures += 1
+            self._restart()
+        return {"error": f"Script execution timed out after {timeout} seconds. "
+                         f"This may indicate an infinite loop or a very long computation."}
 
     def _on_timeout(self) -> None:
-        """The child ran too long: end it (and what it started); the parent stays."""
+        """The child ran too long: end it (and its process group, which the
+        parent made). The pid is the one the parent sent on the control pipe."""
         import os
         import signal
         pid = self._child_pid
-        if pid:
+        if pid and pid > 1:
             for kill in (lambda: os.killpg(pid, signal.SIGKILL), lambda: os.kill(pid, signal.SIGKILL)):
                 try:
                     kill()
@@ -556,7 +702,11 @@ class _IsolatedFallback:
             logger.info(f"Assistant-written files are tracked: each task runs in a fresh process ({mode} mode)")
             _mode_logged = mode
         if mode == "fork":
-            result = _get_fork_server().send_task(task, params, timeout)
+            forks = _get_fork_server()
+            result = forks.send_task(task, params, timeout)
+            if forks.failures >= ForkServer.MAX_FAILURES and not os.environ.get("PSYNEUVIEW_WORKER_ISOLATION"):
+                logger.warning("The fork server keeps failing here; using a pool of fresh workers instead")
+                _fork_failed = True
             if result.get("error") in ("Worker did not start the task", "Worker process died before the task started",
                                        f"{ForkServer.NAME} failed to start") and not os.environ.get("PSYNEUVIEW_WORKER_ISOLATION"):
                 logger.warning("The fork server couldn't start a task here; using a pool of fresh workers instead")
