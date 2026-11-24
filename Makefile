@@ -184,7 +184,10 @@ backend: install ## Start the backend server (PORT=8000, or set SLOT/PORT)
 		echo ""; \
 		exit 1; \
 	fi
-	cd backend && $(realpath $(VENV_DIR))/bin/uvicorn app.main:app --port $(PORT) --reload --reload-dir app
+	@# The assistant's page secret (#381), made here so it stays the same across
+	@# --reload restarts; the backend prints the one-time link that carries it.
+	cd backend && PSYNEUVIEW_PAGE_SECRET=$$($(realpath $(VENV_DIR))/bin/python -c 'import secrets; print(secrets.token_urlsafe(32))') \
+		$(realpath $(VENV_DIR))/bin/uvicorn app.main:app --port $(PORT) --reload --reload-dir app
 
 frontend: install-frontend ## Start the frontend dev server (FRONTEND_PORT=5173, or set SLOT)
 	@pid=$$(lsof -tiTCP:$(FRONTEND_PORT) -sTCP:LISTEN 2>/dev/null | head -1); \
@@ -230,7 +233,9 @@ dev: install install-frontend ## Start both servers in background (use SLOT=N fo
 	else \
 		echo "Starting backend on port $(PORT)..."; \
 		log=$${TMPDIR:-/tmp}/psyneuview-backend-$(PORT).log; \
-		cd backend && $(realpath $(VENV_DIR))/bin/uvicorn app.main:app --port $(PORT) --reload --reload-dir app > $$log 2>&1 & \
+		secret=$$($(realpath $(VENV_DIR))/bin/python -c 'import secrets; print(secrets.token_urlsafe(32))'); \
+		cd backend && PSYNEUVIEW_PAGE_SECRET=$$secret PSYNEUVIEW_PAGE_URL=http://localhost:$(FRONTEND_PORT) \
+			$(realpath $(VENV_DIR))/bin/uvicorn app.main:app --port $(PORT) --reload --reload-dir app > $$log 2>&1 & \
 		bpid=$$!; \
 		printf "Waiting for backend on port $(PORT) to become ready"; \
 		ready=; \
@@ -281,6 +286,8 @@ dev: install install-frontend ## Start both servers in background (use SLOT=N fo
 	@echo "PsyNeuView is running (SLOT=$(SLOT)):"
 	@echo "  Frontend:  http://localhost:$(FRONTEND_PORT)"
 	@echo "  Backend:   http://localhost:$(PORT)/docs"
+	@link=$$(grep -o 'http[^ ]*#pnv-session=[^ ]*' $${TMPDIR:-/tmp}/psyneuview-backend-$(PORT).log 2>/dev/null | tail -1); \
+	if [ -n "$$link" ]; then echo "  AI assistant: open this link once per tab (#381): $$link"; fi
 	@echo ""
 	@echo "To stop:  make stop SLOT=$(SLOT)"
 
