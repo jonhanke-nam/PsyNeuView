@@ -59,6 +59,7 @@ async def get_setup(request: Request):
         token = mcp_link.get_or_create_token()
     except keys.NoSecureStore as e:
         raise HTTPException(status_code=501, detail=str(e))
+    mcp_link.claim(_port(request))
     return {**mcp_link.setup(token, _port(request)), "token": token}
 
 
@@ -75,13 +76,18 @@ async def replace_token(request: Request):
 
 
 @page_router.get("/status")
-async def get_status():
-    """Whether a Claude client is connected, and the MCP session the page
-    polls for its tool calls and proposals while the agent is Claude over MCP."""
+async def get_status(request: Request):
+    """Whether a Claude client is connected, its name, its tool calls in the
+    current limit window, and the MCP session the page polls for its tool
+    calls and proposals while the agent is Claude over MCP."""
     available()
     current = assistant_settings.get_settings()
-    out = mcp_link.status()
+    out = mcp_link.status(current)
     active = current["enabled"] and current["agent"]["type"] == mcp_link.AGENT_TYPE
+    if active:
+        # Corrects the port guessed at start, and takes the discovery file
+        # over from a backend that has stopped.
+        mcp_link.claim(_port(request))
     out["active"] = active
     out["session_id"] = mcp_link.session().id if active else None
     return out

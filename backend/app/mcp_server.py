@@ -2,7 +2,7 @@
 
 Run by the Claude program over stdio::
 
-    PSYNEUVIEW_URL=http://127.0.0.1:8000 PSYNEUVIEW_MCP_TOKEN=... python -m app.mcp_server
+    PSYNEUVIEW_MCP_TOKEN=... psyneuview-mcp          # or: python -m app.mcp_server
 
 It is a thin bridge. It holds no model, no settings and no file access of
 its own: every tool call goes to the running PsyNeuView backend's token
@@ -10,9 +10,13 @@ checked route group (``/api/assistant/mcp-client``), which runs it through
 the built-in assistant's own dispatcher, allowlist and checks. Proposals
 appear in PsyNeuView's Assistant tab for the user to accept or reject.
 
-The token is sent only to this machine: ``PSYNEUVIEW_URL`` must be plain
-``http`` to ``127.0.0.1``, ``::1`` or ``localhost``. Settings ▸ AI assistant
-gives the exact command, with the URL and the token filled in.
+It finds the running backend by itself, on every request, through the
+discovery file the backend writes (``app/services/assistant/mcp_discovery.py``),
+so it keeps working when PsyNeuView restarts on another port.
+``PSYNEUVIEW_URL`` overrides that. Either way the token is sent only to this
+machine: the address must be plain ``http`` to ``127.0.0.1``, ``::1`` or
+``localhost``. Settings ▸ AI assistant gives the exact setup, with the token
+filled in.
 
 Only the standard library and the MCP SDK are used here, so it starts fast
 and never imports PsyNeuLink.
@@ -31,13 +35,14 @@ from urllib.parse import quote, urlsplit
 
 import anyio
 import mcp_types as types
-from mcp.server import Server
 from mcp import MCPError
+from mcp.server import Server
 from mcp.server.stdio import stdio_server
+
+from app.services.assistant import mcp_discovery
 
 URL_ENV = "PSYNEUVIEW_URL"
 TOKEN_ENV = "PSYNEUVIEW_MCP_TOKEN"
-DEFAULT_URL = "http://127.0.0.1:8000"
 HEARTBEAT_SECONDS = 30
 TIMEOUT_SECONDS = 30
 _LOOPBACK = {"127.0.0.1", "::1", "localhost"}
@@ -66,13 +71,30 @@ def check_url(url: str) -> str:
     return url.rstrip("/")
 
 
-def http_transport(base_url: str, token: str, client_name: Callable[[], str] = lambda: "") -> Transport:
-    """Calls the backend with the token, in a worker thread."""
-    base_url = check_url(base_url)
+def discovered_url() -> str:
+    """The running backend's address, from the discovery file; ``BackendError``
+    (a message for the user) when it can't be found."""
+    try:
+        return check_url(mcp_discovery.find_url())
+    except mcp_discovery.NotFound as e:
+        raise BackendError(str(e)) from None
+
+
+def http_transport(base_url: str | Callable[[], str], token: str, client_name: Callable[[], str] = lambda: "") -> Transport:
+    """Calls the backend with the token, in a worker thread. ``base_url`` is
+    an address, or a function that finds one for each request."""
+    if isinstance(base_url, str):
+        fixed = check_url(base_url)
+
+        def find() -> str:
+            return fixed
+    else:
+        find = base_url
 
     def blocking(method: str, path: str, body: Any) -> tuple[int, Any]:
+        base = find()
         data = None if body is None else json.dumps(body).encode("utf-8")
-        req = urllib.request.Request(base_url + path, data=data, method=method)
+        req = urllib.request.Request(base + path, data=data, method=method)
         req.add_header("Authorization", f"Bearer {token}")
         req.add_header("Accept", "application/json")
         if data is not None:
@@ -88,7 +110,7 @@ def http_transport(base_url: str, token: str, client_name: Callable[[], str] = l
         except urllib.error.HTTPError as e:
             return e.code, _json(e.read())
         except (urllib.error.URLError, OSError) as e:
-            raise BackendError(f"PsyNeuView isn't answering at {base_url}. Is it running? ({getattr(e, 'reason', e)})") from None
+            raise BackendError(f"PsyNeuView isn't answering at {base}. Is it running? ({getattr(e, 'reason', e)})") from None
 
     async def call(method: str, path: str, body: Any) -> tuple[int, Any]:
         return await anyio.to_thread.run_sync(blocking, method, path, body)
@@ -194,14 +216,16 @@ def main() -> None:
     token = os.environ.get(TOKEN_ENV, "").strip()
     if not token:
         raise SystemExit(f"{TOKEN_ENV} is not set. Copy the setup from PsyNeuView's Settings ▸ AI assistant.")
-    url = os.environ.get(URL_ENV, DEFAULT_URL)
+    url = os.environ.get(URL_ENV, "").strip()
     client = {"name": ""}
 
     def heard(name: str) -> None:
         if name:
             client["name"] = name
 
-    anyio.run(serve_stdio, http_transport(url, token, client_name=lambda: client["name"]), heard)
+    # PSYNEUVIEW_URL overrides; otherwise look the backend up on every request.
+    base = url if url else discovered_url
+    anyio.run(serve_stdio, http_transport(base, token, client_name=lambda: client["name"]), heard)
 
 
 if __name__ == "__main__":

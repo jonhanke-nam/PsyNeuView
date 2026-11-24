@@ -31,7 +31,7 @@ from app.services import (
     startup_phases,
     working_copies,
 )
-from app.services.assistant import import_guard, review as assistant_review
+from app.services.assistant import import_guard, mcp_link, review as assistant_review
 from app.services.sandbox import _get_warm_worker
 
 
@@ -119,7 +119,11 @@ async def lifespan(app: FastAPI):
     threading.Thread(target=github_auth.get_auth, name="github-auth-warm", daemon=True).start()
     # From here uvicorn answers /health: the whole start, from process launch.
     startup_phases.ready()
+    # Where the MCP command finds this backend, whatever port it is on (#201),
+    # when Claude over MCP is the chosen agent.
+    mcp_link.claim_at_start()
     yield
+    mcp_link.release()
     pnl_updates.stop()
 
 
