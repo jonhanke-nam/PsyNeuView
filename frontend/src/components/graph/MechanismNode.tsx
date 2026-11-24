@@ -481,7 +481,11 @@ export const MechanismNode = memo(function MechanismNode({
           </div>
         )}
     <div
-      onDoubleClick={onDoubleClick}
+      // #333: caught on the way down, not on the way back up. Where nodes
+      // can't be dragged (an automatic layout), React Flow's double-click zoom
+      // on the pane stops the event before React's own handler sees it, so
+      // the node zoomed the canvas instead of expanding.
+      onDoubleClickCapture={onDoubleClick}
       data-node-shape={shape}
       data-connect-target={dropStatus ?? undefined}
       // #253: a valid drop target pulses a teal halo (index.css), held steady
