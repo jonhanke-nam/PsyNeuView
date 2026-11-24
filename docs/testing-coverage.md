@@ -9,10 +9,10 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 170 | 448 | 438 tests in 165 files |
+| Browser (Playwright) | 174 | 457 | 447 tests in 169 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 140 | 1253 | 1253 tests in 140 files |
-| Backend (pytest) | 191 | 1759 | 1759 tests in 191 files |
+| Frontend unit (vitest) | 146 | 1284 | 1284 tests in 146 files |
+| Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
 
@@ -25,16 +25,16 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Matching show_graph](#showgraph) | 8 files, 19 tests | – | 8 files, 66 tests | 5 files, 34 tests | 118 of 119 |
 | [Dragging and pointer interaction](#pointer) | 18 files, 54 tests | – | 6 files, 37 tests | – | 91 of 91 |
 | [Building models in the UI](#building) | 4 files, 7 tests | – | 1 files, 9 tests | 13 files, 145 tests | 161 of 161 |
-| [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 359 of 362 |
+| [Editing: code and graph in step](#sync) | 17 files, 40 tests | – | 10 files, 81 tests | 26 files, 247 tests | 365 of 368 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
-| [Running, learning and debugging](#running) | 14 files, 33 tests | – | 9 files, 92 tests | 51 files, 254 tests | 379 of 379 |
+| [Running, learning and debugging](#running) | 16 files, 38 tests | – | 11 files, 99 tests | 52 files, 262 tests | 399 of 399 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
-| [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 28 files, 263 tests | 19 files, 322 tests | 640 of 640 |
+| [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 11 files, 21 tests | – | 17 files, 114 tests | 21 files, 204 tests | 336 of 339 |
+| [App shell, diagnostics and everything else](#shell) | 12 files, 23 tests | – | 19 files, 130 tests | 21 files, 206 tests | 356 of 359 |
 
 <a id="tutorials"></a>
 
@@ -455,6 +455,7 @@ No tests yet.
 | `live-preview-background.spec.ts` | Browser | 4 | yes | #255, #256 | The live preview runs in the background, has a setting, and checks fast (#255, #256). |
 | `lock-in-checkout.spec.ts` | Browser | 1 | yes | #1346 | Locking one model inside your own PsyNeuLink checkout (#1346, part 1). |
 | `model-lock.spec.ts` | Browser | 3 | yes | #1116, #1309 | The per-model lock, as a user meets it (#1116, #1309). |
+| `multiport-labels-learn.spec.ts` | Browser | 2 | yes | #358 | Input nodes with several input ports, follow-ups (#358). |
 | `node-name-special-characters.spec.ts` | Browser | 1 | yes | #1236 | A node name with a newline or a quote doesn't crash the app (#1236). |
 | `node-names-simple.spec.ts` | Browser | 1 | yes | #122 | A node shows just its name by default, as PsyNeuLink's show_graph() draws it (#122). |
 | `preview-error-banner.spec.ts` | Browser | 3 | yes | #1367 | A code edit that doesn't build shows the stale-graph banner (#1367). |
@@ -469,6 +470,7 @@ No tests yet.
 | `holdLastGoodGraph.test.ts` | Frontend unit | 14 | yes | #1030 | A model that does not build must not take the graph down with it (#1030). |
 | `livePreviewStore.test.ts` | Frontend unit | 4 | yes | #255 | The live preview's setting (#255). |
 | `lineDiff.test.ts` | Frontend unit | 17 | yes |  |  |
+| `portElementLabels.test.ts` | Frontend unit | 4 | yes | #358 | A node with two input ports, RED_task (2 elements) and WORD_task (1), as in the two-port fixture (#358). |
 | `previewBreak.test.ts` | Frontend unit | 6 | yes |  |  |
 | `sourceDiff.test.ts` | Frontend unit | 14 | yes | #1093 | Showing how a graph edit changed the code (#1093). |
 | `syncState.test.ts` | Frontend unit | 13 | yes |  |  |
@@ -522,6 +524,8 @@ No tests yet.
 | no tag when unlocked; lock from the Layout menu, unlock from the tag (#1309) | `model-lock.spec.ts` | Browser | yes | #1309 |
 | the lock items are hidden for a protected PsyNeuLink file (#1309) | `model-lock.spec.ts` | Browser | yes | #1309 |
 | your own checkout: the editing badge, and protecting it (#1305, for the docs) | `model-lock.spec.ts` | Browser | yes | #1305 |
+| the grid names a multi-port node's elements per port | `multiport-labels-learn.spec.ts` | Browser | yes | #358 |
+| the Learn panel edits each input port and sends one array per port | `multiport-labels-learn.spec.ts` | Browser | yes | #358 |
 | Node names with special characters › render without crashing, and the reference model can be reset | `node-name-special-characters.spec.ts` | Browser | yes | #1236 |
 | node names: just the name by default, Elements brings the details back and is remembered | `node-names-simple.spec.ts` | Browser | yes | #122 |
 | a syntax error typed in the editor shows the stale-graph banner (#1367) | `preview-error-banner.spec.ts` | Browser | yes | #1367 |
@@ -596,10 +600,12 @@ No tests yet.
 | `pytorch-view.spec.ts` | Browser | 3 | yes | #230 | PyTorch (autodiff) view (#230). |
 | `reference-models-runnable.spec.ts` | Browser | 2 | yes | #818, #577, #652 | Reference-model runnability gate (#818, #577, #652). |
 | `run-array-inputs.spec.ts` | Browser | 1 | yes | #330, #331 | Trial inputs as arrays (#330), arranged by trial by default (#331). |
+| `run-followups.spec.ts` | Browser | 4 | yes | #357 | Run and Learn follow-ups (#357). |
 | `run-multiport-inputs.spec.ts` | Browser | 1 | yes | #332 | Input nodes with several input ports (#332). |
 | `run-panel-grouping.spec.ts` | Browser | 1 | yes | #570 | Run-panel input-grouping toggle (#570). |
 | `run-record-yaml.spec.ts` | Browser | 1 | yes | #525 | Run-record YAML export/import round-trip (#525). |
 | `run-set-survives-edit.spec.ts` | Browser | 1 | yes | #57 | A chosen run set survives a parameter edit (#57). |
+| `run-sticky-node-headers.spec.ts` | Browser | 1 | yes | #363 | Run panel, inputs arranged by node: each node's header sticks just below the sticky Run row while its trials scroll past, and the next node's header pushes it up (#363). |
 | `run-trial-seconds.spec.ts` | Browser | 1 | yes | #334 | Per-trial run times beside each trial number (#334). |
 | `stale-run-results.spec.ts` | Browser | 3 | yes | #337 | Run results go stale after an edit (#337). |
 | `stroop-lc-reference.spec.ts` | Browser | 2 | yes |  | Stroop + LC reference model — LC feedback edges render after the swap. |
@@ -610,7 +616,9 @@ No tests yet.
 | `valueViewStore.test.ts` | Frontend unit | 6 | yes | #1387 | #1387: a node's "list \| grid" choice, and its width, are kept in the model's layout file and come back when the model is opened again. |
 | `inputSets.test.ts` | Frontend unit | 12 | yes |  |  |
 | `learnPlan.test.ts` | Frontend unit | 19 | yes |  |  |
+| `learnPorts.test.ts` | Frontend unit | 5 | yes |  |  |
 | `runEcho.test.ts` | Frontend unit | 4 | yes | #49 | An input node's OUT row is dropped only when it would repeat its IN row (#49). |
+| `runProgress.test.ts` | Frontend unit | 2 | yes |  |  |
 | `timeline.test.ts` | Frontend unit | 6 | yes | #177 | The timeline (#177): the merge order, what each kind is marked as, a wait as its start and stop lines, errors linked to their cause, and the text file's one time format. |
 | `valueGrid.test.ts` | Frontend unit | 18 | yes |  |  |
 | `test_autodiff_observability.py` | Backend | 7 | yes | #629 | Autodiff (PyTorch) runs synthesize the scheduler path's observability contract so the stepper / Run State / value pills / snapshot table light up (#629). |
@@ -652,6 +660,7 @@ No tests yet.
 | `test_run_composition_by_name.py` | Backend | 4 | yes | #886, #859 | Run/learn resolve a composition by its display name, not just its module variable (#886 follow-up to #859). |
 | `test_run_error_real_cause.py` | Backend | 3 | yes | #1235 | Run says why a model couldn't be built, not just that it's missing (#1235). |
 | `test_run_execution_mode.py` | Backend | 7 | yes | #764 | Execution-mode selection on the *run* path (#764). |
+| `test_run_progress.py` | Backend | 8 | yes | #357 | Live run progress and Learn's per-trial times (#357). |
 | `test_run_warnings_contract.py` | Backend | 3 | yes | #1101 | Warnings travel beside a run failure, not inside it (#1101). |
 | `test_sandbox.py` | Backend | 9 | yes |  | Tests for subprocess sandbox execution. |
 | `test_sandbox_gives_way.py` | Backend | 3 | yes | #175 | Work nobody is waiting for lets user-requested work go first (#175). |
@@ -691,10 +700,15 @@ No tests yet.
 | reference models: load + run without crashing › coverage: spec lists every bundled reference model | `reference-models-runnable.spec.ts` | Browser | yes | #818 |
 | reference models: load + run without crashing › loads + runs without white-screen: ${label} | `reference-models-runnable.spec.ts` | Browser | yes | #818 |
 | trial inputs are typed as arrays and sent as typed | `run-array-inputs.spec.ts` | Browser | yes | #330 |
+| Run and Learn follow-ups (#357) › a run in flight shows which trial it is on | `run-followups.spec.ts` | Browser | yes | #357 |
+| Run and Learn follow-ups (#357) › Learn shows each trial's time | `run-followups.spec.ts` | Browser | yes | #357 |
+| Run and Learn follow-ups (#357) › a saved run says whether it matches the open file | `run-followups.spec.ts` | Browser | yes | #357 |
+| Run and Learn follow-ups (#357) › arranged by node, the sticky Run row never covers a node header | `run-followups.spec.ts` | Browser | yes | #357 |
 | a two-port input node takes one array per port | `run-multiport-inputs.spec.ts` | Browser | yes | #332 |
 | run panel input grouping › toggles between by-trial and by-node layouts | `run-panel-grouping.spec.ts` | Browser | yes | #570 |
 | run record YAML round-trip › exports YAML and re-imports it | `run-record-yaml.spec.ts` | Browser | yes | #525 |
 | a parameter edit keeps the run set the learner chose | `run-set-survives-edit.spec.ts` | Browser | yes | #57 |
+| Run panel sticky node headers (#363) › arranged by node, the current node's header stays just below the Run row | `run-sticky-node-headers.spec.ts` | Browser | yes | #363 |
 | per-trial run times (#334) › each trial row shows how many seconds it took | `run-trial-seconds.spec.ts` | Browser | yes | #334 |
 | Run results go stale after an edit (#337) › an edit warns and clears the highlights | `stale-run-results.spec.ts` | Browser | yes | #337 |
 | Run results go stale after an edit (#337) › Undo back to the source that ran makes the results current (#366) | `stale-run-results.spec.ts` | Browser | yes | #337 |
@@ -879,6 +893,7 @@ No tests yet.
 | `pnlSourceEvents.test.ts` | Frontend unit | 2 | yes |  |  |
 | `pnlSources.test.ts` | Frontend unit | 52 | yes |  |  |
 | `pnlUpdates.test.ts` | Frontend unit | 13 | yes |  | 2026-10-07 10:42 local time, and a check 20 minutes earlier. |
+| `recordVersion.test.ts` | Frontend unit | 4 | yes |  |  |
 | `test_app_config.py` | Backend | 9 | yes | #1025 | The preferences-file path resolves through one accessor (#1025). |
 | `test_branch_lookup.py` | Backend | 10 | yes |  | Tests for app.services.branch_lookup. |
 | `test_checkout_updates.py` | Backend | 15 | yes | #1304 | Update options for a developer's checkouts (#1304): the check reports behind or up to date, the pull is fast-forward only, and it refuses with uncommitted changes or a diverged branch and never switches branch. |
@@ -1234,6 +1249,7 @@ No tests yet.
 | `pycharm-live.local.spec.ts` | Browser | 1 | no |  | LOCAL ONLY — the full two-headed loop with a real PyCharm. |
 | `read-only-badge-note.spec.ts` | Browser | 1 | yes | #50 | Clicking the "PsyNeuLink from … · read only" tag explains it (#50). |
 | `round-trips.spec.ts` | Browser | 5 | yes | #319 | Round trips: an edit in the graph reaches the code and survives a reload; an edit in the code reaches the graph (#319). |
+| `step-highlight.spec.ts` | Browser | 2 | yes | #365 | Stepping a run: the graph and the trial card highlight the same nodes in the same pale blue, step by step (#365). |
 | `trace-autoplay-label.spec.ts` | Browser | 1 | yes | #338 | The trace bar's auto-play button says what it does (#338). |
 | `ciSpecs.test.ts` | Frontend unit | 3 | yes |  | The CI e2e set is the specs tagged `@ci`; e2e/ci-specs.txt names their files. |
 | `DiagnosticPanel.test.ts` | Frontend unit | 4 | yes | #109 | The diagnostics bar (#109): amber only when there is something to act on, the toolbar's neutral grey otherwise, and no "click to expand" line — the bar's tooltip says it expands. |
@@ -1242,6 +1258,7 @@ No tests yet.
 | `useMenuInWindow.test.ts` | Frontend unit | 5 | yes | #109 | A 160×120 menu in a 1000×700 window (#109). |
 | `traceAutoPlay.test.ts` | Frontend unit | 2 | yes |  |  |
 | `e2eDistFreshness.test.ts` | Frontend unit | 3 | yes |  |  |
+| `retrySummary.test.ts` | Frontend unit | 4 | yes | #359 | The "Passed only on retry" job summary (#359): scripts/retry-summary.mjs reads the merged Playwright JSON report and lists every test that failed first and passed on retry. |
 | `errorReveal.test.ts` | Frontend unit | 4 | yes | #1103 | Clicking a model error to jump to its line (#1103). |
 | `uiStoreInputs.test.ts` | Frontend unit | 6 | yes | #331, #330 | The Run panel's input arrangement (#331) and the per-element grid setting (#330): their defaults, and a choice made before being kept. |
 | `activityLog.test.ts` | Frontend unit | 17 | yes | #1287 | The activity log's rules (#1287): the cap, the order, `~` for the home folder, and no secrets — the value of a key that looks like a token or a password is never recorded, however it gets in. |
@@ -1250,6 +1267,7 @@ No tests yet.
 | `graphEditBlame.test.ts` | Frontend unit | 7 | yes | #353 | #353: a failing load is blamed on the last graph edit only when the line that failed is one the edit wrote. |
 | `joinNames.test.ts` | Frontend unit | 1 | yes |  | Mirrors the formatter in PresenceIndicator — kept as a pure function test so the phrasing is pinned without rendering the component. |
 | `nodeSelector.test.ts` | Frontend unit | 2 | yes | #1236 | #1236: a node name is any Python string, and must never make an invalid selector. |
+| `stepHighlight.test.ts` | Frontend unit | 12 | yes |  | Two trials of a small Stroop-like run: inputs, then hidden, then output. |
 | `tensorInput.test.ts` | Frontend unit | 21 | yes |  |  |
 | `waitLog.test.ts` | Frontend unit | 10 | yes | #177 | The action-logging setting is remembered in localStorage (#177); the suite runs on node, so stub it. |
 | `test_activity_log.py` | Backend | 7 | yes | #177 | The page's activity log on disk (#177): batches appended as sent, the file rotated at start so the previous launch is kept, a size cap, and the actions removed when action logging is turned off. |
@@ -1264,7 +1282,7 @@ No tests yet.
 | `test_e2e_reset.py` | Backend | 4 | yes | #147 | Unit tests for the test-only /api/test/reset endpoint (#147). |
 | `test_frontend_cache_headers.py` | Backend | 6 | yes | #2 | The built page is served so an update can't be hidden by a cached copy (#2). |
 | `test_model_warnings.py` | Backend | 11 | yes | #1101 | Showing what PsyNeuLink said about a model that ran fine (#1101). |
-| `test_multiport_inputs.py` | Backend | 4 | yes | #332 | An input node with several input ports gets one array per port (#332). |
+| `test_multiport_inputs.py` | Backend | 6 | yes | #332 | An input node with several input ports gets one array per port (#332). |
 | `test_no_event_loop_blocking.py` | Backend | 4 | yes | #860 | Regression guards against backend freezes (#860). |
 | `test_request_guard.py` | Backend | 10 | yes |  | The server refuses requests from another site or under another name. |
 | `test_test_extractor.py` | Backend | 15 | yes |  | Tests for app.services.test_extractor. |
@@ -1298,6 +1316,8 @@ No tests yet.
 | round trips between the graph and the code (#319) › rename a node: in the Inspector, to the code and back; and in the code, to the graph | `round-trips.spec.ts` | Browser | yes | #319 |
 | round trips between the graph and the code (#319) › connect: dragged in the graph, to the code and back; and typed in the code, to the graph | `round-trips.spec.ts` | Browser | yes | #319 |
 | round trips between the graph and the code (#319) › a parameter: changed in the Inspector, to the code and back; and in the code, to the Inspector | `round-trips.spec.ts` | Browser | yes | #319 |
+| step highlight (#365) › graph and current trial card highlight the same nodes in the selection blue | `step-highlight.spec.ts` | Browser | yes | #365 |
+| step highlight (#365) › a collapsed composition lights up when a node inside it runs (EGO) | `step-highlight.spec.ts` | Browser | yes | #365 |
 | the trace bar's auto-play button (#338) › reads Auto-play, then Pause while playing, then Auto-play again | `trace-autoplay-label.spec.ts` | Browser | yes | #338 |
 
 </details>
