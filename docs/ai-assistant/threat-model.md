@@ -125,6 +125,9 @@ checks that following it is refused by the backend.
 | Assistant routes | Another program, another account | **Assistant routes accept requests only from the app's own page** (`same_site`); a per-session credential is not built yet (open item below); off by default; off in `container` and `hosted` modes via the `assistant` capability | `test_off_by_default`, `test_capability_off_in_container_and_hosted`, `test_same_site_check`, `test_review_routes_accept_only_the_apps_own_page` |
 | Settings routes | Rogue agent; another site | There is no tool that reaches `PUT /api/assistant/settings`, and it accepts requests only from the app's own page (`same_site`). Turning the assistant on, and a new destination while on, need `confirm_raise`, which only the page sends after the user's consent (#369) | `test_non_allowlisted_tools_are_refused`, `test_only_turning_on_and_a_new_destination_while_on_need_consent`, `test_settings_from_another_site_are_refused` |
 | Key routes | Rogue agent | `GET /api/assistant/key` returns `{"set": bool}` only; the key never appears in logs, reports or the runner's environment | `test_key_never_in_responses_logs_settings_or_environment` |
+| MCP route group `/api/assistant/mcp-client/*` (#201) | Another program on this Mac; a web page; another machine | Separate from the page's routes, with its own check on every request: the peer is loopback and `Host` names this machine (403 `not_local`); no `Origin`, so no browser request, even the app's own page, gets in (403 `not_mcp_client`); `Authorization: Bearer` must match the connection token in constant time (401 `bad_token`; with no token stored nothing matches); and the assistant must be on with `claude_mcp` chosen (403 `off` / `not_chosen`), so it stays off until the user turns it on. The group has only hello, the tool list and a tool call: no route for settings, the key, the token, proposals, reviews or models. A tool call goes through `Session.call_tool`, the built-in agent's dispatcher, so the allowlist, per-call settings checks, events and log are shared and can't drift; `limits.tool_calls` applies per `limits.minutes` window | `test_token_is_required`, `test_no_token_stored_means_nothing_matches`, `test_localhost_only_and_never_a_web_page`, `test_only_while_on_with_claude_over_mcp_chosen`, `test_tools_are_the_built_in_agents`, `test_cannot_approve_change_settings_or_read_the_key`, `test_tool_call_limit_applies` (`test_assistant_mcp.py`) |
+| The MCP connection token (#201) | Another program on this Mac; a leaked config file; a web page | Random (`secrets.token_urlsafe(32)`), made on first use of the setup, kept in the login Keychain beside the API key and cached in the backend; never logged. Shown only through the page's `same_site` setup route, to copy into Claude's own config (`~/.claude.json`, `claude_desktop_config.json`), where any program running as the user can read it, as it can the Keychain item through `security`: the token keeps out web pages, other accounts' and other machines' requests, and programs that don't have it, not a program already running as the user (out of scope, section 6). "Make a new token" replaces it at once. The MCP command refuses to send it anywhere but plain `http` to loopback, and ignores proxies | `test_a_new_token_refuses_the_old_one`, `test_the_mcp_command_sends_the_token_only_to_this_machine`, `test_mcp_server_reports_a_bad_token` |
+| The page's MCP routes `/api/assistant/mcp/*` (#201): setup (with the token), new token, status, context | Another site; rogue agent | `same_site`, like every page route; the MCP client has no route to them. Context is filtered by `visibility` on arrival and again when a tool reads it | `test_cannot_approve_change_settings_or_read_the_key`, `test_read_open_model_respects_visibility` |
 | `/model/load`, watcher reload, autosave reload, undo, redo | Rogue agent via write-then-open; malicious file | Every route that executes a model consults `is_runnable`; unreviewed content is refused everywhere | `test_route_refuses_unreviewed`, `test_watchers_refuse_unreviewed`, `test_inprocess_and_sandbox_entry_points_refuse` |
 
 **Decision: one clear consent (#369, 2026-11-24).** Asking before every
@@ -160,7 +163,8 @@ summary, rather than a confirmed one.
 | Custom `base_url` | Rogue agent; misled user | Only the user sets it, in Settings; the panel shows where data goes; the agent has no tool for it | `test_non_allowlisted_tools_are_refused` |
 | The service itself | The service | One consent before anything is sent (#369): turning it on shows what is shared, with whom (the service's host, and that PsyNeuView can't limit what it does with the data), what it can do and the folders; a new destination while on asks again. Settings always shows a summary of what is shared and with whom. A per-folder consent at a cloud agent's first use of it is not built (open item below); model contents are what's sent, nothing more | `ai-assistant.spec.ts` ("turning it on is the one consent", "once on, widening a permission saves without asking") |
 | The model list and Test connection (#368, #370) | Misled user; the service | Both use the saved agent, address and key only, through the adapter's request handling: redirects refused, a 15-second wait, the key never in a response or the log; they go only to the chosen service, and only once an agent is chosen. Model names from the service are shown as text | `test_assistant_model_list.py`, `test_assistant_test_connection.py` |
-| New dependencies for the connection | Supply chain | Reviewed in the phase review | checklist item |
+| Claude Desktop or Claude Code over MCP (#201) | The Claude program; Anthropic | It is the agent: untrusted like any other, with only the tools in `TOOL_ALLOWLIST`; approval comes only from the user in PsyNeuView's page (no MCP route accepts, rejects or approves). Choosing it while on is a new destination and asks first (#369); Settings says messages go to Claude Desktop or Claude Code under the user's subscription and Anthropic's terms, and that no key is kept. What that program does outside PsyNeuView's tools (Claude Code's own file and command access) is out of scope (section 6) and said in the app | `test_choosing_claude_over_mcp_while_on_asks_first`, `test_propose_makes_a_pending_proposal_in_the_assistant_tab`, `test_nothing_it_writes_runs_before_review`, `test_mcp_server_in_process`, `ai-assistant-mcp.spec.ts` |
+| New dependencies for the connection | Supply chain | Reviewed in the phase review. #201 adds the MCP SDK (`mcp>=2.3,<3`, with `mcp-types`, `httpx2`, `httpcore2`, `sse-starlette`, `pyjwt`, `cryptography`, `truststore`), used only by the stdio command `app/mcp_server.py`; the backend's routes don't import it | checklist item |
 
 ## 5. The tools, one by one, and in combination
 
@@ -227,7 +231,12 @@ containment rather than a better approval view.
 
 - An external agent (for example a coding agent over MCP) running on the
   same machine has its own file and command access. PsyNeuView limits what it
-  does through PsyNeuView's tools and says so in the app.
+  does through PsyNeuView's tools and says so in the app. With Claude over
+  MCP (#201) that agent is Claude Desktop or Claude Code: the connection
+  token proves the connection is one the user set up, but a program already
+  running as the user can read Claude's config or the Keychain item, as it
+  could the API key, and the page routes accept requests with no `Origin`
+  from this machine (the per-session credential below is still open).
 - A model the user wrote and chose to run has always been able to do anything
   the user can. The assistant doesn't change that; it adds a second author.
 - Containment (Phase 4) is a separate decision; see `containment.md`.
@@ -570,3 +579,9 @@ it has its own issue.
   is no run tool.
 - **Removing a file** (Trash, with approval) is a later phase; there is no
   delete tool.
+- **MCP over streamable HTTP** (#201). Only stdio is offered. An HTTP
+  endpoint on localhost would need the same token check plus protection
+  against DNS rebinding and other sites before it ships.
+- **The MCP command's address is fixed when it is set up** (#201). If the
+  backend starts on another port, the user copies the setup again; finding
+  the running backend by itself is not built.

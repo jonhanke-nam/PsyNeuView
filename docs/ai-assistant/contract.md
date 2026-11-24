@@ -27,6 +27,7 @@ is. The rules behind it are in issue #179; the threat model is in
 | Threat model, containment findings, review checklist | `docs/ai-assistant/` |
 | Settings, keys, agent connection, session loop, tools, routes | `backend/app/services/assistant/`, `backend/app/api/assistant_routes.py` |
 | Folder rules, file tools, review state, execution guard, review routes | `backend/app/services/assistant/files.py`, `review.py`, `same_site.py`, `backend/app/api/assistant_review_routes.py` |
+| Claude over MCP (#201): connection token, page context, MCP session, routes, the stdio server | `backend/app/services/assistant/mcp_link.py`, `backend/app/api/assistant_mcp_routes.py`, `backend/app/mcp_server.py`; setup in `docs/ai-assistant/mcp.md` |
 | Panel, Settings section, applying proposals | `frontend/src/components/assistant/`, `frontend/src/stores/assistantStore.ts`, `frontend/src/utils/assistantApply.ts`, `frontend/src/components/common/settings/AssistantSection.tsx` |
 
 ## Settings, stored by the backend
@@ -68,8 +69,12 @@ is. The rules behind it are in issue #179; the threat model is in
   the model's own folder (not code or the assistant's files); when that
   folder can't be opened, the model's `notices` say why.
 
-- `agent.type`: `none`, `anthropic`, `openai_compatible`. `base_url` must be
-  `https`, or `http` to this machine only.
+- `agent.type`: `none`, `anthropic`, `openai_compatible`, `claude_mcp`.
+  `base_url` must be `https`, or `http` to this machine only. With
+  `claude_mcp` (#201) no agent is called from PsyNeuView: Claude Desktop or
+  Claude Code connects over MCP (below, and `mcp.md`); `model` and
+  `base_url` are stored empty, and choosing it while on asks first, like
+  any new destination.
 - `autonomy`: `answer`, `suggest`, `app_edits`.
 - `saving`: `always_ask`, `structured_without_asking`.
 - `folders[].access`: `read`, `read_write`. Every folder goes through
@@ -363,11 +368,70 @@ state file at all means nothing is tracked. Tests and a second instance redirect
 - These two routes work with the assistant off, so a file written earlier
   can still be reviewed.
 
+## Claude over MCP (#201)
+
+With `agent.type: claude_mcp`, the agent is Claude Desktop or Claude Code,
+signed in with the user's subscription. It launches `python -m
+app.mcp_server` (also installed as `psyneuview-mcp`) over stdio; that command
+calls the backend over HTTP on `127.0.0.1` with the connection token, and
+forwards the backend's tool list and tool results unchanged. Setup and
+limits for users: `mcp.md`.
+
+**The page's routes**, `same_site` like every other assistant route:
+
+| Route | Does |
+|---|---|
+| `GET /api/assistant/mcp/setup` | `{url, command, args, env_names, claude_code, claude_desktop, token}`: the `claude mcp add` line and the `claude_desktop_config.json` snippet, with this backend's port and the token, made on first use. Works with the assistant off, outside `container` and `hosted` |
+| `POST /api/assistant/mcp/token` | A new token, same shape; any client set up with the old one gets 401 from then on |
+| `GET /api/assistant/mcp/status` | `{connected, last_seen, seconds_ago, client, active, session_id}`. `connected`: heard from in the last 90 s (the command says hello every 30 s). `session_id`: the MCP session, while `active` (on, with `claude_mcp` chosen) |
+| `PUT /api/assistant/mcp/context` | `{context}`, as with a message; filtered by `visibility` on arrival. Needs the assistant on |
+
+**The MCP command's routes**, `/api/assistant/mcp-client/...`, not
+`same_site` but checked by `mcp_client` on every request, in this order:
+
+1. The peer address is `127.0.0.1` or `::1`, and `Host` names this machine,
+   else 403 `not_local`.
+2. No `Origin` header, else 403 `not_mcp_client` (every browser request has
+   one; the command never sends one).
+3. `Authorization: Bearer <token>` matches the stored token (constant-time),
+   else 401 `bad_token` with `WWW-Authenticate: Bearer`. No stored token
+   matches nothing.
+4. The assistant is available (403 `unavailable`), on (403 `off`), and
+   `agent.type` is `claude_mcp` (403 `not_chosen`).
+
+| Route | Does |
+|---|---|
+| `POST /api/assistant/mcp-client/hello` | Heartbeat; `{ok, session_id}` |
+| `GET /api/assistant/mcp-client/tools` | `{tools: TOOL_DEFINITIONS, instructions}` |
+| `POST /api/assistant/mcp-client/tools/{name}` | `{arguments}` in, `{ok, content}` out: the same text the built-in agent gets (`[untrusted data …]` + JSON, or `Refused: …`, or `Error: …`) |
+
+There is no route in that group for settings, the key, the token, proposals,
+reviews or models. A tool call runs through `Session.call_tool`, the
+built-in agent's own dispatcher, in the one pinned MCP session (never
+dropped to make room): the allowlist, the per-call settings and checks, the
+`tool_call` event (with `via: "mcp"`), `refused` and `tool_result` events and
+the log line are the same. `read_open_model` and `propose_app_edit` read the
+context the page last shared, filtered again by `visibility` as it is then;
+with no page context yet they are refused, saying PsyNeuView isn't open.
+`limits.tool_calls` applies to any `limits.minutes`-long window;
+`limits.max_tokens` doesn't apply (PsyNeuView never sees the tokens).
+
+The token is kept like the API key, in the login Keychain (service
+"PsyNeuView AI assistant", account `mcp-connection-token`), or in memory when
+`PSYNEUVIEW_ASSISTANT_KEY_STORE=memory`; it is cached in the backend process
+and never logged. The page shows it only in the setup text.
+
+The Assistant tab, with `claude_mcp`, has no text box: it says to use Claude
+Desktop or Claude Code, polls the status every 1.5 s and the MCP session's
+events, shares the context whenever the open model, its source or the
+selection changes, and shows proposals with Accept and Reject as usual.
+
 ## Same site
 
-Every assistant route, the review routes included, carries the one
-`same_site` dependency (`same_site.py`): a request whose `Origin` isn't this
-server's own site is refused, and in `local` and `mac_app` modes so is a
+Every assistant route, the review routes included, except the MCP command's
+token-checked group above, carries the one `same_site` dependency
+(`same_site.py`): a request whose `Origin` isn't this server's own site is
+refused, and in `local` and `mac_app` modes so is a
 `Host` that isn't this machine. Both answer 403 with `reason: "not_app_page"`.
 
 ## Log
