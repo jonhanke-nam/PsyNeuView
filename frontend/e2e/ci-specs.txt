@@ -137,6 +137,7 @@ shape-mismatch-explained.spec.ts
 show-cims-at-once.spec.ts
 show-graph-agreement.spec.ts
 show-graph-edge-courses.spec.ts
+show-graph-shapes.spec.ts
 show-graph-tab-fetch.spec.ts
 show-ports.spec.ts
 sidecar-placement.spec.ts
