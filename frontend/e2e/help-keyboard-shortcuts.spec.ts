@@ -112,7 +112,7 @@ test.describe("Help ▸ Keyboard Shortcuts", { tag: "@ci" }, () => {
     await resetAll.click();
     await expect(resetAll).toBeDisabled();
     await expect(chip).toHaveText(/^(⌘I|Ctrl\+I)$/);
-    await page.keyboard.press(`${mod}+/`);
+    await page.keyboard.press("ControlOrMeta+/");
     await expect(reference).toBeVisible();
     await expect(reference.getByTestId("shortcuts-reference-summary")).toHaveText("Every shortcut is on its default.");
     await expect(reference.locator('[data-changed="true"]')).toHaveCount(0);
