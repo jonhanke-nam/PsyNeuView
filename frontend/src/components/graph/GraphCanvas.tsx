@@ -199,6 +199,8 @@ async function createProjectionOnServer(
     });
     if (!resp.ok) return;
     const data = await resp.json();
+    // #353: if what this wrote doesn't run, the warning names this connection.
+    useModelStore.getState().noteGraphEdit("connect", `${changes.sender} to ${changes.receiver}`);
     setSource(data.source);
     loadModel(data.model, data.layout);
   } catch {

@@ -334,6 +334,8 @@ export async function addNodeToModel(
       ? { ...(data.layout ?? {}), [key]: { ...(data.layout?.[key] ?? {}), [varName]: dropPosition } }
       : data.layout;
 
+    // #353: if what this wrote doesn't run, the warning names this add.
+    useModelStore.getState().noteGraphEdit("add", varName);
     setSource(data.source);
     loadModel(data.model, layout);
     recordAction(`Added ${mechType} "${varName}"`);
@@ -432,6 +434,8 @@ export async function setMechanismFunction(
     });
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) throw new Error(data.detail || "Function change failed");
+    // #353: if what this wrote doesn't run, the warning names this change.
+    if (data.source) useModelStore.getState().noteGraphEdit("function", `${label}'s function to ${fnType}`);
     if (data.source) setSource(data.source);
     if (data.model) loadModel(data.model, data.layout);
     addNotification("success", `${label} now uses ${fnType}`);
