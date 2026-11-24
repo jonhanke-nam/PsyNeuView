@@ -30,7 +30,8 @@
 
 import type { Node } from "@xyflow/react";
 import { knownSize } from "./showGraphLayout";
-import { ovalBoxFor } from "./nodeBox";
+import { shapedBoxFor } from "./nodeBox";
+import { nodeShapeFor } from "./nodeShape";
 
 /** The learning and control apparatus: may sit above the outputs. */
 const APPARATUS = ["LEARNING", "LEARNING_OBJECTIVE", "TARGET", "CONTROLLER", "CONTROLLER_OBJECTIVE", "CONTROL_OBJECTIVE"];
@@ -66,7 +67,8 @@ export function sizeOf(n: Node): { w: number; h: number } {
   if (known.w !== undefined && known.h !== undefined) return { w: known.w, h: known.h };
   if (n.type === "compositionNode") return { w: known.w ?? 300, h: known.h ?? 200 };
   const label = (n.data as { label?: string } | undefined)?.label;
-  const box = ovalBoxFor(label ?? n.id);
+  // #385: in its shape, at show_graph's proportions.
+  const box = shapedBoxFor(label ?? n.id, nodeShapeFor(n.data as any));
   return { w: known.w ?? box.width, h: known.h ?? box.height };
 }
 
