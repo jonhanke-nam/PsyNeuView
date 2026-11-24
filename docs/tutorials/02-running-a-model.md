@@ -16,16 +16,20 @@ How to run a loaded model and read its per-trial output.
 ## 1. Open the Run tab
 
 With a model loaded, click the **Run** tab in the bottom panel. PsyNeuView shows
-the **Inputs** grid — one block per input node, pre-filled with default trials
-you can edit — and a **Run Model** button.
+the **Inputs**, pre-filled with default trials you can edit, an **Execution
+mode** menu (how PsyNeuLink runs it, for example Python or PyTorch), and a
+**Run Model** button.
 
 ![The Run tab with the inputs grid and Run Model button](assets/running/01-run-tab.png)
 
 ## 2. (Optional) edit the inputs
 
-Each input node lists its trials; edit any cell to change a value, add/remove
-trials, or paste a CSV. You can group the grid **by Node** (default) or **by
-Trial**. The defaults run as-is, so you can skip this step the first time.
+Each input is written as an array, the way PsyNeuLink takes it, such as
+`[0, 1]`. **Arrange inputs** sets the order: **By trial** (the default) lists
+each trial with every input node's array under it; **By node** lists each input
+node with its trials, and the node's name stays at the top of the panel while
+its trials scroll by. Edit any array to change a value, add or remove trials, or
+paste a CSV. The defaults run as-is, so you can skip this step the first time.
 
 ### Inputs a model declares
 
@@ -45,9 +49,16 @@ counts, isn't offered.
 
 ## 3. Click **Run Model**
 
-PsyNeuView executes the model and shows **Results (N trials)** with a
-**Per-trial values** breakdown — the input and the computed output of every node,
-for each trial.
+While it runs, the button counts the seconds and, beside it, says which trial
+has finished (for example "Trial 3 of 10"). PsyNeuView then shows **Results (N
+trials)** with a **Per-trial values** breakdown: the input and the computed
+output of every node, for each trial, with how long the trial took (for example
+"Trial 1 · 0.04 s"). Each node's rows carry its role colour. **Show Δ** adds
+each value's change from the previous trial, and **Results table** opens the
+same numbers as a table.
+
+If you edit the model after a run, a note above the results says they
+are from an earlier version of the model, with a **Run again** button.
 
 ![Per-trial results for the Stroop — Basic model](assets/running/results-stroop-basic-panel.png)
 

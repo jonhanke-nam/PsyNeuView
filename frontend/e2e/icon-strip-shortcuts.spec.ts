@@ -77,6 +77,9 @@ test.describe("Components icon strip (#372, #395)", { tag: "@ci" }, () => {
     await openAppearance(page);
     const box = page.getByTestId("setting-components-strip-shortcuts");
     await expect(box).not.toBeChecked();
+    // The setting names the heading the strip really shows.
+    const description = page.locator("label").filter({ has: box });
+    await expect(description).toContainText('a small "Recent" heading');
     await box.check();
     await expect(page.getByTestId("setting-components-strip-headings")).not.toBeChecked();
     await closeSettings(page);

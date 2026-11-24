@@ -46,7 +46,9 @@ test.describe("Tutorial: Editing via the code editor", () => {
     await editor.click();
     await page.keyboard.press("ControlOrMeta+a");
     await page.keyboard.insertText(EDITED_SOURCE);
-    await page.keyboard.press("ControlOrMeta+s");
+    // The toolbar button, not "ControlOrMeta+s": on a Mac that sends ⌘S to a
+    // browser that reports Windows, so it never saved (#394).
+    await page.getByRole("button", { name: "Save", exact: true }).click();
 
     // Guarantee: the canvas rebuilds to match the edited source.
     await expect(page.locator('.react-flow__node[data-id^="alpha"]')).toBeVisible({ timeout: 30000 });

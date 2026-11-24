@@ -27,10 +27,25 @@ one.
 
 ![The Components palette](assets/building/02-palette.png)
 
+The **◀** at the top of the panel folds it to the **icon strip**, a narrow
+column with one menu per category under a small **All** heading; the small
+**›** at the strip's top opens the full panel again. To keep your favourite and
+recently used components in the strip too, turn on **Show favourite and
+recently used components in the icon strip** in ⚙ Settings ▸ Appearance ▸
+Components panel: they sit at the bottom under a **Recent** heading. To make a
+component a favourite, hover its row and click the empty star that appears; a
+favourite keeps its filled star.
+
 There are two ways to add a component, and they do exactly the same thing:
 
 - **Click** it, then **click the graph** where it should go. It is added there. Option-click puts down several; Esc puts it back (#252).
 - **Drag** it onto the canvas — useful when you care where it lands.
+
+A **function** goes onto a mechanism, not onto the canvas: click it and then
+click a mechanism, or drag it onto one (while you drag, the mechanisms that can
+take it glow). The mechanism's `function=` changes, with a notice such as
+"decision now uses Logistic", and one Undo takes it back. A mechanism that
+can't take the function says why.
 
 Rather than opening groups, you can **search**: type into the box at the top of
 the palette and the matching components are listed directly.

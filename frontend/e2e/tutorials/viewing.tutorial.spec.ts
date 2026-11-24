@@ -58,6 +58,11 @@ test.describe("Tutorial: Viewing options & the flat view", () => {
       .poll(() => page.locator(".react-flow__node").count(), { timeout: 30000 })
       .toBeGreaterThan(nestedCount);
     await expect(canvasNode(page, "STATE [RETRIEVED]").first()).toBeVisible({ timeout: 30000 });
+    // With every composition inlined the graph is far bigger, and the view keeps
+    // its zoom, so most of it starts off-screen. Fit it before the picture
+    // (#394), and check nothing is left out.
+    await page.locator(".react-flow__controls-fitview").click();
+    await expect(page.getByTestId("offscreen-nodes-indicator")).toHaveCount(0, { timeout: 10000 });
     await page.waitForTimeout(800);
     await page.screenshot({ path: shot("02-flat.png") });
   });

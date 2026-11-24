@@ -3,7 +3,7 @@
  *
  * Open as the narrow icon strip by default (#345), or as the word list (the
  * search box and the sections, folded closed). A stored choice is kept. This setting decides how the panel
- * opens; the panel's own ◀/▶ button collapses or opens it for the current
+ * opens; the panel's own ◀/› button collapses or opens it for the current
  * session without changing the setting (one control per setting), the same
  * way the graph legend's Show/Hide works (graphLegendStore). Remembered per
  * browser; inside the Mac app the app keeps `psyneuview.` keys across
