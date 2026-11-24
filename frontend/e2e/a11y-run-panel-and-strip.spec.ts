@@ -16,6 +16,10 @@
  * colour alone), and the trace bar's arrow buttons and step number have
  * names and work from the keyboard.
  *
+ * Contrast (#412): no text in the faint or hint grey on the icon strip, the
+ * Run panel or the trace bar, and no row of the current trial card not
+ * reached yet at the trace step, reads below WCAG AA (4.5:1).
+ *
  * Updates: the automatic-install question takes focus on its safe answer; the
  * update notice's Later reads at WCAG AA. (pnvSettings bridge stubbed.)
  */
@@ -53,6 +57,63 @@ async function contrast(el: Locator): Promise<number> {
     const text = fg.slice(0, 3).map((v, i) => v * fg[3] + bg[i] * (1 - fg[3]));
     const [a, b] = [lum(text), lum(bg)];
     return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  });
+}
+
+/**
+ * Text drawn in the faint or hint grey (or a not-yet-reached row's grey)
+ * inside `scope` that reads below WCAG AA on what is behind it (#412).
+ * Returns "text: ratio" for each, so an empty list is a pass.
+ */
+async function faintTextBelowAA(scope: Locator): Promise<string[]> {
+  return scope.evaluate((root) => {
+    const probe = document.createElement("span");
+    document.body.appendChild(probe);
+    const resolve = (v: string) => {
+      probe.style.color = `var(${v})`;
+      return getComputedStyle(probe).color;
+    };
+    const greys = new Set(["--pnv-text-faint", "--pnv-text-hint", "--pnv-step-pending-text"].map(resolve));
+    probe.remove();
+    const parse = (c: string) => {
+      const m = c.match(/rgba?\(([^)]+)\)/);
+      if (!m) return null;
+      const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number);
+      return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
+    };
+    const lum = (rgb: number[]) => {
+      const f = (v: number) => {
+        v /= 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      };
+      return 0.2126 * f(rgb[0]) + 0.7152 * f(rgb[1]) + 0.0722 * f(rgb[2]);
+    };
+    const low: string[] = [];
+    for (const el of Array.from(root.querySelectorAll<HTMLElement>("*"))) {
+      const cs = getComputedStyle(el);
+      if (!greys.has(cs.color)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      if (!Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent!.trim())) continue;
+      // Opacity on the way up dims the text; the first opaque background is behind it.
+      let opacity = 1;
+      const layers: number[][] = [];
+      for (let e: Element | null = el; e; e = e.parentElement) {
+        const s = getComputedStyle(e);
+        opacity *= Number(s.opacity);
+        const c = parse(s.backgroundColor);
+        if (c && c[3] > 0 && layers.every((l) => l[3] < 1)) layers.push(c);
+      }
+      let bg = [255, 255, 255];
+      for (const l of layers.reverse()) bg = bg.map((v, i) => v * (1 - l[3]) + l[i] * l[3]);
+      const fg = parse(cs.color)!;
+      const a = fg[3] * opacity;
+      const text = fg.slice(0, 3).map((v, i) => v * a + bg[i] * (1 - a));
+      const [x, y] = [lum(text), lum(bg)];
+      const ratio = (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+      if (ratio < 4.5) low.push(`${el.textContent!.trim().slice(0, 40)}: ${ratio.toFixed(2)}`);
+    }
+    return low;
   });
 }
 
@@ -121,6 +182,9 @@ test.describe("accessibility: Run panel, trace bar, icon strip, notices (#410)",
       expect(await contrast(palette.getByTestId(id)), id).toBeGreaterThanOrEqual(4.5);
     }
 
+    // No faint or hint grey text on the strip reads below AA (#412).
+    expect(await faintTextBelowAA(palette), "icon strip").toEqual([]);
+
     // In the full list, keyboard focus shows a row's hidden ☆.
     await palette.getByTestId("palette-strip-expand").click();
     const star = palette.locator('[data-testid="palette-fav-star"][data-starred="false"]').first();
@@ -176,6 +240,14 @@ test.describe("accessibility: Run panel, trace bar, icon strip, notices (#410)",
     const card = page.locator('[data-testid^="run-trial-card-"][aria-current="true"]');
     await expect(card).toHaveCount(1);
     await expect(card.locator('[data-testid="run-trial-node-band"][aria-current="step"]').first()).toBeVisible();
+
+    // Faint and hint grey text, and the rows not reached yet in the current
+    // trial card, read at AA in the Run panel and the trace bar (#412).
+    await expect(card.locator('[data-testid="run-trial-node-band"][data-step="pending"]').first()).toBeVisible();
+    expect(await faintTextBelowAA(page.getByTestId("run-panel")), "Run panel").toEqual([]);
+    expect(await faintTextBelowAA(next.locator("..")), "trace bar").toEqual([]);
+    const pendingName = card.locator('[data-testid="run-trial-node-band"][data-step="pending"] span').first();
+    expect(await contrast(pendingName), "a row not reached yet").toBeGreaterThanOrEqual(4.5);
     await expect(page.locator('[data-testid="run-trial-node-band"][aria-current="step"]')).toHaveCount(
       await page.locator('[data-testid="run-trial-node-band"][data-step="active"]').count(),
     );
