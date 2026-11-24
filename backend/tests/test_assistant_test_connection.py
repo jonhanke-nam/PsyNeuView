@@ -14,6 +14,7 @@ import urllib.error
 
 import pytest
 from app.main import app
+from tests.assistant_page import page_client
 from app.services.assistant import agents, keys
 from fastapi.testclient import TestClient
 
@@ -33,7 +34,7 @@ class FakeResponse(io.BytesIO):
 def client(monkeypatch):
     monkeypatch.delenv("PSYNEUVIEW_DEPLOYMENT_MODE", raising=False)
     keys.use_store(keys.MemoryStore())
-    yield TestClient(app, base_url="http://127.0.0.1")
+    yield page_client()
     keys.use_store(None)
 
 

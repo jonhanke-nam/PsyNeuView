@@ -9,6 +9,13 @@ import pytest
 # FastAPI's test client calls itself "testserver".
 os.environ.setdefault("PSYNEUVIEW_ALLOWED_HOSTS", "testserver")
 
+# The assistant's page secret (#381) is fixed for the run, so the tests' own
+# page client (tests/assistant_page.py) can send it.
+from app.services.assistant import page_secret as _page_secret  # noqa: E402
+from tests.assistant_page import PAGE_SECRET as _PAGE_SECRET  # noqa: E402
+
+_page_secret.use_for_tests(_PAGE_SECRET)
+
 # For the test of the real-preferences-file guard below (#1292).
 pytest_plugins = ["pytester"]
 

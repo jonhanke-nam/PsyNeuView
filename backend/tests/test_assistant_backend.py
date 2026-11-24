@@ -13,6 +13,7 @@ import time
 
 import pytest
 from app.main import app
+from tests.assistant_page import page_client, page_headers
 from app.services import deployment_mode
 from app.services.assistant import agents, keys
 from app.services.assistant import session as sessions
@@ -52,7 +53,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.delenv("PSYNEUVIEW_DEPLOYMENT_MODE", raising=False)
     keys.use_store(keys.MemoryStore())
     sessions.reset()
-    yield TestClient(app, base_url="http://127.0.0.1")
+    yield page_client()
     sessions.reset()
     keys.use_store(None)
 
@@ -188,10 +189,13 @@ def test_same_site_check(tmp_path):
     keys.use_store(keys.MemoryStore())
     try:
         other_site = TestClient(app, base_url="http://127.0.0.1")
-        assert other_site.get("/api/assistant/settings", headers={"origin": "https://evil.example"}).status_code == 403
-        assert other_site.get("/api/assistant/settings", headers={"origin": "http://127.0.0.1"}).status_code == 200
+        own = page_headers()
+        assert other_site.get("/api/assistant/settings", headers={**own, "origin": "https://evil.example"}).status_code == 403
+        assert other_site.get("/api/assistant/settings", headers=own).status_code == 200
+        # Without the page secret (#381), even the app's own site is refused.
+        assert other_site.get("/api/assistant/settings", headers={"origin": "http://127.0.0.1"}).status_code == 403
         wrong_host = TestClient(app, base_url="http://psyneuview.example.com")
-        assert wrong_host.get("/api/assistant/settings").status_code == 403
+        assert wrong_host.get("/api/assistant/settings", headers=page_headers("http://psyneuview.example.com")).status_code == 403
     finally:
         keys.use_store(None)
 

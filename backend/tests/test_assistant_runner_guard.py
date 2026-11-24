@@ -33,12 +33,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.assistant_page import page_client
 from app.services import jobs as job_service
 from app.services.assistant import files, import_guard, review
 from app.services.introspector import load_and_introspect
 from app.services.sandbox import WORKER_PATH
 
-client = TestClient(app, base_url="http://127.0.0.1:8000", headers={"origin": "http://127.0.0.1:8000"})
+client = page_client("http://127.0.0.1:8000")
 
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
 

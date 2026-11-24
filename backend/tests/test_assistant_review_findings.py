@@ -19,11 +19,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.assistant_page import page_client
 from app.services.assistant import agents, files, review, tools
 from app.services.assistant import log as alog
 from app.services.assistant import settings as asettings
 
-client = TestClient(app, base_url="http://127.0.0.1:8000", headers={"origin": "http://127.0.0.1:8000"})
+client = page_client("http://127.0.0.1:8000")
 
 
 def marker_model(marker, extra: str = "") -> str:

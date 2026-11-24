@@ -26,6 +26,17 @@ class ModelsDirRequest(BaseModel):
     path: str | None = None
 
 
+@router.get("/test/page-secret")
+async def page_secret_for_test() -> dict:
+    """The assistant's page secret (#381), for the e2e harness, which puts it
+    into each page's ``sessionStorage`` before the page loads (test-base.ts),
+    as the Mac app's user script and the one-time link do for real. Test mode
+    only: outside it no route serves the secret."""
+    from app.services.assistant import page_secret
+
+    return {"secret": page_secret.load(), "header": page_secret.HEADER}
+
+
 @router.post("/test/models-dir")
 async def set_models_dir_for_test(request: ModelsDirRequest) -> dict:
     """Set or clear ``PSYNEUVIEW_MODELS_DIR`` in the running backend (#1295).

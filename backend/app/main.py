@@ -31,8 +31,12 @@ from app.services import (
     startup_phases,
     working_copies,
 )
-from app.services.assistant import import_guard, mcp_link, review as assistant_review
+from app.services.assistant import import_guard, mcp_link, page_secret, review as assistant_review
 from app.services.sandbox import _get_warm_worker
+
+# The assistant's page secret (#381), read now, before any worker starts:
+# the variables that carry it leave the environment the workers inherit.
+page_secret.load()
 
 
 def _configure_app_logging() -> None:
@@ -122,6 +126,9 @@ async def lifespan(app: FastAPI):
     # Where the MCP command finds this backend, whatever port it is on (#201),
     # when Claude over MCP is the chosen agent.
     mcp_link.claim_at_start()
+    # The one-time link a browser opens to hold the assistant's page secret
+    # (#381). Not printed when the Mac app passed it: the app injects it.
+    _announce_page_link()
     yield
     mcp_link.release()
     pnl_updates.stop()
@@ -138,6 +145,15 @@ def _announce_what_is_running() -> None:
         print(running_from.summary_line(running_from.describe()), flush=True)
     except Exception:  # noqa: BLE001 — a report must never stop the start
         logger.exception("Couldn't say what is running")
+
+
+def _announce_page_link() -> None:
+    try:
+        line = page_secret.announce(mcp_link.startup_port())
+        if line:
+            print(line, flush=True)
+    except Exception:  # noqa: BLE001 — a report must never stop the start
+        logger.exception("Couldn't print the page link")
 
 
 def _prewarm_model_runner() -> None:

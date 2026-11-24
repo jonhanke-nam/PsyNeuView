@@ -14,13 +14,14 @@ from fastapi.testclient import TestClient
 
 from app.api import ws
 from app.main import app
+from tests.assistant_page import page_client, page_headers
 from app.services import executor, introspector, sandbox
 from app.services.assistant import review
 from app.services.assistant.review import REASON, UnreviewedAssistantCode
 
 # The page's own requests: a browser sends the page's Origin, and the server
 # is reached on this machine.
-client = TestClient(app, base_url="http://127.0.0.1:8000", headers={"origin": "http://127.0.0.1:8000"})
+client = page_client("http://127.0.0.1:8000")
 
 
 def approve_current(path: str):
@@ -241,7 +242,7 @@ def test_approve_with_stale_hash_leaves_it_unrunnable(state):
 def test_review_routes_accept_only_the_apps_own_page(state, route):
     p = str(state["model"])
     body = {"path": p, "content_hash": review.content_hash(state["model"].read_text())}
-    own = {"host": "127.0.0.1:8000", "origin": "http://127.0.0.1:8000"}
+    own = {"host": "127.0.0.1:8000", **page_headers("http://127.0.0.1:8000")}
     foreign_origin = {"host": "127.0.0.1:8000", "origin": "http://evil.example"}
     foreign_host = {"host": "evil.example:8000", "origin": "http://evil.example:8000"}
     null_origin = {"host": "127.0.0.1:8000", "origin": "null"}
@@ -254,10 +255,14 @@ def test_review_routes_accept_only_the_apps_own_page(state, route):
     assert not state["marker"].exists()
     resp = client.post(route, json=body, headers=own)
     assert resp.status_code == 200, resp.text
-    # Without an Origin (not a browser page), the Host still has to be this machine.
+    # Without an Origin the Host still has to be this machine; and even then
+    # a request that names no site, or lacks the page secret, is refused (#381).
+    secret_only = {k: v for k, v in page_headers().items() if k != "origin"}
     no_origin = TestClient(app, base_url="http://evil.example:8000")
-    assert no_origin.post(route, json=body).status_code == 403
-    assert TestClient(app, base_url="http://localhost:8000").post(route, json=body).status_code == 200
+    assert no_origin.post(route, json=body, headers=secret_only).status_code == 403
+    assert TestClient(app, base_url="http://localhost:8000").post(route, json=body).status_code == 403
+    assert TestClient(app, base_url="http://localhost:8000").post(route, json=body, headers=secret_only).status_code == 403
+    assert page_client("http://localhost:8000").post(route, json=body).status_code == 200
 
 
 def test_is_own_page_rules():

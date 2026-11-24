@@ -19,6 +19,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.assistant_page import page_client
 from app.mcp_server import build_server, check_url
 from app.services.assistant import keys, mcp_link
 from app.services.assistant import session as sessions
@@ -42,7 +43,7 @@ def page(tmp_path, monkeypatch):
     mcp_link.use_token_store(keys.MemoryStore())
     sessions.reset()
     mcp_link.reset()
-    yield TestClient(app, base_url="http://127.0.0.1", client=LOCAL)
+    yield page_client(client=LOCAL)
     sessions.reset()
     mcp_link.reset()
     keys.use_store(None)
@@ -448,7 +449,7 @@ def test_the_status_route_corrects_the_port_from_the_real_request(page, tmp_path
 
     turn_on_mcp(page, tmp_path)
     mcp_link.claim(1234)  # a wrong guess at start
-    TestClient(app, base_url="http://127.0.0.1:8393", client=LOCAL).get("/api/assistant/mcp/status")
+    page_client("http://127.0.0.1:8393", client=LOCAL).get("/api/assistant/mcp/status")
     assert mcp_discovery.find_url() == "http://127.0.0.1:8393"
     mcp_link.release()
 
