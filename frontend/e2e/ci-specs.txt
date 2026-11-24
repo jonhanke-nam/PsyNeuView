@@ -116,6 +116,7 @@ run-set-survives-edit.spec.ts
 save-copy-sidecars.spec.ts
 saves-in-history.spec.ts
 scheduling-arrows-setting.spec.ts
+selection-colour.spec.ts
 settings-panel.spec.ts
 settings-search.spec.ts
 shape-mismatch-explained.spec.ts
@@ -150,4 +151,3 @@ watch-status-in-bar.spec.ts
 watch-two-windows.spec.ts
 whats-running.spec.ts
 where-things-live.spec.ts
-selection-colour.spec.ts
