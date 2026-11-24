@@ -134,6 +134,9 @@ describe("dialog inventory (#1289)", () => {
   it("lists nothing that draws no overlay", () => {
     const drawing = new Set(overlayFiles);
     for (const r of rows) {
+      // A notice may be a strip in the layout instead of a layer on top (the
+      // failed-open strip, #401): listed for how it closes, not for drawing over.
+      if (r.kind === "notice") continue;
       expect(drawing.has(r.file), `${r.name}: ${rel(r.file)} draws no overlay — is the row stale?`).toBe(true);
     }
     for (const n of notDialogs) {
