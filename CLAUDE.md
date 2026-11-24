@@ -10,7 +10,7 @@ one level up in `../CLAUDE.md` and in auto-memory. Not repeated here.
 
 | Area | Doc |
 |---|---|
-| **Design principles (accurate display; automatic behaviour only by consent)** | [`docs/design-principles.md`](docs/design-principles.md) |
+| **Design principles (accurate display; automatic behaviour only by consent; nothing on the graph hidden)** | [`docs/design-principles.md`](docs/design-principles.md) |
 | **Interactive UI elements (hover/affordance)** | [`docs/ui-interaction-conventions.md`](docs/ui-interaction-conventions.md) |
 | **Colours and buttons (the palette, the five button kinds, the Close rule)** | [`docs/ui-style-conventions.md`](docs/ui-style-conventions.md) — colours are tokens from `frontend/src/styles/palette.css`, buttons are `Button` kinds; `styleConventions.test.ts` and `style-report.mjs --check` (CI) fail on any hand-written colour outside the listed exceptions |
 | Icons and their meanings | [`docs/icon-ontology.md`](docs/icon-ontology.md) |

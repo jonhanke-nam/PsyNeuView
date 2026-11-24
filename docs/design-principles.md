@@ -1,6 +1,6 @@
 # Design principles
 
-Two rules the owner has set for everything PsyNeuView and the Mac app show or
+Three rules the owner has set for everything PsyNeuView and the Mac app show or
 do. They apply to the code, the backend and the Mac app alike, and reviewers
 (people and CodeRabbit) check new work against them.
 
@@ -52,6 +52,35 @@ setting, which is off until the person opts in
 
 **Checking a change:** if the app does something on its own, is it off by
 default, how does a person turn it on, and what does the app say when it acts?
+
+## 3. Nothing on the graph is hidden or confusing
+
+Everything on the graph is visible in two dimensions. A person should never
+misread what connects to what because one thing sits on top of another.
+
+- **Arrows never substantively overlap.** Arrows between the same two nodes,
+  in either direction, and arrows that share an end attach at distinct points
+  on each node and stay apart for most of their length. A brief crossing is
+  fine; running on top of each other is not.
+- **Arrows never pass behind or through nodes they don't connect to.** An
+  arrow routes around any node in its way.
+- **Nodes never overlap.** This holds in every layout, Custom included, after
+  moves, additions and expanded compositions.
+- **Labels stay readable.** Arrow labels and port names don't sit on top of
+  each other or on top of nodes.
+
+Where the Like show_graph layout follows show_graph's own course for an arrow
+and that course already keeps it apart, the course is kept: show_graph is the
+reference.
+
+The first application is a second arrow dragged between two nodes that are
+already connected, which was drawn exactly on top of the first
+([#388](https://github.com/jonhanke-nam/PsyNeuView/issues/388)). The wider
+work, a "nothing hidden" check across every reference model and view, is
+[#389](https://github.com/jonhanke-nam/PsyNeuView/issues/389).
+
+**Checking a change:** if it draws or moves anything on the graph, can any
+arrow, node or label end up on top of another, or an arrow behind a node?
 
 ## Related
 
