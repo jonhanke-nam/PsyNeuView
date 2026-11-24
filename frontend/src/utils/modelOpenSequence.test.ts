@@ -3,7 +3,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { useModelStore } from "@/stores/modelStore";
-import { beginModelOpen, isNewestModelOpen, withStillShowing } from "./modelOpenSequence";
+import { useFailedOpenStore } from "@/stores/failedOpenStore";
+import { beginModelOpen, isNewestModelOpen, reportFailedOpen, withStillShowing } from "./modelOpenSequence";
 
 /** An answer that arrives when the test says so. */
 function later<T>() {
@@ -83,5 +84,39 @@ describe("a failed open says which model is still open", () => {
 
   it("says nothing more when no model is open", () => {
     expect(withStillShowing("Failed to load: nope.")).toBe("Failed to load: nope");
+  });
+});
+
+describe("a failed open is kept for the banner over the graph (#401)", () => {
+  beforeEach(() => {
+    useModelStore.setState({ filePath: "", bundleOrigin: null });
+    useFailedOpenStore.getState().clear();
+  });
+
+  it("keeps what was tried, why, which model is still open, and how to try again", () => {
+    useModelStore.setState({ filePath: "/models/stroop_reference_basic.py" });
+    let tries = 0;
+    reportFailedOpen("missing.py", "File not found: /x/missing.py.", () => { tries += 1; });
+    const failed = useFailedOpenStore.getState().failed;
+    expect(failed).toMatchObject({
+      attempted: "missing.py",
+      reason: "File not found: /x/missing.py",
+      shownPath: "/models/stroop_reference_basic.py",
+    });
+    failed?.retry();
+    expect(tries).toBe(1);
+  });
+
+  it("an error object is shown by its message, and an empty reason still says something", () => {
+    reportFailedOpen("a.py", new TypeError("Failed to fetch"), () => {});
+    expect(useFailedOpenStore.getState().failed?.reason).toBe("TypeError: Failed to fetch");
+    reportFailedOpen("a.py", "", () => {});
+    expect(useFailedOpenStore.getState().failed?.reason).toBe("unknown error");
+  });
+
+  it("starting another open clears it", () => {
+    reportFailedOpen("missing.py", "nope", () => {});
+    beginModelOpen();
+    expect(useFailedOpenStore.getState().failed).toBeNull();
   });
 });
