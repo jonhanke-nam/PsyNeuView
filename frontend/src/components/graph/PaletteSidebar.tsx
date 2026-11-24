@@ -4,7 +4,7 @@
  * Items can be dragged onto the canvas or clicked to add.
  */
 
-import { isProjectionType } from "@/constants/pnlTypes";
+import { isFunctionType, isProjectionType } from "@/constants/pnlTypes";
 import { type DragEvent, useEffect, useMemo, useRef } from "react";
 import { useModelStore } from "@/stores/modelStore";
 import { useNotificationStore } from "@/stores/notificationStore";
@@ -21,6 +21,9 @@ import { addNodeToModel } from "@/utils/nodeActions";
 import { useDismiss } from "@/components/common/dialog/useDismiss";
 import { iconForCategory, iconForType } from "@/utils/componentIcons";
 import { ComponentIcon } from "./ComponentIcon";
+
+/** #354: the drag is over, dropped or not. */
+const endDrag = () => usePaletteStore.getState().setDraggingFunction(null);
 
 
 function findNode(id: string, nodes: TaxonomyNode[] = PNL_TAXONOMY_TREE): TaxonomyNode | null {
@@ -112,6 +115,8 @@ export function PaletteSidebar() {
       JSON.stringify({ type: item.type, defaults: item.defaults }),
     );
     e.dataTransfer.effectAllowed = "move";
+    // #354: a function dragged goes onto a mechanism; light up those that can take it.
+    if (isFunctionType(item.type)) usePaletteStore.getState().setDraggingFunction(item.type);
   };
 
   const width = isCompact ? 48 : 260;
@@ -479,6 +484,7 @@ function PaletteLeaf({
       <div
         draggable
         onDragStart={(e) => onDragStart(e, item)}
+        onDragEnd={endDrag}
         onClick={() => onAdd(item)}
         data-testid="palette-item"
         data-type={item.type}
@@ -512,6 +518,7 @@ function PaletteLeaf({
     <div
       draggable
       onDragStart={(e) => onDragStart(e, item)}
+      onDragEnd={endDrag}
       onClick={() => onAdd(item)}
       data-testid="palette-item"
       data-type={item.type}

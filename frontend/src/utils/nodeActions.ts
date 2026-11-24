@@ -12,6 +12,7 @@ import { generateDefaultVarName } from "@/utils/defaultNaming";
 import { modelLoadOptions, modelViewOptions } from "@/utils/showGraphLoadRequest";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { withBusy } from "@/stores/busyStore";
+import { blameGraphEdit } from "@/utils/graphEditBlame";
 import {
   applyView,
   captureView,
@@ -334,10 +335,13 @@ export async function addNodeToModel(
       ? { ...(data.layout ?? {}), [key]: { ...(data.layout?.[key] ?? {}), [varName]: dropPosition } }
       : data.layout;
 
+    // #353: if what this wrote doesn't run, the warning names this add.
+    useModelStore.getState().noteGraphEdit("add", varName);
     setSource(data.source);
     loadModel(data.model, layout);
     recordAction(`Added ${mechType} "${varName}"`);
-    addNotification("success", `Added ${mechType} "${varName}"`);
+    // A model it broke says so instead (#353).
+    if (!editBroke(data.model)) addNotification("success", `Added ${mechType} "${varName}"`);
   } catch (e) {
     addNotification("error", `Failed to add node: ${e}`);
   } finally {
@@ -387,6 +391,17 @@ async function saveDroppedPosition(
 }
 
 
+/**
+ * #353: whether the graph edit just loaded broke the model on a line it
+ * wrote, in which case its warning says so and "done" would contradict it.
+ * A model that already failed elsewhere doesn't count.
+ */
+function editBroke(model: { error?: string; errorLine?: number } | undefined): boolean {
+  if (!model?.error) return false;
+  const { lastGraphEdit, source } = useModelStore.getState();
+  return blameGraphEdit(lastGraphEdit, source, model.errorLine) !== null;
+}
+
 /** #348: clicking empty canvas (or a non-mechanism) while a function is picked up. */
 export const FUNCTION_NEEDS_MECHANISM =
   "A function belongs to a mechanism. Click one of the highlighted mechanisms, or press Esc.";
@@ -432,9 +447,11 @@ export async function setMechanismFunction(
     });
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) throw new Error(data.detail || "Function change failed");
+    // #353: if what this wrote doesn't run, the warning names this change.
+    if (data.source) useModelStore.getState().noteGraphEdit("function", `${label}'s function to ${fnType}`);
     if (data.source) setSource(data.source);
     if (data.model) loadModel(data.model, data.layout);
-    addNotification("success", `${label} now uses ${fnType}`);
+    if (!editBroke(data.model)) addNotification("success", `${label} now uses ${fnType}`);
   } catch (e: any) {
     addNotification("error", `Function change failed: ${e.message ?? e}`);
   }
