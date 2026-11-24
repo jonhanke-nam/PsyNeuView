@@ -21,6 +21,10 @@
  *  - A dismissed overlay is popped by its own effect cleanup, so a stale entry
  *    can't swallow the next Escape.
  *
+ * Escape is the closing half; the keyboard focus that goes with opening and
+ * closing — in on open, kept inside a modal dialog, back to the opener on
+ * close (#415) — is dialogFocus.ts, which DialogHeader runs for every dialog.
+ *
  * The stack itself (`pushDismiss`, `handleEscape`) is plain code with no React
  * in it, so useDismiss.test.ts can drive it directly.
  */
