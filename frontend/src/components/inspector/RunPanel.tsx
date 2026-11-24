@@ -40,6 +40,7 @@ import {
   formatLabeledValue,
   formatDelta,
   expandMultiPort,
+  portElementLabels,
 } from "@/utils/labels";
 import { formatTraceValue } from "@/utils/traceValues";
 import { echoesSubmitted } from "@/utils/runEcho";
@@ -1895,6 +1896,9 @@ function TrialPorts({
   // under them the node's whole input as Composition.run takes it.
   const multi = shapes.length > 1;
   const portName = (p: number) => node.inputPorts[p]?.name ?? `port ${p}`;
+  // The grid labels a multi-port node's boxes by element name, per port (#358).
+  const modelLabels = useModelStore((s) => s.modelLabels);
+  const portLabels = multi ? portElementLabels(modelLabels, node.name, node.inputPorts, "input") : null;
   const fields = shapes.map((shape, p) => {
         const text = texts[p] ?? "";
         const check = parsed[p];
@@ -1912,7 +1916,7 @@ function TrialPorts({
               {shown.map((val, e) => (
                 <InputCell
                   key={e}
-                  label={(multi ? undefined : labels[e]) ?? `[${e}]`}
+                  label={(multi ? portLabels?.[p]?.[e] : labels[e]) ?? `[${e}]`}
                   value={val}
                   extra={e >= width}
                   onChange={(v) => {

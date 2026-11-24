@@ -334,3 +334,31 @@ function jsonRound(v: unknown, maxLen: number): string {
   if (full === undefined) return "";
   return full.length > maxLen ? full.slice(0, maxLen - 1) + "…" : full;
 }
+
+/**
+ * Each port's element labels, for a node with one or several ports (#358):
+ * one list per port, by name from the model's labels when they fit the
+ * port's size, else by position (`[0]`, `[1]`). A port's labels come from
+ * the port itself or its own sidecar entry; the node-level shorthand applies
+ * to the first port only, since it names one vector.
+ */
+export function portElementLabels(
+  labels: ModelLabels | null | undefined,
+  nodeName: string,
+  ports: { name: string; shape?: number[] | null; element_names?: string[] | null }[],
+  kind: "input" | "output",
+): string[][] {
+  return ports.map((port, p) => {
+    const size = port.shape?.[0] || 1;
+    let resolved = resolvePortLabels(labels, nodeName, port.name, kind, ports);
+    if (p > 0 && resolved) {
+      const own = ports[p].element_names;
+      const portsKey = kind === "input" ? "input_ports" : "output_ports";
+      const sidecar = labels ? lookupNode(labels, nodeName)?.[portsKey]?.[port.name]?.element_names : null;
+      if (!(own && own.length > 0) && !(sidecar && sidecar.length > 0)) resolved = null;
+    }
+    return resolved && resolved.length === size
+      ? resolved
+      : Array.from({ length: size }, (_, i) => `[${i}]`);
+  });
+}
