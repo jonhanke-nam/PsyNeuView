@@ -37,7 +37,7 @@ test.describe("Learn: non-autodiff learning", { tag: "@ci" }, () => {
     // Preloaded from the model's own target-less training set.
     await expect(page.getByTestId("learn-training-set")).toHaveValue("three_objects");
     await expect(page.getByTestId("learn-no-targets")).toBeVisible();
-    await expect(page.locator("select").filter({ hasText: "Python (graph)" }).first()).toHaveValue("Python");
+    await expect(page.locator("label:visible", { hasText: /^Execution mode/ }).locator("select")).toHaveValue("Python");
 
     const values = await trainAndReadValues(page);
     await expect(page.getByText(/final weight change/i)).toBeVisible();
