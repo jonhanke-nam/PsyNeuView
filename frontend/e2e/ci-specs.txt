@@ -1,5 +1,6 @@
 about-release-dates.spec.ts
 ai-assistant-mcp.spec.ts
+ai-assistant-page-secret.spec.ts
 ai-assistant-real.spec.ts
 ai-assistant.spec.ts
 app-shell.spec.ts

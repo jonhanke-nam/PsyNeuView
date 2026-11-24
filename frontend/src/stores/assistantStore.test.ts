@@ -54,6 +54,24 @@ describe("assistantStore (#179)", () => {
     expect(useAssistantStore.getState().available).toBe(false);
   });
 
+  it("says how to get the page secret instead of hiding the assistant (#381)", async () => {
+    const message = "Refused: this page doesn't hold this launch's assistant secret.";
+    answers["GET /api/assistant/settings"] = () => json({ detail: { reason: "page_secret_missing", message } }, 403);
+    await useAssistantStore.getState().load();
+    expect(useAssistantStore.getState()).toMatchObject({ available: true, loadError: message });
+  });
+
+  it("sends the page secret on assistant routes when the tab holds one (#381)", async () => {
+    const store = new Map([["psyneuview.pageSecret", "tab-secret"]]);
+    vi.stubGlobal("window", { sessionStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: () => undefined } });
+    answers["GET /api/assistant/settings"] = () => json({ ...DEFAULT_ASSISTANT_SETTINGS });
+    answers["GET /api/assistant/key"] = () => json({ set: false });
+    await useAssistantStore.getState().load();
+    const sent = calls.filter((c) => c.url.startsWith("/api/assistant/"));
+    expect(sent.length).toBeGreaterThan(0);
+    for (const c of sent) expect(new Headers(c.init?.headers).get("X-PsyNeuView-Session")).toBe("tab-secret");
+  });
+
   it("loads settings and whether a key is set, never the key", async () => {
     answers["GET /api/assistant/settings"] = () => json({ ...DEFAULT_ASSISTANT_SETTINGS, enabled: true });
     answers["GET /api/assistant/key"] = () => json({ set: true });

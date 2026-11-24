@@ -119,9 +119,37 @@ async function expandOpenMenuSections(page: import("@playwright/test").Page) {
   );
 }
 
+/** Where the page keeps the assistant's page secret (#381); utils/pageSecret.ts. */
+const PAGE_SECRET_KEY = "psyneuview.pageSecret";
+
+/**
+ * Give the page this launch's assistant secret (#381), as the Mac app's user
+ * script and the printed one-time link do for real: from the harness's
+ * test-only route, into sessionStorage before the page's scripts run. Without
+ * it every assistant route answers 403. A spec about a page without the
+ * secret removes the key in its own `addInitScript`.
+ */
+async function holdPageSecret(page: import("@playwright/test").Page, request: import("@playwright/test").APIRequestContext) {
+  const resp = await request.get("/api/test/page-secret").catch(() => null);
+  if (!resp || !resp.ok()) return;
+  const { secret } = (await resp.json()) as { secret?: string };
+  if (!secret) return;
+  await page.addInitScript(
+    ([key, value]) => {
+      try {
+        if (sessionStorage.getItem(key) === null) sessionStorage.setItem(key, value);
+      } catch {
+        // A page that refuses storage simply has no secret.
+      }
+    },
+    [PAGE_SECRET_KEY, secret] as const,
+  );
+}
+
 export const readOnlyTest = base.extend({
-  page: async ({ page }, use) => {
+  page: async ({ page, request }, use) => {
     await expandOpenMenuSections(page);
+    await holdPageSecret(page, request);
     await use(page);
   },
 });
@@ -139,6 +167,7 @@ export const mutatingTest = base.extend({
       );
     }
     await expandOpenMenuSections(page);
+    await holdPageSecret(page, request);
     await use(page);
   },
 });

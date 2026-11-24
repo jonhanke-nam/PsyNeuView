@@ -12,6 +12,12 @@ import { useUIStore } from "./stores/uiStore";
 import { syncDeveloperModeWithMacApp } from "./utils/macAppSettings";
 import { installBusyFetch } from "./stores/busyStore";
 import { adoptRecordedDefaultOnce } from "./utils/narration";
+import { takePageSecretFromUrl } from "./utils/pageSecret";
+
+// The assistant's page secret (#381), from the one-time link the server
+// printed: into this tab's sessionStorage, and out of the address bar, before
+// anything else reads the address.
+takePageSecretFromUrl();
 
 // A system voice chosen before the recorded voices gives way, once, to the
 // recorded default (#159).

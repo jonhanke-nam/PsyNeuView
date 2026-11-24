@@ -14,6 +14,7 @@ import { create } from "zustand";
 import { record } from "@/utils/activityLog";
 import { applyAppEdit } from "@/utils/assistantApply";
 import { contextFor, setProposalState, sha256Hex, withProposal } from "@/utils/assistantProposals";
+import { assistantFetch, pageSecretRefusal } from "@/utils/pageSecret";
 import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
 import { useModelStore } from "./modelStore";
 import {
@@ -189,7 +190,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
 
   loadSandbox: async () => {
     try {
-      const resp = await fetch("/api/assistant/sandbox");
+      const resp = await assistantFetch("/api/assistant/sandbox");
       if (resp.ok) set({ sandbox: (await readJson(resp)) as unknown as SandboxStatus });
     } catch {
       // The section says nothing rather than something wrong.
@@ -198,7 +199,16 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
 
   load: async () => {
     try {
-      const resp = await fetch("/api/assistant/settings");
+      const resp = await assistantFetch("/api/assistant/settings");
+      if (resp.status === 403) {
+        // This page doesn't hold the launch's secret (#381): say how to get it,
+        // rather than hiding the assistant as if the deployment had none.
+        const refusal = pageSecretRefusal(await readJson(resp));
+        if (refusal) {
+          set({ available: true, loadError: refusal });
+          return;
+        }
+      }
       if (!resp.ok) {
         // 403 and 404: the deployment lacks the capability, or the backend
         // predates the assistant. Either way there is nothing to show.
@@ -213,7 +223,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
       }
       set({ available: true, settings: fromBackend(body), loadError: null });
       void get().loadSandbox();
-      const key = await fetch("/api/assistant/key");
+      const key = await assistantFetch("/api/assistant/key");
       if (key.ok) set({ keySet: Boolean(((await readJson(key)) as { set?: boolean }).set) });
     } catch (e) {
       set({ available: false, loadError: String(e) });
@@ -224,7 +234,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
     set({ saving: true });
     try {
       const body = settingsBody(next);
-      const resp = await fetch("/api/assistant/settings", {
+      const resp = await assistantFetch("/api/assistant/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(confirmRaise ? { ...body, confirm_raise: true } : body),
@@ -269,7 +279,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
   cancelRaise: () => set({ pendingRaise: null }),
 
   setKey: async (key) => {
-    const resp = await fetch("/api/assistant/key", {
+    const resp = await assistantFetch("/api/assistant/key", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key }),
@@ -294,7 +304,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
     set({ models: { ...before, loading: true } });
     let body: Partial<ModelListResponse> = {};
     try {
-      const resp = await fetch("/api/assistant/models");
+      const resp = await assistantFetch("/api/assistant/models");
       body = (await readJson(resp)) as Partial<ModelListResponse>;
       if (!resp.ok) body = { ok: false, message: `The list couldn't be fetched (HTTP ${resp.status})` };
     } catch {
@@ -318,7 +328,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
   testConnection: async () => {
     const failed = (message: string): ConnectionTest => ({ ok: false, agent: get().settings.agent.type, model: get().settings.agent.model, ms: null, message });
     try {
-      const resp = await fetch("/api/assistant/test-connection", { method: "POST" });
+      const resp = await assistantFetch("/api/assistant/test-connection", { method: "POST" });
       const body = await readJson(resp);
       if (!resp.ok || typeof body.message !== "string") {
         const detail = body.detail;
@@ -334,7 +344,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
   },
 
   clearKey: async () => {
-    const resp = await fetch("/api/assistant/key", { method: "DELETE" });
+    const resp = await assistantFetch("/api/assistant/key", { method: "DELETE" });
     if (resp.ok) {
       set({ keySet: false });
       record("assistant", "API key removed");
@@ -346,7 +356,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
     const { settings } = get();
     let sessionId = get().sessionId;
     if (!sessionId) {
-      const resp = await fetch("/api/assistant/sessions", { method: "POST" });
+      const resp = await assistantFetch("/api/assistant/sessions", { method: "POST" });
       if (!resp.ok) {
         set({ loadError: `Could not start a session: HTTP ${resp.status}` });
         return;
@@ -363,7 +373,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
     });
     set((s) => ({ items: [...s.items, { kind: "user", id: `u${itemSeq++}`, text }], turn: "running", lastDone: null }));
     record("assistant", "Message sent");
-    const resp = await fetch(`/api/assistant/sessions/${sessionId}/messages`, {
+    const resp = await assistantFetch(`/api/assistant/sessions/${sessionId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, context }),
@@ -387,7 +397,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
     if (!sessionId || turn === "idle") return;
     set({ turn: "stopping" });
     record("assistant", "Stop pressed");
-    await fetch(`/api/assistant/sessions/${sessionId}/stop`, { method: "POST" }).catch(() => undefined);
+    await assistantFetch(`/api/assistant/sessions/${sessionId}/stop`, { method: "POST" }).catch(() => undefined);
     void get().poll();
   },
 
@@ -399,7 +409,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
     // nothing to check.
     const current_hash =
       proposal.kind === "app_edit" ? await sha256Hex(useModelStore.getState().source) : proposal.base_hash;
-    const resp = await fetch(`/api/assistant/proposals/${id}/accept`, {
+    const resp = await assistantFetch(`/api/assistant/proposals/${id}/accept`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ current_hash }),
@@ -446,7 +456,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
   },
 
   rejectProposal: async (id) => {
-    await fetch(`/api/assistant/proposals/${id}/reject`, { method: "POST" }).catch(() => undefined);
+    await assistantFetch(`/api/assistant/proposals/${id}/reject`, { method: "POST" }).catch(() => undefined);
     set((s) => ({ proposals: setProposalState(s.proposals, id, "rejected") }));
     record("assistant", `Proposal rejected: ${id}`);
   },
@@ -462,7 +472,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
   approveReviewed: async () => {
     const offer = get().reviewOffer;
     if (!offer || !offer.content_hash) return;
-    const resp = await fetch("/api/assistant/review/approve", {
+    const resp = await assistantFetch("/api/assistant/review/approve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ path: offer.path, content_hash: offer.content_hash }),
@@ -491,7 +501,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
 
   loadMcpSetup: async () => {
     try {
-      const resp = await fetch("/api/assistant/mcp/setup");
+      const resp = await assistantFetch("/api/assistant/mcp/setup");
       const body = await readJson(resp);
       if (!resp.ok) {
         const detail = body.detail;
@@ -505,7 +515,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
   },
 
   replaceMcpToken: async () => {
-    const resp = await fetch("/api/assistant/mcp/token", { method: "POST" });
+    const resp = await assistantFetch("/api/assistant/mcp/token", { method: "POST" });
     if (resp.ok) {
       set({ mcpSetup: (await readJson(resp)) as unknown as McpSetup, mcpSetupError: null });
       record("assistant", "MCP connection token replaced");
@@ -514,7 +524,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
 
   loadMcpStatus: async () => {
     try {
-      const resp = await fetch("/api/assistant/mcp/status");
+      const resp = await assistantFetch("/api/assistant/mcp/status");
       if (!resp.ok) return null;
       const status = (await readJson(resp)) as unknown as McpStatus;
       set({ mcpStatus: status });
@@ -534,7 +544,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
       selection: model.selectedNodeId ?? null,
       errors: [],
     });
-    await fetch("/api/assistant/mcp/context", {
+    await assistantFetch("/api/assistant/mcp/context", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ context }),
@@ -588,7 +598,7 @@ function fromBackend(body: Partial<AssistantSettings>): AssistantSettings {
 
 async function fetchReviewStatus(path: string): Promise<Pick<ReviewOffer, "content" | "content_hash">> {
   try {
-    const resp = await fetch("/api/assistant/review/status", {
+    const resp = await assistantFetch("/api/assistant/review/status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ path }),
@@ -642,7 +652,7 @@ async function pollOnce(): Promise<void> {
   if (!sessionId) return;
   let running = false;
   try {
-    const resp = await fetch(`/api/assistant/sessions/${sessionId}/events?after=${next}`);
+    const resp = await assistantFetch(`/api/assistant/sessions/${sessionId}/events?after=${next}`);
     if (!resp.ok) {
       set({ turn: "idle", loadError: `Lost the conversation: HTTP ${resp.status}` });
       return;
