@@ -135,6 +135,9 @@ afterEach(() => {
   expect(openDialogCount(), "a test left a dialog open").toBe(0);
 });
 
+/** Hands the focus back at once, instead of on the next task. */
+const now = (fn: () => void) => fn();
+
 /** A page with an opener button, and a modal dialog of × / field / OK. */
 function page(opts: { modal?: boolean; field?: boolean } = {}) {
   const opener = doc.el("button");
@@ -152,7 +155,7 @@ function page(opts: { modal?: boolean; field?: boolean } = {}) {
 describe("dialog focus (#415)", () => {
   it("moves the focus to the first text field when it opens, and back to the opener when it closes", () => {
     const { opener, dialog, field } = page();
-    const close = openDialogFocus(dialog, doc);
+    const close = openDialogFocus(dialog, doc, now);
     expect(doc.activeElement).toBe(field);
     dialog.remove();
     close();
@@ -161,7 +164,7 @@ describe("dialog focus (#415)", () => {
 
   it("focuses the dialog itself when it has only buttons, so Enter answers nothing by accident", () => {
     const { dialog } = page({ field: false });
-    const close = openDialogFocus(dialog, doc);
+    const close = openDialogFocus(dialog, doc, now);
     expect(doc.activeElement).toBe(dialog);
     expect(dialog.getAttribute("tabindex")).toBe("-1");
     dialog.remove();
@@ -171,14 +174,14 @@ describe("dialog focus (#415)", () => {
   it("keeps a control the dialog focused itself, or one marked data-autofocus", () => {
     const { dialog, ok } = page();
     ok.setAttribute("data-autofocus", "");
-    const close = openDialogFocus(dialog, doc);
+    const close = openDialogFocus(dialog, doc, now);
     expect(doc.activeElement).toBe(ok);
     dialog.remove();
     close();
 
     const second = page();
     second.close.focus(); // as an autoFocus would, before the effect runs
-    const close2 = openDialogFocus(second.dialog, doc);
+    const close2 = openDialogFocus(second.dialog, doc, now);
     expect(doc.activeElement).toBe(second.close);
     second.dialog.remove();
     close2();
@@ -189,7 +192,7 @@ describe("dialog focus (#415)", () => {
 
   it("Tab and Shift+Tab go round inside a modal dialog", () => {
     const { dialog, close: x, field, ok } = page();
-    const close = openDialogFocus(dialog, doc);
+    const close = openDialogFocus(dialog, doc, now);
     expect(listeners.add).toHaveBeenCalledTimes(1);
 
     // In the middle, Tab is the browser's.
@@ -222,7 +225,7 @@ describe("dialog focus (#415)", () => {
 
   it("a panel that is not modal takes the focus but does not trap Tab", () => {
     const { dialog, ok, field } = page({ modal: false });
-    const close = openDialogFocus(dialog, doc);
+    const close = openDialogFocus(dialog, doc, now);
     expect(doc.activeElement).toBe(field);
     ok.focus();
     const e = tab();
@@ -234,7 +237,7 @@ describe("dialog focus (#415)", () => {
 
   it("only the dialog opened last traps, and closing it gives the focus back into the one under it", () => {
     const outer = page();
-    const closeOuter = openDialogFocus(outer.dialog, doc);
+    const closeOuter = openDialogFocus(outer.dialog, doc, now);
     // A button in the outer dialog opens the inner one.
     outer.ok.focus();
     recordFocus(outer.ok);
@@ -242,7 +245,7 @@ describe("dialog focus (#415)", () => {
     const innerOk = doc.el("button");
     inner.add(innerOk);
     doc.body.add(inner);
-    const closeInner = openDialogFocus(inner, doc);
+    const closeInner = openDialogFocus(inner, doc, now);
     expect(doc.activeElement).toBe(inner);
 
     handleTab(tab(), doc);
@@ -270,7 +273,7 @@ describe("dialog focus (#415)", () => {
     recordFocus(menuButton);
     item.focus();
     recordFocus(item);
-    const close = openDialogFocus(dialog, doc);
+    const close = openDialogFocus(dialog, doc, now);
     item.remove();
     dialog.remove();
     close();
@@ -281,16 +284,30 @@ describe("dialog focus (#415)", () => {
     const { dialog } = page({ modal: false });
     const elsewhere = doc.el("button");
     doc.body.add(elsewhere);
-    const close = openDialogFocus(dialog, doc);
+    const close = openDialogFocus(dialog, doc, now);
     elsewhere.focus();
     dialog.remove();
     close();
     expect(doc.activeElement).toBe(elsewhere);
   });
 
+  it("hands the focus back only after the key that closed the dialog is over", () => {
+    const { opener, dialog } = page();
+    const queued: (() => void)[] = [];
+    const close = openDialogFocus(dialog, doc, (fn) => queued.push(fn));
+    dialog.remove();
+    close();
+    // Still the Enter that closed it: nothing has the focus yet, so the rest
+    // of that key reaches nothing.
+    expect(doc.activeElement).toBe(doc.body);
+    expect(queued).toHaveLength(1);
+    queued[0]();
+    expect(doc.activeElement).toBe(opener);
+  });
+
   it("leaves a Tab alone that something closer already handled", () => {
     const { dialog, ok } = page();
-    const close = openDialogFocus(dialog, doc);
+    const close = openDialogFocus(dialog, doc, now);
     ok.focus();
     const e = { ...tab(), defaultPrevented: true };
     handleTab(e, doc);

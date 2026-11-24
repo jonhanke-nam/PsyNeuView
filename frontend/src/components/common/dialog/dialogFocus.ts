@@ -24,6 +24,8 @@
  *    most recent thing focused before it that is still there (the menu's
  *    button). It does this only when the focus would otherwise be lost: a
  *    click outside that put the focus on another control leaves it there.
+ *    It does it once the key or click that closed the dialog is over, so the
+ *    rest of that key never reaches the control it lands on.
  *
  * Menus (role="menu"/"listbox") do not use this: they keep their own rule,
  * listed in docs/dialog-inventory.md. Notices take no focus.
@@ -199,7 +201,20 @@ export function initialFocus(container: FocusEl, doc: FocusDoc): FocusEl {
  * is modal. Returns the function to call when it closes, which gives the
  * focus back.
  */
-export function openDialogFocus(container: FocusEl, doc: FocusDoc = document as unknown as FocusDoc): () => void {
+/**
+ * When the focus goes back. Not at once: a dialog closed by a key (Enter in
+ * its field) closes while that key is still being delivered, and the focus
+ * handed back now would take the rest of it — Enter landing on the Open
+ * button would open its menu. The next task is after the whole key.
+ */
+export type Later = (fn: () => void) => void;
+const nextTask: Later = (fn) => void setTimeout(fn, 0);
+
+export function openDialogFocus(
+  container: FocusEl,
+  doc: FocusDoc = document as unknown as FocusDoc,
+  later: Later = nextTask,
+): () => void {
   const active = doc.activeElement;
   const opener = active && active !== doc.body && !container.contains(active) ? active : null;
   const entry: Open = { container, modal: container.getAttribute("aria-modal") === "true" };
@@ -217,7 +232,7 @@ export function openDialogFocus(container: FocusEl, doc: FocusDoc = document as 
     const i = open.indexOf(entry);
     if (i >= 0) open.splice(i, 1);
     if (open.length === 0) listen()?.removeEventListener("keydown", onKeydown);
-    restoreFocus(container, opener, doc);
+    later(() => restoreFocus(container, opener, doc));
   };
 }
 
