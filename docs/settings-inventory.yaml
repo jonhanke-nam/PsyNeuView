@@ -750,8 +750,15 @@ settings:
     section: assistant
     storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
     control: setting-assistant-agent-type
+    keywords: ["mcp", "claude desktop", "claude code", "subscription", "connection token"]
     notes: >-
-      none, anthropic or openai_compatible. The section says where messages go for the chosen agent.
+      none, anthropic, openai_compatible or claude_mcp. The section says where messages go for the chosen agent.
+      claude_mcp (#201), "Claude (your subscription, via Claude Desktop or Claude Code)", is the same one control:
+      choosing it replaces the model and API key with setup text, not further settings: the `claude mcp add` line
+      for Claude Code and the claude_desktop_config.json snippet for Claude Desktop (GET /api/assistant/mcp/setup,
+      each with a Copy button and the connection token, which "Make a new token" replaces), and a status line
+      saying whether a Claude client is connected and when it was last heard from (GET /api/assistant/mcp/status).
+      See docs/ai-assistant/mcp.md.
 
   - id: assistant-agent-model
     label: Developer ▸ AI assistant model ▸ Model id
