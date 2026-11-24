@@ -4769,6 +4769,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - round trips between the graph and the code (#319) › connect: dragged in the graph, to the code and back; and typed in the code, to the graph · CI · #319
 - round trips between the graph and the code (#319) › a parameter: changed in the Inspector, to the code and back; and in the code, to the Inspector · CI · #319
 
+**`frontend/e2e/step-highlight.spec.ts`** (Browser (Playwright))
+
+- step highlight (#365) › graph and current trial card highlight the same nodes in the selection blue · CI · #365
+- step highlight (#365) › a collapsed composition lights up when a node inside it runs (EGO) · CI · #365
+
 **`frontend/e2e/trace-autoplay-label.spec.ts`** (Browser (Playwright))
 
 - the trace bar's auto-play button (#338) › reads Auto-play, then Pause while playing, then Auto-play again · CI · #338
@@ -4890,6 +4895,21 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - nodeSelector › leaves no raw newline, quote or backslash in the value for %j · CI · #1236
 - nodeSelector › leaves an ordinary name alone · CI · #1236
+
+**`frontend/src/utils/stepHighlight.test.ts`** (Frontend unit (vitest))
+
+- ranAtStep (#365) › is false with no step · CI · #365
+- ranAtStep (#365) › matches any of the node's names · CI · #365
+- ranAtStep (#365) › is false past the end of the trace · CI · #365
+- classifyStepRow (#365) › marks the nodes at the current step active · CI · #365
+- classifyStepRow (#365) › marks nodes that ran earlier in this trial done · CI · #365
+- classifyStepRow (#365) › marks nodes not reached yet in this trial pending · CI · #365
+- classifyStepRow (#365) › does not count steps from an earlier trial · CI · #365
+- classifyStepRow (#365) › tries a log name without its -N suffix · CI · #365
+- classifyStepRow (#365) › ignores empty and missing names · CI · #365
+- compositionMemberNames (#365) › lists every node inside, at any depth, with and without its -N suffix · CI · #365
+- compositionMemberNames (#365) › is empty for a composition with no nodes · CI · #365
+- compositionMemberNames (#365) › lets a collapsed composition match a member's step · CI · #365
 
 **`frontend/src/utils/tensorInput.test.ts`** (Frontend unit (vitest))
 

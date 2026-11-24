@@ -9,9 +9,9 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 170 | 450 | 440 tests in 165 files |
+| Browser (Playwright) | 171 | 452 | 442 tests in 166 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 141 | 1252 | 1252 tests in 141 files |
+| Frontend unit (vitest) | 142 | 1264 | 1264 tests in 142 files |
 | Backend (pytest) | 192 | 1767 | 1767 tests in 192 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -34,7 +34,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 10 files, 20 tests | – | 16 files, 107 tests | 21 files, 204 tests | 328 of 331 |
+| [App shell, diagnostics and everything else](#shell) | 11 files, 22 tests | – | 17 files, 119 tests | 21 files, 204 tests | 342 of 345 |
 
 <a id="tutorials"></a>
 
@@ -1240,6 +1240,7 @@ No tests yet.
 | `pycharm-live.local.spec.ts` | Browser | 1 | no |  | LOCAL ONLY — the full two-headed loop with a real PyCharm. |
 | `read-only-badge-note.spec.ts` | Browser | 1 | yes | #50 | Clicking the "PsyNeuLink from … · read only" tag explains it (#50). |
 | `round-trips.spec.ts` | Browser | 5 | yes | #319 | Round trips: an edit in the graph reaches the code and survives a reload; an edit in the code reaches the graph (#319). |
+| `step-highlight.spec.ts` | Browser | 2 | yes | #365 | Stepping a run: the graph and the trial card highlight the same nodes in the same pale blue, step by step (#365). |
 | `trace-autoplay-label.spec.ts` | Browser | 1 | yes | #338 | The trace bar's auto-play button says what it does (#338). |
 | `ciSpecs.test.ts` | Frontend unit | 3 | yes |  | The CI e2e set is the specs tagged `@ci`; e2e/ci-specs.txt names their files. |
 | `DiagnosticPanel.test.ts` | Frontend unit | 4 | yes | #109 | The diagnostics bar (#109): amber only when there is something to act on, the toolbar's neutral grey otherwise, and no "click to expand" line — the bar's tooltip says it expands. |
@@ -1255,6 +1256,7 @@ No tests yet.
 | `errorDetail.test.ts` | Frontend unit | 4 | yes |  |  |
 | `joinNames.test.ts` | Frontend unit | 1 | yes |  | Mirrors the formatter in PresenceIndicator — kept as a pure function test so the phrasing is pinned without rendering the component. |
 | `nodeSelector.test.ts` | Frontend unit | 2 | yes | #1236 | #1236: a node name is any Python string, and must never make an invalid selector. |
+| `stepHighlight.test.ts` | Frontend unit | 12 | yes |  | Two trials of a small Stroop-like run: inputs, then hidden, then output. |
 | `tensorInput.test.ts` | Frontend unit | 21 | yes |  |  |
 | `waitLog.test.ts` | Frontend unit | 10 | yes | #177 | The action-logging setting is remembered in localStorage (#177); the suite runs on node, so stub it. |
 | `test_activity_log.py` | Backend | 7 | yes | #177 | The page's activity log on disk (#177): batches appended as sent, the file rotated at start so the previous launch is kept, a size cap, and the actions removed when action logging is turned off. |
@@ -1302,6 +1304,8 @@ No tests yet.
 | round trips between the graph and the code (#319) › rename a node: in the Inspector, to the code and back; and in the code, to the graph | `round-trips.spec.ts` | Browser | yes | #319 |
 | round trips between the graph and the code (#319) › connect: dragged in the graph, to the code and back; and typed in the code, to the graph | `round-trips.spec.ts` | Browser | yes | #319 |
 | round trips between the graph and the code (#319) › a parameter: changed in the Inspector, to the code and back; and in the code, to the Inspector | `round-trips.spec.ts` | Browser | yes | #319 |
+| step highlight (#365) › graph and current trial card highlight the same nodes in the selection blue | `step-highlight.spec.ts` | Browser | yes | #365 |
+| step highlight (#365) › a collapsed composition lights up when a node inside it runs (EGO) | `step-highlight.spec.ts` | Browser | yes | #365 |
 | the trace bar's auto-play button (#338) › reads Auto-play, then Pause while playing, then Auto-play again | `trace-autoplay-label.spec.ts` | Browser | yes | #338 |
 
 </details>
