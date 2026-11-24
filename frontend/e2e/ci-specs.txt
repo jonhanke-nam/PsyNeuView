@@ -115,6 +115,7 @@ reference-models-runnable.spec.ts
 restore-saved-layout.spec.ts
 round-trips.spec.ts
 run-array-inputs.spec.ts
+run-followups.spec.ts
 run-multiport-inputs.spec.ts
 run-panel-grouping.spec.ts
 run-record-yaml.spec.ts
