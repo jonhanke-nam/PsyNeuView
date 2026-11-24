@@ -134,6 +134,55 @@ For a bundled reference model the layout resolves user → curated → auto (#10
 a user's layout is never overwritten by the shipped one, the shipped one seeds
 only when absent, and with neither the auto-layout runs.
 
+## Which model is open: the label and the file name (#422)
+
+> **Proposed — not yet decided.** Two title layouts are on trial for the
+> owner to choose between (A, one line; B, two lines). The rule for what is
+> dropped when space runs out is the same in both. This section becomes the
+> rule once one is chosen.
+
+Every model has two names:
+
+- the **label**, the name the Open menu shows: "Stroop — Bidirectional
+  (Cohen & Huston 1994)". For a Reference Model it is `label` in
+  `REFERENCE_MODELS` (`backend/app/api/routes.py`); for a Library model,
+  example or demo it is made from the file name;
+- the **file name**: `Cohen_Huston1994.py`. For a Reference Model, `name` in
+  `REFERENCE_MODELS` is the file name without `.py`.
+
+The user's own file has no label: its file name is its name.
+
+The server works out which model a file is from its path, and returns it
+with every open (`identity`: label, file, source, path) and from
+`GET /api/model/identity`. The toolbar never guesses from the file name.
+
+### The toolbar title
+
+Shown, in priority order:
+
+1. the label (for the user's own file, the file name);
+2. the file name;
+3. the source tag: Reference, Library, Example, Demo or Your file;
+4. the folder, shortened to its last two names (the user's own file only).
+
+**When space runs out**, parts go from the end: the folder first, then the
+tag, then the file name. Then the label is shortened in the middle, keeping
+its start and its author/year end ("Stroop — Bidi… (Cohen & Huston 1994)");
+when even that does not fit, its start and its last characters. The label
+is never hidden: it keeps at least 120 px, and the badges after it (format,
+read only, autosave) are cut off before it goes below that. The title never
+wraps and never changes the toolbar's height.
+
+- **Layout A** puts it all on one line.
+- **Layout B** stacks two lines in the same height: the label on top, and
+  below it in small text the file name (the folder, for the user's own
+  file) and the tag. Each line is shortened by the same rule.
+
+Everything is shown in full on hover, and in the **model card** a click on
+the title opens: label, file, full path, where it came from, the working
+copy and the file it was made from, and the PsyNeuLink in use, with Copy
+path. The window or tab title is the label.
+
 ## Detection algorithm
 
 Implemented in `classify_file()`:
