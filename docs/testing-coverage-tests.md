@@ -1848,7 +1848,8 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/stale-run-results.spec.ts`** (Browser (Playwright))
 
-- Run results go stale after an edit (#337) › an edit warns and clears the highlights; Undo makes the results current · CI · #337
+- Run results go stale after an edit (#337) › an edit warns and clears the highlights · CI · #337
+- Run results go stale after an edit (#337) › Undo back to the source that ran makes the results current (#366) · CI · #337
 - Run results go stale after an edit (#337) › a fold toggle doesn't make results stale · CI · #337
 
 **`frontend/e2e/stroop-lc-reference.spec.ts`** (Browser (Playwright))
