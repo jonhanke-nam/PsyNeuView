@@ -28,7 +28,11 @@ anchored to the button that opens it: that button toggles it, Escape and a
 click outside close it, and there is no × (a × inside a menu would be odd;
 the button is in view by construction). A *notice* has the shared × and takes
 no Escape: it asks nothing, and it must never take the key from whatever
-dialog is open.
+dialog is open. The one exception is the failed-open strip (#401), which
+closes on its × and on Escape (through `useDismiss`, so a dialog opened after
+it still gets Escape first). It is a strip in the layout rather than a layer
+on top, so nothing on the graph is hidden under it; the guard test lets a
+notice be either.
 
 **Size of the ×.** A dialog's × is the full-size one in its header. A small
 box that is one line of text — a toast, the graph legend, the Open menu's
@@ -78,7 +82,7 @@ Escape, which every row has.
 | Sidecar placement | menu | `editor/SidecarPlacementPicker.tsx` | `sidecar-placement-menu` | Files: in the editor header | the button, click outside, a pick |
 | Sidecar variant | menu | `editor/SidecarVariantPicker.tsx` | `sidecar-variant-menu` | Layout: / Labels: in the editor header | the button, click outside, a pick |
 | The file changed on disk | dialog | `common/ExternalChangeModal.tsx` | `external-change-modal` | an external editor saves the open file while there are unsaved edits here | × (Keep my changes), either answer; no click outside — a stray click is not an answer |
-| Couldn't open X (a failed open) | notice | `graph/FailedOpenBanner.tsx` | `failed-open-dismiss` | opening a model that fails outright: a missing file, a server error (#401). Over the graph; the open model stays | the × (Dismiss), Escape, Try again, opening any model |
+| Couldn't open X (a failed open) | notice | `graph/FailedOpenBanner.tsx` | `failed-open-dismiss` | opening a model that fails outright: a missing file, a server error (#401). A strip between the graph toolbar and the canvas, never over the graph; the open model stays | the × (Dismiss), Escape, Try again, opening any model |
 | Toasts | notice | `common/NotificationBar.tsx` | `notification-dismiss` | an error, warning or message; one with a `key` replaces the last with that key in place, so a burst (undo, #1377) is one notice | the × on each; no Escape, on purpose |
 
 ## Drawn on top, but not a dialog
