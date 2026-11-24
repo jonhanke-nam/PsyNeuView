@@ -108,10 +108,21 @@ def _refusal(status: int, body: Any) -> str:
     return f"PsyNeuView answered HTTP {status}"
 
 
-def build_server(transport: Transport) -> Server[Any]:
-    """The MCP server: the backend's tools, forwarded."""
+def _client_name(ctx: Any) -> str:
+    """The connected program's own name ("claude-code", "claude-ai"), for the status line."""
+    try:
+        info = ctx.session.client_params.client_info
+        return f"{info.name} {info.version}".strip() if info else ""
+    except AttributeError:
+        return ""
+
+
+def build_server(transport: Transport, on_client: Callable[[str], None] = lambda name: None) -> Server[Any]:
+    """The MCP server: the backend's tools, forwarded. ``on_client`` hears
+    the client's name, which the transport passes on as a header."""
 
     async def list_tools(ctx: Any, params: types.PaginatedRequestParams | None) -> types.ListToolsResult:
+        on_client(_client_name(ctx))
         status, body = await transport("GET", "/api/assistant/mcp-client/tools", None)
         if status != 200 or not isinstance(body, dict):
             raise BackendError(_refusal(status, body))
@@ -120,6 +131,7 @@ def build_server(transport: Transport) -> Server[Any]:
         )
 
     async def call_tool(ctx: Any, params: types.CallToolRequestParams) -> types.CallToolResult:
+        on_client(_client_name(ctx))
         try:
             status, body = await transport(
                 "POST", f"/api/assistant/mcp-client/tools/{quote(params.name, safe='')}", {"arguments": params.arguments or {}},
@@ -160,8 +172,8 @@ async def heartbeat(transport: Transport) -> None:
         await anyio.sleep(HEARTBEAT_SECONDS)
 
 
-async def serve_stdio(transport: Transport) -> None:
-    server = build_server(transport)
+async def serve_stdio(transport: Transport, on_client: Callable[[str], None] = lambda name: None) -> None:
+    server = build_server(transport, on_client)
     async with stdio_server() as (read_stream, write_stream):
         async with anyio.create_task_group() as tg:
             tg.start_soon(heartbeat, transport)
@@ -174,7 +186,13 @@ def main() -> None:
     if not token:
         raise SystemExit(f"{TOKEN_ENV} is not set. Copy the setup from PsyNeuView's Settings ▸ AI assistant.")
     url = os.environ.get(URL_ENV, DEFAULT_URL)
-    anyio.run(serve_stdio, http_transport(url, token, client_name=lambda: "MCP client"))
+    client = {"name": ""}
+
+    def heard(name: str) -> None:
+        if name:
+            client["name"] = name
+
+    anyio.run(serve_stdio, http_transport(url, token, client_name=lambda: client["name"]), heard)
 
 
 if __name__ == "__main__":
