@@ -12,7 +12,10 @@
  *    useDismiss, a listed notice uses DialogCloseButton;
  *  - a listed dialog or menu does not handle Escape on its own, nor listen for
  *    keydown on the window or document (Escape by another name);
- *  - a listed test id is written literally in its file.
+ *  - a listed test id is written literally in its file;
+ *  - every row says what it does with the keyboard focus (#415): a "trap"
+ *    dialog is aria-modal, a "no trap" panel is not, every dialog is labelled
+ *    by its title, a menu takes or leaves the focus, a notice takes none.
  *
  * A source check, not a render, like settingsInventory.test.ts: it catches a
  * new overlay nobody listed, and a listed one that stopped using the shared
@@ -30,11 +33,19 @@ const DIALOG_DIR = path.join(COMPONENTS, "common/dialog");
 
 type Kind = "dialog" | "menu" | "notice";
 
+/** What each kind may do with the keyboard focus (#415). */
+const FOCUS: Record<Kind, string[]> = {
+  dialog: ["trap", "no trap"],
+  menu: ["takes focus", "leaves focus"],
+  notice: ["none"],
+};
+
 interface Row {
   name: string;
   kind: Kind;
   file: string;
   testId: string;
+  focus: string;
 }
 
 interface NotDialog {
@@ -72,12 +83,33 @@ function tableUnder(markdown: string, heading: string): string[][] {
 
 const markdown = readFileSync(INVENTORY, "utf8");
 
-const rows: Row[] = tableUnder(markdown, "## Dialogs and menus").map(([name, kind, file, testId]) => ({
+const rows: Row[] = tableUnder(markdown, "## Dialogs and menus").map(([name, kind, file, testId, , , focus]) => ({
   name,
   kind: kind as Kind,
   file: path.join(COMPONENTS, file),
   testId,
+  focus: focus ?? "",
 }));
+
+/**
+ * The attributes of the dialog element with test id `testId`: from the `<`
+ * of its tag to its `onClick` or `style`, where role and aria are written. Where
+ * the test id is on the scrim (the last-good diff), the dialog is the first
+ * role="dialog" inside it.
+ */
+function dialogTag(source: string, testId: string): string {
+  const at = source.indexOf(`data-testid="${testId}"`);
+  if (at < 0) return "";
+  let start = source.lastIndexOf("<", at);
+  let from = at;
+  if (!/role="dialog"/.test(source.slice(start, at))) {
+    from = source.indexOf('role="dialog"', at);
+    if (from < 0) return "";
+    start = source.lastIndexOf("<", from);
+  }
+  const end = source.slice(from).search(/\s(onClick|style)=/);
+  return source.slice(start, end < 0 ? undefined : from + end);
+}
 
 const notDialogs: NotDialog[] = tableUnder(markdown, "## Drawn on top, but not a dialog").map(([what, files]) => ({
   what,
@@ -189,6 +221,19 @@ describe("dialog inventory (#1289)", () => {
     for (const f of listed) {
       const source = readFileSync(f, "utf8");
       expect(/>\s*×\s*</.test(source), `${rel(f)} draws its own ×; use DialogHeader or DialogCloseButton`).toBe(false);
+    }
+  });
+
+  it("says what each one does with the keyboard focus, and a dialog's markup agrees (#415)", () => {
+    for (const r of rows) {
+      expect(FOCUS[r.kind], `${r.name}: the Focus column must be one of ${FOCUS[r.kind].join(", ")}`).toContain(r.focus);
+      if (r.kind !== "dialog") continue;
+      const tag = dialogTag(readFileSync(r.file, "utf8"), r.testId);
+      expect(tag, `${r.name}: role="dialog" on the element with data-testid="${r.testId}"`).toContain('role="dialog"');
+      expect(tag, `${r.name}: labelled by its title`).toMatch(/aria-labelledby=/);
+      const modal = tag.includes('aria-modal="true"');
+      if (r.focus === "trap") expect(modal, `${r.name}: a trap dialog is aria-modal="true"`).toBe(true);
+      else expect(modal, `${r.name}: a no-trap panel is not modal; mark it trap or drop aria-modal`).toBe(false);
     }
   });
 });
