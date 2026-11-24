@@ -8,25 +8,73 @@
  * picture here reads like show_graph's, and each shape says what it means in
  * a tooltip on the node and in the legend.
  *
+ * The shape kind comes from show_graph itself where the backend could ask it
+ * (`showGraphShape` on the node, #385); the role rule below stands in where it
+ * couldn't. Graphviz draws a circle and a double circle as true circles,
+ * width equal to height, whatever the name's length, so PsyNeuView does too
+ * (utils/nodeBox.ts shapedBoxFor): every shape keeps show_graph's proportions,
+ * the size is PsyNeuView's own.
+ *
  * The geometry here is in the node's own box, so ports and floating edge
  * ends can sit on the shape's outline rather than on the oval it replaces.
  * show_graph's egg (an OptimizationControlMechanism's agent_rep) has no node
  * on the canvas to draw it on yet.
  */
 
-export type NodeShape = "oval" | "octagon" | "doubleoctagon" | "doublecircle" | "rectangle";
+export type NodeShape = "oval" | "circle" | "octagon" | "doubleoctagon" | "doublecircle" | "rectangle";
 
 /** What of a node decides its shape (a subset of MechanismData). */
 export interface ShapedNodeData {
   type?: string;
   roles?: string[];
   isController?: boolean;
+  /** The Graphviz shape show_graph gives this node, where the backend asked it (#385). */
+  showGraphShape?: string;
 }
 
-/** show_graph's precedence: composition, controller, feedback sender, cycle, mechanism. */
+/**
+ * The canvas shape for a Graphviz shape show_graph uses, or null for one the
+ * canvas has no drawing of (an egg, a diamond), which then keeps the role rule.
+ */
+export function shapeFromShowGraph(graphvizShape: string | undefined | null): NodeShape | null {
+  switch ((graphvizShape || "").toLowerCase()) {
+    case "oval":
+    case "ellipse":
+      return "oval";
+    case "circle":
+      return "circle";
+    case "doublecircle":
+      return "doublecircle";
+    case "octagon":
+      return "octagon";
+    case "doubleoctagon":
+      return "doubleoctagon";
+    case "box":
+    case "rect":
+    case "rectangle":
+    case "square":
+      return "rectangle";
+    default:
+      return null;
+  }
+}
+
+/** Shapes Graphviz always draws as wide as they are tall (#385). */
+export function isCircle(shape: NodeShape): boolean {
+  return shape === "circle" || shape === "doublecircle";
+}
+
+/**
+ * show_graph's own shape for the node where known (#385); otherwise show_graph's
+ * rule, by precedence: composition, controller, feedback sender, cycle, mechanism.
+ */
 export function nodeShapeFor(d: ShapedNodeData | undefined | null): NodeShape {
   if (!d) return "oval";
+  // A collapsed composition is show_graph's rectangle; show_graph, asked with
+  // compositions open, draws it as a frame rather than a node.
   if (d.type === "Composition") return "rectangle";
+  const asked = shapeFromShowGraph(d.showGraphShape);
+  if (asked) return asked;
   if (d.isController) return "doubleoctagon";
   const roles = d.roles || [];
   if (roles.includes("FEEDBACK_SENDER")) return "octagon";
@@ -35,13 +83,18 @@ export function nodeShapeFor(d: ShapedNodeData | undefined | null): NodeShape {
 }
 
 /** The shapes the legend lists, in the order it lists them. */
-export const SHAPE_ORDER: NodeShape[] = ["oval", "octagon", "doublecircle", "doubleoctagon", "rectangle"];
+export const SHAPE_ORDER: NodeShape[] = ["oval", "circle", "octagon", "doublecircle", "doubleoctagon", "rectangle"];
 
 export const SHAPE_INFO: Record<NodeShape, { label: string; meaning: string; drawn: string }> = {
   oval: {
     label: "mechanism",
     meaning: "An ordinary mechanism.",
     drawn: "an oval, as show_graph draws it",
+  },
+  circle: {
+    label: "circle",
+    meaning: "show_graph draws this node as a circle.",
+    drawn: "a circle, as show_graph draws it",
   },
   octagon: {
     label: "feedback sender",
@@ -51,7 +104,7 @@ export const SHAPE_INFO: Record<NodeShape, { label: string; meaning: string; dra
   doublecircle: {
     label: "on a cycle",
     meaning: "It sits on a loop of connections that runs as a cycle.",
-    drawn: "a double outline, show_graph's double circle",
+    drawn: "a double circle, as show_graph draws it",
   },
   doubleoctagon: {
     label: "controller",

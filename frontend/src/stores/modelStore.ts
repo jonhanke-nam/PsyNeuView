@@ -330,6 +330,9 @@ export interface MechanismData {
   // #365: a collapsed composition only — the names of every node inside it
   // (at any depth), so it shows the step highlight when one of them runs.
   memberNames?: string[];
+  // #385: the Graphviz shape show_graph draws this node in (doublecircle,
+  // octagon, ...), where the backend could ask show_graph.
+  showGraphShape?: string;
 }
 
 interface ModelState {
@@ -1983,6 +1986,16 @@ export const useModelStore = create<ModelState>((set, get) => ({
         }
       : savedPositions;
     const hasPlaced = Object.keys(placed).length > 0;
+
+    // #385: the shape show_graph draws each node in, as the backend read it
+    // from show_graph's own description; nodeShapeFor prefers it to the role
+    // rule. Set before the layout, which sizes an undrawn circle as a circle.
+    const showGraphShapes: Record<string, string> = modelData.showGraphShapes || {};
+    for (const n of nodes) {
+      if (n.type !== "mechanismNode") continue;
+      const sgShape = showGraphShapes[n.id];
+      if (sgShape) n.data = { ...n.data, showGraphShape: sgShape };
+    }
 
     let layoutNodes: Node[];
     if (autoLayout) {

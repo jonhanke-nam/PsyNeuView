@@ -11,6 +11,9 @@
  *   - rows: pairs of nodes whose above / level / below relation agrees,
  *   - order: pairs on one show_graph row whose left/right order agrees,
  *   - edges drawn along show_graph's course,
+ *   - shapes (#385): each node's shape kind is show_graph's (a circle where
+ *     show_graph draws a circle), and its width-to-height ratio within 5% of
+ *     show_graph's,
  *   - overlapping boxes, and anything cut off after Fit.
  *
  * The full batch writes `agreement.json`, `agreement.md` and numbered
@@ -18,33 +21,36 @@
  * `test-results/show-graph-agreement/` — run it before a release and look at
  * the sheets. The @ci test holds a few representative models to thresholds.
  */
-import { mutatingTest as test, expect, closePalette, VIEW_OPTION_IDS } from "./test-base";
+import { mutatingTest as test, expect, closePalette } from "./test-base";
+import {
+  REFERENCE_MODELS,
+  drawnShapes,
+  enterView,
+  loaded,
+  openModel,
+  settledBoxes,
+  toggleOption,
+  views,
+} from "./showGraphViews";
 import type { Page, Response } from "@playwright/test";
 import { Graphviz } from "@hpcc-js/wasm-graphviz";
 import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { placementFromGraphviz } from "../src/utils/showGraphLayout";
-import { measureAgreement, share, type Agreement, type Box } from "../src/utils/layoutAgreement";
+import {
+  measureAgreement,
+  measureShapes,
+  share,
+  type Agreement,
+} from "../src/utils/layoutAgreement";
+import { shapeFromShowGraph } from "../src/utils/nodeShape";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const BACKEND_DIR = path.resolve(__dirname, "..", "..", "backend");
 const OUT_DIR = path.resolve(__dirname, "..", "test-results", "show-graph-agreement");
 
 // Every bundled model: the reference models and the demos (29), relative to
 // backend/. Results name a model by its file name.
-const REFERENCE_MODELS = [
-  "Botvinick_conflict_monitoring_model.py",
-  "Cohen_Huston1994_horse_race.py",
-  "Cohen_Huston1994.py",
-  "Giallanza2024_ego_study2.py",
-  "GilzenratModel.py",
-  "Kalanthroff_PCTC_2018.py",
-  "MontagueDayanSejnowski96.py",
-  "Nieuwenhuis2005Model.py",
-  "stroop_reference_basic.py",
-  "stroop_reference_with_lc.py",
-].map((f) => `reference_models/${f}`);
 const DEMOS = [
   "autodiff_feedforward.py",
   "bistable_attractor.py",
@@ -87,6 +93,8 @@ interface ViewResult extends Omit<Agreement, "overlaps"> {
    * instead of drawing its loop.
    */
   courses: { drawn: number; showGraph: number; missing: string[]; selfLoops: number };
+  /** Nodes whose shape kind and proportions are show_graph's (#385), and the rest by name. */
+  shapes: { agree: number; nodes: number; off: string[] };
   cutOff: string[];
   /** A composition frame's buttons that something else sits on top of (#71). */
   covered: string[];
@@ -130,59 +138,6 @@ function captureShowGraph(page: Page): {
 
 const layoutSelect = (page: Page) =>
   page.locator("select").filter({ has: page.locator("option", { hasText: "Like show_graph" }) }).first();
-const viewSelect = (page: Page) =>
-  page.locator("select").filter({ has: page.locator("option", { hasText: "Flatten (all compositions)" }) }).first();
-
-async function openModel(page: Page, model: string) {
-  const file = path.basename(model);
-  await page.getByRole("button", { name: /Open/ }).first().click();
-  await page.getByRole("button", { name: "Open from path…" }).click();
-  const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
-  await prompt.fill(path.join(BACKEND_DIR, model));
-  // The previous model stays drawn until this one's load returns.
-  await Promise.all([
-    page.waitForResponse(
-      (r) => r.url().includes("/api/model/load") && (r.request().postData() ?? "").includes(file),
-      { timeout: 60000 },
-    ),
-    prompt.press("Enter"),
-  ]);
-  await expect(page.getByTestId("graph-canvas").locator(".react-flow__node").first()).toBeVisible({ timeout: 60000 });
-  // The view menu appears once the load has finished drawing.
-  await settledBoxes(page);
-}
-
-/** The view menu's choices, in order, or just the one view when there is no menu. */
-async function views(page: Page): Promise<{ value: string; label: string }[]> {
-  const select = viewSelect(page);
-  if (!(await select.isVisible().catch(() => false))) return [{ value: "", label: "the model" }];
-  return select.locator("option").evaluateAll((os) =>
-    os.map((o) => ({ value: (o as HTMLOptionElement).value, label: (o.textContent ?? "").trim() })),
-  );
-}
-
-/** Canvas node boxes, read until two reads a moment apart agree. */
-async function settledBoxes(page: Page): Promise<Map<string, Box>> {
-  const read = () =>
-    page
-      .getByTestId("graph-canvas")
-      .locator(".react-flow__node-mechanismNode")
-      .evaluateAll((els) =>
-        els.map((el) => {
-          const r = el.getBoundingClientRect();
-          return [el.getAttribute("data-id") ?? "", { x: r.left, y: r.top, w: r.width, h: r.height }] as const;
-        }),
-      );
-  let last = JSON.stringify(await read());
-  for (let i = 0; i < 25; i++) {
-    await page.waitForTimeout(400);
-    const now = JSON.stringify(await read());
-    if (now === last) break;
-    last = now;
-  }
-  return new Map(JSON.parse(last));
-}
-
 async function cutOffAfterFit(page: Page): Promise<string[]> {
   const canvas = page.getByTestId("graph-canvas");
   const pane = (await canvas.locator(".react-flow").boundingBox())!;
@@ -195,37 +150,6 @@ async function cutOffAfterFit(page: Page): Promise<string[]> {
   return drawn
     .filter((r) => r.x0 < pane.x - 1 || r.y0 < pane.y - 1 || r.x1 > pane.x + pane.width + 1 || r.y1 > pane.y + pane.height + 1)
     .map((r) => r.id);
-}
-
-const loaded = (page: Page) =>
-  page.waitForResponse((r) => r.url().includes("/api/model/load") && r.ok(), { timeout: 60000 });
-
-/** Switch to a view; returns whether it opened on saved positions. */
-async function enterView(page: Page, view: { value: string; label: string }): Promise<boolean> {
-  const select = viewSelect(page);
-  if (view.value && (await select.inputValue()) !== view.value) {
-    await Promise.all([loaded(page), select.selectOption(view.value)]);
-  }
-  await settledBoxes(page);
-  // A view with saved positions opens in Custom; what's measured here is the
-  // automatic layout, so switch to it (nothing is saved).
-  const custom = page.getByRole("button", { name: /^Layout: Custom$/ });
-  const savedLayout = await custom.isVisible().catch(() => false);
-  if (savedLayout) {
-    // Switching mode reloads the view.
-    await Promise.all([loaded(page), custom.click()]);
-    await settledBoxes(page);
-  }
-  return savedLayout;
-}
-
-/** Flip one of the graph's show_graph options (Controller, Learning, CIMs), in Advanced Graph View Options (#123). */
-async function toggleOption(page: Page, label: string) {
-  await page.getByTestId("graph-view-options-button").click();
-  const item = page.getByTestId(VIEW_OPTION_IDS[label]);
-  await Promise.all([loaded(page), item.click()]);
-  await page.keyboard.press("Escape");
-  await settledBoxes(page);
 }
 
 /**
@@ -339,12 +263,15 @@ async function measureCurrent(
     else missing.push(`${e.tail} → ${e.head}`);
   }
 
+  const shapes = measureShapes(await drawnShapes(page), reference, shapeFromShowGraph);
+
   const result: ViewResult = {
     model: path.basename(model),
     view: label,
     ...agreement,
     overlaps: agreement.overlaps.map(([a, b]) => `${a} / ${b}`),
     courses: { drawn: between.length - selfLoops - missing.length, showGraph: between.length - selfLoops, missing, selfLoops },
+    shapes,
     cutOff: await cutOffAfterFit(page),
     covered: await coveredControls(page),
     savedLayout,
@@ -364,6 +291,8 @@ function summaryLine(r: ViewResult): string {
     `courses ${r.courses.drawn}/${r.courses.showGraph}` +
     (r.courses.selfLoops ? ` (+${r.courses.selfLoops} self-loops)` : "") +
     (r.courses.missing.length ? ` — not drawn: ${r.courses.missing.join(", ")}` : "") +
+    ` · shapes ${r.shapes.agree}/${r.shapes.nodes}` +
+    (r.shapes.off.length ? ` — not show_graph's: ${r.shapes.off.join(", ")}` : "") +
     ` · overlaps ${r.overlaps.length} · cut off ${r.cutOff.length}` +
     (r.covered.length ? ` · ${r.covered.join("; ")}` : "") +
     (r.savedLayout ? " · had a saved layout" : "") +
@@ -396,6 +325,7 @@ const failed = (model: string, view: string, e: unknown): ViewResult => ({
   order: { agree: 0, pairs: 0 },
   overlaps: [],
   courses: { drawn: 0, showGraph: 0, missing: [], selfLoops: 0 },
+  shapes: { agree: 0, nodes: 0, off: [] },
   cutOff: [],
   covered: [],
   savedLayout: false,
@@ -534,14 +464,15 @@ function writeReport(results: ViewResult[]) {
   const rows = results.map(
     (r, i) =>
       `| ${i + 1} | ${r.model.replace(/\.py$/, "")} | ${r.view} | ${r.matched}/${r.nodes} | ${pct(share(r.rows))} | ` +
-      `${pct(share(r.order))} | ${r.courses.drawn}/${r.courses.showGraph} | ${r.courses.selfLoops} | ${r.overlaps.length} | ${r.cutOff.length} | ` +
-      `${[...r.courses.missing.map((m) => `not drawn: ${m}`), ...r.covered, ...(r.savedLayout ? ["had a saved layout"] : []), ...(r.notes ?? []), ...(r.error ? [r.error] : [])].join("; ")} |`,
+      `${pct(share(r.order))} | ${r.courses.drawn}/${r.courses.showGraph} | ${r.courses.selfLoops} | ` +
+      `${r.shapes.agree}/${r.shapes.nodes} | ${r.overlaps.length} | ${r.cutOff.length} | ` +
+      `${[...r.courses.missing.map((m) => `not drawn: ${m}`), ...r.shapes.off.map((s) => `shape: ${s}`), ...r.covered, ...(r.savedLayout ? ["had a saved layout"] : []), ...(r.notes ?? []), ...(r.error ? [r.error] : [])].join("; ")} |`,
   );
   writeFileSync(
     path.join(OUT_DIR, "agreement.md"),
     [
-      "| # | Model | View | Nodes | Rows | Order | Courses | Self-loops | Overlaps | Cut off | Notes |",
-      "|---|---|---|---|---|---|---|---|---|---|---|",
+      "| # | Model | View | Nodes | Rows | Order | Courses | Self-loops | Shapes | Overlaps | Cut off | Notes |",
+      "|---|---|---|---|---|---|---|---|---|---|---|---|",
       ...rows,
       "",
     ].join("\n"),
@@ -562,7 +493,9 @@ test("every bundled model, every view: agreement with show_graph", async ({ page
 
 // Representative models, held to thresholds in CI: the basic Stroop, EGO in
 // each of its views (nested, flattened, PyTorch), a learning model, and a
-// composition open inside another, with edges crossing its frame (#73).
+// composition open inside another, with edges crossing its frame (#73). Node
+// shapes are held in CI by show-graph-shapes.spec.ts, on every reference
+// model and view (#385); here the shape score is reported only.
 const REPRESENTATIVE = [
   ...["stroop_reference_basic.py", "Giallanza2024_ego_study2.py", "MontagueDayanSejnowski96.py"].map(
     (f) => `reference_models/${f}`,

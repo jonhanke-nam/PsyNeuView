@@ -9,10 +9,10 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 176 | 468 | 458 tests in 171 files |
+| Browser (Playwright) | 177 | 469 | 459 tests in 172 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 147 | 1295 | 1295 tests in 147 files |
-| Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
+| Frontend unit (vitest) | 147 | 1306 | 1306 tests in 147 files |
+| Backend (pytest) | 193 | 1773 | 1773 tests in 193 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
 
@@ -22,7 +22,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 |---|---|---|---|---|---|
 | [Tutorials and guided walkthroughs](#tutorials) | 13 files, 57 tests | 35 files, 80 tests | 13 files, 219 tests | 2 files, 18 tests | 374 of 374 |
 | AI assistant | – | – | – | – | **no tests** |
-| [Matching show_graph](#showgraph) | 8 files, 19 tests | – | 8 files, 66 tests | 5 files, 34 tests | 118 of 119 |
+| [Matching show_graph](#showgraph) | 9 files, 20 tests | – | 8 files, 68 tests | 6 files, 38 tests | 125 of 126 |
 | [Dragging and pointer interaction](#pointer) | 18 files, 54 tests | – | 6 files, 37 tests | – | 91 of 91 |
 | [Building models in the UI](#building) | 4 files, 7 tests | – | 1 files, 9 tests | 13 files, 145 tests | 161 of 161 |
 | [Editing: code and graph in step](#sync) | 17 files, 40 tests | – | 10 files, 81 tests | 26 files, 247 tests | 365 of 368 |
@@ -31,7 +31,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 6 files, 26 tests | – | 5 files, 59 tests | 7 files, 99 tests | 184 of 184 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
-| [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
+| [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 61 tests | – | 97 of 97 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
 | [App shell, diagnostics and everything else](#shell) | 13 files, 26 tests | – | 20 files, 133 tests | 21 files, 206 tests | 362 of 365 |
@@ -269,12 +269,13 @@ No tests yet.
 | `scheduling-arrows-setting.spec.ts` | Browser | 1 | yes | #53 | Settings ▸ Appearance hides scheduling-condition arrows (#53). |
 | `show-graph-agreement.spec.ts` | Browser | 2 | 1 of 2 | #34 | Like show_graph agrees with show_graph, in every view (#34). |
 | `show-graph-edge-courses.spec.ts` | Browser | 1 | yes | #23 | #23: in the "Like show_graph" layout, edges follow show_graph's own courses (marked `pnv-edge-showgraph`), and a node moved by hand hands its edges back to normal routing while the others keep theirs. |
+| `show-graph-shapes.spec.ts` | Browser | 1 | yes | #385 | Every node is drawn in show_graph's shape, at show_graph's proportions (#385). |
 | `show-graph-tab-fetch.spec.ts` | Browser | 1 | yes | #22 | #22: the show_graph tab stays mounted while hidden, and it used to fetch show_graph's picture on every model open. |
 | `GSCLegend.test.ts` | Frontend unit | 2 | yes |  |  |
 | `showGraphColours.test.ts` | Frontend unit | 2 | yes | #306 | Role colours match PsyNeuLink's show_graph exactly (#306). |
 | `gscEdgeId.test.ts` | Frontend unit | 6 | yes |  |  |
 | `ioRows.test.ts` | Frontend unit | 16 | yes |  | A 100×40 mechanism node at (x, y), with roles. |
-| `layoutAgreement.test.ts` | Frontend unit | 5 | yes |  |  |
+| `layoutAgreement.test.ts` | Frontend unit | 7 | yes |  |  |
 | `roleRanks.test.ts` | Frontend unit | 16 | yes |  |  |
 | `showGraphLayout.test.ts` | Frontend unit | 16 | yes |  | show_graph(output_fmt="source") for the bundled Stroop reference model (backend/reference_models/stroop_reference_basic.py), as the backend returns it. |
 | `showGraphLoadRequest.test.ts` | Frontend unit | 3 | yes |  |  |
@@ -283,6 +284,7 @@ No tests yet.
 | `test_show_graph_guard.py` | Backend | 11 | yes | #1090 | show_graph suppression across the Composition hierarchy (#1090). |
 | `test_show_graph_palette.py` | Backend | 3 | yes | #306, #190 | The palette's role colours match PsyNeuLink's show_graph EXACTLY (#306, #190). |
 | `test_show_graph_picture.py` | Backend | 8 | yes | #190 | The show_graph tab's picture draws green and purple as show_graph's PDF does (#190). |
+| `test_show_graph_shapes.py` | Backend | 4 | yes | #385 | The page gets the shape show_graph draws each node in (#385). |
 
 <details><summary>Every browser and tutorial test in this area</summary>
 
@@ -306,6 +308,7 @@ No tests yet.
 | every bundled model, every view: agreement with show_graph | `show-graph-agreement.spec.ts` | Browser | no | #34 |
 | representative models agree with show_graph in every view | `show-graph-agreement.spec.ts` | Browser | yes | #34 |
 | Like show_graph draws edges along show_graph's courses until a node moves @ci | `show-graph-edge-courses.spec.ts` | Browser | yes | #23 |
+| every reference model, every view: each node has show_graph's shape and proportions | `show-graph-shapes.spec.ts` | Browser | yes | #385 |
 | show_graph tab fetches only while it is showing @ci | `show-graph-tab-fetch.spec.ts` | Browser | yes | #22 |
 
 </details>
@@ -1013,8 +1016,8 @@ No tests yet.
 | `selectionColours.test.ts` | Frontend unit | 3 | yes | #335 | The selection blue never looks like a role colour. |
 | `typeColourContrast.test.ts` | Frontend unit | 2 | yes | #283, #109 | Every component type's colour can be seen. |
 | `arrowShapes.test.ts` | Frontend unit | 8 | yes | #164 | Shaping an arrow by hand, as a step of its own (#164). |
-| `nodeBox.test.ts` | Frontend unit | 5 | yes |  | Whether the corners of a name's box lie inside an oval this size, inset by the outline. |
-| `nodeShape.test.ts` | Frontend unit | 8 | yes | #192, #193 | Node shapes follow show_graph (#192, #193): which node gets which shape, what the shape says, and where its outline is for ports and edge ends. |
+| `nodeBox.test.ts` | Frontend unit | 11 | yes |  | Whether the corners of a name's box lie inside an oval this size, inset by the outline. |
+| `nodeShape.test.ts` | Frontend unit | 11 | yes | #192, #193 | Node shapes follow show_graph (#192, #193): which node gets which shape, what the shape says, and where its outline is for ports and edge ends. |
 
 <details><summary>Every browser and tutorial test in this area</summary>
 

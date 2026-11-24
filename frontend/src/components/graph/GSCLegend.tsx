@@ -20,7 +20,7 @@ import { useGraphLegendStore } from "@/stores/graphLegendStore";
 import { useReactFlow, useStore } from "@xyflow/react";
 import { useModelStore } from "@/stores/modelStore";
 import { DialogCloseButton } from "@/components/common/dialog/DialogHeader";
-import { nodeShapeFor, polygonPoints, shapeTooltip, SHAPE_INFO, SHAPE_ORDER, type NodeShape } from "@/utils/nodeShape";
+import { isCircle, nodeShapeFor, polygonPoints, shapeTooltip, SHAPE_INFO, SHAPE_ORDER, type NodeShape } from "@/utils/nodeShape";
 
 const STORAGE_KEY = "psyneuview-gsc-legend";
 const LEGEND_MARGIN = 12;
@@ -341,12 +341,14 @@ export function GSCLegend() {
 /** A small drawing of the shape beside its name; the tooltip says what it means. */
 function ShapeRow({ shape }: { shape: NodeShape }) {
   const w = 28, h = 14, inset = 1;
-  const round = shape === "oval" || shape === "doublecircle";
+  const round = shape === "oval" || isCircle(shape);
   const double = shape === "doubleoctagon" || shape === "doublecircle";
   const line: React.CSSProperties = { fill: "none", stroke: "var(--pnv-node-text-detail)" };
+  // #385: a circle is drawn as one, as show_graph draws it.
+  const rx = (ins: number) => (isCircle(shape) ? h / 2 - ins : w / 2 - ins);
   const sample = (ins: number, key: string) =>
     round ? (
-      <ellipse key={key} cx={w / 2} cy={h / 2} rx={w / 2 - ins} ry={h / 2 - ins} style={line} strokeWidth={1} />
+      <ellipse key={key} cx={w / 2} cy={h / 2} rx={rx(ins)} ry={h / 2 - ins} style={line} strokeWidth={1} />
     ) : (
       <polygon key={key} points={polygonPoints(shape, w, h, ins)} style={line} strokeWidth={1} />
     );

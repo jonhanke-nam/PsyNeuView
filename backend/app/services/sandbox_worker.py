@@ -1197,6 +1197,22 @@ def task_introspect(params):
             )
         except Exception:  # an extra; never let it break loading the model
             pass
+    if compositions and not developer_mode:
+        # #385: the shape show_graph draws each node in, so the canvas draws
+        # the same one (a circle where show_graph draws a circle).
+        try:
+            t_shapes = time.time()
+            shapes, asked = _show_graph_shapes(module, compositions, pnl, result.get("showGraph"))
+            _sys.stderr.write(f"[perf] show_graph shapes: {time.time() - t_shapes:.3f}s "
+                              f"({'asked' if asked else 'reused'})\n")
+            if shapes:
+                result["showGraphShapes"] = shapes
+            if asked:
+                # Kept like the layout's answers, so "Like show_graph" with
+                # these options needn't ask again.
+                result.setdefault("showGraph", []).append(asked)
+        except Exception:  # an extra; never let it break loading the model
+            pass
     try:
         input_sets = _find_input_sets(module, all_comps)
     except Exception:  # never let an optional extra break loading the model
@@ -1272,6 +1288,97 @@ def task_introspect(params):
 _SHOW_GRAPH_MAX_COMPOSITIONS = 2
 
 
+def _outermost_composition(compositions):
+    """The page's rule (modelStore): the first composition whose name isn't a
+    node inside another composition."""
+    def clean(n):
+        return re.sub(r'-\d+$', '', n) if n else n
+
+    nested = set()
+    for c in compositions:
+        for node in c.get("nodes") or []:
+            if node.get("kind") == "composition":
+                n = node.get("varName") or node.get("name")
+                nested.update({n, clean(n)})
+    names = [c["varName"] for c in compositions if c.get("varName")]
+    return next((n for n in names if n not in nested and clean(n) not in nested),
+                names[0] if names else None)
+
+
+# A node statement in show_graph's Graphviz source: its name, then its
+# attributes. An edge ("a" -> "b" [...]) has an arrow after the name, so it
+# doesn't match.
+_DOT_NODE = re.compile(r'^\s*("(?:[^"\\]|\\.)*"|[A-Za-z_][\w.]*)\s*\[(.*)\]\s*;?\s*$')
+_DOT_SHAPE = re.compile(r'(?:^|[\s,])shape="?(\w+)"?')
+
+
+def show_graph_node_shapes(dot):
+    """The Graphviz shape show_graph gives each node, by node name (#385).
+
+    Read from show_graph's own description, so the canvas draws what show_graph
+    draws: ``doublecircle`` for a node on a cycle, ``octagon`` for a feedback
+    sender, and so on, including any shape a model sets on show_graph itself.
+    The ``node [...]`` default line and nodes with no shape of their own are
+    skipped. A label comes before ``shape`` in Graphviz's sorted attributes,
+    so the last ``shape=`` on the line is the node's own.
+    """
+    shapes = {}
+    for line in (dot or "").splitlines():
+        m = _DOT_NODE.match(line)
+        if not m:
+            continue
+        name = m.group(1)
+        if name.startswith('"'):
+            name = re.sub(r'\\(.)', r'\1', name[1:-1])
+        if name in ("node", "edge", "graph"):
+            continue
+        found = _DOT_SHAPE.findall(m.group(2))
+        if found:
+            shapes[name] = found[-1]
+    return shapes
+
+
+def _show_graph_shapes(module, compositions, pnl, answers=None):
+    """show_graph's shape for each node of the model (#385).
+
+    Uses show_graph's description of the outermost composition with nested
+    compositions open, which names every node. An answer this load already
+    has (the "Like show_graph" layout's) is reused; otherwise show_graph is
+    asked once, about 0.04-0.09 s. Returns the shapes and, when it asked, the
+    answer, for the route to keep.
+    """
+    outer = _outermost_composition(compositions)
+    if not outer:
+        return {}, None
+    shapes = {}
+    # The plain picture first; one with learning shown only adds its learning
+    # nodes. A PyTorch picture (an answer with a note, #72) draws the model
+    # differently, so it isn't used.
+    usable = [a for a in answers or []
+              if a.get("composition") == outer
+              and (a.get("options") or {}).get("show_nested") == "nested"
+              and "dot" in (a.get("answer") or {})
+              and not (a.get("answer") or {}).get("note")]
+    for a in sorted(usable, key=lambda a: bool(a["options"].get("show_learning"))):
+        for name, shape in show_graph_node_shapes(a["answer"]["dot"]).items():
+            shapes.setdefault(name, shape)
+    if shapes:
+        return shapes, None
+    comp = _resolve_composition(module, outer)
+    if comp is None or not isinstance(comp, pnl.Composition):
+        return {}, None
+    options = {
+        "show_controller": True,
+        "show_learning": False,
+        "show_cim": False,
+        "show_nested": "nested",
+    }
+    answer = _show_graph_source(pnl, comp, options)
+    if "dot" not in answer:
+        return {}, None
+    return show_graph_node_shapes(answer["dot"]), {"composition": outer, "options": options, "answer": answer}
+
+
 def _show_graph_while_loaded(module, compositions, request, pnl):
     """Ask show_graph about the model this load just built (#27).
 
@@ -1292,20 +1399,8 @@ def _show_graph_while_loaded(module, compositions, request, pnl):
     Never fails the load: a failure is recorded as show_graph's own refusal,
     which is what asking separately would have returned.
     """
-    # The page's rule (modelStore): the outermost composition is the first
-    # whose name isn't a node inside another composition.
-    def clean(n):
-        return re.sub(r'-\d+$', '', n) if n else n
-
-    nested = set()
-    for c in compositions:
-        for node in c.get("nodes") or []:
-            if node.get("kind") == "composition":
-                n = node.get("varName") or node.get("name")
-                nested.update({n, clean(n)})
     names = [c["varName"] for c in compositions if c.get("varName")]
-    outermost = next((n for n in names if n not in nested and clean(n) not in nested),
-                     names[0] if names else None)
+    outermost = _outermost_composition(compositions)
     wanted = []
     for name in (outermost, request.get("composition")):
         if name and name in names and name not in wanted:
