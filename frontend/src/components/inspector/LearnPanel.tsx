@@ -597,12 +597,17 @@ export function LearnPanel() {
           />
         </label>
         {executionModes.length > 0 && (
-          <label title={selectedModeReason ?? "Execution backend used for training"}>
-            Backend{" "}
+          <label title={selectedModeReason ?? "Execution mode used for training"}>
+            Execution mode{" "}
+            {/* #329: capped so the longer label keeps Start Learning on this
+                row at the Mac app's 1200px window. Closed, the select only
+                shows a usable mode (no "— can't train" suffix); the open list
+                still shows every option in full. */}
             <select
               value={executionMode}
               onChange={(e) => setExecutionMode(e.target.value)}
               disabled={busy}
+              style={{ maxWidth: 160 }}
             >
               {executionModes.map((m) => {
                 const usable = m.available && m.learnable;
