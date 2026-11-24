@@ -38,7 +38,9 @@ describe("undo and redo notices (#1377)", () => {
     vi.useFakeTimers();
     resetBurst();
     useNotificationStore.getState().clearAll();
-    useModelStore.setState({ filePath: null });
+    // The editor holds the newest step's code: no edit is waiting to be
+    // recorded, which Undo would take as a step first (#366).
+    useModelStore.setState({ filePath: null, source: step(STEPS).source });
     h().clear();
     h().setRestoring(false); // an undo holds recording off for a moment
     for (let i = 0; i <= STEPS; i++) {
@@ -113,6 +115,7 @@ describe("undo and redo notices (#1377)", () => {
     await press(2);
     h().setRestoring(false);
     h().pushSnapshot(step(100));
+    useModelStore.setState({ source: step(100).source });
     await press(1);
     expect(notices()[0].message).toBe("Undid Edit 100");
   });
