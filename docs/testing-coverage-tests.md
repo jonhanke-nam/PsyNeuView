@@ -610,6 +610,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - Like show_graph draws edges along show_graph's courses until a node moves @ci · CI · #23
 
+**`frontend/e2e/show-graph-shapes.spec.ts`** (Browser (Playwright))
+
+- every reference model, every view: each node has show_graph's shape and proportions · CI · #385
+
 **`frontend/e2e/show-graph-tab-fetch.spec.ts`** (Browser (Playwright))
 
 - show_graph tab fetches only while it is showing @ci · CI · #22
@@ -659,6 +663,8 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - measureAgreement › allows a couple of pixels of rounding within a row · CI
 - measureAgreement › lists nodes show_graph doesn't draw, and overlapping boxes · CI
 - measureAgreement › doesn't count boxes that only touch · CI
+- measureShapes (#385) › agrees where the kind is show_graph's and the proportions are within 5% · CI · #385
+- measureShapes (#385) › names a circle drawn as an oval, and a wrong kind · CI · #385
 
 **`frontend/src/utils/roleRanks.test.ts`** (Frontend unit (vitest))
 
@@ -707,7 +713,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 **`backend/tests/test_load_show_graph.py`** (Backend (pytest))
 
 - test_layout_after_a_show_graph_load_does_not_reload · CI · #27
-- test_plain_load_keeps_nothing · CI · #27
+- test_plain_load_keeps_only_the_answer_its_shapes_came_from: A plain load asks show_graph once, for its node shapes (#385), and keeps that answer; any other options still ask. · CI · #385
 - test_editing_after_the_load_asks_again · CI · #27
 - test_learning_on_a_model_with_a_nested_composition: show_graph shows EGO's learning only as its PyTorch picture (#72). · CI · #72
 
@@ -752,6 +758,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - test_the_tab_gets_the_redrawn_picture_of_a_real_model: The route the tab calls hands it an INPUT node drawn #00ff00. · CI · #190
 - test_the_tab_draws_a_controller_in_the_x11_purple: The route the tab calls hands it a controller drawn #a020f0. · CI · #190
 - test_a_picture_kept_before_the_redraw_changed_is_not_shown_again · CI · #190
+
+**`backend/tests/test_show_graph_shapes.py`** (Backend (pytest))
+
+- test_reads_each_nodes_shape_from_show_graphs_description · CI · #385
+- test_the_load_sends_show_graphs_circles · CI · #385
+- test_other_shapes_reach_the_page_too · CI · #385
+- test_shapes_come_with_a_show_graph_load_and_every_view: A load that asks for the Like show_graph layout reuses its answer, in the nested and the flattened view; EGO's octagon is inside a nested composition, and its learning picture (a PyTorch one) isn't used. · CI · #385
 
 ## Dragging and pointer interaction
 
@@ -4068,11 +4081,20 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - a node's oval (#210) › holds the name inside the outline at every width, single or double · CI · #210
 - an expanded node's box (#333) › holds the text's corners inside the outline, clear of it, for every shape · CI · #333
 - an expanded node's box (#333) › is no bigger than the shape needs: √2 for a round or cut shape, nothing for a rectangle · CI · #333
+- a node in show_graph's shape and proportions (#385) › draws a circle as wide as it is tall, its diameter covering the text's diagonal and the outline · CI · #385
+- a node in show_graph's shape and proportions (#385) › keeps show_graph's width-to-height ratio for every shape · CI · #385
+- a node in show_graph's shape and proportions (#385) › holds the name inside the outline, for every shape · CI · #385
+- a node in show_graph's shape and proportions (#385) › follows Graphviz's sizing: a circle is round, a short name gets the least node, a box isn't enlarged · CI · #385
+- a node in show_graph's shape and proportions (#385) › leaves room for a button beside the name · CI · #385
+- an expanded circle (#385) › stays a circle round its text · CI · #385
 
 **`frontend/src/utils/nodeShape.test.ts`** (Frontend unit (vitest))
 
 - nodeShapeFor › gives show_graph's shape to each kind of node · CI · #192
 - nodeShapeFor › keeps show_graph's precedence and survives missing data · CI · #192
+- show_graph's own shape (#385) › maps Graphviz's shapes onto the canvas's · CI · #385
+- show_graph's own shape (#385) › is preferred to the role rule where the backend asked show_graph · CI · #385
+- show_graph's own shape (#385) › knows its circles · CI · #385
 - shapeTooltip › says what each special shape means and that show_graph draws it so · CI · #192
 - outline geometry › a rectangle's outline is the box itself · CI · #192
 - outline geometry › an octagon is flat across the middle of each side and cut at the corners · CI · #192
