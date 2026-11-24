@@ -205,6 +205,47 @@ test.describe("AI assistant (#179)", { tag: "@ci" }, () => {
     await expect.poll(() => stub.settings.autonomy).toBe("answer");
   });
 
+  test("Test connection says whether the key, model and network work (#368)", async ({ page }) => {
+    await stubAssistant(page, { agent: { type: "anthropic", model: "claude-test", base_url: "" } });
+    const answers = [
+      { ok: true, agent: "anthropic", model: "claude-test", ms: 412, message: "Connected to Anthropic, model claude-test, in 412 ms" },
+      { ok: false, agent: "anthropic", model: "claude-test", ms: 120, message: "The key was refused (HTTP 401)" },
+    ];
+    let release: () => void = () => {};
+    let calls = 0;
+    await page.route("**/api/assistant/test-connection", async (route) => {
+      const answer = answers[calls++];
+      if (calls === 1) await new Promise<void>((resolve) => (release = resolve));
+      return route.fulfill({ json: answer });
+    });
+    await page.goto("/");
+    await openSettings(page);
+    await page.getByTestId("settings-section-assistant").click();
+    const button = page.getByTestId("assistant-test-connection");
+    const result = page.getByTestId("assistant-test-connection-result");
+    await expect(button).toBeEnabled();
+
+    await button.click();
+    await expect(result).toHaveText("Testing…");
+    release();
+    await expect(result).toHaveText("✓ Connected to Anthropic, model claude-test, in 412 ms");
+    await expect(result).toHaveAttribute("data-ok", "true");
+    await shot(page, "test-connection-ok");
+
+    await button.click();
+    await expect(result).toHaveText("⚠ The key was refused (HTTP 401)");
+    await expect(result).toHaveAttribute("data-ok", "false");
+    await shot(page, "test-connection-401");
+  });
+
+  test("Test connection is disabled until an agent is chosen (#368)", async ({ page }) => {
+    await stubAssistant(page);
+    await page.goto("/");
+    await openSettings(page);
+    await page.getByTestId("settings-section-assistant").click();
+    await expect(page.getByTestId("assistant-test-connection")).toBeDisabled();
+  });
+
   test("a conversation, with the turn's state shown", async ({ page }) => {
     const stub = await stubAssistant(page, { enabled: true });
     await page.goto("/");

@@ -14,7 +14,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-import { useAssistantStore } from "@/stores/assistantStore";
+import { useAssistantStore, type ConnectionTest } from "@/stores/assistantStore";
 import type { AssistantSettings, Autonomy, AgentType, FolderAccess, SandboxStatus, Saving } from "@/stores/assistantTypes";
 import { VISIBILITY_WORDS, whereDataGoes } from "@/utils/assistantProposals";
 import { Button } from "../Button";
@@ -428,6 +428,22 @@ function ApiKeySetting() {
   const keySet = useAssistantStore((s) => s.keySet);
   const setKey = useAssistantStore((s) => s.setKey);
   const clearKey = useAssistantStore((s) => s.clearKey);
+  const agentType = useAssistantStore((s) => s.settings.agent.type);
+  const testConnection = useAssistantStore((s) => s.testConnection);
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<ConnectionTest | null>(null);
+  const agent = useAssistantStore((s) => s.settings.agent);
+  // A result is about the agent and key it tested; a change makes it stale.
+  useEffect(() => setResult(null), [agent.type, agent.model, agent.base_url, keySet]);
+  const test = async () => {
+    setTesting(true);
+    setResult(null);
+    try {
+      setResult(await testConnection());
+    } finally {
+      setTesting(false);
+    }
+  };
   const [draft, setDraft] = useState("");
   const [failed, setFailed] = useState(false);
   const submit = async () => {
@@ -466,8 +482,27 @@ function ApiKeySetting() {
             Remove
           </Button>
         )}
+        <Button
+          kind="small"
+          data-testid="assistant-test-connection"
+          disabled={agentType === "none" || testing}
+          title={agentType === "none" ? "Choose an agent first" : "Send one small request to check the key, the model and the network"}
+          onClick={() => void test()}
+        >
+          Test connection
+        </Button>
       </div>
       {failed && <div style={{ ...errorStyle, marginTop: 4 }}>The key was not saved.</div>}
+      {(testing || result) && (
+        <div
+          data-testid="assistant-test-connection-result"
+          data-ok={testing ? undefined : String(result?.ok)}
+          role="status"
+          style={{ marginTop: 4, color: testing ? "var(--pnv-text-hint)" : result?.ok ? "var(--pnv-success)" : "var(--pnv-warning)" }}
+        >
+          {testing ? "Testing…" : `${result?.ok ? "✓" : "⚠"} ${result?.message}`}
+        </div>
+      )}
     </div>
   );
 }

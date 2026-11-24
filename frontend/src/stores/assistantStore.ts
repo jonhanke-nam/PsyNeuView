@@ -51,6 +51,15 @@ export interface ReviewOffer {
   openAfter: boolean;
 }
 
+/** What Test connection answers (#368): `message` is plain English and never the key. */
+export interface ConnectionTest {
+  ok: boolean;
+  agent: string;
+  model: string;
+  ms: number | null;
+  message: string;
+}
+
 interface AssistantState {
   /** null until asked; false when the deployment lacks the capability (the section hides). */
   available: boolean | null;
@@ -83,6 +92,8 @@ interface AssistantState {
   acknowledgeExplanation: () => void;
   setKey: (key: string) => Promise<boolean>;
   clearKey: () => Promise<boolean>;
+  /** One small request to the saved agent with the saved key (#368). */
+  testConnection: () => Promise<ConnectionTest>;
 
   send: (text: string) => Promise<void>;
   poll: () => Promise<void>;
@@ -232,6 +243,24 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
       record("assistant", "API key set");
     }
     return resp.ok;
+  },
+
+  testConnection: async () => {
+    const failed = (message: string): ConnectionTest => ({ ok: false, agent: get().settings.agent.type, model: get().settings.agent.model, ms: null, message });
+    try {
+      const resp = await fetch("/api/assistant/test-connection", { method: "POST" });
+      const body = await readJson(resp);
+      if (!resp.ok || typeof body.message !== "string") {
+        const detail = body.detail;
+        const why = detail && typeof detail === "object" ? String((detail as { message?: unknown }).message ?? "") : String(detail ?? "");
+        return failed(why || `The test couldn't run (HTTP ${resp.status})`);
+      }
+      const result = body as unknown as ConnectionTest;
+      record("assistant", result.ok ? "Test connection: connected" : "Test connection: failed");
+      return result;
+    } catch {
+      return failed("Couldn't reach PsyNeuView's backend");
+    }
   },
 
   clearKey: async () => {
