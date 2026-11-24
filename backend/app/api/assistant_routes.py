@@ -121,6 +121,21 @@ def test_connection():
     return result.as_dict()
 
 
+@router.get("/models")
+def get_models():
+    """The models the saved agent's service offers (#370), fetched with the
+    saved key: ``{ok, agent, models: [{id, display_name}], default,
+    message}``, always a 200, never the key. Like Test connection it works
+    with the assistant off, once an agent is chosen."""
+    available()
+    agent_settings = assistant_settings.get_settings()["agent"]
+    if agent_settings.get("type", "none") == "none":
+        return agents.list_models(agent_settings, key=None).as_dict()
+    result = agents.list_models(agent_settings, key=keys.get_key())
+    logger.info("assistant model list: agent=%s ok=%s count=%d", result.agent, result.ok, len(result.models))
+    return result.as_dict()
+
+
 # ── sessions ─────────────────────────────────────────────────────────────
 
 

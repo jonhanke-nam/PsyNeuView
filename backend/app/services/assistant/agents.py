@@ -145,6 +145,16 @@ def _post_json(url: str, headers: dict, body: dict, *, timeout: float = REQUEST_
     data = json.dumps(body).encode("utf-8")
     request = urllib.request.Request(url, data=data, method="POST")
     request.add_header("Content-Type", "application/json")
+    return _send(request, headers, timeout)
+
+
+def _get_json(url: str, headers: dict, *, timeout: float = REQUEST_TIMEOUT_SECONDS) -> dict:
+    """A GET with the same handling as :func:`_post_json`: redirects
+    refused, errors worded without the key (#370, the model list)."""
+    return _send(urllib.request.Request(url, method="GET"), headers, timeout)
+
+
+def _send(request: urllib.request.Request, headers: dict, timeout: float) -> dict:
     for name, value in headers.items():
         request.add_header(name, value)
     try:
@@ -242,6 +252,88 @@ def _connection_message(e: AgentError, *, host: str, model: str) -> str:
         return f"The agent answered HTTP {e.status}" + (f": {e.detail}" if e.detail else "")
     # A redirect refused, or an answer that wasn't JSON: the message is safe.
     return str(e)[:1].upper() + str(e)[1:]
+
+
+# ── The model list (#370) ────────────────────────────────────────────────
+
+
+@dataclass
+class ModelList:
+    ok: bool
+    agent: str
+    #: ``[{"id", "display_name"}]``, in the service's order (Anthropic: newest first).
+    models: list[dict]
+    #: The one to preselect when none is saved, or "" for the server's own.
+    default: str
+    message: str
+
+    def as_dict(self) -> dict:
+        return {"ok": self.ok, "agent": self.agent, "models": self.models, "default": self.default, "message": self.message}
+
+
+MAX_MODELS = 500
+
+
+def list_models(agent_settings: dict, *, key: str | None, timeout: float = TEST_TIMEOUT_SECONDS) -> ModelList:
+    """Ask the chosen service which models it offers: ``GET /v1/models``
+    on Anthropic's API or the OpenAI-compatible server (Ollama answers the
+    same path). Only the chosen service is asked, with the saved key, and
+    the message never contains the key."""
+    kind = agent_settings.get("type", "none")
+    if kind == "anthropic":
+        base = (agent_settings.get("base_url") or ANTHROPIC_URL).rstrip("/")
+        if not key:
+            return ModelList(False, kind, [], DEFAULT_ANTHROPIC_MODEL, "No API key is saved, so the list can't be fetched. Paste the key and press Save key.")
+        url = f"{base}/v1/models?limit=1000"
+        headers = {"x-api-key": key, "anthropic-version": ANTHROPIC_VERSION}
+    elif kind == "openai_compatible":
+        base = (agent_settings.get("base_url") or "").rstrip("/")
+        if not base:
+            return ModelList(False, kind, [], "", "No server address is set, so the list can't be fetched.")
+        url = f"{base}/v1/models"
+        headers = {"Authorization": f"Bearer {key}"} if key else {}
+    else:
+        return ModelList(False, "none", [], "", "No agent is chosen.")
+
+    try:
+        payload = _get_json(url, headers, timeout=timeout)
+    except AgentError as e:
+        host = urlparse(url).hostname or base
+        message = f"{host} has no model list (HTTP 404)" if e.status == 404 else _connection_message(e, host=host, model="")
+        return ModelList(False, kind, [], DEFAULT_ANTHROPIC_MODEL if kind == "anthropic" else "", message)
+    models = parse_models(payload)
+    if not models:
+        return ModelList(False, kind, [], DEFAULT_ANTHROPIC_MODEL if kind == "anthropic" else "", "The service listed no models.")
+    ids = [m["id"] for m in models]
+    if kind == "anthropic":
+        default = DEFAULT_ANTHROPIC_MODEL if DEFAULT_ANTHROPIC_MODEL in ids else ids[0]
+    else:
+        default = ""
+    return ModelList(True, kind, models, default, f"{len(models)} model{'s' if len(models) != 1 else ''} offered.")
+
+
+def parse_models(payload: Any) -> list[dict]:
+    """``{"data": [{"id", "display_name"?}]}`` from either service, or
+    Ollama's own ``{"models": [{"name"|"model"}]}``; anything else is
+    skipped. Ids and names are plain strings, cut to a sane length."""
+    if not isinstance(payload, dict):
+        return []
+    items = payload.get("data")
+    if not isinstance(items, list):
+        items = payload.get("models") if isinstance(payload.get("models"), list) else []
+    out: list[dict] = []
+    seen: set[str] = set()
+    for item in items[:MAX_MODELS]:
+        if not isinstance(item, dict):
+            continue
+        model_id = item.get("id") or item.get("model") or item.get("name")
+        if not isinstance(model_id, str) or not model_id.strip() or model_id in seen:
+            continue
+        model_id = model_id.strip()[:200]
+        seen.add(model_id)
+        name = item.get("display_name")
+        out.append({"id": model_id, "display_name": name.strip()[:200] if isinstance(name, str) and name.strip() else model_id})
+    return out
 
 
 # ── Anthropic ────────────────────────────────────────────────────────────

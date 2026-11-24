@@ -39,6 +39,8 @@ MAX_TOOL_CALLS = 200
 MAX_MINUTES = 120
 MAX_TOKENS = 10_000_000
 LIMIT_KEYS = ("tool_calls", "minutes", "max_tokens")
+MAX_ALIASES = 200
+MAX_ALIAS_LENGTH = 40
 SANDBOX_KEYS = ("all_runs", "require")
 
 DEFAULTS: dict[str, Any] = {
@@ -57,6 +59,9 @@ DEFAULTS: dict[str, Any] = {
     # is tracked (opening any shared model runs its code). require: the
     # assistant doesn't turn on where no sandbox can be applied.
     "sandbox": {"all_runs": True, "require": True},
+    # A short name of the user's own per model id (#370), shown in Settings
+    # and the Assistant tab; the real id is what is sent.
+    "model_aliases": {},
 }
 
 _lock = threading.Lock()
@@ -273,6 +278,20 @@ def _validate(doc: dict) -> dict:
         if not isinstance(value, bool):
             raise SettingsError(f"sandbox.{key} must be true or false")
         out["sandbox"][key] = value
+
+    aliases = doc.get("model_aliases", {})
+    if not isinstance(aliases, dict) or len(aliases) > MAX_ALIASES:
+        raise SettingsError(f"model_aliases must be an object of at most {MAX_ALIASES} model ids and names")
+    out_aliases: dict[str, str] = {}
+    for model_id, alias in aliases.items():
+        if not isinstance(model_id, str) or not model_id.strip() or len(model_id) > 200 or not isinstance(alias, str):
+            raise SettingsError("each model alias maps a model id to a name")
+        alias = " ".join(alias.split())
+        if len(alias) > MAX_ALIAS_LENGTH:
+            raise SettingsError(f"a model alias is at most {MAX_ALIAS_LENGTH} characters")
+        if alias:  # an empty name removes it
+            out_aliases[model_id.strip()] = alias
+    out["model_aliases"] = out_aliases
     return out
 
 
