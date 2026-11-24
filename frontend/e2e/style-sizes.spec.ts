@@ -232,11 +232,11 @@ test("the Run and Learn panels keep their row heights", { tag: "@ci" }, async ({
   await expectHeight(reset, BASELINE.runReset, "Reset");
   await expectHeight(runModel, BASELINE.runModel, "Run Model");
   expect(Math.abs((await height(reset)) - (await height(runModel))), "Reset beside Run Model").toBeLessThanOrEqual(1);
-  // #109: the Group by segments and the Backend select stand as tall as
+  // #109: the Group by segments and the Execution mode select stand as tall as
   // Reset and Run Model (they were 21 and 19px), the row unchanged.
   for (const [el, what] of [
     [panel.getByTestId("run-grouping"), "Group by Node / Trial"],
-    [panel.getByTestId("run-backend").locator("select"), "the Backend select"],
+    [panel.getByTestId("run-backend").locator("select"), "the Execution mode select"],
   ] as const) {
     await expectHeight(el, BASELINE.runModel, what);
     const top = (await el.boundingBox())!.y;
