@@ -12,6 +12,26 @@
 
 import { create } from "zustand";
 import { loadComponentsStart } from "./componentsPanelStartStore";
+import { recordSettingChanged } from "@/utils/activityLog";
+
+/**
+ * #372: whether the icon strip shows your favourite and recently used
+ * components, at the bottom under a small "Favourites & recent" heading.
+ * Settings ▸ Appearance ▸ Components panel. Off by default: unlabelled
+ * shortcuts above the category menus read as more categories. A stored
+ * choice is kept; the `psyneuview.` key lets the Mac app keep it.
+ */
+export const STRIP_SHORTCUTS_KEY = "psyneuview.components.stripShortcuts";
+export const DEFAULT_STRIP_SHORTCUTS = false;
+
+export function loadStripShortcuts(): boolean {
+  try {
+    const stored = localStorage.getItem(STRIP_SHORTCUTS_KEY);
+    return stored === "true" ? true : stored === "false" ? false : DEFAULT_STRIP_SHORTCUTS;
+  } catch {
+    return DEFAULT_STRIP_SHORTCUTS;
+  }
+}
 
 const LS_FAVORITES = "psyneuview_palette_favorites";
 const LS_RECENTS = "psyneuview_palette_recents";
@@ -55,6 +75,9 @@ interface PaletteState {
   favorites: string[];
   recentlyUsed: string[];
   compactFlyoutNodeId: string | null;
+  /** #372: favourites and recents shown in the icon strip (a setting). */
+  showStripShortcuts: boolean;
+  setShowStripShortcuts: (show: boolean) => void;
   /**
    * #252: a component picked up, waiting for a click on the graph to say
    * where it goes. Clicking a component used to add it at once, wherever the
@@ -92,6 +115,16 @@ export const usePaletteStore = create<PaletteState>((set, get) => ({
   favorites: loadJson<string[]>(LS_FAVORITES, []),
   recentlyUsed: loadJson<string[]>(LS_RECENTS, []),
   compactFlyoutNodeId: null,
+  showStripShortcuts: loadStripShortcuts(),
+  setShowStripShortcuts: (show) => {
+    try {
+      localStorage.setItem(STRIP_SHORTCUTS_KEY, String(show));
+    } catch {
+      // Storage blocked: the choice holds for this page.
+    }
+    recordSettingChanged("components-strip-shortcuts", String(show));
+    set({ showStripShortcuts: show });
+  },
   armed: null,
   setArmed: (armed) => set({ armed }),
   draggingFunction: null,
