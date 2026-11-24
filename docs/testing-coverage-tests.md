@@ -1176,6 +1176,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - the lock items are hidden for a protected PsyNeuLink file (#1309) · CI · #1309
 - your own checkout: the editing badge, and protecting it (#1305, for the docs) · CI · #1305
 
+**`frontend/e2e/multiport-labels-learn.spec.ts`** (Browser (Playwright))
+
+- the grid names a multi-port node's elements per port · CI · #358
+- the Learn panel edits each input port and sends one array per port · CI · #358
+
 **`frontend/e2e/node-name-special-characters.spec.ts`** (Browser (Playwright))
 
 - Node names with special characters › render without crashing, and the reference model can be reset · CI · #1236
@@ -1280,6 +1285,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - toSideBySide (#1348) › pairs a removal with the addition that replaced it · CI · #1348
 - toSideBySide (#1348) › leaves a blank on the shorter side · CI · #1348
 - toSideBySide (#1348) › keeps a gap as a gap · CI · #1348
+
+**`frontend/src/utils/portElementLabels.test.ts`** (Frontend unit (vitest))
+
+- portElementLabels (#358) › names each port's elements from the sidecar's per-port labels · CI · #358
+- portElementLabels (#358) › prefers the model's own port labels · CI · #358
+- portElementLabels (#358) › falls back to positions when the labels don't fit the port · CI · #358
+- portElementLabels (#358) › applies the node-level shorthand to the first port only · CI · #358
 
 **`frontend/src/utils/previewBreak.test.ts`** (Frontend unit (vitest))
 
@@ -1941,6 +1953,14 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - formatMetricValue › keeps six decimals for ordinary values · CI
 - formatMetricValue › switches to scientific for a value that has fallen near zero · CI
 - formatMetricValue › says n/a for nothing · CI
+
+**`frontend/src/utils/learnPorts.test.ts`** (Frontend unit (vitest))
+
+- Learn panel grids for multi-port nodes (#358) › edits every input port of a multi-port input node · CI · #358
+- Learn panel grids for multi-port nodes (#358) › keeps one port for a one-port node and for targets · CI · #358
+- Learn panel grids for multi-port nodes (#358) › sends a multi-port trial as one array per port · CI · #358
+- Learn panel grids for multi-port nodes (#358) › sends a one-port trial as its vector, as before · CI · #358
+- Learn panel grids for multi-port nodes (#358) › lays a declared multi-port trial out across the ports · CI · #358
 
 **`frontend/src/utils/runEcho.test.ts`** (Frontend unit (vitest))
 
@@ -5066,6 +5086,8 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - test_trial_array_ragged_ports_become_one_array_each · CI · #332
 - test_two_port_inputs_reach_composition_run_in_process · CI · #332
 - test_two_port_inputs_run_in_the_sandbox · CI · #332
+- test_input_nodes_lists_every_port_in_process · CI · #332
+- test_input_nodes_lists_every_port_through_the_api · CI · #332
 
 **`backend/tests/test_no_event_loop_blocking.py`** (Backend (pytest))
 

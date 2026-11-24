@@ -9,10 +9,10 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 168 | 445 | 435 tests in 163 files |
+| Browser (Playwright) | 169 | 447 | 437 tests in 164 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 139 | 1246 | 1246 tests in 139 files |
-| Backend (pytest) | 191 | 1759 | 1759 tests in 191 files |
+| Frontend unit (vitest) | 141 | 1255 | 1255 tests in 141 files |
+| Backend (pytest) | 191 | 1761 | 1761 tests in 191 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
 
@@ -25,16 +25,16 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Matching show_graph](#showgraph) | 8 files, 19 tests | – | 8 files, 66 tests | 5 files, 34 tests | 118 of 119 |
 | [Dragging and pointer interaction](#pointer) | 17 files, 53 tests | – | 6 files, 37 tests | – | 90 of 90 |
 | [Building models in the UI](#building) | 4 files, 7 tests | – | 1 files, 9 tests | 13 files, 145 tests | 161 of 161 |
-| [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 359 of 362 |
+| [Editing: code and graph in step](#sync) | 17 files, 40 tests | – | 10 files, 81 tests | 26 files, 247 tests | 365 of 368 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
-| [Running, learning and debugging](#running) | 14 files, 32 tests | – | 9 files, 92 tests | 51 files, 254 tests | 378 of 378 |
+| [Running, learning and debugging](#running) | 14 files, 32 tests | – | 10 files, 97 tests | 51 files, 254 tests | 383 of 383 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 28 files, 263 tests | 19 files, 322 tests | 640 of 640 |
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 10 files, 20 tests | – | 16 files, 107 tests | 21 files, 204 tests | 328 of 331 |
+| [App shell, diagnostics and everything else](#shell) | 10 files, 20 tests | – | 16 files, 107 tests | 21 files, 206 tests | 330 of 333 |
 
 <a id="tutorials"></a>
 
@@ -453,6 +453,7 @@ No tests yet.
 | `live-preview-background.spec.ts` | Browser | 4 | yes | #255, #256 | The live preview runs in the background, has a setting, and checks fast (#255, #256). |
 | `lock-in-checkout.spec.ts` | Browser | 1 | yes | #1346 | Locking one model inside your own PsyNeuLink checkout (#1346, part 1). |
 | `model-lock.spec.ts` | Browser | 3 | yes | #1116, #1309 | The per-model lock, as a user meets it (#1116, #1309). |
+| `multiport-labels-learn.spec.ts` | Browser | 2 | yes | #358 | Input nodes with several input ports, follow-ups (#358). |
 | `node-name-special-characters.spec.ts` | Browser | 1 | yes | #1236 | A node name with a newline or a quote doesn't crash the app (#1236). |
 | `node-names-simple.spec.ts` | Browser | 1 | yes | #122 | A node shows just its name by default, as PsyNeuLink's show_graph() draws it (#122). |
 | `preview-error-banner.spec.ts` | Browser | 3 | yes | #1367 | A code edit that doesn't build shows the stale-graph banner (#1367). |
@@ -467,6 +468,7 @@ No tests yet.
 | `holdLastGoodGraph.test.ts` | Frontend unit | 14 | yes | #1030 | A model that does not build must not take the graph down with it (#1030). |
 | `livePreviewStore.test.ts` | Frontend unit | 4 | yes | #255 | The live preview's setting (#255). |
 | `lineDiff.test.ts` | Frontend unit | 17 | yes |  |  |
+| `portElementLabels.test.ts` | Frontend unit | 4 | yes | #358 | A node with two input ports, RED_task (2 elements) and WORD_task (1), as in the two-port fixture (#358). |
 | `previewBreak.test.ts` | Frontend unit | 6 | yes |  |  |
 | `sourceDiff.test.ts` | Frontend unit | 14 | yes | #1093 | Showing how a graph edit changed the code (#1093). |
 | `syncState.test.ts` | Frontend unit | 13 | yes |  |  |
@@ -520,6 +522,8 @@ No tests yet.
 | no tag when unlocked; lock from the Layout menu, unlock from the tag (#1309) | `model-lock.spec.ts` | Browser | yes | #1309 |
 | the lock items are hidden for a protected PsyNeuLink file (#1309) | `model-lock.spec.ts` | Browser | yes | #1309 |
 | your own checkout: the editing badge, and protecting it (#1305, for the docs) | `model-lock.spec.ts` | Browser | yes | #1305 |
+| the grid names a multi-port node's elements per port | `multiport-labels-learn.spec.ts` | Browser | yes | #358 |
+| the Learn panel edits each input port and sends one array per port | `multiport-labels-learn.spec.ts` | Browser | yes | #358 |
 | Node names with special characters › render without crashing, and the reference model can be reset | `node-name-special-characters.spec.ts` | Browser | yes | #1236 |
 | node names: just the name by default, Elements brings the details back and is remembered | `node-names-simple.spec.ts` | Browser | yes | #122 |
 | a syntax error typed in the editor shows the stale-graph banner (#1367) | `preview-error-banner.spec.ts` | Browser | yes | #1367 |
@@ -608,6 +612,7 @@ No tests yet.
 | `valueViewStore.test.ts` | Frontend unit | 6 | yes | #1387 | #1387: a node's "list \| grid" choice, and its width, are kept in the model's layout file and come back when the model is opened again. |
 | `inputSets.test.ts` | Frontend unit | 12 | yes |  |  |
 | `learnPlan.test.ts` | Frontend unit | 19 | yes |  |  |
+| `learnPorts.test.ts` | Frontend unit | 5 | yes |  |  |
 | `runEcho.test.ts` | Frontend unit | 4 | yes | #49 | An input node's OUT row is dropped only when it would repeat its IN row (#49). |
 | `timeline.test.ts` | Frontend unit | 6 | yes | #177 | The timeline (#177): the merge order, what each kind is marked as, a wait as its start and stop lines, errors linked to their cause, and the text file's one time format. |
 | `valueGrid.test.ts` | Frontend unit | 18 | yes |  |  |
@@ -1259,7 +1264,7 @@ No tests yet.
 | `test_e2e_reset.py` | Backend | 4 | yes | #147 | Unit tests for the test-only /api/test/reset endpoint (#147). |
 | `test_frontend_cache_headers.py` | Backend | 6 | yes | #2 | The built page is served so an update can't be hidden by a cached copy (#2). |
 | `test_model_warnings.py` | Backend | 11 | yes | #1101 | Showing what PsyNeuLink said about a model that ran fine (#1101). |
-| `test_multiport_inputs.py` | Backend | 4 | yes | #332 | An input node with several input ports gets one array per port (#332). |
+| `test_multiport_inputs.py` | Backend | 6 | yes | #332 | An input node with several input ports gets one array per port (#332). |
 | `test_no_event_loop_blocking.py` | Backend | 4 | yes | #860 | Regression guards against backend freezes (#860). |
 | `test_request_guard.py` | Backend | 10 | yes |  | The server refuses requests from another site or under another name. |
 | `test_test_extractor.py` | Backend | 15 | yes |  | Tests for app.services.test_extractor. |
