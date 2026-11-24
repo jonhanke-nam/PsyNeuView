@@ -9,9 +9,9 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 171 | 451 | 441 tests in 166 files |
+| Browser (Playwright) | 172 | 452 | 442 tests in 167 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 140 | 1253 | 1253 tests in 140 files |
+| Frontend unit (vitest) | 141 | 1261 | 1261 tests in 141 files |
 | Backend (pytest) | 191 | 1759 | 1759 tests in 191 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -20,12 +20,12 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 
 | Area | Browser | Tutorial | Unit (vitest) | Backend (pytest) | Tests in CI |
 |---|---|---|---|---|---|
-| [Tutorials and guided walkthroughs](#tutorials) | 13 files, 57 tests | 35 files, 80 tests | 13 files, 219 tests | 2 files, 18 tests | 374 of 374 |
+| [Tutorials and guided walkthroughs](#tutorials) | 13 files, 57 tests | 35 files, 80 tests | 13 files, 220 tests | 2 files, 18 tests | 375 of 375 |
 | AI assistant | – | – | – | – | **no tests** |
 | [Matching show_graph](#showgraph) | 8 files, 19 tests | – | 8 files, 66 tests | 5 files, 34 tests | 118 of 119 |
 | [Dragging and pointer interaction](#pointer) | 18 files, 54 tests | – | 6 files, 37 tests | – | 91 of 91 |
 | [Building models in the UI](#building) | 4 files, 7 tests | – | 1 files, 9 tests | 13 files, 145 tests | 161 of 161 |
-| [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 359 of 362 |
+| [Editing: code and graph in step](#sync) | 17 files, 39 tests | – | 10 files, 84 tests | 26 files, 247 tests | 367 of 370 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
 | [Running, learning and debugging](#running) | 14 files, 33 tests | – | 9 files, 92 tests | 51 files, 254 tests | 379 of 379 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
@@ -98,7 +98,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | `orientationOffer.test.ts` | Frontend unit | 5 | yes |  |  |
 | `pronunciation.test.ts` | Frontend unit | 5 | yes |  |  |
 | `recordedNarration.test.ts` | Frontend unit | 6 | yes | #159 | Recorded narration (#159): a clip for every caption, in every recorded voice. |
-| `tourStep.test.ts` | Frontend unit | 85 | yes |  |  |
+| `tourStep.test.ts` | Frontend unit | 86 | yes |  |  |
 | `tutorialGuard.test.ts` | Frontend unit | 36 | yes |  | The app's window: opening one is checked in the browser, by the e2e spec. |
 | `tutorialProgress.test.ts` | Frontend unit | 4 | yes |  |  |
 | `tutorialView.test.ts` | Frontend unit | 6 | yes |  |  |
@@ -457,6 +457,7 @@ No tests yet.
 | `model-lock.spec.ts` | Browser | 3 | yes | #1116, #1309 | The per-model lock, as a user meets it (#1116, #1309). |
 | `node-name-special-characters.spec.ts` | Browser | 1 | yes | #1236 | A node name with a newline or a quote doesn't crash the app (#1236). |
 | `node-names-simple.spec.ts` | Browser | 1 | yes | #122 | A node shows just its name by default, as PsyNeuLink's show_graph() draws it (#122). |
+| `platform-key-labels.spec.ts` | Browser | 1 | yes | #409 | Tooltips name the keys of the platform the app runs on (#409). |
 | `preview-error-banner.spec.ts` | Browser | 3 | yes | #1367 | A code edit that doesn't build shows the stale-graph banner (#1367). |
 | `preview-not-save.spec.ts` | Browser | 4 | yes | #1029 | Typing in the code editor must not write the user's file (#1029). |
 | `preview-survives-save.spec.ts` | Browser | 1 | yes | #160 | A request sent while a save is on its way still finds the preview (#160). |
@@ -465,6 +466,7 @@ No tests yet.
 | `watch-two-windows.spec.ts` | Browser | 2 | yes | #272 | Two windows on two models each notice their own model being edited elsewhere, and one closing leaves the other watching (#272). |
 | `inspectorUndoSteps.test.ts` | Frontend unit | 1 | yes | #1369 | Every Inspector edit records its undo step before it changes the model (#1369). |
 | `optimisticUpdate.test.ts` | Frontend unit | 5 | yes | #45 | The Inspector's instant edit of the code must not break a list value (#45). |
+| `keyLabels.test.ts` | Frontend unit | 7 | yes |  |  |
 | `definitionError.test.ts` | Frontend unit | 3 | yes | #254 | An error in a statement that defines the model is shown even though the rest built (#254). |
 | `holdLastGoodGraph.test.ts` | Frontend unit | 14 | yes | #1030 | A model that does not build must not take the graph down with it (#1030). |
 | `livePreviewStore.test.ts` | Frontend unit | 4 | yes | #255 | The live preview's setting (#255). |
@@ -524,6 +526,7 @@ No tests yet.
 | your own checkout: the editing badge, and protecting it (#1305, for the docs) | `model-lock.spec.ts` | Browser | yes | #1305 |
 | Node names with special characters › render without crashing, and the reference model can be reset | `node-name-special-characters.spec.ts` | Browser | yes | #1236 |
 | node names: just the name by default, Elements brings the details back and is remembered | `node-names-simple.spec.ts` | Browser | yes | #122 |
+| Key names in tooltips follow the platform (#409) › Undo, Redo and Save name this machine's keys | `platform-key-labels.spec.ts` | Browser | yes | #409 |
 | a syntax error typed in the editor shows the stale-graph banner (#1367) | `preview-error-banner.spec.ts` | Browser | yes | #1367 |
 | a typed line that fails when it runs shows the same banner (#1367) | `preview-error-banner.spec.ts` | Browser | yes | #1367 |
 | fast typing previews once, after the pause, with no banner on the way (#1367) | `preview-error-banner.spec.ts` | Browser | yes | #1367 |

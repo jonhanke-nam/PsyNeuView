@@ -478,6 +478,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - parseWalkthrough — the orientation's fields (#1310) › rejects a docs entry that isn't a markdown page · CI · #1310
 - parseWalkthrough — the orientation's fields (#1310) › rejects an orientation number that isn't a whole number from 1 · CI · #1310
 - parseWalkthrough — the orientation's fields (#1310) › rejects a pointer or say of the wrong shape · CI · #1310
+- parseWalkthrough — the orientation's fields (#1310) › lets an instruction name a {key:…}, but only with a caption of its own (#409) · CI · #1310
 - parseWalkthrough — the orientation's fields (#1310) › takes within only as a testid, on a step with a testid anchor (#170) · CI · #1310
 - parseWalkthrough — the orientation's fields (#1310) › takes say_phonemes only as text beside a say (#1407) · CI · #1310
 
@@ -1188,6 +1189,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - node names: just the name by default, Elements brings the details back and is remembered · CI · #122
 
+**`frontend/e2e/platform-key-labels.spec.ts`** (Browser (Playwright))
+
+- Key names in tooltips follow the platform (#409) › Undo, Redo and Save name this machine's keys · CI · #409
+
 **`frontend/e2e/preview-error-banner.spec.ts`** (Browser (Playwright))
 
 - a syntax error typed in the editor shows the stale-graph banner (#1367) · CI · #1367
@@ -1234,6 +1239,16 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - applyOptimisticUpdate › still edits a plain number at once · CI · #45
 - applyOptimisticUpdate › never edits the next mechanism: a bare function class goes to the backend · CI · #45
 - applyOptimisticUpdate › puts a new function parameter inside the function's call, not the mechanism's · CI · #45
+
+**`frontend/src/shortcuts/keyLabels.test.ts`** (Frontend unit (vitest))
+
+- key names, this platform's way (#409) › modLabel reads ⌘Z on a Mac and Ctrl+Z elsewhere · CI · #409
+- key names, this platform's way (#409) › names Option on a Mac and Alt elsewhere · CI · #409
+- key names, this platform's way (#409) › names the window zoom keys without a doubled plus · CI · #409
+- walkthrough text naming a shortcut (#409) › fills in the Mac keys on a Mac · CI · #409
+- walkthrough text naming a shortcut (#409) › fills in Ctrl keys elsewhere · CI · #409
+- walkthrough text naming a shortcut (#409) › follows a rebinding · CI · #409
+- walkthrough text naming a shortcut (#409) › leaves an unknown id as written, so a typo shows · CI · #409
 
 **`frontend/src/stores/definitionError.test.ts`** (Frontend unit (vitest))
 
