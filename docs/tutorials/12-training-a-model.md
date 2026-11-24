@@ -18,9 +18,10 @@ How to *train* a model — distinct from running it — using the Learn panel.
 
 With an autodiff model loaded, open the **Learn** tab. It lets you set the
 training **inputs** and **targets**, the number of **epochs**, and the
-**learning rate**, and pick the execution backend. The backend list is the
-model's own: an AutodiffComposition trains under PyTorch, a Composition with
-learning pathways under Python, and the options that can't train this model are
+**learning rate**, and pick the **Execution mode** (PsyNeuLink's
+`ExecutionMode`). The list of modes is the model's own: an
+AutodiffComposition trains under PyTorch, a Composition with learning
+pathways under Python, and the options that can't train this model are
 greyed out with the reason. Leave the learning rate empty to use the model's
 own; a value you type overrides it.
 

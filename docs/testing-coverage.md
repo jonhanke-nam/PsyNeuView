@@ -9,10 +9,10 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 158 | 430 | 418 tests in 152 files |
+| Browser (Playwright) | 159 | 431 | 419 tests in 153 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 134 | 1203 | 1203 tests in 134 files |
-| Backend (pytest) | 188 | 1747 | 1747 tests in 188 files |
+| Backend (pytest) | 188 | 1749 | 1749 tests in 188 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
 
@@ -27,7 +27,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Building models in the UI](#building) | 3 files, 6 tests | – | 1 files, 9 tests | 13 files, 145 tests | 160 of 160 |
 | [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 359 of 362 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
-| [Running, learning and debugging](#running) | 9 files, 26 tests | – | 8 files, 84 tests | 51 files, 252 tests | 362 of 362 |
+| [Running, learning and debugging](#running) | 10 files, 27 tests | – | 8 files, 84 tests | 51 files, 254 tests | 365 of 365 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 54 tests | – | 28 files, 262 tests | 19 files, 322 tests | 638 of 638 |
@@ -587,6 +587,7 @@ No tests yet.
 | File | Layer | Tests | In CI | Issues | What it checks |
 |---|---|---|---|---|---|
 | `busy-indicator.spec.ts` | Browser | 13 | yes | #38 | The spinning wheel of patience (#38): anything slower than 0.2 s shows it, with a "progress" pointer; anything quicker shows nothing; covers a save and an undo. |
+| `execution-mode-label.spec.ts` | Browser | 1 | yes | #329 | The Run and Learn panels call their backend choice "Execution mode" (#329). |
 | `learning-nodes-run-inspector.spec.ts` | Browser | 2 | yes | #1383, #1385 | Learning models in the Run tab and the Inspector (#1383, #1385). |
 | `pytorch-view.spec.ts` | Browser | 3 | yes | #230 | PyTorch (autodiff) view (#230). |
 | `reference-models-runnable.spec.ts` | Browser | 2 | yes | #818, #577, #652 | Reference-model runnability gate (#818, #577, #652). |
@@ -629,7 +630,7 @@ No tests yet.
 | `test_ego_executor_runnability.py` | Backend | 4 | yes | #578 | Runnability + baseline-match for the EGO reference model via the executor (#578). |
 | `test_error_names_its_type.py` | Backend | 4 | yes | #165 | An error from a model names its exception type, and its line (#165). |
 | `test_error_replies_are_json.py` | Backend | 2 | yes | #1396 | An unhandled server error comes back as JSON the page can read (#1396). |
-| `test_execution_modes.py` | Backend | 5 | yes | #537 | Tests for execution-backend capability detection (#537, Learn L4). |
+| `test_execution_modes.py` | Backend | 7 | yes | #537 | Tests for execution-backend capability detection (#537, Learn L4). |
 | `test_executor.py` | Backend | 11 | yes |  | Tests for the executor service. |
 | `test_executor_side_effects.py` | Backend | 3 | yes | #608, #609 | Executor must suppress a model's module-level side effects (#608, #609). |
 | `test_input_sets.py` | Backend | 7 | yes | #1216 | A model can declare its own run inputs and training sets (#1216). |
@@ -672,6 +673,7 @@ No tests yet.
 | Busy wheel (#38) › a style with no clear centre puts the time below it, even when the centre is chosen | `busy-indicator.spec.ts` | Browser | yes | #38 |
 | Busy wheel (#38) › with reduced motion every style stands still (#169) | `busy-indicator.spec.ts` | Browser | yes | #38 |
 | Busy wheel (#38) › a problem report has each wait's start and stop, and the action it came from | `busy-indicator.spec.ts` | Browser | yes | #38 |
+| Execution mode label › the Run and Learn panels say Execution mode, and no option says graph | `execution-mode-label.spec.ts` | Browser | yes | #329 |
 | learning models: Run inputs and the Inspector › the TD demo's Run tab lists only the cue, and runs | `learning-nodes-run-inspector.spec.ts` | Browser | yes | #1383 |
 | learning models: Run inputs and the Inspector › the Hebbian demo's Inspector shows learning on | `learning-nodes-run-inspector.spec.ts` | Browser | yes | #1383 |
 | pytorch view › option is absent for a non-autodiff composition | `pytorch-view.spec.ts` | Browser | yes | #230 |
