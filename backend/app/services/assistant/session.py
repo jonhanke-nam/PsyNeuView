@@ -233,6 +233,8 @@ def _summarize(tool: str, result: dict) -> str:
         return f"{len(result.get('files') or [])} files"
     if tool == "read_docs":
         return f"{len(result.get('hits') or [])} hits"
+    if tool == "check_proposal":
+        return f"proposal {result.get('id')} is {result.get('state')}"
     if tool.startswith("propose_"):
         return f"proposal {result.get('proposal_id')}"
     return "ok"

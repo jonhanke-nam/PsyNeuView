@@ -39,6 +39,7 @@ TOOL_ALLOWLIST: tuple[str, ...] = (
     "read_file",
     "propose_file_write",
     "propose_open_file",
+    "check_proposal",
 )
 
 DOCS_DIR = Path(__file__).resolve().parents[4] / "docs"
@@ -126,6 +127,15 @@ TOOL_DEFINITIONS: list[dict] = [
         "name": "propose_open_file",
         "description": "Ask the user to open a model file from an allowed folder. Only the user can accept.",
         "input_schema": {"type": "object", "properties": {"path": _STRING, "summary": _STRING}, "required": ["path"], "additionalProperties": False},
+    },
+    {
+        "name": "check_proposal",
+        "description": (
+            "Whether one of your proposals is still pending, or the user accepted or rejected it "
+            "(stale: it couldn't apply because the model changed since; look again and propose anew). "
+            "Takes the proposal_id a propose_* call returned. Read-only."
+        ),
+        "input_schema": {"type": "object", "properties": {"id": _STRING}, "required": ["id"], "additionalProperties": False},
     },
 ]
 
@@ -415,6 +425,17 @@ def propose_open_file(ctx: ToolContext, args: dict) -> dict:
     return {"proposal_id": proposal["id"], "state": proposal["state"]}
 
 
+def check_proposal(ctx: ToolContext, args: dict) -> dict:
+    """The state of one of this session's own proposals, and nothing else.
+    Reads only: it never changes a proposal, and it can't see another
+    session's."""
+    proposal_id = _need_str(args, "id")
+    proposal = ctx.session.proposal(proposal_id)
+    if proposal is None:
+        raise ToolRefused("no proposal with that id in this conversation")
+    return {"id": proposal_id, "state": proposal["state"]}
+
+
 TOOLS: dict[str, Callable[[ToolContext, dict], dict]] = {
     "read_open_model": read_open_model,
     "read_docs": read_docs,
@@ -423,6 +444,7 @@ TOOLS: dict[str, Callable[[ToolContext, dict], dict]] = {
     "read_file": read_file,
     "propose_file_write": propose_file_write,
     "propose_open_file": propose_open_file,
+    "check_proposal": check_proposal,
 }
 
 assert tuple(TOOLS) == TOOL_ALLOWLIST
