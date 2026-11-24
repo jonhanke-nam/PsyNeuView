@@ -3022,6 +3022,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/components-panel-start-setting.spec.ts`** (Browser (Playwright))
 
+- Components panel opening setting (#113) › a fresh app opens the panel as the icon strip (#345) · CI · #113
 - Components panel opening setting (#113) › Starts as the icon strip opens the strip after a reload · CI · #113
 - Components panel opening setting (#113) › ◀ collapses it for the session only; a reload comes back open · CI · #113
 
@@ -3300,8 +3301,9 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/src/stores/componentsPanelStart.test.ts`** (Frontend unit (vitest))
 
-- Components panel opening state (#113) › opens as the word list by default, sections folded · CI · #113
-- Components panel opening state (#113) › starts as the icon strip when the setting says so · CI · #113
+- Components panel opening state (#113) › opens as the icon strip by default (#345) · CI · #113
+- Components panel opening state (#113) › keeps a stored word-list choice, sections folded (#345) · CI · #113
+- Components panel opening state (#113) › lists the icon strip first in Settings (#345) · CI · #113
 - Components panel opening state (#113) › ignores anything else stored, and the old remembered strip · CI · #113
 - Components panel opening state (#113) › the ◀/▶ button switches the panel for the session without remembering it · CI · #113
 - Components panel opening state (#113) › setStart remembers the choice · CI · #113
@@ -3997,6 +3999,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - outline geometry › writes SVG points inside the box by the inset · CI · #192
 
 ## Layout, views and compositions
+
+**`frontend/e2e/add-keeps-view.spec.ts`** (Browser (Playwright))
+
+- adding a component keeps the view still (#346) › the zoom and pan don't change, and the node's centre is at the click · CI · #346
 
 **`frontend/e2e/composition-cim-edges.spec.ts`** (Browser (Playwright))
 

@@ -178,8 +178,9 @@ test.describe("pick a component, then click where it goes (#252)", { tag: "@ci" 
     await expect(page.getByTestId("place-component-hint")).toHaveCount(0);
     await expect(tm).not.toHaveAttribute("data-armed", "true");
 
-    // The new node sits where the click was, in the graph's own coordinates
-    // (the view may refit after the model reloads), and it is on screen.
+    // The new node's centre sits where the click was, in the graph's own
+    // coordinates, and that centre is on screen (#346: the node is centred on
+    // the click, so near the edge of the canvas part of it can be beyond).
     const ids = await page.locator(".react-flow__node").evaluateAll((ns) => ns.map((n) => (n as HTMLElement).dataset.id!));
     const fresh = ids.find((id) => /New_TransferMechanism/.test(id))!;
     await page.waitForTimeout(400);
@@ -188,8 +189,8 @@ test.describe("pick a component, then click where it goes (#252)", { tag: "@ci" 
     const zoom = await page.evaluate(() => new DOMMatrixReadOnly(getComputedStyle(document.querySelector(".react-flow__viewport")!).transform).a);
     expect(Math.hypot(centre.x - clickedAt.x, centre.y - clickedAt.y), JSON.stringify({ centre, clickedAt })).toBeLessThan(Math.max(box.width, box.height) / zoom);
     const pane = (await page.locator(".react-flow__pane").boundingBox())!;
-    expect(box.x).toBeGreaterThanOrEqual(pane.x);
-    expect(box.y + box.height).toBeLessThanOrEqual(pane.y + pane.height);
+    expect(box.x + box.width / 2).toBeGreaterThanOrEqual(pane.x);
+    expect(box.y + box.height / 2).toBeLessThanOrEqual(pane.y + pane.height);
   });
 
   test("Esc, the same component again, or another one: nothing is added", async ({ page }) => {

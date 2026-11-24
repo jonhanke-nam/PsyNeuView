@@ -1,4 +1,5 @@
 about-release-dates.spec.ts
+add-keeps-view.spec.ts
 app-shell.spec.ts
 app-update-notice.spec.ts
 apply-only-when-needed.spec.ts
