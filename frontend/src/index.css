@@ -299,6 +299,23 @@ html.pnv-busy * {
 .graph-placing .react-flow__node {
   cursor: crosshair !important;
 }
+/* #348: a mechanism that can't take the function picked up. */
+.graph-placing [data-function-target="invalid"],
+.graph-placing [data-function-target="invalid"] * {
+  cursor: not-allowed !important;
+}
+.graph-placing [data-function-target="valid"],
+.graph-placing [data-function-target="valid"] * {
+  cursor: pointer !important;
+}
+/* Held steady under the pointer, like a connection's target (#253). */
+.graph-placing [data-function-target="valid"]:hover::after {
+  inset: -7px;
+  background: var(--pnv-connect-tint);
+  box-shadow: 0 0 0 4px var(--pnv-connect-target), 0 0 24px 11px var(--pnv-connect-glow);
+  animation: none;
+  opacity: 1;
+}
 
 /* #253: the connector on each node, for dragging a connection to another
    node. Shown while the pointer is on the node, or during a connection. */

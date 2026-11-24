@@ -54,7 +54,8 @@ import { PaletteSidebar } from "./PaletteSidebar";
 import { NodeContextMenu } from "./NodeContextMenu";
 import { OffscreenNodesIndicator } from "./OffscreenNodesIndicator";
 import { TourOverlay } from "./TourOverlay";
-import { addNodeToModel, deleteProjection, deleteSchedulingCondition, renameProjection } from "@/utils/nodeActions";
+import { addNodeToModel, deleteProjection, deleteSchedulingCondition, FUNCTION_NEEDS_MECHANISM, functionRefusal, renameProjection, setMechanismFunction } from "@/utils/nodeActions";
+import { isFunctionType } from "@/constants/pnlTypes";
 import { isProjectionType, findDefByType } from "@/constants/pnlTypes";
 import { inNodeLayer } from "./canvasLayers";
 import { registerCommand } from "@/shortcuts/commands";
@@ -608,9 +609,30 @@ export function GraphCanvas() {
 
   // #252: a component picked up in the panel goes where the graph is clicked.
   const armed = usePaletteStore((s) => s.armed);
-  const placeArmed = useCallback((e: React.MouseEvent | MouseEvent, onNode?: { id: string; type?: string; parentId?: string }): boolean => {
+  const placeArmed = useCallback((e: React.MouseEvent | MouseEvent, onNode?: { id: string; type?: string; parentId?: string; data?: any }): boolean => {
     const pick = usePaletteStore.getState().armed;
     if (!pick || !filePath) return false;
+    // #348/#349: a function isn't a node. It goes onto a mechanism, as its
+    // function=, and is never written into the code by itself.
+    if (isFunctionType(pick.type)) {
+      if (onNode?.type !== "mechanismNode") {
+        addNotification("warning", FUNCTION_NEEDS_MECHANISM);
+        return true; // the pick stays
+      }
+      const d = onNode.data;
+      const refusal = functionRefusal(d, pick.type);
+      if (refusal) {
+        addNotification("warning", refusal);
+        return true;
+      }
+      void setMechanismFunction(
+        filePath, d?.varName || onNode.id, d?.label || d?.varName || onNode.id, pick.type,
+        setSource, loadModelFromServer, addNotification,
+      );
+      usePaletteStore.getState().addRecentlyUsed(pick.type);
+      if (!e.altKey) usePaletteStore.getState().setArmed(null);
+      return true;
+    }
     const at = screenToFlowPosition({ x: e.clientX, y: e.clientY });
     // Inside a composition, it goes into that composition: the frame of the
     // node clicked, or else the innermost open frame around the point. (Open
@@ -1143,8 +1165,17 @@ export function GraphCanvas() {
                 pointerEvents: "none",
               }}
             >
-              Click where the new <b>{armed.label}</b> should go.{" "}
-              <span style={{ opacity: 0.8 }}>Option-click to put down several. Esc to cancel.</span>
+              {isFunctionType(armed.type) ? (
+                <>
+                  Click a mechanism to give it this function (<b>{armed.label}</b>).{" "}
+                  <span style={{ opacity: 0.8 }}>Esc to cancel.</span>
+                </>
+              ) : (
+                <>
+                  Click where the new <b>{armed.label}</b> should go.{" "}
+                  <span style={{ opacity: 0.8 }}>Option-click to put down several. Esc to cancel.</span>
+                </>
+              )}
             </div>
           )}
           {portChooser && (

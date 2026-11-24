@@ -931,6 +931,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - modulatory projections to parameter ports (#616) › LC→gain control edges render · CI · #616
 
+**`frontend/e2e/place-function-on-mechanism.spec.ts`** (Browser (Playwright))
+
+- a function goes onto a mechanism (#348, #349) › empty canvas: a message, the pick stays, nothing is written; decision: its function changes; Undo puts it back · CI · #348
+
 **`frontend/src/utils/componentIcons.test.ts`** (Frontend unit (vitest))
 
 - Components panel icons (#283) › every palette item has an icon · CI · #283
@@ -4889,6 +4893,12 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - test_the_file_is_capped · CI · #177
 - test_turning_action_logging_off_removes_the_actions_from_both_files · CI · #177
 - test_a_bad_line_in_the_file_is_skipped · CI · #177
+
+**`backend/tests/test_add_function_refused.py`** (Backend (pytest))
+
+- test_add_node_refuses_function_and_leaves_file_alone · CI · #349
+- test_mechanisms_are_not_function_types · CI · #349
+- test_structural_change_route_answers_400_for_a_function · CI · #349
 
 **`backend/tests/test_anchor_collisions.py`** (Backend (pytest))
 
