@@ -51,6 +51,40 @@ async function pickFromMenu(page: Page, type: string) {
   throw new Error(`${type} not reached in the menu`);
 }
 
+/**
+ * In graph coordinates: the box around every node except `skip`, a node's
+ * box, and every arrow's drawn path (by arrow id).
+ */
+async function graphState(page: Page, skip = "") {
+  return page.evaluate((skip) => {
+    const vp = document.querySelector(".react-flow__viewport") as HTMLElement;
+    const pane = document.querySelector(".react-flow__pane")!.getBoundingClientRect();
+    const m = new DOMMatrixReadOnly(getComputedStyle(vp).transform);
+    const flow = (r: DOMRect) => ({
+      left: (r.left - pane.left - m.e) / m.a,
+      top: (r.top - pane.top - m.f) / m.d,
+      right: (r.right - pane.left - m.e) / m.a,
+      bottom: (r.bottom - pane.top - m.f) / m.d,
+    });
+    const boxes = Array.from(document.querySelectorAll(".react-flow__node"))
+      .filter((e) => e.getAttribute("data-id") !== skip)
+      .map((e) => flow(e.getBoundingClientRect()))
+      .filter((b) => b.right > b.left);
+    const bounds = {
+      left: Math.min(...boxes.map((b) => b.left)),
+      top: Math.min(...boxes.map((b) => b.top)),
+      right: Math.max(...boxes.map((b) => b.right)),
+      bottom: Math.max(...boxes.map((b) => b.bottom)),
+    };
+    const mine = skip ? document.querySelector(`.react-flow__node[data-id="${skip}"]`) : null;
+    const paths: Record<string, string> = {};
+    for (const e of Array.from(document.querySelectorAll(".react-flow__edge"))) {
+      paths[e.getAttribute("data-id") ?? ""] = e.querySelector(".react-flow__edge-path")?.getAttribute("d") ?? "";
+    }
+    return { bounds, node: mine ? flow(mine.getBoundingClientRect()) : null, paths };
+  }, skip);
+}
+
 /** The declaration of `name` in the file, up to its closing parenthesis. */
 function declaration(file: string, name: string): string {
   const src = readFileSync(file, "utf8");
@@ -70,6 +104,10 @@ test.describe("adding a component from the keyboard (#411)", { tag: "@ci" }, () 
     const placement = page.getByTestId("keyboard-placement");
 
     // --- A mechanism --------------------------------------------------
+    // Nothing selected: the graph's box and its arrows, before.
+    await expect(page.locator(".react-flow__node.selected")).toHaveCount(0);
+    const before = await graphState(page);
+    expect(Object.keys(before.paths).length).toBeGreaterThan(0);
     // Enter on Mechanisms opens its menu, and focus goes into it.
     const mechanisms = palette.locator('[data-testid="palette-category"][data-category="mechanisms"]');
     await mechanisms.focus();
@@ -130,6 +168,13 @@ test.describe("adding a component from the keyboard (#411)", { tag: "@ci" }, () 
         }),
       )
       .toEqual([]);
+    // With nothing selected it went beside the graph, outside the box the
+    // graph filled before, never into a gap inside it; and no arrow moved.
+    const after = await graphState(page, "New_ProcessingMechanism_1");
+    const n = after.node!;
+    const b = before.bounds;
+    expect(n.left >= b.right || n.right <= b.left || n.top >= b.bottom || n.bottom <= b.top, JSON.stringify({ n, b })).toBe(true);
+    expect(after.paths).toEqual(before.paths);
 
     // --- A function ---------------------------------------------------
     const functions = palette.locator('[data-testid="palette-category"][data-category="functions"]');
