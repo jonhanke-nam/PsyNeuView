@@ -4803,7 +4803,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - Components icon strip (#372, #395) › a fresh strip shows four categories, no shortcuts and no heading words · CI · #372
 - Components icon strip (#372, #395) › with shortcuts on and headings off, a divider with no words sets them below the categories · CI · #372
 - Components icon strip (#372, #395) › with the headings setting on, Components and Recent show above their groups · CI · #372
-- Components icon strip (#372, #395) › at Text size ${scale}, each heading sits on one line within the strip · CI · #372
+- Components icon strip (#372, #395) › at Text size ${scale}, both headings are the same size, each on one line within the strip · CI · #372
 - Components icon strip (#372, #395) › a row's empty star shows on hover or focus; a starred row keeps its star · CI · #372
 
 **`frontend/e2e/notification-dwell.spec.ts`** (Browser (Playwright))
