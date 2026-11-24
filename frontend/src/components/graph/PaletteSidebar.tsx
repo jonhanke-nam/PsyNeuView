@@ -507,8 +507,9 @@ function PaletteLeaf({
   onToggleFavorite: () => void;
 }) {
   // #252: picked up and waiting to be put on the graph.
+  // #387: shaded and outlined in the selection colours (index.css, keyed
+  // on data-armed), like the open category's strip icon.
   const armed = usePaletteStore((s) => s.armed?.type === item.type);
-  const armedStyle = armed ? { background: "var(--pnv-primary-tint)", outline: "2px solid var(--pnv-primary)", outlineOffset: -2 } : {};
   // #283: the component's icon, in its type colour. The text glyph is only a
   // fallback; componentIcons.test.ts checks every item has an icon.
   const icon = iconForType(item.type);
@@ -532,14 +533,12 @@ function PaletteLeaf({
         data-armed={armed ? "true" : undefined}
         aria-pressed={armed}
         title={title}
+        className="pnv-palette-tile"
         style={{
-          ...armedStyle,
           width: 32,
           height: 32,
           margin: "2px auto",
           borderRadius: 4,
-          border: "1px solid var(--pnv-border)",
-          background: "var(--pnv-surface)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -567,7 +566,6 @@ function PaletteLeaf({
       aria-pressed={armed}
       className="pnv-palette-row"
       style={{
-        ...armedStyle,
         display: "flex",
         alignItems: "center",
         gap: 8,
@@ -577,12 +575,6 @@ function PaletteLeaf({
         userSelect: "none",
         borderRadius: 4,
         fontSize: "var(--pnv-fs-12)",
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.background = "var(--pnv-primary-tint)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.background = armed ? "var(--pnv-primary-tint)" : "transparent";
       }}
       title={`${item.type} \u2014 drag onto the graph, or click it and then click where it goes`}
     >
@@ -748,13 +740,14 @@ function CompactCategoryIcon({
       title={node.label}
       data-testid="palette-category"
       data-category={node.id}
+      // #387: the open category is shaded as well as outlined (index.css).
+      data-active={isActive ? "true" : undefined}
+      className="pnv-palette-tile"
       style={{
         width: 32,
         height: 32,
         margin: "2px auto",
         borderRadius: 4,
-        border: `1px solid ${isActive ? "var(--pnv-primary)" : "var(--pnv-border)"}`,
-        background: isActive ? "var(--pnv-primary-tint)" : "var(--pnv-surface)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -945,6 +938,10 @@ function CompactFlyout({
             <button
               key={child.id}
               onClick={() => usePaletteStore.getState().openCompactFlyout(child.id)}
+              // #387: hover tints like a component row, lighter than the
+              // picked-up one (index.css).
+              className="pnv-palette-row"
+              data-testid="palette-flyout-branch"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -952,17 +949,10 @@ function CompactFlyout({
                 width: "100%",
                 padding: "6px 12px",
                 border: "none",
-                background: "none",
                 cursor: "pointer",
                 fontSize: "var(--pnv-fs-12)",
                 color: "var(--pnv-text-body)",
                 textAlign: "left",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "var(--pnv-primary-tint)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "transparent";
               }}
             >
               <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
