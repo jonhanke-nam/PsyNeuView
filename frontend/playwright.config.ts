@@ -152,7 +152,13 @@ export default defineConfig({
   timeout: 120_000,
   use: {
     baseURL,
-    trace: "on-first-retry",
+    // #359: record a trace on every attempt and keep it only when that attempt
+    // failed. "on-first-retry" traced the retry, so a test that failed and then
+    // passed on retry left only the passing attempt's trace: nothing to
+    // diagnose. Now the failed attempt's trace (and its screenshot, below) is
+    // kept, a test that fails twice keeps both, and a passing test keeps none,
+    // so artifacts for a green run don't grow.
+    trace: "retain-on-failure",
     video: "on-first-retry",
     screenshot: "only-on-failure",
     // 10s was too tight for backend POSTs (model load / test reset) when the CI
