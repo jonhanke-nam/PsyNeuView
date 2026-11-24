@@ -269,20 +269,22 @@ setup text picks, in order:
 The Mac app already runs `pip install -e .` in the install's `backend/`, so
 `<install>/backend/.venv/bin/psyneuview-mcp` exists. But that path names the
 installed version (`.../PsyNeuView/psyneuview-0.6.16/backend/...`), and an
-update moves it, which would break the setup pasted into Claude. So that the
-setup survives updates, the Mac app needs to (a change for the Mac app repo,
-not made here):
+update moves it, which would break the setup pasted into Claude. So the
+setup survives updates, the Mac app
+([jonhanke-nam/PsyNeuView-MacApp#86](https://github.com/jonhanke-nam/PsyNeuView-MacApp/issues/86))
+does this:
 
-1. After each install or update, once the backend's `pip install -e .` has
-   finished, make a link at a path that doesn't change, for example
-   `~/Library/Application Support/PsyNeuView/bin/psyneuview-mcp`, pointing to
-   the current install's `backend/.venv/bin/psyneuview-mcp`. Replace it
-   atomically (make the new link beside it, then rename it over the old), and
-   make the `bin` folder writable by the user only.
-2. Start the backend with `PSYNEUVIEW_MCP_LAUNCHER` set to that path, beside
-   the other variables it passes (`backendOverrides`). The setup text then
-   names the stable path, and no `PYTHONPATH`.
-3. The test app keeps its own link (its own folder), as it keeps its own
+1. It writes `~/Library/Application Support/PsyNeuView/bin/psyneuview-mcp`, a
+   path that doesn't change, as a small shell script, not a link. The script
+   sets `PYTHONPATH` to the current install's `backend/` and runs
+   `backend/.venv/bin/python -m app.mcp_server`. It is readable, writable
+   and runnable by the user only (`0700`).
+2. It writes the script again on every backend start, so after an update the
+   script names the new install's backend.
+3. It starts the backend with `PSYNEUVIEW_MCP_LAUNCHER` set to that path,
+   beside the other variables it passes. The setup text then names the
+   stable path, and no `PYTHONPATH`.
+4. The test app keeps its own script (its own folder), as it keeps its own
    preferences, so it never takes over the real app's setup.
 
 Nothing else is needed: the command finds the backend's port through the
