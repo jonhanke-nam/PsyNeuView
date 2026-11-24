@@ -6,7 +6,9 @@ import { describe, expect, it } from "vitest";
 import {
   boundaryDir,
   boundaryInward,
+  isCircle,
   nodeShapeFor,
+  shapeFromShowGraph,
   onShapeBoundary,
   polygonPoints,
   shapeTooltip,
@@ -29,6 +31,37 @@ describe("nodeShapeFor", () => {
     expect(nodeShapeFor({ roles: ["CYCLE", "FEEDBACK_SENDER"] })).toBe("octagon");
     expect(nodeShapeFor(undefined)).toBe("oval");
     expect(nodeShapeFor({})).toBe("oval");
+  });
+});
+
+describe("show_graph's own shape (#385)", () => {
+  it("maps Graphviz's shapes onto the canvas's", () => {
+    expect(shapeFromShowGraph("oval")).toBe("oval");
+    expect(shapeFromShowGraph("ellipse")).toBe("oval");
+    expect(shapeFromShowGraph("circle")).toBe("circle");
+    expect(shapeFromShowGraph("doublecircle")).toBe("doublecircle");
+    expect(shapeFromShowGraph("octagon")).toBe("octagon");
+    expect(shapeFromShowGraph("doubleoctagon")).toBe("doubleoctagon");
+    expect(shapeFromShowGraph("box")).toBe("rectangle");
+    expect(shapeFromShowGraph("egg")).toBeNull();
+    expect(shapeFromShowGraph(undefined)).toBeNull();
+  });
+
+  it("is preferred to the role rule where the backend asked show_graph", () => {
+    // A node show_graph draws as a circle although its roles say oval, and
+    // one the role rule would make a double circle that show_graph doesn't.
+    expect(nodeShapeFor({ roles: ["INTERNAL"], showGraphShape: "circle" })).toBe("circle");
+    expect(nodeShapeFor({ roles: ["CYCLE"], showGraphShape: "oval" })).toBe("oval");
+    // A shape the canvas can't draw keeps the role rule.
+    expect(nodeShapeFor({ roles: ["CYCLE"], showGraphShape: "egg" })).toBe("doublecircle");
+    // A collapsed composition stays a rectangle.
+    expect(nodeShapeFor({ type: "Composition", showGraphShape: "oval" })).toBe("rectangle");
+  });
+
+  it("knows its circles", () => {
+    expect(isCircle("circle")).toBe(true);
+    expect(isCircle("doublecircle")).toBe(true);
+    expect(isCircle("oval")).toBe(false);
   });
 });
 
