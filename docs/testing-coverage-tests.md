@@ -3821,6 +3821,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - lines between nodes: a width in Settings, arrowheads follow, remembered · CI · #107
 
+**`frontend/e2e/expanded-node-fits-shape.spec.ts`** (Browser (Playwright))
+
+- an expanded node holds its text inside its shape (#333) › Stroop: an oval · CI · #333
+- an expanded node holds its text inside its shape (#333) › EGO: an oval and an octagon, in an automatic layout · CI · #333
+- an expanded node holds its text inside its shape (#333) › Botvinick: a double circle · CI · #333
+- an expanded node holds its text inside its shape (#333) › a controller: a double octagon · CI · #333
+
 **`frontend/e2e/graph-legend.spec.ts`** (Browser (Playwright))
 
 - Graph legend opening state (#7) › opens collapsed by default, and Show/Hide still folds it · CI · #7
@@ -3931,6 +3938,8 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - a node's oval (#210) › is never smaller than Graphviz's least oval · CI · #210
 - a node's oval (#210) › grows with the name · CI · #210
 - a node's oval (#210) › holds the name inside the outline at every width, single or double · CI · #210
+- an expanded node's box (#333) › holds the text's corners inside the outline, clear of it, for every shape · CI · #333
+- an expanded node's box (#333) › is no bigger than the shape needs: √2 for a round or cut shape, nothing for a rectangle · CI · #333
 
 **`frontend/src/utils/nodeShape.test.ts`** (Frontend unit (vitest))
 

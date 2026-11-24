@@ -9,9 +9,9 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 158 | 430 | 418 tests in 152 files |
+| Browser (Playwright) | 159 | 434 | 422 tests in 153 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 134 | 1203 | 1203 tests in 134 files |
+| Frontend unit (vitest) | 134 | 1205 | 1205 tests in 134 files |
 | Backend (pytest) | 188 | 1747 | 1747 tests in 188 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -31,7 +31,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 54 tests | – | 28 files, 262 tests | 19 files, 322 tests | 638 of 638 |
-| [Look and style conventions](#style) | 13 files, 31 tests | – | 8 files, 47 tests | – | 76 of 78 |
+| [Look and style conventions](#style) | 14 files, 35 tests | – | 8 files, 49 tests | – | 82 of 84 |
 | [Layout, views and compositions](#layout) | 21 files, 47 tests | – | 21 files, 151 tests | 5 files, 56 tests | 253 of 254 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
 | [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 13 files, 78 tests | 18 files, 194 tests | 288 of 291 |
@@ -952,6 +952,7 @@ No tests yet.
 | `arrowheads-at-end.spec.ts` | Browser | 1 | yes |  | Arrowheads sit at the end of each line by default, where it meets the receiving node, as show_graph draws them (they used to sit mid-line). |
 | `dialog-sweep.spec.ts` | Browser | 8 | yes | #1289 | Every dialog and pop-up closes the same ways (#1289): the sweep. |
 | `edge-line-width.spec.ts` | Browser | 1 | yes | #107 | The lines between nodes have a width in Settings ▸ Appearance ▸ Lines between nodes (#107). |
+| `expanded-node-fits-shape.spec.ts` | Browser | 4 | yes | #333 | An expanded node holds its text inside its own shape (#333). |
 | `graph-legend.spec.ts` | Browser | 2 | yes | #7 | The graph legend opens collapsed, and Settings ▸ Appearance chooses (#7). |
 | `node-outlines.spec.ts` | Browser | 1 | yes | #190, #42 | Node outlines are heavier by default and adjustable in Settings ▸ Appearance ▸ Node outlines. |
 | `node-shapes.spec.ts` | Browser | 2 | yes | #192, #193 | Node shapes follow show_graph (#192, #193). |
@@ -968,7 +969,7 @@ No tests yet.
 | `styleConventions.test.ts` | Frontend unit | 11 | yes | #1302 | The palette and the button kinds, held across the whole frontend. |
 | `typeColourContrast.test.ts` | Frontend unit | 2 | yes | #283, #109 | Every component type's colour can be seen. |
 | `arrowShapes.test.ts` | Frontend unit | 8 | yes | #164 | Shaping an arrow by hand, as a step of its own (#164). |
-| `nodeBox.test.ts` | Frontend unit | 3 | yes |  | Whether the corners of a name's box lie inside an oval this size, inset by the outline. |
+| `nodeBox.test.ts` | Frontend unit | 5 | yes |  | Whether the corners of a name's box lie inside an oval this size, inset by the outline. |
 | `nodeShape.test.ts` | Frontend unit | 8 | yes | #192, #193 | Node shapes follow show_graph (#192, #193): which node gets which shape, what the shape says, and where its outline is for ports and edge ends. |
 
 <details><summary>Every browser and tutorial test in this area</summary>
@@ -985,6 +986,10 @@ No tests yet.
 | dialog sweep (#1289) › the palette's compact flyout | `dialog-sweep.spec.ts` | Browser | yes | #1289 |
 | dialog sweep (#1289) › the first-launch offer | `dialog-sweep.spec.ts` | Browser | yes | #1289 |
 | lines between nodes: a width in Settings, arrowheads follow, remembered | `edge-line-width.spec.ts` | Browser | yes | #107 |
+| an expanded node holds its text inside its shape (#333) › Stroop: an oval | `expanded-node-fits-shape.spec.ts` | Browser | yes | #333 |
+| an expanded node holds its text inside its shape (#333) › EGO: an oval and an octagon, in an automatic layout | `expanded-node-fits-shape.spec.ts` | Browser | yes | #333 |
+| an expanded node holds its text inside its shape (#333) › Botvinick: a double circle | `expanded-node-fits-shape.spec.ts` | Browser | yes | #333 |
+| an expanded node holds its text inside its shape (#333) › a controller: a double octagon | `expanded-node-fits-shape.spec.ts` | Browser | yes | #333 |
 | Graph legend opening state (#7) › opens collapsed by default, and Show/Hide still folds it | `graph-legend.spec.ts` | Browser | yes | #7 |
 | Graph legend opening state (#7) › Starts expanded opens it unfolded, now and for the next model opened | `graph-legend.spec.ts` | Browser | yes | #7 |
 | node outlines: show_graph's colours and heavier defaults, one width in Settings, emphasis and selection follow | `node-outlines.spec.ts` | Browser | yes | #190 |
