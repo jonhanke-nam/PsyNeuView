@@ -54,6 +54,7 @@ import { PaletteSidebar } from "./PaletteSidebar";
 import { NodeContextMenu } from "./NodeContextMenu";
 import { OffscreenNodesIndicator } from "./OffscreenNodesIndicator";
 import { TourOverlay } from "./TourOverlay";
+import { KeyboardPlacer } from "./KeyboardPlacer";
 import { addNodeToModel, deleteProjection, deleteSchedulingCondition, FUNCTION_NEEDS_MECHANISM, functionRefusal, renameProjection, setMechanismFunction } from "@/utils/nodeActions";
 import { isFunctionType } from "@/constants/pnlTypes";
 import { isProjectionType, findDefByType } from "@/constants/pnlTypes";
@@ -707,6 +708,23 @@ export function GraphCanvas() {
     if (!e.altKey) usePaletteStore.getState().setArmed(null);
     return true;
   }, [filePath, setSource, loadModelFromServer, addNotification, screenToFlowPosition, getInternalNode, putFunctionOn]);
+  // #411: picked up from the keyboard, KeyboardPlacer puts it down: at a
+  // point it chose (a component, top level), or on the mechanism it chose (a
+  // function). The same changes a click makes.
+  const placeFromKeyboard = useCallback((at: { x: number; y: number }, keep: boolean) => {
+    const pick = usePaletteStore.getState().armed;
+    if (!pick || !filePath) return;
+    addNodeToModel(filePath, pick.type, pick.defaults, setSource, loadModelFromServer, addNotification, at);
+    usePaletteStore.getState().addRecentlyUsed(pick.type);
+    if (!keep) usePaletteStore.getState().setArmed(null);
+  }, [filePath, setSource, loadModelFromServer, addNotification]);
+  const giveFunctionFromKeyboard = useCallback((node: { id: string; type?: string; data?: any }, keep: boolean) => {
+    const pick = usePaletteStore.getState().armed;
+    if (!pick) return;
+    if (putFunctionOn(pick.type, node) && !keep) usePaletteStore.getState().setArmed(null);
+  }, [putFunctionOn]);
+  // What the placing hint says while placing from the keyboard.
+  const [keyboardNote, setKeyboardNote] = useState("");
   useEffect(() => {
     if (!armed) return;
     const onKey = (e: KeyboardEvent) => {
@@ -1199,6 +1217,7 @@ export function GraphCanvas() {
           {armed && (
             <div
               data-testid="place-component-hint"
+              id="place-component-hint"
               role="status"
               style={{
                 position: "absolute",
@@ -1215,7 +1234,10 @@ export function GraphCanvas() {
                 pointerEvents: "none",
               }}
             >
-              {isFunctionType(armed.type) ? (
+              {armed.viaKeyboard && keyboardNote ? (
+                // #411: placing from the keyboard: each step, said as it happens.
+                keyboardNote
+              ) : isFunctionType(armed.type) ? (
                 <>
                   Click a mechanism to give it this function (<b>{armed.label}</b>).{" "}
                   {/* Full white: at 0.8 it fell below WCAG AA on the blue. */}
@@ -1302,6 +1324,17 @@ export function GraphCanvas() {
               proOptions={{ hideAttribution: true }}
             >
               <Background />
+              {armed?.viaKeyboard && (
+                <KeyboardPlacer
+                  // A new pick starts afresh.
+                  key={armed.type}
+                  pick={armed}
+                  nodes={nodes}
+                  place={placeFromKeyboard}
+                  giveFunction={giveFunctionFromKeyboard}
+                  announce={setKeyboardNote}
+                />
+              )}
               {/* #52: our own Fit, framing edges too. The built-in one queues a
                   node-only fit that would land after ours, so it is hidden;
                   CSS keeps this button in its place above the lock. */}
