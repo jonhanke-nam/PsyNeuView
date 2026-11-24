@@ -9,9 +9,9 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 159 | 431 | 419 tests in 153 files |
+| Browser (Playwright) | 160 | 433 | 421 tests in 154 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 134 | 1203 | 1203 tests in 134 files |
+| Frontend unit (vitest) | 134 | 1204 | 1204 tests in 134 files |
 | Backend (pytest) | 188 | 1749 | 1749 tests in 188 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -30,9 +30,9 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Running, learning and debugging](#running) | 10 files, 27 tests | – | 8 files, 84 tests | 51 files, 254 tests | 365 of 365 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
-| [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 54 tests | – | 28 files, 262 tests | 19 files, 322 tests | 638 of 638 |
+| [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 28 files, 263 tests | 19 files, 322 tests | 640 of 640 |
 | [Look and style conventions](#style) | 13 files, 31 tests | – | 8 files, 47 tests | – | 76 of 78 |
-| [Layout, views and compositions](#layout) | 21 files, 47 tests | – | 21 files, 151 tests | 5 files, 56 tests | 253 of 254 |
+| [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
 | [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 13 files, 78 tests | 18 files, 194 tests | 288 of 291 |
 
@@ -821,7 +821,7 @@ No tests yet.
 | File | Layer | Tests | In CI | Issues | What it checks |
 |---|---|---|---|---|---|
 | `blank-screen-setting.spec.ts` | Browser | 10 | yes | #215 | A blank screen by choice (#215): Settings ▸ Appearance ▸ Panels. |
-| `components-panel-start-setting.spec.ts` | Browser | 2 | yes | #113 | How the Components panel opens is a setting: Settings ▸ Appearance (#113). |
+| `components-panel-start-setting.spec.ts` | Browser | 3 | yes | #113 | How the Components panel opens is a setting: Settings ▸ Appearance (#113). |
 | `help-keyboard-shortcuts.spec.ts` | Browser | 4 | yes | #292 | Help ▸ Keyboard Shortcuts (#292). |
 | `keep-pnl-current.spec.ts` | Browser | 4 | yes | #1304 | Keep PsyNeuLink current and show it (#1304). |
 | `local-checkout-empty-folder.spec.ts` | Browser | 3 | yes | #1342 | Another local checkout…: the folder is checked as soon as it is typed, and an empty one can have PsyNeuLink downloaded into it (#1342). |
@@ -850,7 +850,7 @@ No tests yet.
 | `reference.test.ts` | Frontend unit | 10 | yes |  |  |
 | `registry.test.ts` | Frontend unit | 14 | yes |  |  |
 | `storage.test.ts` | Frontend unit | 11 | yes |  | Overrides live in localStorage. |
-| `componentsPanelStart.test.ts` | Frontend unit | 5 | yes |  | The suite runs on node, not jsdom (vitest.config.ts): stub localStorage, as graphLegendStore.test.ts does. |
+| `componentsPanelStart.test.ts` | Frontend unit | 6 | yes |  | The suite runs on node, not jsdom (vitest.config.ts): stub localStorage, as graphLegendStore.test.ts does. |
 | `edgeLineStore.test.ts` | Frontend unit | 6 | yes | #107 | #107: the width of the lines between nodes, remembered per browser. |
 | `fitButtonStyleStore.test.ts` | Frontend unit | 3 | yes | #289 | #289: the Fit button shows its icon by default (no translation needed), and the choice of the word "Fit" is remembered per browser. |
 | `graphLayoutDefaultStore.test.ts` | Frontend unit | 4 | yes |  |  |
@@ -898,6 +898,7 @@ No tests yet.
 | a blank screen by choice (#215) › a stored blank layout with the setting off, or corrupt stored values, fall back safely | `blank-screen-setting.spec.ts` | Browser | yes | #215 |
 | a blank screen by choice (#215) › a walkthrough started from blank shows its panels and ends on blank, or the graph if the setting went off | `blank-screen-setting.spec.ts` | Browser | yes | #215 |
 | a blank screen by choice (#215) › a walkthrough opened by its link from blank ends on blank | `blank-screen-setting.spec.ts` | Browser | yes | #215 |
+| Components panel opening setting (#113) › a fresh app opens the panel as the icon strip (#345) | `components-panel-start-setting.spec.ts` | Browser | yes | #113 |
 | Components panel opening setting (#113) › Starts as the icon strip opens the strip after a reload | `components-panel-start-setting.spec.ts` | Browser | yes | #113 |
 | Components panel opening setting (#113) › ◀ collapses it for the session only; a reload comes back open | `components-panel-start-setting.spec.ts` | Browser | yes | #113 |
 | Help ▸ Keyboard Shortcuts › the Help menu has its four items, and the reference lists every shortcut | `help-keyboard-shortcuts.spec.ts` | Browser | yes | #292 |
@@ -1017,6 +1018,7 @@ No tests yet.
 
 | File | Layer | Tests | In CI | Issues | What it checks |
 |---|---|---|---|---|---|
+| `add-keeps-view.spec.ts` | Browser | 1 | yes | #346 | Adding a component keeps the view still (#346). |
 | `composition-cim-edges.spec.ts` | Browser | 1 | yes | #644 | Edges to/from a nested composition's CIM ports render (#644). |
 | `composition-expand-geometry.spec.ts` | Browser | 3 | yes | #208, #209 | Expanding a nested composition that was folded and moved (#208, #209). |
 | `composition-frame-buttons.spec.ts` | Browser | 5 | yes | #194 | The three buttons on a composition frame (#194): Enter, Inset, Collapse. |
@@ -1069,6 +1071,7 @@ No tests yet.
 
 | Test | File | Layer | In CI | Issue |
 |---|---|---|---|---|
+| adding a component keeps the view still (#346) › the zoom and pan don't change, and the node is put down at the click | `add-keeps-view.spec.ts` | Browser | yes | #346 |
 | nested-composition CIM edges (#644) › edges to/from the EM composition render | `composition-cim-edges.spec.ts` | Browser | yes | #644 |
 | expanding a folded, moved composition (#208, #209) › Like show_graph: the open frame clears the outer nodes and its projections reach its members | `composition-expand-geometry.spec.ts` | Browser | yes | #208 |
 | expanding a folded, moved composition (#208, #209) › dragging: an open frame dropped on outer nodes moves them aside, and a node dropped on it lands beside it | `composition-expand-geometry.spec.ts` | Browser | yes | #208 |
