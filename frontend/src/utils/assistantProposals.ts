@@ -22,6 +22,27 @@ export function needsConsent(prev: AssistantSettings, next: AssistantSettings): 
   return [];
 }
 
+/**
+ * What to call the model in use (#370): the user's alias, else the service's
+ * display name, else the id. A blank model is the service's default: for
+ * Anthropic that is `defaultId`.
+ */
+export function modelLabel(
+  settings: AssistantSettings,
+  models: { id: string; display_name: string }[],
+  defaultId = "",
+): string {
+  if (settings.agent.type === "none") return "";
+  const id = settings.agent.model || (settings.agent.type === "anthropic" ? defaultId || ANTHROPIC_DEFAULT_MODEL : "");
+  if (!id) return "the server's default model";
+  const alias = settings.model_aliases[id];
+  if (alias) return `${alias} (${id})`;
+  return models.find((m) => m.id === id)?.display_name ?? id;
+}
+
+/** The backend's default Claude model when none is chosen (agents.DEFAULT_ANTHROPIC_MODEL). */
+export const ANTHROPIC_DEFAULT_MODEL = "claude-opus-5-5";
+
 /** The host messages go to, for a short summary: "api.anthropic.com", "localhost:11434". */
 export function destinationHost(agent: AssistantSettings["agent"]): string | null {
   if (agent.type === "none") return null;

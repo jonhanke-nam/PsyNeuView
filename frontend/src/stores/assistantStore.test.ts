@@ -24,6 +24,7 @@ beforeEach(() => {
     available: null, settings: DEFAULT_ASSISTANT_SETTINGS, keySet: false, loadError: null, saving: false,
     pendingRaise: null, sessionId: null, items: [], proposals: {}, next: 0, turn: "idle",
     lastDone: null, tokensUsed: 0, reviewOffer: null,
+    models: { list: [], default: "", ok: null, message: "", loading: false, forAgent: "" },
   });
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
@@ -37,6 +38,17 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("assistantStore (#179)", () => {
+  it("fetches the model list, and keeps the last one when a refresh fails (#370)", async () => {
+    useAssistantStore.setState({ settings: { ...DEFAULT_ASSISTANT_SETTINGS, agent: { type: "anthropic", model: "", base_url: "" } } });
+    const list = [{ id: "claude-opus-5-5", display_name: "Claude Opus 5.5" }];
+    answers["GET /api/assistant/models"] = () => json({ ok: true, agent: "anthropic", models: list, default: "claude-opus-5-5", message: "1 model offered." });
+    await useAssistantStore.getState().loadModels();
+    expect(useAssistantStore.getState().models).toMatchObject({ ok: true, list, default: "claude-opus-5-5", loading: false });
+    answers["GET /api/assistant/models"] = () => json({ ok: false, agent: "anthropic", models: [], default: "claude-opus-5-5", message: "Couldn't reach api.anthropic.com." });
+    await useAssistantStore.getState().loadModels();
+    expect(useAssistantStore.getState().models).toMatchObject({ ok: false, list, message: "Couldn't reach api.anthropic.com." });
+  });
+
   it("is unavailable when the backend has no assistant", async () => {
     await useAssistantStore.getState().load();
     expect(useAssistantStore.getState().available).toBe(false);

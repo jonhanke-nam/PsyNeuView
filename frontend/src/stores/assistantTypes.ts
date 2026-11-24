@@ -40,6 +40,24 @@ export interface AssistantSettings {
    * tracked. require: the assistant won't turn on where no sandbox holds.
    */
   sandbox: { all_runs: boolean; require: boolean };
+  /** A short name of the user's own per model id (#370); the real id is what is sent. */
+  model_aliases: Record<string, string>;
+}
+
+/** One model the chosen service offers (#370). */
+export interface ModelEntry {
+  id: string;
+  display_name: string;
+}
+
+/** GET /api/assistant/models (#370): never the key. */
+export interface ModelListResponse {
+  ok: boolean;
+  agent: AgentType;
+  models: ModelEntry[];
+  /** The one to preselect when none is saved; "" for the server's own default. */
+  default: string;
+  message: string;
 }
 
 /**
@@ -62,7 +80,7 @@ export interface SandboxStatus {
 }
 
 /** The keys a PUT may carry: what the backend stores, and nothing it adds to a GET (`available`). */
-export const ASSISTANT_SETTINGS_KEYS = ["enabled", "agent", "folders", "autonomy", "saving", "visibility", "limits", "keep_log", "sandbox"] as const;
+export const ASSISTANT_SETTINGS_KEYS = ["enabled", "agent", "folders", "autonomy", "saving", "visibility", "limits", "keep_log", "sandbox", "model_aliases"] as const;
 
 /** `settings` reduced to the keys the backend takes. */
 export function settingsBody(settings: AssistantSettings): AssistantSettings {
@@ -81,6 +99,7 @@ export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
   limits: { tool_calls: 25, minutes: 10, max_tokens: 100000 },
   keep_log: true,
   sandbox: { all_runs: true, require: true },
+  model_aliases: {},
 };
 
 /**

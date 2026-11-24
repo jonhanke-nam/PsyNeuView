@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { registerCommand } from "@/shortcuts/commands";
 import { useAssistantStore } from "@/stores/assistantStore";
 import type { AssistantEvent, Proposal } from "@/stores/assistantTypes";
-import { pendingProposals } from "@/utils/assistantProposals";
+import { modelLabel, pendingProposals } from "@/utils/assistantProposals";
 import { Button } from "../common/Button";
 import { SafeText } from "./SafeText";
 import { hasInvisible, showInvisible } from "@/utils/safeText";
@@ -28,6 +28,9 @@ export function AssistantPanel() {
   const lastDone = useAssistantStore((s) => s.lastDone);
   const tokensUsed = useAssistantStore((s) => s.tokensUsed);
   const maxTokens = useAssistantStore((s) => s.settings.limits.max_tokens);
+  const settings = useAssistantStore((s) => s.settings);
+  const models = useAssistantStore((s) => s.models);
+  const model = modelLabel(settings, models.list, models.default);
   const loadError = useAssistantStore((s) => s.loadError);
   const send = useAssistantStore((s) => s.send);
   const stop = useAssistantStore((s) => s.stop);
@@ -125,6 +128,11 @@ export function AssistantPanel() {
         <span data-testid="assistant-turn-state" style={{ flex: 1, minWidth: 0, color: loadError ? "var(--pnv-danger)" : "var(--pnv-text-muted)" }}>
           {loadError ?? state}
         </span>
+        {model && (
+          <span data-testid="assistant-model-name" style={{ color: "var(--pnv-text-hint)" }} title={`The model in use: ${settings.agent.model || "the service's default"} (Settings: AI assistant)`}>
+            {model}
+          </span>
+        )}
         {tokensUsed > 0 && (
           <span data-testid="assistant-tokens-used" style={{ color: "var(--pnv-text-hint)" }} title="Tokens the agent's service has reported for this session, against the limit in Settings">
             {tokensUsed.toLocaleString()} of {maxTokens.toLocaleString()} tokens

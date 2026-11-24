@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_ASSISTANT_SETTINGS, type Proposal } from "@/stores/assistantTypes";
-import { contextFor, destinationHost, needsConsent, pendingProposals, setProposalState, sharedWords, whereDataGoes, withProposal } from "./assistantProposals";
+import { contextFor, destinationHost, modelLabel, needsConsent, pendingProposals, setProposalState, sharedWords, whereDataGoes, withProposal } from "./assistantProposals";
 
 const base = DEFAULT_ASSISTANT_SETTINGS;
 
@@ -72,5 +72,17 @@ describe("whereDataGoes (#179)", () => {
     expect(whereDataGoes({ type: "none", model: "", base_url: "" })).toMatch(/nothing is sent/);
     expect(whereDataGoes({ type: "anthropic", model: "", base_url: "" })).toMatch(/Anthropic/);
     expect(whereDataGoes({ type: "openai_compatible", model: "", base_url: "http://localhost:1/v1" })).toContain("http://localhost:1/v1");
+  });
+});
+
+describe("modelLabel (#370)", () => {
+  const anthropic = { ...base, agent: { type: "anthropic" as const, model: "", base_url: "" } };
+  const list = [{ id: "claude-opus-5-5", display_name: "Claude Opus 5.5" }, { id: "claude-haiku-5", display_name: "Claude Haiku 5" }];
+  it("is the alias with the id, else the display name, else the id", () => {
+    expect(modelLabel(anthropic, list, "claude-opus-5-5")).toBe("Claude Opus 5.5");
+    expect(modelLabel({ ...anthropic, model_aliases: { "claude-opus-5-5": "big" } }, list)).toBe("big (claude-opus-5-5)");
+    expect(modelLabel({ ...anthropic, agent: { ...anthropic.agent, model: "claude-x" } }, list)).toBe("claude-x");
+    expect(modelLabel({ ...base, agent: { type: "openai_compatible", model: "", base_url: "http://localhost:1" } }, [])).toBe("the server's default model");
+    expect(modelLabel(base, list)).toBe("");
   });
 });

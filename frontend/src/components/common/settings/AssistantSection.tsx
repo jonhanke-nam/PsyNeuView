@@ -15,9 +15,9 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-import { useAssistantStore, type ConnectionTest } from "@/stores/assistantStore";
+import { agentKey, useAssistantStore, type ConnectionTest } from "@/stores/assistantStore";
 import type { AssistantSettings, Autonomy, AgentType, FolderAccess, SandboxStatus, Saving } from "@/stores/assistantTypes";
-import { destinationHost, sharedWords, whereDataGoes } from "@/utils/assistantProposals";
+import { ANTHROPIC_DEFAULT_MODEL, destinationHost, sharedWords, whereDataGoes } from "@/utils/assistantProposals";
 import { Button } from "../Button";
 import { Group, SettingLabel, errorStyle, inputStyle, mutedStyle, selectStyle } from "./shared";
 
@@ -95,18 +95,7 @@ export function AssistantSection() {
             </option>
           ))}
         </select>
-        <div style={{ marginTop: 12 }}>
-          <SettingLabel title="Model" htmlFor="setting-assistant-agent-model">
-            The model name the agent's service expects. Blank uses the service's default.
-          </SettingLabel>
-          <DraftInput
-            id="setting-assistant-agent-model"
-            data-testid="setting-assistant-agent-model"
-            value={settings.agent.model}
-            disabled={saving}
-            onCommit={(model) => change({ agent: { ...settings.agent, model } })}
-          />
-        </div>
+        <ModelChoice settings={settings} disabled={saving} onChange={change} />
         {settings.agent.type === "openai_compatible" && (
           <div style={{ marginTop: 12 }}>
             <SettingLabel title="Server address" htmlFor="setting-assistant-agent-base-url">
@@ -448,6 +437,142 @@ function TurnOnConsent({ next }: { next: AssistantSettings }) {
         </Button>
       </div>
     </div>
+  );
+}
+
+/** "Alias — Display name (id)", or as much of it as there is. */
+function modelOptionLabel(id: string, displayName: string, alias: string | undefined): string {
+  const name = displayName && displayName !== id ? `${displayName} (${id})` : id;
+  return alias ? `${alias} — ${name}` : name;
+}
+
+/**
+ * The model, chosen from the list the service offers (#370), with a Refresh
+ * button and a short name of your own for it. A saved model the service no
+ * longer lists is kept and flagged, never changed silently. Typing an id is
+ * in Developer (`AssistantModelIdSetting`).
+ */
+function ModelChoice({
+  settings,
+  disabled,
+  onChange,
+}: {
+  settings: AssistantSettings;
+  disabled: boolean;
+  onChange: (patch: Partial<AssistantSettings>) => void;
+}) {
+  const models = useAssistantStore((s) => s.models);
+  const loadModels = useAssistantStore((s) => s.loadModels);
+  const keySet = useAssistantStore((s) => s.keySet);
+  const agent = settings.agent;
+  const key = agentKey(agent);
+  useEffect(() => {
+    if (agent.type !== "none") void loadModels();
+    // Fetch again when the agent, its address or the key changes; `agent.type` is in `key`.
+  }, [key, keySet, loadModels]);
+
+  const current = models.forAgent === key ? models : null;
+  const list = current?.list ?? [];
+  const aliases = settings.model_aliases;
+  const anthropicDefault = current?.default || ANTHROPIC_DEFAULT_MODEL;
+  // What is in use: the saved id, or for Anthropic its default (preselected).
+  const shown = agent.model || (agent.type === "anthropic" ? anthropicDefault : "");
+  const offered = list.some((m) => m.id === shown);
+  const notOffered = Boolean(agent.model) && current?.ok === true && !offered;
+
+  const choose = (model: string) => onChange({ agent: { ...agent, model } });
+  return (
+    <div style={{ marginTop: 12 }}>
+      <SettingLabel title="Model" htmlFor="setting-assistant-agent-model">
+        The models the agent's service offers, asked with your key. Refresh after the service adds one.
+      </SettingLabel>
+      <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+        <select
+          id="setting-assistant-agent-model"
+          data-testid="setting-assistant-agent-model"
+          value={shown}
+          disabled={disabled || agent.type === "none"}
+          onChange={(e) => choose(e.target.value)}
+          style={{ ...selectStyle, flex: 1, minWidth: 0 }}
+        >
+          {agent.type === "none" && <option value="">Choose an agent first</option>}
+          {agent.type === "openai_compatible" && <option value="">The server's default</option>}
+          {shown && !offered && (
+            <option value={shown}>
+              {modelOptionLabel(shown, "", aliases[shown])}
+              {notOffered ? " — no longer offered by the service" : ""}
+            </option>
+          )}
+          {list.map((m) => (
+            <option key={m.id} value={m.id}>
+              {modelOptionLabel(m.id, m.display_name, aliases[m.id])}
+            </option>
+          ))}
+        </select>
+        <Button
+          kind="small"
+          data-testid="assistant-models-refresh"
+          disabled={agent.type === "none" || models.loading}
+          title="Ask the service for its list of models again"
+          onClick={() => void loadModels()}
+        >
+          Refresh
+        </Button>
+      </div>
+      {agent.type !== "none" && (current?.loading || current?.ok === false || notOffered) && (
+        <div data-testid="assistant-models-message" data-ok={String(current?.ok)} style={{ marginTop: 4, color: current?.loading ? "var(--pnv-text-hint)" : "var(--pnv-warning)" }}>
+          {current?.loading
+            ? "Fetching the list…"
+            : notOffered
+              ? `${agent.model} is no longer offered by the service. It stays chosen until you pick another.`
+              : `${current?.message} The saved choice is kept.`}
+        </div>
+      )}
+      <div style={{ marginTop: 10 }}>
+        <SettingLabel title="Short name for this model" htmlFor="setting-assistant-model-alias">
+          Optional, for example "fast" or "big". Shown here and in the Assistant tab; the real id is what is sent.
+        </SettingLabel>
+        <DraftInput
+          id="setting-assistant-model-alias"
+          data-testid="setting-assistant-model-alias"
+          value={(shown && aliases[shown]) || ""}
+          disabled={disabled || !shown}
+          placeholder={shown ? `A name for ${shown}` : "Choose a model first"}
+          onCommit={(alias) => {
+            const next = { ...aliases };
+            if (alias) next[shown] = alias;
+            else delete next[shown];
+            onChange({ model_aliases: next });
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Developer ▸ AI assistant model (#370): type a model id the service's list
+ * doesn't show. The everyday control is the drop-down in AI assistant.
+ */
+export function AssistantModelIdSetting() {
+  const settings = useAssistantStore((s) => s.settings);
+  const save = useAssistantStore((s) => s.save);
+  const saving = useAssistantStore((s) => s.saving);
+  return (
+    <>
+      <SettingLabel title="Model id" htmlFor="setting-assistant-agent-model-id">
+        The AI assistant's model, typed exactly as the service names it, for one its list doesn't show. Blank uses
+        the service's default.
+      </SettingLabel>
+      <DraftInput
+        id="setting-assistant-agent-model-id"
+        data-testid="setting-assistant-agent-model-id"
+        value={settings.agent.model}
+        disabled={saving || settings.agent.type === "none"}
+        placeholder={settings.agent.type === "none" ? "Choose an agent in AI assistant first" : "claude-opus-5-5"}
+        onCommit={(model) => void save({ ...settings, agent: { ...settings.agent, model } })}
+      />
+    </>
   );
 }
 

@@ -28,6 +28,7 @@ const DEFAULTS = {
   visibility: { model: true, selection: true, errors: true, results: false, files: false },
   limits: { tool_calls: 25, minutes: 10, max_tokens: 100000 },
   keep_log: true,
+  model_aliases: {} as Record<string, string>,
 };
 
 type Event = Record<string, unknown> & { seq: number; type: string };
@@ -244,6 +245,64 @@ test.describe("AI assistant (#179)", { tag: "@ci" }, () => {
     await expect(result).toHaveText("⚠ The key was refused (HTTP 401)");
     await expect(result).toHaveAttribute("data-ok", "false");
     await shot(page, "test-connection-401");
+  });
+
+  test("the model is chosen from the service's list, with a short name of your own (#370)", async ({ page }) => {
+    const stub = await stubAssistant(page, { enabled: true, agent: { type: "anthropic", model: "", base_url: "" } });
+    let fail = false;
+    await page.route("**/api/assistant/models", (route) =>
+      route.fulfill({
+        json: fail
+          ? { ok: false, agent: "anthropic", models: [], default: "claude-opus-5-5", message: "Couldn't reach api.anthropic.com." }
+          : {
+              ok: true, agent: "anthropic", default: "claude-opus-5-5", message: "2 models offered.",
+              models: [{ id: "claude-opus-5-5", display_name: "Claude Opus 5.5" }, { id: "claude-haiku-5", display_name: "Claude Haiku 5" }],
+            },
+      }),
+    );
+    await page.goto("/");
+    await openSettings(page);
+    await page.getByTestId("settings-section-assistant").click();
+    const model = page.getByTestId("setting-assistant-agent-model");
+    // The default is preselected.
+    await expect(model).toHaveValue("claude-opus-5-5");
+    await expect(model.locator("option")).toHaveText(["Claude Opus 5.5 (claude-opus-5-5)", "Claude Haiku 5 (claude-haiku-5)"]);
+
+    await model.selectOption("claude-haiku-5");
+    await expect.poll(() => stub.settings.agent.model).toBe("claude-haiku-5");
+    const alias = page.getByTestId("setting-assistant-model-alias");
+    await alias.fill("fast");
+    await alias.blur();
+    await expect.poll(() => stub.settings.model_aliases).toEqual({ "claude-haiku-5": "fast" });
+    expect(stub.settings.agent.model).toBe("claude-haiku-5");
+    await expect(model.locator("option:checked")).toHaveText("fast — Claude Haiku 5 (claude-haiku-5)");
+    await shot(page, "model-list-alias");
+
+    // A failed refresh says so and keeps the choice and the last list.
+    fail = true;
+    await page.getByTestId("assistant-models-refresh").click();
+    await expect(page.getByTestId("assistant-models-message")).toHaveText("Couldn't reach api.anthropic.com. The saved choice is kept.");
+    await expect(model).toHaveValue("claude-haiku-5");
+
+    // The alias is shown in the Assistant tab; the id is what's stored.
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await page.getByTestId("tab-assistant").click();
+    await expect(page.getByTestId("assistant-model-name")).toHaveText("fast (claude-haiku-5)");
+  });
+
+  test("a saved model the service no longer offers is flagged, not changed (#370)", async ({ page }) => {
+    const stub = await stubAssistant(page, { agent: { type: "anthropic", model: "claude-old-1", base_url: "" } });
+    await page.route("**/api/assistant/models", (route) =>
+      route.fulfill({ json: { ok: true, agent: "anthropic", default: "claude-opus-5-5", message: "1 model offered.", models: [{ id: "claude-opus-5-5", display_name: "Claude Opus 5.5" }] } }),
+    );
+    await page.goto("/");
+    await openSettings(page);
+    await page.getByTestId("settings-section-assistant").click();
+    const model = page.getByTestId("setting-assistant-agent-model");
+    await expect(model).toHaveValue("claude-old-1");
+    await expect(model.locator("option:checked")).toHaveText("claude-old-1 — no longer offered by the service");
+    await expect(page.getByTestId("assistant-models-message")).toContainText("claude-old-1 is no longer offered by the service");
+    expect(stub.puts).toEqual([]);
   });
 
   test("Test connection is disabled until an agent is chosen (#368)", async ({ page }) => {

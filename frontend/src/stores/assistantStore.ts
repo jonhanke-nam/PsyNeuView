@@ -22,6 +22,7 @@ import {
   type AssistantEvent,
   type AssistantSettings,
   type ConversationItem,
+  type ModelListResponse,
   type Proposal,
   type SandboxStatus,
 } from "./assistantTypes";
@@ -60,6 +61,27 @@ export interface ConnectionTest {
   message: string;
 }
 
+/**
+ * The models the chosen service offers (#370). `forAgent` is the agent and
+ * address the list was fetched for; a failed refresh keeps the last list for
+ * the same agent and says why.
+ */
+export interface ModelsState {
+  list: ModelListResponse["models"];
+  default: string;
+  /** null until asked. */
+  ok: boolean | null;
+  message: string;
+  loading: boolean;
+  forAgent: string;
+}
+
+const NO_MODELS: ModelsState = { list: [], default: "", ok: null, message: "", loading: false, forAgent: "" };
+
+export function agentKey(agent: AssistantSettings["agent"]): string {
+  return `${agent.type} ${agent.base_url}`;
+}
+
 interface AssistantState {
   /** null until asked; false when the deployment lacks the capability (the section hides). */
   available: boolean | null;
@@ -90,6 +112,9 @@ interface AssistantState {
   cancelRaise: () => void;
   setKey: (key: string) => Promise<boolean>;
   clearKey: () => Promise<boolean>;
+  models: ModelsState;
+  /** Ask the saved agent's service which models it offers (#370). */
+  loadModels: () => Promise<void>;
   /** One small request to the saved agent with the saved key (#368). */
   testConnection: () => Promise<ConnectionTest>;
 
@@ -239,6 +264,40 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
       record("assistant", "API key set");
     }
     return resp.ok;
+  },
+
+  models: NO_MODELS,
+
+  loadModels: async () => {
+    const agent = get().settings.agent;
+    const key = agentKey(agent);
+    if (agent.type === "none") {
+      set({ models: NO_MODELS });
+      return;
+    }
+    const before = get().models.forAgent === key ? get().models : { ...NO_MODELS, forAgent: key };
+    set({ models: { ...before, loading: true } });
+    let body: Partial<ModelListResponse> = {};
+    try {
+      const resp = await fetch("/api/assistant/models");
+      body = (await readJson(resp)) as Partial<ModelListResponse>;
+      if (!resp.ok) body = { ok: false, message: `The list couldn't be fetched (HTTP ${resp.status})` };
+    } catch {
+      body = { ok: false, message: "Couldn't reach PsyNeuView's backend" };
+    }
+    // The agent changed while this was in flight: its answer is for another one.
+    if (agentKey(get().settings.agent) !== key) return;
+    const ok = body.ok === true && Array.isArray(body.models);
+    set({
+      models: {
+        list: ok ? body.models! : before.list,
+        default: typeof body.default === "string" ? body.default : before.default,
+        ok,
+        message: typeof body.message === "string" ? body.message : "",
+        loading: false,
+        forAgent: key,
+      },
+    });
   },
 
   testConnection: async () => {
