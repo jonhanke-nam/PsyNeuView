@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { InputSet } from "@/types/model";
-import { MAX_PRELOAD_TRIALS, cellsFromSet, preloadable, setTrialCount, setsFor } from "./inputSets";
+import { MAX_PRELOAD_TRIALS, cellsFromSet, preloadable, setTrialCount, setsFor, textsFromSet } from "./inputSets";
 
 const set = (name: string, kind: InputSet["kind"], composition: string): InputSet => ({
   name, kind, composition, inputs: {},
@@ -71,5 +71,29 @@ describe("preloadable", () => {
 
   it("keeps a set right at the limit", () => {
     expect(preloadable([set("edge", MAX_PRELOAD_TRIALS)])?.name).toBe("edge");
+  });
+});
+
+describe("textsFromSet (#330)", () => {
+  const nodes = [{ name: "color_input", varName: "color_input" }, { name: "task", varName: "task" }];
+
+  it("writes each trial in bracket notation, one text per port", () => {
+    const out = textsFromSet(
+      { color_input: [[1, 0], [0, 1]], task: [[[1, 0], [0]], [[0, 1], [1]]] },
+      nodes,
+      (n) => (n.name === "task" ? 2 : 1),
+    );
+    expect(out).toEqual({
+      trials: 2,
+      texts: {
+        color_input: [["[1, 0]"], ["[0, 1]"]],
+        task: [["[1, 0]", "[0]"], ["[0, 1]", "[1]"]],
+      },
+    });
+  });
+
+  it("refuses a set missing a node or with uneven trials", () => {
+    expect(textsFromSet({ color_input: [[1, 0]] }, nodes, () => 1)).toBeNull();
+    expect(textsFromSet({ color_input: [[1, 0]], task: [[1], [0]] }, nodes, () => 1)).toBeNull();
   });
 });

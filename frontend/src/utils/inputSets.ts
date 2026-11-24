@@ -2,6 +2,7 @@
 // grids. Kept out of the panels so the matching rules can be unit-tested.
 
 import type { InputSet } from "@/types/model";
+import { formatTensor, portValues } from "@/utils/tensorInput";
 
 /** A grid row owner: the node's display name and the key its cells live under. */
 export interface GridNode {
@@ -51,6 +52,29 @@ export function cellsFromSet(
     cells[node.varName] = rows.map((row) => row.map((v) => String(v)));
   }
   return { cells, trials };
+}
+
+/**
+ * A set's values as the Run panel's trial texts (#330): each trial written in
+ * bracket notation, one text per input port (`portsOf` says how many a node
+ * has). Null if the set doesn't cover every node, as for `cellsFromSet`.
+ */
+export function textsFromSet(
+  values: Record<string, unknown[]>,
+  nodes: GridNode[],
+  portsOf: (node: GridNode) => number,
+): { texts: Record<string, string[][]>; trials: number } | null {
+  if (nodes.length === 0) return null;
+  const texts: Record<string, string[][]> = {};
+  let trials = -1;
+  for (const node of nodes) {
+    const rows = entryFor(values as Record<string, number[][]>, node.name) as unknown[] | undefined;
+    if (!rows) return null;
+    if (trials === -1) trials = rows.length;
+    if (rows.length !== trials) return null;
+    texts[node.varName] = rows.map((row) => portValues(row, portsOf(node)).map((v) => formatTensor(v)));
+  }
+  return { texts, trials };
 }
 
 /**
