@@ -6,6 +6,8 @@
  * so: "Couldn't open X: reason. Still showing Y.", with Try again and Dismiss.
  * Stroop stays open and usable under it, Try again asks for the same file
  * again (and opens it once it exists), and the × and Escape put it away.
+ * The banner is a strip above the canvas, so it covers no node, and the graph
+ * is fitted to the smaller canvas so no node is cut off either.
  */
 import { mutatingTest as test, expect } from "./test-base";
 import type { Page } from "@playwright/test";
@@ -17,6 +19,33 @@ import { fixturePath } from "./fixtures";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STROOP = path.resolve(__dirname, "..", "..", "backend", "reference_models", "stroop_reference_basic.py");
+
+type Box = { x: number; y: number; width: number; height: number };
+
+/**
+ * Nodes the banner overlaps, and nodes not wholly inside the canvas: both must
+ * be none, so nothing on the graph is hidden while the banner is up.
+ */
+async function hiddenNodes(page: Page): Promise<{ underBanner: string[]; cutOff: string[] }> {
+  const banner = (await page.getByTestId("failed-open-banner").boundingBox()) as Box;
+  const canvas = (await page.getByTestId("graph-canvas-viewport").boundingBox()) as Box;
+  const nodes = page.getByTestId("graph-canvas").locator(".react-flow__node");
+  const underBanner: string[] = [];
+  const cutOff: string[] = [];
+  for (let i = 0; i < (await nodes.count()); i++) {
+    const n = nodes.nth(i);
+    const id = (await n.getAttribute("data-id")) ?? `#${i}`;
+    const b = (await n.boundingBox()) as Box;
+    const overlaps =
+      b.x < banner.x + banner.width && banner.x < b.x + b.width && b.y < banner.y + banner.height && banner.y < b.y + b.height;
+    if (overlaps) underBanner.push(id);
+    const inside =
+      b.x >= canvas.x - 1 && b.y >= canvas.y - 1 &&
+      b.x + b.width <= canvas.x + canvas.width + 1 && b.y + b.height <= canvas.y + canvas.height + 1;
+    if (!inside) cutOff.push(id);
+  }
+  return { underBanner, cutOff };
+}
 
 async function openFromPath(page: Page, file: string) {
   await page.getByTestId("open-menu").click();
@@ -59,6 +88,10 @@ test.describe("a failed open is marked on the canvas (#401)", () => {
     await expect(message).toContainText("Couldn't open not_there_yet.py:");
     await expect(message).toContainText("Still showing stroop_reference_basic.py.");
     expect(asked).toHaveLength(1);
+
+    // The banner covers no node, and every node is still wholly in view: the
+    // canvas gives up the banner's height and the graph is fitted to the rest.
+    await expect.poll(() => hiddenNodes(page), { timeout: 10_000 }).toEqual({ underBanner: [], cutOff: [] });
 
     // Stroop is still the open model: its title, graph and code, and it still
     // answers a click while the banner is up.
