@@ -118,6 +118,49 @@ async function measureOnce(page: Page, label: string): Promise<Sample> {
   await closePalette(page);
   await fitGraph(page);
 
+  // Fold and unfold a composition, where the model has one. A model can open
+  // with it folded (EGO's saved layout folds EM), so unfold first then.
+  const canvas = page.getByTestId("graph-canvas");
+  const frameButton = canvas.getByRole("button", { name: /^(Collapse|Expand) composition / }).first();
+  if (await frameButton.isVisible().catch(() => false)) {
+    const name = ((await frameButton.getAttribute("aria-label")) ?? "").replace(/^(Collapse|Expand) composition /, "");
+    // Folding belongs to the nested view. Opened from the Open menu, EGO
+    // shows EM folded in the flattened view, where Expand reloads but changes
+    // nothing (see docs/performance.md, open questions); so fold in the nested
+    // view and come back afterwards.
+    const viewMenu = page.locator("select").filter({ has: page.locator("option", { hasText: "Flatten (all compositions)" }) }).first();
+    const viewBefore = await viewMenu.inputValue();
+    if (viewBefore === "__flat__") {
+      // The outermost composition: the first option after Flatten and PyTorch.
+      const nested = await viewMenu.evaluate((el) =>
+        [...(el as HTMLSelectElement).options].find((o) => o.value !== "__flat__" && !/PyTorch/.test(o.text))?.value,
+      );
+      await startClock(page);
+      await viewMenu.selectOption(nested!);
+      await waitGraph(page, { needChange: false, quietMs: 300 });
+    }
+    const first = canvas.getByRole("button", { name: `Collapse composition ${name}`, exact: true }).first();
+    const order = (await first.isVisible().catch(() => false)) ? (["Collapse", "Expand"] as const) : (["Expand", "Collapse"] as const);
+    for (const verb of order) {
+      const button = canvas.getByRole("button", { name: `${verb} composition ${name}`, exact: true }).first();
+      await expect(button).toBeVisible({ timeout: 30_000 });
+      const prev = await graphIds(page);
+      // A real pointer press: the frame buttons answer the pointer, not a
+      // scripted click. The clock starts just before it (Playwright's own
+      // few milliseconds are included).
+      await startClock(page);
+      await button.click();
+      const t = (await waitGraph(page, { prevIds: prev })).settled;
+      if (verb === "Collapse") s.foldSettled = t;
+      else s.unfoldSettled = t;
+    }
+    if (viewBefore === "__flat__") {
+      await startClock(page);
+      await viewMenu.selectOption(viewBefore);
+      await waitGraph(page, { needChange: false, quietMs: 300 });
+    }
+  }
+
   // Run the default inputs.
   await page.getByTestId("tab-run").click();
   const runButton = page.getByRole("button", { name: /Run Model/ });
@@ -174,25 +217,6 @@ async function measureOnce(page: Page, label: string): Promise<Sample> {
     // Let a layout save or rebuild the drop starts finish.
     await startClock(page);
     await waitGraph(page, { needChange: false, quietMs: 300 }).catch(() => null);
-  }
-
-  // Fold and unfold a composition, where the model has one. A model can open
-  // with it folded (EGO's saved layout folds EM), so unfold first then.
-  const canvas = page.getByTestId("graph-canvas");
-  const frameButton = canvas.getByRole("button", { name: /^(Collapse|Expand) composition / }).first();
-  if (await frameButton.isVisible().catch(() => false)) {
-    const aria = (await frameButton.getAttribute("aria-label")) ?? "";
-    const name = aria.replace(/^(Collapse|Expand) composition /, "");
-    const order = aria.startsWith("Collapse") ? (["Collapse", "Expand"] as const) : (["Expand", "Collapse"] as const);
-    for (const verb of order) {
-      const button = canvas.getByRole("button", { name: `${verb} composition ${name}`, exact: true }).first();
-      await expect(button).toBeVisible({ timeout: 30_000 });
-      const prev = await graphIds(page);
-      await clickTimed(button);
-      const t = (await waitGraph(page, { prevIds: prev })).settled;
-      if (verb === "Collapse") s.foldSettled = t;
-      else s.unfoldSettled = t;
-    }
   }
 
   // Type in the code editor, live preview on (the default).
