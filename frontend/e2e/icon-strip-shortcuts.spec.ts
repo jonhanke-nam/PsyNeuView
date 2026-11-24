@@ -6,7 +6,9 @@
  * in the icon strip" brings the shortcuts back, at the bottom under a thin
  * divider, favourites first, each once. "Show headings in the icon strip"
  * adds a tiny "Components" over the categories and "Recent" over the
- * shortcuts, each on one line within the strip at every Text size. The fold-out chevron is much smaller than a component icon. In
+ * shortcuts, the same size (fitted to the longer word, "Components"), each on
+ * one line within the strip at every Text size. The fold-out chevron is much
+ * smaller than a component icon. In
  * the word list, a row's empty ☆ shows only on hover or keyboard focus; a
  * starred row keeps its ★.
  */
@@ -141,7 +143,7 @@ test.describe("Components icon strip (#372, #395)", { tag: "@ci" }, () => {
   });
 
   for (const [size, scale] of [["small", "1"], ["default", "1.1"], ["large", "1.2"]] as const) {
-    test(`at Text size ${scale}, each heading sits on one line within the strip`, async ({ page }) => {
+    test(`at Text size ${scale}, both headings are the same size, each on one line within the strip`, async ({ page }) => {
       await seed(page, "strip", {
         "psyneuview.components.stripShortcuts": "true",
         "psyneuview.components.stripHeadings": "true",
@@ -153,6 +155,7 @@ test.describe("Components icon strip (#372, #395)", { tag: "@ci" }, () => {
         .toBe(scale);
       const palette = page.getByTestId("palette-sidebar");
       const strip = (await palette.boundingBox())!;
+      const sizes: number[] = [];
       for (const id of ["palette-strip-heading-components", "palette-strip-heading-shortcuts"]) {
         const text = palette.getByTestId(`${id}-text`);
         await expect(text).toBeVisible();
@@ -187,7 +190,18 @@ test.describe("Components icon strip (#372, #395)", { tag: "@ci" }, () => {
         expect(m.left).toBeGreaterThanOrEqual(strip.x + 4);
         expect(m.right).toBeLessThanOrEqual(strip.x + strip.width - 5);
         expect(m.overflow).not.toBe("ellipsis");
+        sizes.push(m.fontPx);
       }
+      // "Components" and "Recent" match: both take the size "Components"
+      // fits at, so "Recent" is not left larger.
+      expect(sizes).toHaveLength(2);
+      expect(sizes[1]).toBe(sizes[0]);
+      // And they stay matched once every refit has settled.
+      const fontOf = (id: string) =>
+        palette.getByTestId(`${id}-text`).evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+      await expect
+        .poll(async () => (await fontOf("palette-strip-heading-shortcuts")) - (await fontOf("palette-strip-heading-components")))
+        .toBe(0);
     });
   }
 
