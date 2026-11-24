@@ -5,7 +5,7 @@
  */
 
 import { isFunctionType, isProjectionType } from "@/constants/pnlTypes";
-import { type DragEvent, useEffect, useMemo, useRef } from "react";
+import { type DragEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useModelStore } from "@/stores/modelStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { usePaletteStore } from "@/stores/paletteStore";
@@ -63,6 +63,7 @@ export function PaletteSidebar() {
   const recentlyUsed = usePaletteStore((s) => s.recentlyUsed);
   const compactFlyoutNodeId = usePaletteStore((s) => s.compactFlyoutNodeId);
   const showStripShortcuts = usePaletteStore((s) => s.showStripShortcuts);
+  const showStripHeadings = usePaletteStore((s) => s.showStripHeadings);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return null;
@@ -279,7 +280,9 @@ export function PaletteSidebar() {
             <div style={{ padding: isCompact ? 0 : "4px 0" }}>
               {isCompact ? (
                 <>
-                  <StripHeading testId="palette-strip-heading-components" label="All components">{"All"}</StripHeading>
+                  {showStripHeadings && (
+                    <StripHeading testId="palette-strip-heading-components" label="All components" text="Components" />
+                  )}
                   {taxonomy.map((node) => (
                     <CompactCategoryIcon
                       key={node.id}
@@ -291,7 +294,11 @@ export function PaletteSidebar() {
                   ))}
                   {showStripShortcuts && stripShortcuts.length > 0 && (
                     <div data-testid="palette-strip-shortcuts" style={{ marginTop: 6 }}>
-                      <StripHeading testId="palette-strip-heading-shortcuts" label="Recent and favourite components">{"Recent"}</StripHeading>
+                      {showStripHeadings ? (
+                        <StripHeading testId="palette-strip-heading-shortcuts" label="Recent and favourite components" text="Recent" />
+                      ) : (
+                        <StripDivider />
+                      )}
                       {stripShortcuts.map(({ item, kind }) => (
                         <PaletteLeaf
                           key={`strip-${item.type}`}
@@ -654,29 +661,107 @@ function SectionHeader({ label, icon }: { label: string; icon?: string }) {
   );
 }
 
-/** #372: the icon strip's tiny group headings, in the smallest text. */
-function StripHeading({ children, testId, label }: { children: React.ReactNode; testId: string; label: string }) {
+/** Smallest size a strip heading shrinks to, so it stays legible. */
+const STRIP_HEADING_MIN_PX = 5;
+
+/**
+ * A tiny heading in the icon strip (#372), shown only when the strip's
+ * headings are on (#395). The word always sits on one line within the strip:
+ * it starts at the smallest text size and, if it is still too wide (as
+ * "Components" is), its font shrinks until it fits. A hidden copy at the full
+ * size is measured, so a change of Text size or font refits it.
+ */
+function StripHeading({ text, testId, label }: { text: string; testId: string; label: string }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [fitPx, setFitPx] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const measure = measureRef.current;
+    if (!box || !measure) return;
+    const fit = () => {
+      const natural = measure.getBoundingClientRect().width;
+      const fullPx = parseFloat(getComputedStyle(measure).fontSize);
+      // The strip's width inside its padding, less a pixel of air.
+      const room = box.clientWidth - 1;
+      if (!natural || !fullPx || room <= 0 || natural <= room) {
+        setFitPx(null);
+        return;
+      }
+      // Round down to a tenth of a pixel so it never lands a hair too wide.
+      setFitPx(Math.max(STRIP_HEADING_MIN_PX, Math.floor(((fullPx * room) / natural) * 10) / 10));
+    };
+    fit();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(fit);
+    ro.observe(measure);
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, [text]);
+
+  // Small text doesn't scale exactly (glyphs snap to pixels), so check the
+  // word as drawn and step it down a tenth of a pixel while it is too wide.
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const shown = textRef.current;
+    if (fitPx === null || !box || !shown || fitPx <= STRIP_HEADING_MIN_PX) return;
+    if (shown.getBoundingClientRect().width > box.clientWidth - 1) {
+      setFitPx(Math.max(STRIP_HEADING_MIN_PX, Math.round((fitPx - 0.1) * 10) / 10));
+    }
+  }, [fitPx]);
+
+  const font = { fontWeight: 600, whiteSpace: "nowrap" } as const;
   return (
     <div
+      ref={boxRef}
       data-testid={testId}
       role="heading"
       aria-level={3}
       aria-label={label}
       style={{
-        fontSize: "var(--pnv-fs-9)",
-        fontWeight: 600,
+        position: "relative",
         color: "var(--pnv-text-hint)",
         textAlign: "center",
         lineHeight: 1.15,
-        // The strip's full width (its 4px padding given back). The headings
-        // are one short word each ("All", "Recent"), so they never wrap.
-        margin: "0 -4px",
+        // Inside the strip's 4px padding, as the icons are: the panel's
+        // resize handle lies over the strip's left 4px and would hide the
+        // first letter of a word that ran into it.
         padding: "4px 0 2px",
-        whiteSpace: "nowrap",
+        overflow: "hidden",
       }}
     >
-      {children}
+      <span
+        ref={textRef}
+        data-testid={`${testId}-text`}
+        style={{ ...font, fontSize: fitPx === null ? "var(--pnv-fs-9)" : `${fitPx}px` }}
+      >
+        {text}
+      </span>
+      <span
+        ref={measureRef}
+        aria-hidden
+        style={{ ...font, fontSize: "var(--pnv-fs-9)", position: "absolute", left: 0, top: 0, visibility: "hidden", pointerEvents: "none" }}
+      >
+        {text}
+      </span>
     </div>
+  );
+}
+
+/**
+ * With the strip's headings off (#395), a thin line keeps the shortcuts apart
+ * from the category menus, in the room a heading would take.
+ */
+function StripDivider() {
+  return (
+    <div
+      data-testid="palette-strip-divider"
+      role="separator"
+      aria-label="Recent and favourite components"
+      style={{ margin: "2px 4px 4px", borderTop: "1px solid var(--pnv-border)" }}
+    />
   );
 }
 
