@@ -9,9 +9,9 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 177 | 472 | 462 tests in 172 files |
+| Browser (Playwright) | 177 | 470 | 460 tests in 172 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 148 | 1299 | 1299 tests in 148 files |
+| Frontend unit (vitest) | 147 | 1296 | 1296 tests in 147 files |
 | Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -31,10 +31,10 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 6 files, 26 tests | – | 5 files, 59 tests | 7 files, 99 tests | 184 of 184 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
-| [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
+| [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 53 tests | – | 89 of 89 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 14 files, 30 tests | – | 21 files, 137 tests | 21 files, 206 tests | 370 of 373 |
+| [App shell, diagnostics and everything else](#shell) | 14 files, 28 tests | – | 20 files, 133 tests | 21 files, 206 tests | 364 of 367 |
 
 <a id="tutorials"></a>
 
@@ -1010,7 +1010,7 @@ No tests yet.
 | `dialogInventory.test.ts` | Frontend unit | 7 | yes | #1289 | Every dialog and pop-up closes the same ways (#1289). |
 | `useNodeBoxes.test.ts` | Frontend unit | 3 | yes |  |  |
 | `styleConventions.test.ts` | Frontend unit | 11 | yes | #1302 | The palette and the button kinds, held across the whole frontend. |
-| `selectionColours.test.ts` | Frontend unit | 3 | yes | #335 | The selection blue never looks like a role colour. |
+| `selectionColours.test.ts` | Frontend unit | 4 | yes | #335 | The selection blue never looks like a role colour. |
 | `typeColourContrast.test.ts` | Frontend unit | 2 | yes | #283, #109 | Every component type's colour can be seen. |
 | `arrowShapes.test.ts` | Frontend unit | 8 | yes | #164 | Shaping an arrow by hand, as a step of its own (#164). |
 | `nodeBox.test.ts` | Frontend unit | 5 | yes |  | Whether the corners of a name's box lie inside an oval this size, inset by the outline. |
@@ -1254,7 +1254,7 @@ No tests yet.
 | `docs-shots-saving.spec.ts` | Browser | 2 | no | #662 | Docs pictures for saving and changes since save (#662). |
 | `graph-edit-broke-model.spec.ts` | Browser | 1 | yes | #353, #349 | When an edit made on the graph writes a line that doesn't run, the warning names that edit ("Adding X broke the model at line N.") and offers Undo, which puts the file back as it was (#353). |
 | `harness.spec.ts` | Browser | 1 | yes | #147 | Proves the test harness wiring end-to-end (#147): playwright.config env vars → backend in test mode → /api/test/reset open → mutatingTest fixture fires it. |
-| `icon-strip-shortcuts.spec.ts` | Browser | 5 | yes | #372, #395 | The Components icon strip (#372, #395). |
+| `icon-strip-shortcuts.spec.ts` | Browser | 3 | yes | #372 | The Components icon strip (#372). |
 | `notification-dwell.spec.ts` | Browser | 1 | yes | #879 | #879: info/success toasts dwell long enough to read. |
 | `palette-active-shade.spec.ts` | Browser | 2 | yes | #387 | Components panel: the active item is shaded as well as outlined (#387). |
 | `pycharm-live.local.spec.ts` | Browser | 1 | no |  | LOCAL ONLY — the full two-headed loop with a real PyCharm. |
@@ -1271,7 +1271,6 @@ No tests yet.
 | `e2eDistFreshness.test.ts` | Frontend unit | 3 | yes |  |  |
 | `retrySummary.test.ts` | Frontend unit | 4 | yes | #359 | The "Passed only on retry" job summary (#359): scripts/retry-summary.mjs reads the merged Playwright JSON report and lists every test that failed first and passed on retry. |
 | `errorReveal.test.ts` | Frontend unit | 4 | yes | #1103 | Clicking a model error to jump to its line (#1103). |
-| `stripHeadings.test.ts` | Frontend unit | 4 | yes |  | The suite runs on node, not jsdom (vitest.config.ts): stub localStorage, as stripShortcuts.test.ts does. |
 | `stripShortcuts.test.ts` | Frontend unit | 3 | yes |  | The suite runs on node, not jsdom (vitest.config.ts): stub localStorage, as componentsPanelStart.test.ts does. |
 | `uiStoreInputs.test.ts` | Frontend unit | 6 | yes | #331, #330 | The Run panel's input arrangement (#331) and the per-element grid setting (#330): their defaults, and a choice made before being kept. |
 | `activityLog.test.ts` | Frontend unit | 17 | yes | #1287 | The activity log's rules (#1287): the cap, the order, `~` for the home folder, and no secrets — the value of a key that looks like a token or a password is never recorded, however it gets in. |
@@ -1321,11 +1320,9 @@ No tests yet.
 | Docs pictures: saving › Changes since save, after a change outside PsyNeuView | `docs-shots-saving.spec.ts` | Browser | no | #662 |
 | an edit that breaks the model is named, with Undo (#353) › adding a node that writes a failing line: the warning names the add; Undo restores the file | `graph-edit-broke-model.spec.ts` | Browser | yes | #353 |
 | @smoke harness › mutatingTest fixture reaches /api/test/reset | `harness.spec.ts` | Browser | yes | #147 |
-| Components icon strip (#372, #395) › a fresh strip shows four categories, no shortcuts and no heading words | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
-| Components icon strip (#372, #395) › with shortcuts on and headings off, a divider with no words sets them below the categories | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
-| Components icon strip (#372, #395) › with the headings setting on, Components and Recent show above their groups | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
-| Components icon strip (#372, #395) › at Text size ${scale}, each heading sits on one line within the strip | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
-| Components icon strip (#372, #395) › a row's empty star shows on hover or focus; a starred row keeps its star | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
+| Components icon strip (#372) › a fresh strip shows the All heading, four categories and no shortcuts | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
+| Components icon strip (#372) › with the setting on, favourites and recents sit below the categories under their heading | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
+| Components icon strip (#372) › a row's empty star shows on hover or focus; a starred row keeps its star | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
 | success toast dwells past the old 2s window | `notification-dwell.spec.ts` | Browser | yes | #879 |
 | Components panel shades the active item (#387) › the open category's strip icon and a picked-up flyout row are shaded; others are not | `palette-active-shade.spec.ts` | Browser | yes | #387 |
 | Components panel shades the active item (#387) › a picked-up row in the word list is shaded, and hover is lighter | `palette-active-shade.spec.ts` | Browser | yes | #387 |

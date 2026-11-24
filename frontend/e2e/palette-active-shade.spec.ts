@@ -3,9 +3,13 @@
  *
  * The strip icon whose menu is open, and a component picked up for placing
  * (in the word list, in a strip menu, or as a strip shortcut), take the
- * selection fill behind them as well as the selection outline, so it is
- * obvious which one is active. Hover is lighter than active, so the two never
- * look the same.
+ * deeper selection shade (`--pnv-selection-fill-strong`, one shade darker
+ * than `--pnv-selection-fill`) behind them as well as the selection outline,
+ * so it is obvious which one is active. Hover is the pale
+ * `--pnv-selection-hover`, so the levels are plain, hover (pale) and active
+ * (deeper). In the light theme the plain selection fill is the same colour as
+ * the primary tint the open strip icon used to have; the active item must now
+ * differ from it.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 import { readFileSync, writeFileSync, mkdtempSync } from "fs";
@@ -57,10 +61,19 @@ function brightness(c: string): number {
 test.describe("Components panel shades the active item (#387)", { tag: "@ci" }, () => {
   test("the open category's strip icon and a picked-up flyout row are shaded; others are not", async ({ page }) => {
     await open(page, "strip");
-    const fill = await token(page, "--pnv-selection-fill");
+    const fill = await token(page, "--pnv-selection-fill-strong");
     const surface = await token(page, "--pnv-surface");
     const ring = await token(page, "--pnv-selection-border");
+    const oldTint = await token(page, "--pnv-primary-tint");
+    const paleFill = await token(page, "--pnv-selection-fill");
+    const hoverToken = await token(page, "--pnv-selection-hover");
     expect(fill).not.toBe(surface);
+    // Active is one shade deeper than the old tint and the plain selection
+    // fill, and darker than both.
+    expect(fill).not.toBe(oldTint);
+    expect(fill).not.toBe(paleFill);
+    expect(brightness(fill)).toBeLessThan(brightness(oldTint));
+    expect(brightness(fill)).toBeLessThan(brightness(paleFill));
 
     const palette = page.getByTestId("palette-sidebar");
     const categories = palette.getByTestId("palette-category");
@@ -69,8 +82,9 @@ test.describe("Components panel shades the active item (#387)", { tag: "@ci" }, 
     const flyout = page.getByTestId("palette-compact-flyout");
     await expect(flyout).toBeVisible();
 
-    // The active icon: the selection fill and the selection outline.
+    // The active icon: the deeper selection shade and the selection outline.
     expect(await bg(categories.first())).toBe(fill);
+    expect(await bg(categories.first())).not.toBe(oldTint);
     expect(await categories.first().evaluate((e) => getComputedStyle(e).borderTopColor)).toBe(ring);
     // A category whose menu is not open keeps the plain surface.
     expect(await bg(categories.nth(1))).toBe(surface);
@@ -84,12 +98,17 @@ test.describe("Components panel shades the active item (#387)", { tag: "@ci" }, 
     await page.mouse.move(600, 500);
     expect(await bg(row)).toBe(fill);
 
-    // Hovering another row in the menu tints it, lighter than the active fill.
+    // Hovering another row in the menu tints it with the pale hover, lighter
+    // than the active shade.
     const other = flyout.getByTestId("palette-flyout-branch").first();
     await other.hover();
     const hover = await bg(other);
+    expect(hover).toBe(hoverToken);
     expect(hover).not.toBe(fill);
     expect(brightness(hover)).toBeGreaterThan(brightness(fill));
+    // Hovering a strip icon whose menu is closed: the same pale hover.
+    await categories.nth(1).hover();
+    expect(await bg(categories.nth(1))).toBe(hoverToken);
     // Hovering the armed row keeps it at the active fill.
     await row.hover();
     expect(await bg(row)).toBe(fill);
@@ -97,13 +116,16 @@ test.describe("Components panel shades the active item (#387)", { tag: "@ci" }, 
 
   test("a picked-up row in the word list is shaded, and hover is lighter", async ({ page }) => {
     await open(page, "open");
-    const fill = await token(page, "--pnv-selection-fill");
+    const fill = await token(page, "--pnv-selection-fill-strong");
+    const hoverToken = await token(page, "--pnv-selection-hover");
+    expect(fill).not.toBe(await token(page, "--pnv-primary-tint"));
     await page.getByPlaceholder("Search components…").fill("DDM");
     const row = page.locator('[data-testid="palette-item"][data-type="DDM"]').first();
     await expect(row).toBeVisible();
 
     await row.hover();
     const hover = await bg(row);
+    expect(hover).toBe(hoverToken);
     expect(brightness(hover)).toBeGreaterThan(brightness(fill));
 
     await row.click();

@@ -4043,6 +4043,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - selection colours › palette.css defines the selection set and the role colours · CI · #335
 - selection colours › the dark set defines all three · CI · #335
+- selection colours › the deeper active shade (#387) is built from the selection fill and border, so it follows them in both sets · CI · #387
 - selection colours › each is at least ${MIN_DISTANCE} from every role colour (${name}) · CI · #335
 
 **`frontend/src/styles/typeColourContrast.test.ts`** (Frontend unit (vitest))

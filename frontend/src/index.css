@@ -436,9 +436,10 @@ body:has([data-pnv-customized="true"]) .pnv-inspector-legend {
 /* #387: in the Components panel, the active item is shaded as well as
    outlined, so it is obvious which one is active: the strip icon whose menu
    is open, and a component picked up for placing (in the word list, a strip
-   menu, or a strip shortcut). Pointing at any other item tints it lighter
-   than that. Here rather than in inline styles so hover can apply (#845). The
-   outline is inset, so nothing changes size. */
+   menu, or a strip shortcut), in the deeper selection shade. Pointing at any
+   other item tints it with the pale selection hover, so the levels are plain,
+   hover (pale) and active (deeper). Here rather than in inline styles so
+   hover can apply (#845). The outline is inset, so nothing changes size. */
 .pnv-palette-tile {
   background: var(--pnv-surface);
   border: 1px solid var(--pnv-border);
@@ -454,7 +455,7 @@ body:has([data-pnv-customized="true"]) .pnv-inspector-legend {
 .pnv-palette-tile[data-active="true"],
 .pnv-palette-tile[data-armed="true"],
 .pnv-palette-row[data-armed="true"] {
-  background: var(--pnv-selection-fill);
+  background: var(--pnv-selection-fill-strong);
   outline: 2px solid var(--pnv-selection-border);
   outline-offset: -2px;
 }
