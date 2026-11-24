@@ -4052,6 +4052,15 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - selection colours › the deeper active shade (#387) is built from the selection fill and border, so it follows them in both sets · CI · #387
 - selection colours › each is at least ${MIN_DISTANCE} from every role colour (${name}) · CI · #335
 
+**`frontend/src/styles/textContrast.test.ts`** (Frontend unit (vitest))
+
+- text contrast (#412) › --pnv-text-faint reads at AA on every surface it is drawn on · CI · #412
+- text contrast (#412) › --pnv-text-hint reads at AA on every surface it is drawn on · CI · #412
+- text contrast (#412) › hint is no lighter than faint, so the order of the greys holds · CI · #412
+- text contrast (#412) › faint and hint are as light as AA allows (one shade fainter fails) · CI · #412
+- text contrast (#412) › not-yet-reached rows read at AA on the current trial card (light) · CI · #412
+- text contrast (#412) › not-yet-reached rows use a colour, not an opacity · CI · #412
+
 **`frontend/src/styles/typeColourContrast.test.ts`** (Frontend unit (vitest))
 
 - component type colours › palette.css defines the type colours as hex · CI · #283
