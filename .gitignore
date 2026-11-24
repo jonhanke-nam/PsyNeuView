@@ -88,3 +88,8 @@ docs/tutorials/assets/orientation/
 /backend/coverage.json
 /backend/htmlcov/
 /frontend/coverage/
+
+# The What's tested pages: built by the docs build and by scripts/test_map.py,
+# never committed (#380).
+/docs/testing-coverage.md
+/docs/testing-coverage-tests.md
