@@ -1,3 +1,4 @@
+a11y-run-panel-and-strip.spec.ts
 about-release-dates.spec.ts
 add-keeps-view.spec.ts
 app-shell.spec.ts
