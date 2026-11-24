@@ -9,9 +9,9 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 175 | 460 | 450 tests in 170 files |
+| Browser (Playwright) | 176 | 468 | 458 tests in 171 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 147 | 1287 | 1287 tests in 147 files |
+| Frontend unit (vitest) | 147 | 1295 | 1295 tests in 147 files |
 | Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -29,7 +29,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
 | [Running, learning and debugging](#running) | 16 files, 38 tests | – | 11 files, 99 tests | 52 files, 262 tests | 399 of 399 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
-| [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
+| [Mac app bridges and what's running](#macapp) | 6 files, 26 tests | – | 5 files, 59 tests | 7 files, 99 tests | 184 of 184 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
@@ -803,11 +803,12 @@ No tests yet.
 | `about-release-dates.spec.ts` | Browser | 3 | yes |  | Settings ▸ About says when the Mac app was built and when its included PsyNeuView was released (PsyNeuView-MacApp#15). |
 | `app-update-notice.spec.ts` | Browser | 6 | yes |  | An app update is waiting (PsyNeuView-MacApp#6). |
 | `mac-app-settings-section.spec.ts` | Browser | 6 | yes | #1279, #1290 | One Settings: the Mac app's parts (PsyNeuView-MacApp#200, #1279, #1290). |
+| `mac-auto-install-updates.spec.ts` | Browser | 8 | yes |  | Install updates automatically, by consent (PsyNeuView-MacApp#79). |
 | `project-folder-move.spec.ts` | Browser | 1 | yes | #1295 | Move… moves My Project Folder, and the Open menu follows (#1295). |
 | `whats-running.spec.ts` | Browser | 2 | yes | #1356 | Settings ▸ About says what PsyNeuView is running and from where (#1356). |
 | `PresenceIndicator.test.ts` | Frontend unit | 4 | yes |  |  |
-| `appUpdateNotice.test.ts` | Frontend unit | 13 | yes |  |  |
-| `macAppSettings.test.ts` | Frontend unit | 7 | yes |  | The suite runs on node (vitest.config.ts): `window` is an EventTarget, with the Mac app's message handler stubbed onto it where a test needs one. |
+| `appUpdateNotice.test.ts` | Frontend unit | 18 | yes |  |  |
+| `macAppSettings.test.ts` | Frontend unit | 10 | yes |  | The suite runs on node (vitest.config.ts): `window` is an EventTarget, with the Mac app's message handler stubbed onto it where a test needs one. |
 | `revealPath.test.ts` | Frontend unit | 5 | yes |  |  |
 | `runningFrom.test.ts` | Frontend unit | 22 | yes | #1356 | What Settings ▸ About says about what's running (#1356). |
 | `test_active_psyneulink_dir.py` | Backend | 5 | yes | #1225 | What PsyNeuView lists *from* PsyNeuLink follows the active install (#1225). |
@@ -837,6 +838,14 @@ No tests yet.
 | inside the Mac app, Developer has Get release candidates, set through the bridge | `mac-app-settings-section.spec.ts` | Browser | yes | #1279 |
 | the Mac app's Settings… (⌘,) opens this Settings, even before the page is ready | `mac-app-settings-section.spec.ts` | Browser | yes | #1279 |
 | inside the Mac app, Problem reports' two settings go through the bridge | `mac-app-settings-section.spec.ts` | Browser | yes | #1279 |
+| Install updates automatically (PsyNeuView-MacApp#79) › asks once, and Yes turns it on | `mac-auto-install-updates.spec.ts` | Browser | yes |  |
+| Install updates automatically (PsyNeuView-MacApp#79) › No, ask me each time leaves it off | `mac-auto-install-updates.spec.ts` | Browser | yes |  |
+| Install updates automatically (PsyNeuView-MacApp#79) › Escape closes the question without answering it | `mac-auto-install-updates.spec.ts` | Browser | yes |  |
+| Install updates automatically (PsyNeuView-MacApp#79) › Settings ▸ General ▸ Updates has the one switch, and About says when it last checked | `mac-auto-install-updates.spec.ts` | Browser | yes |  |
+| Install updates automatically (PsyNeuView-MacApp#79) › off: an available update offers What's new and Install and restart | `mac-auto-install-updates.spec.ts` | Browser | yes |  |
+| Install updates automatically (PsyNeuView-MacApp#79) › on: a downloaded update says it installs when you quit, with Restart now | `mac-auto-install-updates.spec.ts` | Browser | yes |  |
+| Install updates automatically (PsyNeuView-MacApp#79) › after an update, says what it updated to until OK | `mac-auto-install-updates.spec.ts` | Browser | yes |  |
+| Install updates automatically (PsyNeuView-MacApp#79) › in a browser, none of it shows | `mac-auto-install-updates.spec.ts` | Browser | yes |  |
 | Move… carries the models and sidecars, and lists them from the new place | `project-folder-move.spec.ts` | Browser | yes | #1295 |
 | Settings ▸ About: what's running › names the version, the checkout it runs from, its branch and commit, and the page's build | `whats-running.spec.ts` | Browser | yes | #1356 |
 | Settings ▸ About: what's running › the Mac app's included copy, and a page older than the server | `whats-running.spec.ts` | Browser | yes | #1356 |
