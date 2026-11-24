@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  answerAutoInstallOffer,
+  APP_UPDATE_READY,
+  dismissJustUpdated,
   hasSettingsBridge,
+  installAndRelaunch,
+  onAppUpdateReady,
   MAC_SETTINGS_CHANGED,
   OPEN_SETTINGS,
   onOpenSettingsRequest,
@@ -119,5 +124,38 @@ describe("Mac app settings bridge (PsyNeuView-MacApp#200)", () => {
     const reply = await setMacAppSetting("receiveReleaseCandidates", true);
     expect(post).toHaveBeenLastCalledWith({ op: "set", key: "receiveReleaseCandidates", value: true });
     expect(reply.receiveReleaseCandidates).toBe(true);
+  });
+});
+
+describe("automatic install over the bridge (PsyNeuView-MacApp#79)", () => {
+  it("sends the setting, the offer's answer, Restart now and the dismissal", async () => {
+    const post = installBridge(() => settings(false));
+    await setMacAppSetting("autoInstallUpdates", true);
+    await answerAutoInstallOffer(false);
+    await installAndRelaunch();
+    await dismissJustUpdated();
+    expect(post.mock.calls.map((c) => c[0])).toEqual([
+      { op: "set", key: "autoInstallUpdates", value: true },
+      { op: "answerAutoInstallOffer", value: false },
+      { op: "installAndRelaunch" },
+      { op: "dismissJustUpdated" },
+    ]);
+  });
+
+  it("dismissing is harmless with an app that doesn't know the op", async () => {
+    installBridge(() => {
+      throw new Error("pnvSettings: unknown op 'dismissJustUpdated'");
+    });
+    await expect(dismissJustUpdated()).resolves.toBeNull();
+  });
+
+  it("hears the update-ready event with its version", () => {
+    const heard = vi.fn();
+    const off = onAppUpdateReady(heard);
+    win.dispatchEvent(Object.assign(new Event(APP_UPDATE_READY), { detail: { version: "0.6.15" } }));
+    win.dispatchEvent(Object.assign(new Event(APP_UPDATE_READY), { detail: {} }));
+    expect(heard).toHaveBeenCalledTimes(1);
+    expect(heard).toHaveBeenCalledWith("0.6.15");
+    off();
   });
 });

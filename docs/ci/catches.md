@@ -21,6 +21,25 @@ The file is the narrative record; the label is the filter. (We deliberately
 don't use a single GitHub issue as the ledger — it gets noisy and is awkward to
 format.) Tracked as a process in #709.
 
+## Stepping a run stopped the trial card short, under a row that wasn't there (2026-11-24)
+
+**Caught by:** `e2e` → `tour-ring-clear-of-text.spec.ts`, "no step's ring
+crosses text (pnl-simple-configurations)", on both attempts on the rc2 batch
+([#373](https://github.com/jonhanke-nam/PsyNeuView/pull/373))
+
+#357 gave the whole Run panel a top scroll padding the height of the sticky
+Run row, so that a node's header or a focused trial input scrolled into view
+would stop below the row. But the row is sticky only inside the inputs column,
+and never covers the results. When stepping a run scrolled the current trial
+card into view, it stopped about 50 px short, leaving the results' "Input 5
+values, as list grid" row cut off at the panel's top edge. The walkthrough
+ring for the Run panel, which sits astride the panel's edge when the tab bar
+above has no room, then had text under it and was drawn inside the panel,
+through that row. Fixed by moving the offset from the panel to the inputs
+column's own elements (`scroll-margin-top`), so the card scrolls flush again
+and the inputs still stop below the row (`run-followups.spec.ts` and
+`run-sticky-node-headers.spec.ts` still pass).
+
 ## Two clicks near nodes' rims could add a projection (2026-11-23)
 
 **Caught by:** `e2e` → `graph-hit-areas.spec.ts`, "a click anywhere in a node
@@ -303,3 +322,4 @@ kept here so the cost/value of standing up CI is visible too.
 | 2026-10-29 | Backend pytest | `test_an_outside_save_to_an_open_library_model_updates_the_app_once_and_quickly` budgets 10s from an outside save to `file_changed`, which includes re-reading EGO. Locally that step is about 3s once the rest of the suite has run (2.4s alone; PsyNeuLink's in-process registries grow), and a CI runner is about 3.5x slower: the test took 18-22s overall on devel's runs, the step itself at the edge. Three lesson PRs failed it at 10.3-10.7s in one job each. Running only devel's demo tests first, or all the new lessons' too, moved the local step by 0.04s, so the lessons weren't the cause: the budget had no headroom on CI. | CI gets 20s; the 10s promise still holds on a laptop ([#154](https://github.com/jonhanke-nam/PsyNeuView/pull/154)) |
 | 2026-11-23 | E2E | `graph-hit-areas.spec.ts`, "the sweep, at three zooms with interface nodes: stroop_reference_with_lc.py", failed on both attempts on [#316](https://github.com/jonhanke-nam/PsyNeuView/pull/316): 172 points inside the input nodes at the zoomed-out step hit the pane. The trace showed why: turning on Interface nodes reloads the model (`POST /api/model/load`, about 3.2 s on the runner, still in flight), and the spec waited only 800 ms before sweeping. The reload landed between the fitted and zoomed-out sweeps, React Flow remounted the nodes hidden until measured, and every point fell through to the pane. A race with no margin, not a product bug: devel had passed it by tens of milliseconds, and #316's changes (labels, the diagnostics bar, the Inspector legend) didn't touch the reload; a 6× CPU-throttled local timing of the toggle was the same on both. | The spec waits for that reload's response, for the interface nodes to show and for the busy wheel to clear before sweeping ([#316](https://github.com/jonhanke-nam/PsyNeuView/pull/316)) |
 | 2026-11-23 | E2E | On [#316](https://github.com/jonhanke-nam/PsyNeuView/pull/316), after the curve-handles PR (#302) merged into devel, `edge-curve-handles.spec.ts` waited 20 s for a button named "Open from path..." on both attempts: #302's new spec was written against the old three-dot label, and #316 had renamed every label to "…". Each branch was green alone; the merge was not. | The spec selects "Open from path…", and `styleConventions.test.ts` now fails, in seconds and in vitest, on any e2e spec that selects a "..." label ([#316](https://github.com/jonhanke-nam/PsyNeuView/pull/316)) |
+| 2026-11-24 | E2E | `run-trial-seconds.spec.ts` waited for the first OK response whose URL contained `/api/model/run`. Since #357 the Run panel polls `/api/model/run/progress/{id}` every 300 ms while a run goes, and on the slower CI runner a poll answered (with `{trial, total, seconds}`) before the run did, so `data.results` was undefined. Per-trial times still showed; only the spec's reading was wrong. Two other specs had the same loose match. | The three specs match the run's URL exactly ([#373](https://github.com/jonhanke-nam/PsyNeuView/pull/373)) |

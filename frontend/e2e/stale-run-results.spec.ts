@@ -21,7 +21,7 @@ async function runModel(page: Page) {
   const panel = page.getByTestId("run-panel");
   if (!(await panel.isVisible())) await page.getByRole("button", { name: "Run", exact: true }).click();
   await Promise.all([
-    page.waitForResponse((r) => r.url().includes("/api/model/run") && r.ok(), { timeout: 60_000 }),
+    page.waitForResponse((r) => r.url().endsWith("/api/model/run") && r.ok(), { timeout: 60_000 }),
     panel.getByRole("button", { name: "Run Model" }).click(),
   ]);
   await expect(panel.getByTestId("run-results-body")).toBeVisible({ timeout: 30_000 });

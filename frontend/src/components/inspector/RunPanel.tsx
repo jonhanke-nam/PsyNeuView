@@ -801,14 +801,18 @@ export function RunPanel() {
         overflow: "auto",
         height: "100%",
         fontSize: "var(--pnv-fs-13)",
-        // #357: anything scrolled into view — a node's header, a focused
-        // trial input — stops below the sticky Run row, not under it.
-        scrollPaddingTop: stickyRowHeight,
       }}
     >
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", padding: "12px 0" }}>
-        {/* Input configuration */}
-        <div style={{ minWidth: 250 }}>
+        {/* Input configuration. #357: anything in it scrolled into view — a
+            node's header, a focused trial input — stops below the sticky Run
+            row, not under it. Only this column: the row is sticky inside it,
+            so it never covers the results, and a trial card scrolled into
+            view while stepping should not stop short of it. */}
+        <div
+          className="pnv-run-inputs"
+          style={{ minWidth: 250, ["--run-sticky-row-h" as string]: `${stickyRowHeight}px` }}
+        >
           {/* Header + Run Model button live in a sticky strip at the top of
               the Run panel so the button is always reachable without scrolling
               past a tall list of input textareas. */}
