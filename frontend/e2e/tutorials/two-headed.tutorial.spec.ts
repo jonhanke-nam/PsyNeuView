@@ -92,10 +92,7 @@ test.describe("Tutorial: The two-editor workflow", () => {
     await page.keyboard.insertText(
       `${AFTER_EXTERNAL_EDIT}\n# edited in PsyNeuView\n`,
     );
-    // Save via the toolbar button rather than Cmd-S: headless Chromium reports
-    // `navigator.platform === "Win32"`, so CodeMirror resolves "Mod-s" to
-    // Ctrl-s while Playwright's ControlOrMeta sends Meta on a macOS host. Both
-    // routes reach the same save; only the test browser disagrees about keys.
+    // Saved with the toolbar button; ⌘S / Ctrl+S reaches the same save.
     await page.getByRole("button", { name: /^Save$/ }).first().click();
 
     // Guarantee: the file the external editor has open is what PsyNeuView wrote.

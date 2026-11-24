@@ -83,11 +83,7 @@ async function replaceEditorText(page: Page, text: string) {
   await page.keyboard.insertText(text);
 }
 
-/**
- * The toolbar Save button, not Cmd-S: headless Chromium resolves CodeMirror's
- * "Mod-s" differently from Playwright's ControlOrMeta on a macOS host (see
- * preview-not-save.spec.ts).
- */
+/** The toolbar Save button; ⌘S / Ctrl+S reaches the same save. */
 function saveButton(page: Page) {
   return page.getByRole("button", { name: /^Save$/ }).first();
 }

@@ -7,10 +7,10 @@
  * own empty profile, the closest thing to a new install. The tests about the
  * shortcuts start from the shared setup and set the panels they need.
  *
- * Playwright sends a key straight to the page, and its Desktop Chrome profile
- * presents itself as Windows, so the page reads `Mod` as Ctrl: the tests press
- * `Control+1` on every host. A real browser keeps Cmd+1..9 (Ctrl+1..9) for its
- * tabs; the Mac app's web view passes them on.
+ * Playwright sends a key straight to the page, and the test browser reports
+ * the platform it runs on (#402), so `ControlOrMeta+1` is ⌘1 on a Mac and
+ * Ctrl+1 elsewhere, as the app expects. A real browser keeps Cmd+1..9
+ * (Ctrl+1..9) for its tabs; the Mac app's web view passes them on.
  */
 import { test as freshProfileTest, expect } from "@playwright/test";
 import {
@@ -20,6 +20,7 @@ import {
   ORIENTATION_OFFER_KEY,
 } from "./test-base";
 import { EVERYTHING, GRAPH_ONLY, GRAPH_VISIBLE_KEY, PALETTE_OPEN_KEY, expectPanels } from "./panels";
+import { modLabel } from "./hostPlatform";
 
 type Page = import("@playwright/test").Page;
 
@@ -112,11 +113,11 @@ readOnlyTest.describe("one key per panel (#191)", { tag: "@ci" }, () => {
     // The shared setup: code, graph and bottom on; the palette open.
     await expectPanels(page, EVERYTHING);
 
-    await page.keyboard.press("Control+2");
+    await page.keyboard.press("ControlOrMeta+2");
     await expectPanels(page, { ...EVERYTHING, code: false });
-    await page.keyboard.press("Control+3");
+    await page.keyboard.press("ControlOrMeta+3");
     await expectPanels(page, { ...EVERYTHING, code: false, bottom: false });
-    await page.keyboard.press("Control+4");
+    await page.keyboard.press("ControlOrMeta+4");
     await expectPanels(page, GRAPH_ONLY);
 
     // Each is remembered like a Layout-menu change.
@@ -125,17 +126,17 @@ readOnlyTest.describe("one key per panel (#191)", { tag: "@ci" }, () => {
     await expectPanels(page, GRAPH_ONLY);
 
     // And each comes back with the same key.
-    await page.keyboard.press("Control+2");
+    await page.keyboard.press("ControlOrMeta+2");
     await expectPanels(page, { ...GRAPH_ONLY, code: true });
-    await page.keyboard.press("Control+3");
+    await page.keyboard.press("ControlOrMeta+3");
     await expectPanels(page, { ...GRAPH_ONLY, code: true, bottom: true });
-    await page.keyboard.press("Control+4");
+    await page.keyboard.press("ControlOrMeta+4");
     await expectPanels(page, EVERYTHING);
 
     // The graph too, while something else is showing.
-    await page.keyboard.press("Control+1");
+    await page.keyboard.press("ControlOrMeta+1");
     await expectPanels(page, { ...EVERYTHING, graph: false });
-    await page.keyboard.press("Control+1");
+    await page.keyboard.press("ControlOrMeta+1");
     await expectPanels(page, EVERYTHING);
   });
 
@@ -154,19 +155,19 @@ readOnlyTest.describe("one key per panel (#191)", { tag: "@ci" }, () => {
     await expectPanels(page, GRAPH_ONLY);
 
     // #213: the notice says which panel stays, and which to show first with
-    // its key. The keys come from the shortcut registry; the page reads
-    // Playwright's profile as Windows, so they read Ctrl+2 and Ctrl+3 here.
+    // its key. The keys come from the shortcut registry: ⌘2 and ⌘3 on a Mac,
+    // Ctrl+2 and Ctrl+3 elsewhere.
     const notice = (text: string) => page.getByTestId("notification-message").filter({ hasText: text });
     const graphStays = notice("One panel has to stay open, so PsyNeuView can't hide the graph.");
 
-    await page.keyboard.press("Control+1");
+    await page.keyboard.press("ControlOrMeta+1");
     await expectPanels(page, GRAPH_ONLY);
     await expect(graphStays).toBeVisible();
-    await expect(graphStays).toContainText("Show the code editor (Ctrl+2) or the Inspector panel (Ctrl+3) first");
+    await expect(graphStays).toContainText(`Show the code editor (${modLabel("2")}) or the Inspector panel (${modLabel("3")}) first`);
     await expect(graphStays).toContainText("from the Layout menu");
 
     // Trying again doesn't stack a second notice.
-    await page.keyboard.press("Control+1");
+    await page.keyboard.press("ControlOrMeta+1");
     await expectPanels(page, GRAPH_ONLY);
     await expect(graphStays).toHaveCount(1);
 
@@ -186,33 +187,33 @@ readOnlyTest.describe("one key per panel (#191)", { tag: "@ci" }, () => {
 
     // The bottom panel's collapse button, once it is the last one: the same
     // notice, naming the Inspector panel and the other two.
-    await page.keyboard.press("Control+3");
+    await page.keyboard.press("ControlOrMeta+3");
     await expectPanels(page, { ...GRAPH_ONLY, bottom: true });
-    await page.keyboard.press("Control+1");
+    await page.keyboard.press("ControlOrMeta+1");
     await expectPanels(page, { code: false, graph: false, bottom: true, palette: false });
     await page.getByTestId("bottom-panel-collapse").click();
     await expectPanels(page, { code: false, graph: false, bottom: true, palette: false });
     const inspectorStays = notice("PsyNeuView can't hide the Inspector panel.");
     await expect(inspectorStays).toBeVisible();
-    await expect(inspectorStays).toContainText("Show the graph (Ctrl+1) or the code editor (Ctrl+2) first");
+    await expect(inspectorStays).toContainText(`Show the graph (${modLabel("1")}) or the code editor (${modLabel("2")}) first`);
     // ...and the collapse works again once the graph is back.
-    await page.keyboard.press("Control+1");
+    await page.keyboard.press("ControlOrMeta+1");
     await expectPanels(page, { ...GRAPH_ONLY, bottom: true });
     await page.getByTestId("bottom-panel-collapse").click();
     await expectPanels(page, GRAPH_ONLY);
 
     // The Components panel is not one of the three, so it can't stand in for them.
-    await page.keyboard.press("Control+4");
+    await page.keyboard.press("ControlOrMeta+4");
     await expectPanels(page, { ...GRAPH_ONLY, palette: true });
-    await page.keyboard.press("Control+1");
+    await page.keyboard.press("ControlOrMeta+1");
     await expectPanels(page, { ...GRAPH_ONLY, palette: true });
 
     // Once another panel is on, the graph can go, and the code editor is then the last.
-    await page.keyboard.press("Control+2");
+    await page.keyboard.press("ControlOrMeta+2");
     await expectPanels(page, { ...GRAPH_ONLY, palette: true, code: true });
-    await page.keyboard.press("Control+1");
+    await page.keyboard.press("ControlOrMeta+1");
     await expectPanels(page, { code: true, graph: false, bottom: false, palette: true });
-    await page.keyboard.press("Control+2");
+    await page.keyboard.press("ControlOrMeta+2");
     await expectPanels(page, { code: true, graph: false, bottom: false, palette: true });
   });
 
@@ -220,7 +221,7 @@ readOnlyTest.describe("one key per panel (#191)", { tag: "@ci" }, () => {
     await page.addInitScript((bottom) => localStorage.setItem(bottom, "false"), LAYOUT_BOTTOM_VISIBLE_KEY);
     await openApp(page);
     await expectPanels(page, { ...EVERYTHING, bottom: false });
-    await page.keyboard.press("Control+i");
+    await page.keyboard.press("ControlOrMeta+i");
     await expectPanels(page, EVERYTHING);
   });
 });

@@ -10,8 +10,9 @@
  * off opens as the graph, and a walkthrough started from blank ends on blank.
  *
  * The shared setup (`test-base.ts`) turns the code editor and the bottom panel
- * on; these tests set the layout keys outright. Playwright's profile reads as
- * Windows, so the keys read Ctrl+1..3 here.
+ * on; these tests set the layout keys outright. The test browser reports the
+ * platform it runs on (#402), so the keys are ⌘1..3 on a Mac, Ctrl+1..3
+ * elsewhere.
  */
 import { mkdtempSync, readFileSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
@@ -19,6 +20,7 @@ import path from "path";
 import { mutatingTest, readOnlyTest as test, expect, LAYOUT_BOTTOM_VISIBLE_KEY, LAYOUT_CODE_VISIBLE_KEY } from "./test-base";
 import { fixturePath, type FixtureName } from "./fixtures";
 import { EVERYTHING, GRAPH_ONLY, GRAPH_VISIBLE_KEY, PALETTE_OPEN_KEY, expectPanels, type Panels } from "./panels";
+import { modLabel } from "./hostPlatform";
 
 type Page = import("@playwright/test").Page;
 
@@ -123,7 +125,7 @@ test.describe("a blank screen by choice (#215)", { tag: "@ci" }, () => {
     await closeSettings(page);
 
     // Nothing changed: the refusal and its notice are as before (#213).
-    await page.keyboard.press("Control+1");
+    await page.keyboard.press("ControlOrMeta+1");
     await expectPanels(page, GRAPH_ONLY);
     await expect(lastPanelNotice(page)).toBeVisible();
     await expect(hint(page)).toHaveCount(0);
@@ -140,11 +142,11 @@ test.describe("a blank screen by choice (#215)", { tag: "@ci" }, () => {
     expect(await page.evaluate((k) => localStorage.getItem(k), ALLOW_BLANK_KEY)).toBe("true");
 
     // Each key hides its panel; the last one goes too, with no notice.
-    await page.keyboard.press("Control+2");
-    await page.keyboard.press("Control+3");
+    await page.keyboard.press("ControlOrMeta+2");
+    await page.keyboard.press("ControlOrMeta+3");
     await expectPanels(page, GRAPH_ONLY);
     await expect(hint(page)).toHaveCount(0);
-    await page.keyboard.press("Control+1");
+    await page.keyboard.press("ControlOrMeta+1");
     await expectPanels(page, NOTHING);
     await expect(lastPanelNotice(page)).toHaveCount(0);
 
@@ -152,8 +154,8 @@ test.describe("a blank screen by choice (#215)", { tag: "@ci" }, () => {
     await expect(page.getByTestId("app-toolbar")).toBeVisible();
     await expect(page.getByTestId("blank-screen")).toBeVisible();
     await expect(hint(page)).toHaveText(
-      "Every panel is hidden. Bring one back from the Layout menu, or press Ctrl+1 for the graph, " +
-        "Ctrl+2 for the code editor or Ctrl+3 for the Inspector panel.",
+      `Every panel is hidden. Bring one back from the Layout menu, or press ${modLabel("1")} for the graph, ` +
+        `${modLabel("2")} for the code editor or ${modLabel("3")} for the Inspector panel.`,
     );
     // The Layout menu's rows are all available: nothing is locked.
     await page.getByTestId("layout-menu-button").click();
@@ -171,11 +173,11 @@ test.describe("a blank screen by choice (#215)", { tag: "@ci" }, () => {
     await expect(hint(page)).toBeVisible();
 
     // A panel comes back from its key, and the hint goes.
-    await page.keyboard.press("Control+2");
+    await page.keyboard.press("ControlOrMeta+2");
     await expectPanels(page, { ...NOTHING, code: true });
     await expect(hint(page)).toHaveCount(0);
     // ...and from the Layout menu.
-    await page.keyboard.press("Control+2");
+    await page.keyboard.press("ControlOrMeta+2");
     await expectPanels(page, NOTHING);
     await page.getByTestId("layout-menu-button").click();
     await page.getByTestId("layout-menu-list").getByTestId("layout-menu-panel-graph").click();
@@ -212,13 +214,13 @@ test.describe("a blank screen by choice (#215)", { tag: "@ci" }, () => {
     await expectPanels(page, GRAPH_ONLY);
 
     // Blank again, then open: the chosen two.
-    await page.keyboard.press("Control+1");
+    await page.keyboard.press("ControlOrMeta+1");
     await expectPanels(page, NOTHING);
     await openFromPath(page, model);
     await expectPanels(page, { code: true, graph: false, bottom: true, palette: false });
 
     // Showing the graph later fits a model that loaded while it was hidden.
-    await page.keyboard.press("Control+1");
+    await page.keyboard.press("ControlOrMeta+1");
     await expectGraphDrawnInView(page);
   });
 
@@ -226,7 +228,7 @@ test.describe("a blank screen by choice (#215)", { tag: "@ci" }, () => {
     await startWith(page, NOTHING, { allowBlank: "true" });
     await openApp(page);
     const blankAgain = async () => {
-      await page.keyboard.press("Control+1");
+      await page.keyboard.press("ControlOrMeta+1");
       await expectPanels(page, NOTHING);
     };
 
@@ -293,12 +295,12 @@ test.describe("a blank screen by choice (#215)", { tag: "@ci" }, () => {
     await openApp(page);
     await expect(hint(page)).toBeVisible();
 
-    await page.keyboard.press("Control+i");
+    await page.keyboard.press("ControlOrMeta+i");
     await expectPanels(page, { ...NOTHING, bottom: true });
     await expect(hint(page)).toHaveCount(0);
 
     // Diagnostics say so, whatever the panels: an empty list explains itself.
-    await page.keyboard.press("Control+3");
+    await page.keyboard.press("ControlOrMeta+3");
     await expectPanels(page, NOTHING);
     const layout = await page.evaluate(async () => (await (window as any).__pnvDiagnostics()).state.ui.layout);
     expect(layout.visiblePanes).toEqual([]);
@@ -332,7 +334,7 @@ test.describe("a blank screen by choice (#215)", { tag: "@ci" }, () => {
     await expect(hint(page)).toHaveCount(0);
     expect(await page.evaluate((k) => localStorage.getItem(k), GRAPH_VISIBLE_KEY)).toBe("true");
 
-    await page.keyboard.press("Control+1");
+    await page.keyboard.press("ControlOrMeta+1");
     await expectPanels(page, GRAPH_ONLY);
     await expect(lastPanelNotice(page)).toBeVisible();
   });
