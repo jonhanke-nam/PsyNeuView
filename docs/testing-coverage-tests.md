@@ -697,6 +697,8 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - Like show_graph with learning on a nested model (#72) › follows the PyTorch picture when the canvas has no frame to fit · CI · #72
 - Like show_graph edges into an open frame (#73) › names the member a frame's port carries to or from, however deep · CI · #73
 - Like show_graph edges into an open frame (#73) › draws them along show_graph's course, to and from the member · CI · #73
+- a model switch and the show_graph layout (#386) › keys a layout by its file, so models sharing node names don't share one · CI · #386
+- a model switch and the show_graph layout (#386) › a slower answer for the model before a switch does not become the layout in use · CI · #386
 
 **`frontend/src/utils/showGraphLoadRequest.test.ts`** (Frontend unit (vitest))
 
@@ -4594,6 +4596,16 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - a dropped .py file (#227) › says why, and loads nothing, when the file cannot be written · CI · #227
 - reentrancy › is not importing once a call settles · CI
 
+**`frontend/src/utils/modelOpenSequence.test.ts`** (Frontend unit (vitest))
+
+- model open tickets › only the newest ticket is current · CI · #386
+- model open tickets › a slow older answer arriving last is dropped · CI · #386
+- model open tickets › an older answer arriving first is dropped too, not shown in passing · CI · #386
+- model open tickets › three quick opens show only the last · CI · #386
+- a failed open says which model is still open › names the open model · CI · #386
+- a failed open says which model is still open › names a bundle by the bundle, not its working copy · CI · #386
+- a failed open says which model is still open › says nothing more when no model is open · CI · #386
+
 **`frontend/src/utils/recentPaths.test.ts`** (Frontend unit (vitest))
 
 - recent paths follow a moved project folder (#1295) › rewrites a path inside the old folder, and the folder itself · CI · #1295
@@ -4803,6 +4815,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - Components icon strip (#372) › with the setting on, favourites and recents sit below the categories under their heading · CI · #372
 - Components icon strip (#372) › a row's empty star shows on hover or focus; a starred row keeps its star · CI · #372
 
+**`frontend/e2e/model-switch.spec.ts`** (Browser (Playwright))
+
+- switching models (#386) › every switch replaces the graph, the code and the title · CI · #386
+- switching models (#386) › a model that fails to build, or a file that won't open, never leaves the old model looking current · CI · #386
+
 **`frontend/e2e/notification-dwell.spec.ts`** (Browser (Playwright))
 
 - success toast dwells past the old 2s window · CI · #879
@@ -4892,6 +4909,14 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - revealModelError › bumps on each request · CI · #1103
 - revealModelError › keeps bumping, so repeated clicks each re-trigger the jump · CI · #1103
 - revealModelError › is independent of the error line itself · CI · #1103
+
+**`frontend/src/stores/modelSwitch.test.ts`** (Frontend unit (vitest))
+
+- switching to a model that does not build (#386) › clears the previous model's graph and shows the error · CI · #386
+- switching to a model that does not build (#386) › still holds the graph while the same file is edited into a broken state · CI · #386
+- switching to a model that does not build (#386) › does not hold for an explicit re-open of the same file · CI · #386
+- switching to a model that does not build (#386) › replaces the graph when the next model builds · CI · #386
+- a save that comes back after another model opened (#386) › does not put the saved model's graph over the new one · CI · #386
 
 **`frontend/src/stores/stripShortcuts.test.ts`** (Frontend unit (vitest))
 

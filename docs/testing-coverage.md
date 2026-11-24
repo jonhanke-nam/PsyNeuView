@@ -9,9 +9,9 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 176 | 468 | 458 tests in 171 files |
+| Browser (Playwright) | 177 | 470 | 460 tests in 172 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 147 | 1295 | 1295 tests in 147 files |
+| Frontend unit (vitest) | 149 | 1309 | 1309 tests in 149 files |
 | Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -22,7 +22,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 |---|---|---|---|---|---|
 | [Tutorials and guided walkthroughs](#tutorials) | 13 files, 57 tests | 35 files, 80 tests | 13 files, 219 tests | 2 files, 18 tests | 374 of 374 |
 | AI assistant | – | – | – | – | **no tests** |
-| [Matching show_graph](#showgraph) | 8 files, 19 tests | – | 8 files, 66 tests | 5 files, 34 tests | 118 of 119 |
+| [Matching show_graph](#showgraph) | 8 files, 19 tests | – | 8 files, 68 tests | 5 files, 34 tests | 120 of 121 |
 | [Dragging and pointer interaction](#pointer) | 18 files, 54 tests | – | 6 files, 37 tests | – | 91 of 91 |
 | [Building models in the UI](#building) | 4 files, 7 tests | – | 1 files, 9 tests | 13 files, 145 tests | 161 of 161 |
 | [Editing: code and graph in step](#sync) | 17 files, 40 tests | – | 10 files, 81 tests | 26 files, 247 tests | 365 of 368 |
@@ -33,8 +33,8 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
-| [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 13 files, 26 tests | – | 20 files, 133 tests | 21 files, 206 tests | 362 of 365 |
+| [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 5 files, 43 tests | 15 files, 121 tests | 189 of 190 |
+| [App shell, diagnostics and everything else](#shell) | 14 files, 28 tests | – | 21 files, 138 tests | 21 files, 206 tests | 369 of 372 |
 
 <a id="tutorials"></a>
 
@@ -276,7 +276,7 @@ No tests yet.
 | `ioRows.test.ts` | Frontend unit | 16 | yes |  | A 100×40 mechanism node at (x, y), with roles. |
 | `layoutAgreement.test.ts` | Frontend unit | 5 | yes |  |  |
 | `roleRanks.test.ts` | Frontend unit | 16 | yes |  |  |
-| `showGraphLayout.test.ts` | Frontend unit | 16 | yes |  | show_graph(output_fmt="source") for the bundled Stroop reference model (backend/reference_models/stroop_reference_basic.py), as the backend returns it. |
+| `showGraphLayout.test.ts` | Frontend unit | 18 | yes |  | show_graph(output_fmt="source") for the bundled Stroop reference model (backend/reference_models/stroop_reference_basic.py), as the backend returns it. |
 | `showGraphLoadRequest.test.ts` | Frontend unit | 3 | yes |  |  |
 | `test_load_show_graph.py` | Backend | 4 | yes | #27 | A load asked for show_graph keeps its answers, so the layout needn't reload (#27). |
 | `test_show_graph_cache.py` | Backend | 8 | yes | #22 | show_graph answers are reused until the model, its folder or PsyNeuLink changes (#22). |
@@ -1192,6 +1192,7 @@ No tests yet.
 | `modelLoadView.test.ts` | Frontend unit | 2 | yes | #257 | Every model load and preview asks for the view the user is looking at (#257). |
 | `openMenuOrder.test.ts` | Frontend unit | 21 | yes |  | The suite runs on node, not jsdom (see vitest.config.ts), so the two browser APIs this module touches are stubbed rather than pulling in a DOM. |
 | `importModelFiles.test.ts` | Frontend unit | 11 | yes |  |  |
+| `modelOpenSequence.test.ts` | Frontend unit | 7 | yes | #386 | The newest model open wins (#386). |
 | `recentPaths.test.ts` | Frontend unit | 2 | yes |  |  |
 | `test_catalog_sources.py` | Backend | 1 | yes | #853 | `/catalog-sources` returns the resolved source dir for each Open-menu catalog (#853). |
 | `test_catalogs.py` | Backend | 6 | yes | #1229 | The user's own Open-menu catalogs and project folder (#1229). |
@@ -1255,6 +1256,7 @@ No tests yet.
 | `graph-edit-broke-model.spec.ts` | Browser | 1 | yes | #353, #349 | When an edit made on the graph writes a line that doesn't run, the warning names that edit ("Adding X broke the model at line N.") and offers Undo, which puts the file back as it was (#353). |
 | `harness.spec.ts` | Browser | 1 | yes | #147 | Proves the test harness wiring end-to-end (#147): playwright.config env vars → backend in test mode → /api/test/reset open → mutatingTest fixture fires it. |
 | `icon-strip-shortcuts.spec.ts` | Browser | 3 | yes | #372 | The Components icon strip (#372). |
+| `model-switch.spec.ts` | Browser | 2 | yes | #386 | Switching models always replaces what is shown (#386). |
 | `notification-dwell.spec.ts` | Browser | 1 | yes | #879 | #879: info/success toasts dwell long enough to read. |
 | `pycharm-live.local.spec.ts` | Browser | 1 | no |  | LOCAL ONLY — the full two-headed loop with a real PyCharm. |
 | `read-only-badge-note.spec.ts` | Browser | 1 | yes | #50 | Clicking the "PsyNeuLink from … · read only" tag explains it (#50). |
@@ -1270,6 +1272,7 @@ No tests yet.
 | `e2eDistFreshness.test.ts` | Frontend unit | 3 | yes |  |  |
 | `retrySummary.test.ts` | Frontend unit | 4 | yes | #359 | The "Passed only on retry" job summary (#359): scripts/retry-summary.mjs reads the merged Playwright JSON report and lists every test that failed first and passed on retry. |
 | `errorReveal.test.ts` | Frontend unit | 4 | yes | #1103 | Clicking a model error to jump to its line (#1103). |
+| `modelSwitch.test.ts` | Frontend unit | 5 | yes | #386 | Switching to a model that does not build replaces what is shown (#386). |
 | `stripShortcuts.test.ts` | Frontend unit | 3 | yes |  | The suite runs on node, not jsdom (vitest.config.ts): stub localStorage, as componentsPanelStart.test.ts does. |
 | `uiStoreInputs.test.ts` | Frontend unit | 6 | yes | #331, #330 | The Run panel's input arrangement (#331) and the per-element grid setting (#330): their defaults, and a choice made before being kept. |
 | `activityLog.test.ts` | Frontend unit | 17 | yes | #1287 | The activity log's rules (#1287): the cap, the order, `~` for the home folder, and no secrets — the value of a key that looks like a token or a password is never recorded, however it gets in. |
@@ -1322,6 +1325,8 @@ No tests yet.
 | Components icon strip (#372) › a fresh strip shows the All heading, four categories and no shortcuts | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
 | Components icon strip (#372) › with the setting on, favourites and recents sit below the categories under their heading | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
 | Components icon strip (#372) › a row's empty star shows on hover or focus; a starred row keeps its star | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
+| switching models (#386) › every switch replaces the graph, the code and the title | `model-switch.spec.ts` | Browser | yes | #386 |
+| switching models (#386) › a model that fails to build, or a file that won't open, never leaves the old model looking current | `model-switch.spec.ts` | Browser | yes | #386 |
 | success toast dwells past the old 2s window | `notification-dwell.spec.ts` | Browser | yes | #879 |
 | a real PyCharm save updates the PsyNeuView canvas | `pycharm-live.local.spec.ts` | Browser | no |  |
 | the read-only tag explains itself and offers Save a copy as… (#50) | `read-only-badge-note.spec.ts` | Browser | yes | #50 |
