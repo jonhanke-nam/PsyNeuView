@@ -261,6 +261,28 @@ def test_a_github_example_opens_as_a_copy(github_model, tmp_path, monkeypatch):
     assert resp.json()["file_path"] != str(example)
 
 
+def test_reopening_a_github_example_keeps_your_edits(github_model, tmp_path, monkeypatch):
+    """#1010 for examples (#422): reopening used to copy the example over the
+    working copy every time, losing any edits without asking."""
+    monkeypatch.setenv("PSYNEUVIEW_WORKING_DIR", str(tmp_path / "working"))
+    _with_example(github_model)
+    first = client.post("/api/psyneulink-examples/load", json={"name": "Demo"}).json()
+    assert first["workingCopy"] == {"diverged": False, "restored": False}
+    copy = first["file_path"]
+    edited = MODEL + "B = pnl.TransferMechanism(name='B')\n"
+    with open(copy, "w") as f:
+        f.write(edited)
+
+    again = client.post("/api/psyneulink-examples/load", json={"name": "Demo"}).json()
+    assert again["file_path"] == copy
+    assert again["workingCopy"] == {"diverged": True, "restored": False}
+    assert open(copy).read() == edited
+
+    restored = client.post("/api/psyneulink-examples/load", json={"name": "Demo", "restore_pristine": True}).json()
+    assert restored["workingCopy"] == {"diverged": False, "restored": True}
+    assert open(copy).read() == MODEL
+
+
 def test_a_git_install_is_called_github_not_pypi(git_install_model):
     """The badge and the editor's lock said "PyPI" for a `pip install git+…`
     from GitHub devel (#1280)."""
