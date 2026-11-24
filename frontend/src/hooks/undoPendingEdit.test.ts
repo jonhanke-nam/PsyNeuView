@@ -54,3 +54,36 @@ describe("Undo with an edit still waiting for its preview (#366)", () => {
     expect(useHistoryStore.getState().past).toHaveLength(1);
   });
 });
+
+describe("Redo with an edit still waiting for its preview (#391)", () => {
+  const TYPED = "gain = 2.5\n";
+
+  it("keeps the typed edit: Undo after the Redo brings it back", async () => {
+    // A step, undone: Redo has it to put back.
+    useModelStore.getState().setSource(EDITED);
+    recordAction("Edited the code");
+    await applyHistoryStep(false);
+    expect(useModelStore.getState().source).toBe(RAN);
+    useHistoryStore.getState().setRestoring(false);
+
+    // Type, then Redo at once, before the preview has made it a step.
+    useModelStore.getState().setSource(TYPED);
+    await applyHistoryStep(true);
+    expect(useModelStore.getState().source).toBe(EDITED);
+    useHistoryStore.getState().setRestoring(false);
+
+    // The typed edit is a step, just before the one Redo put back.
+    const past = useHistoryStore.getState().past;
+    expect(past.map((s) => s.source)).toEqual([RAN, TYPED, EDITED]);
+
+    await applyHistoryStep(false);
+    expect(useModelStore.getState().source).toBe(TYPED);
+  });
+
+  it("with nothing to redo, records the edit and leaves it in the editor", async () => {
+    useModelStore.getState().setSource(TYPED);
+    await applyHistoryStep(true);
+    expect(useModelStore.getState().source).toBe(TYPED);
+    expect(useHistoryStore.getState().past.map((s) => s.source)).toEqual([RAN, TYPED]);
+  });
+});
