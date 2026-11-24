@@ -136,9 +136,10 @@ changing what the mouse does. Adding a component is the worked example:
   between their rows; Esc gives focus back to what opened them. Opened with
   the mouse, focus stays put.
 - **Where the mouse clicks a point, the keyboard gets a preview.**
-  `KeyboardPlacer` shows the component, dashed, at the nearest free spot
-  (`utils/freeSpot.ts`: nothing may overlap), the arrows move it and Enter
-  puts it down. Where the mouse clicks a node, Tab or the arrows ring one
+  `KeyboardPlacer` shows the component, dashed: beside the selected node, or
+  with nothing selected in empty space just beside the graph (right, else
+  below, else left), never in a gap inside it (`utils/freeSpot.ts`: nothing
+  may overlap). The arrows move it and Enter puts it down. Where the mouse clicks a node, Tab or the arrows ring one
   node at a time and Enter acts on it; a node that refuses says why in words,
   not only in a hover tooltip.
 - **Each step is said** in a status message (the placing hint), and focus

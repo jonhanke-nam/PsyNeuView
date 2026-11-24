@@ -7,7 +7,9 @@
  * comes here instead, and this takes keyboard focus:
  *
  *  - A component is shown, dashed, where it would go: the free spot nearest
- *    the selected node, or else the middle of the view, so it covers nothing.
+ *    the selected node, or, with nothing selected, in empty space just beside
+ *    the graph (right of it, else below, else left: whichever is showing),
+ *    never in a gap inside it where arrows run. It covers nothing.
  *    The arrow keys move it (Shift for bigger steps), always to a spot that
  *    covers nothing; Enter puts it there; Option-Enter puts one there and
  *    keeps it picked up, as Option-click does.
@@ -27,8 +29,7 @@ import { isFunctionType } from "@/constants/pnlTypes";
 import { useModelStore } from "@/stores/modelStore";
 import { usePaletteStore } from "@/stores/paletteStore";
 import { generateDefaultVarName } from "@/utils/defaultNaming";
-import { type Box, type Point, nearestFreeCentre } from "@/utils/freeSpot";
-import { visibleCentre } from "@/utils/graphViewport";
+import { type Box, type Point, besideGraph, nearestFreeCentre } from "@/utils/freeSpot";
 import { expectedNodeSize, functionRefusal } from "@/utils/nodeActions";
 
 type Pick = NonNullable<ReturnType<typeof usePaletteStore.getState>["armed"]>;
@@ -55,7 +56,7 @@ export function KeyboardPlacer({
   /** What the placing hint should say now. */
   announce: (text: string) => void;
 }) {
-  const { getInternalNode, setCenter, getZoom } = useReactFlow();
+  const { getInternalNode, setCenter, getZoom, screenToFlowPosition } = useReactFlow();
   const ref = useRef<HTMLDivElement>(null);
   const isFn = isFunctionType(pick.type);
 
@@ -119,7 +120,12 @@ export function KeyboardPlacer({
     const sel = selected ? nodes.find((n) => n.id === selected) : undefined;
     const b = sel ? boxOf(sel) : null;
     if (b) return { x: b.x + b.w / 2, y: b.y + b.h / 2 };
-    return visibleCentre() ?? { x: 0, y: 0 };
+    // Nothing selected: beside the graph, in the part of it showing.
+    const pane = document.querySelector('[data-testid="graph-canvas-viewport"] .react-flow__pane')?.getBoundingClientRect();
+    const tl = pane ? screenToFlowPosition({ x: pane.left, y: pane.top }) : null;
+    const br = pane ? screenToFlowPosition({ x: pane.right, y: pane.bottom }) : null;
+    const visible = tl && br ? { x: tl.x, y: tl.y, w: br.x - tl.x, h: br.y - tl.y } : null;
+    return besideGraph(taken, size, visible, GAP);
   });
   const spot = useMemo(
     () => (isFn ? want : nearestFreeCentre(want, size, taken, { gap: GAP, step: STEP })),
@@ -138,19 +144,20 @@ export function KeyboardPlacer({
     : `Placing ${pick.label}: the arrow keys move it, Enter puts it down, Esc cancels.`;
   useEffect(() => announce(note), [note, announce]);
 
-  // A ringed mechanism out of view, or under the placing hint, is brought
-  // into view.
+  // A ringed mechanism or the new node's outline out of view, or under the
+  // placing hint, is brought into view.
   useEffect(() => {
     const el = ref.current;
     const pane = el?.closest(".react-flow")?.getBoundingClientRect();
     const r = el?.getBoundingClientRect();
-    if (!target || !pane || !r) return;
+    if (!pane || !r || (isFn && !target)) return;
     const hint = document.getElementById("place-component-hint")?.getBoundingClientRect();
     const underHint = !!hint && r.left < hint.right && hint.left < r.right && r.top < hint.bottom && hint.top < r.bottom;
     if (underHint || r.left < pane.left || r.right > pane.right || r.top < pane.top || r.bottom > pane.bottom) {
-      void setCenter(target.box.x + target.box.w / 2, target.box.y + target.box.h / 2, { zoom: getZoom(), duration: 200 });
+      const c = target ? { x: target.box.x + target.box.w / 2, y: target.box.y + target.box.h / 2 } : spot;
+      void setCenter(c.x, c.y, { zoom: getZoom(), duration: 200 });
     }
-  }, [target, setCenter, getZoom]);
+  }, [isFn, target, spot, setCenter, getZoom]);
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Escape") {

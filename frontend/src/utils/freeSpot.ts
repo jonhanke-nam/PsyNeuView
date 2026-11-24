@@ -59,3 +59,42 @@ export function nearestFreeCentre(
   }
   return best?.p ?? want;
 }
+
+/** The box around all of `boxes`, or null when there are none. */
+export function boundsOf(boxes: Box[]): Box | null {
+  if (boxes.length === 0) return null;
+  const x = Math.min(...boxes.map((b) => b.x));
+  const y = Math.min(...boxes.map((b) => b.y));
+  const r = Math.max(...boxes.map((b) => b.x + b.w));
+  const btm = Math.max(...boxes.map((b) => b.y + b.h));
+  return { x, y, w: r - x, h: btm - y };
+}
+
+/**
+ * Where a new node goes when nothing is selected (#411): in empty space
+ * beside the graph, never in a gap inside it, where arrows run. Just right of
+ * the graph's bounding box, centred on it top to bottom; if that isn't in
+ * `visible` (the part of the graph showing), just below the graph, centred
+ * left to right; then just left of it. If none of the three is showing, the
+ * right-hand one, and the caller brings it into view. With no graph, the
+ * middle of what is showing (or the origin).
+ */
+export function besideGraph(
+  taken: Box[],
+  size: { width: number; height: number },
+  visible: Box | null,
+  gap = 24,
+): Point {
+  const g = boundsOf(taken);
+  if (!g) return visible ? { x: visible.x + visible.w / 2, y: visible.y + visible.h / 2 } : { x: 0, y: 0 };
+  const right = { x: g.x + g.w + gap + size.width / 2, y: g.y + g.h / 2 };
+  const below = { x: g.x + g.w / 2, y: g.y + g.h + gap + size.height / 2 };
+  const left = { x: g.x - gap - size.width / 2, y: g.y + g.h / 2 };
+  const shows = (c: Point) =>
+    !visible ||
+    (c.x - size.width / 2 >= visible.x &&
+      c.x + size.width / 2 <= visible.x + visible.w &&
+      c.y - size.height / 2 >= visible.y &&
+      c.y + size.height / 2 <= visible.y + visible.h);
+  return [right, below, left].find(shows) ?? right;
+}
