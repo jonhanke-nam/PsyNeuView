@@ -6,9 +6,10 @@ name: E2E
 # Per the #168 activation plan, this auto-runs a *curated set of currently-green*
 # specs (`npm run test:e2e:ci`) on PRs to devel — the first increment. Specs not
 # yet green are excluded from the gate and tracked for fixing. A spec joins the
-# set by carrying the Playwright tag `@ci` (and its file is listed in
-# frontend/e2e/ci-specs.txt, which a vitest checks). The full / smoke sets remain
-# available via manual "Run workflow".
+# set by carrying the Playwright tag `@ci`; a spec without it must say why in a
+# `Not in CI:` line, which a vitest checks (ciSpecs.test.ts; #380 dropped the
+# checked-in file list). The full / smoke sets remain available via manual
+# "Run workflow".
 #
 # #295: the suite runs as 3 parallel shards (Playwright `--shard=N/3`), each on
 # its own runner with its own build and servers. The final job, named `e2e`,

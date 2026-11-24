@@ -1,25 +1,33 @@
 /**
- * The CI e2e set is the specs tagged `@ci`; e2e/ci-specs.txt names their files.
+ * Every browser spec is accounted for: CI runs it (`@ci`), or it says why not.
  *
  * `npm run test:e2e:ci` runs `playwright test --grep "@ci\b"`, so a spec is
  * in the CI e2e job exactly when it carries the tag. A tag is easy to drop by
  * accident (a rewritten describe, a copied test without its options), and
- * nothing would fail — the tests would just stop running in CI. This check
- * keeps the set of files carrying `@ci` equal to the checked-in list.
+ * nothing would fail: the tests would just stop running in CI. So every spec
+ * outside the tutorials must either carry `@ci` or have a `Not in CI: <why>`
+ * line, with one of the reasons the What's tested page knows
+ * (scripts/test_map.py, NOT_IN_CI). Dropping the tag without writing down why
+ * fails here.
  *
- * The list is one file per line, sorted, so two PRs adding different specs
- * rarely touch the same line.
+ * There used to be a checked-in list of the tagged files
+ * (e2e/ci-specs.txt). Every pull request that added a spec edited it, so
+ * they all conflicted with each other; the check reads the spec files instead
+ * (#380).
  */
 import { readFileSync, readdirSync, statSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 
 const E2E = path.resolve(import.meta.dirname, "../e2e");
-const LIST = path.join(E2E, "ci-specs.txt");
 
 // `@ci` inside a string literal: `{ tag: "@ci" }`, `tag: ["@smoke", "@ci"]`,
 // or a title like "@ci something". A mention in a comment does not count.
 const CI_TAG = /["'`][^"'`\n]*@ci\b/;
+
+// The same reasons as NOT_IN_CI in scripts/test_map.py.
+const NOT_IN_CI =
+  /Not in CI:\s*(slow|needs a network|superseded|broken|measurement|pictures only|local only|should be added)\b/i;
 
 function specFiles(dir: string): string[] {
   const out: string[] = [];
@@ -29,42 +37,40 @@ function specFiles(dir: string): string[] {
     if (statSync(p).isDirectory()) out.push(...specFiles(p));
     else if (name.endsWith(".spec.ts")) out.push(path.relative(E2E, p).split(path.sep).join("/"));
   }
-  return out;
+  return out.sort();
 }
 
-const listed = readFileSync(LIST, "utf8")
-  .split("\n")
-  .map((l) => l.trim())
-  .filter((l) => l && !l.startsWith("#"));
+const specs = specFiles(E2E).map((f) => ({ f, src: readFileSync(path.join(E2E, f), "utf8") }));
+const tutorials = specs.filter(({ f }) => f.startsWith("tutorials/"));
+const browser = specs.filter(({ f }) => !f.startsWith("tutorials/"));
+// *.local.spec.ts are ignored by playwright.config.ts (testIgnore), so a tag
+// there would claim a CI run that never happens.
+const local = browser.filter(({ f }) => f.endsWith(".local.spec.ts"));
 
-const tagged = specFiles(E2E)
-  .filter((f) => CI_TAG.test(readFileSync(path.join(E2E, f), "utf8")))
-  .sort();
-
-describe("CI e2e specs (@ci tag ↔ e2e/ci-specs.txt)", () => {
-  it("the list is sorted, one file per line, with no repeats", () => {
-    const sorted = [...new Set(listed)].sort();
-    expect(listed, "keep frontend/e2e/ci-specs.txt sorted with each file once").toEqual(sorted);
+describe("CI e2e specs: every spec is tagged @ci or says why not", () => {
+  it("finds the specs (a moved e2e folder must not pass by finding none)", () => {
+    expect(browser.length).toBeGreaterThan(100);
+    expect(browser.filter(({ src }) => CI_TAG.test(src)).length).toBeGreaterThan(100);
   });
 
-  it("the files tagged @ci are exactly the files listed", () => {
-    const missingFromList = tagged.filter((f) => !listed.includes(f));
-    const missingTag = listed.filter((f) => !tagged.includes(f));
-    const problems: string[] = [];
-    if (missingFromList.length)
-      problems.push(
-        `Tagged @ci but not in frontend/e2e/ci-specs.txt: ${missingFromList.join(", ")}.\n` +
-          "  Added a spec to CI? Add its file to frontend/e2e/ci-specs.txt (sorted, one per line).",
-      );
-    if (missingTag.length)
-      problems.push(
-        `Listed in frontend/e2e/ci-specs.txt but no @ci tag in the file: ${missingTag.join(", ")}.\n` +
-          '  Removed it from CI on purpose? Remove its line from ci-specs.txt. Otherwise put back its { tag: "@ci" }.',
-      );
-    expect(problems.join("\n"), problems.join("\n")).toBe("");
+  it("every browser spec is tagged @ci or has a 'Not in CI: <why>' line", () => {
+    const unaccounted = browser
+      .filter(({ f, src }) => (f.endsWith(".local.spec.ts") || !CI_TAG.test(src)) && !NOT_IN_CI.test(src))
+      .map(({ f }) => f);
+    expect(
+      unaccounted,
+      `Not tagged @ci and no 'Not in CI:' line: ${unaccounted.join(", ")}.\n` +
+        '  Should it run in CI? Tag its describe (or each top-level test) { tag: "@ci" }.\n' +
+        "  Kept out on purpose? Add a header line 'Not in CI: <slow | needs a network | superseded | broken |\n" +
+        "  measurement | pictures only | local only | should be added>: <why>'.",
+    ).toEqual([]);
+  });
+
+  it("no *.local.spec.ts is tagged @ci (CI ignores those files)", () => {
+    expect(local.filter(({ src }) => CI_TAG.test(src)).map(({ f }) => f)).toEqual([]);
   });
 
   it("no tutorial spec is tagged @ci (tutorials run in their own job)", () => {
-    expect(tagged.filter((f) => f.startsWith("tutorials/"))).toEqual([]);
+    expect(tutorials.filter(({ src }) => CI_TAG.test(src)).map(({ f }) => f)).toEqual([]);
   });
 });
