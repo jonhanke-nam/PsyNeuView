@@ -63,6 +63,7 @@ inspector-condition-undo.spec.ts
 inspector-legend.spec.ts
 io-role-rows.spec.ts
 keep-pnl-current.spec.ts
+keyboard-add-component.spec.ts
 layered-wide-boxes.spec.ts
 layout-default-fresh-profile.spec.ts
 layout-default-show-graph.spec.ts
