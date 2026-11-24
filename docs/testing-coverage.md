@@ -9,10 +9,10 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 159 | 431 | 419 tests in 153 files |
+| Browser (Playwright) | 160 | 432 | 420 tests in 154 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 136 | 1226 | 1226 tests in 136 files |
-| Backend (pytest) | 188 | 1747 | 1747 tests in 188 files |
+| Frontend unit (vitest) | 136 | 1232 | 1232 tests in 136 files |
+| Backend (pytest) | 189 | 1751 | 1751 tests in 189 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
 
@@ -27,14 +27,14 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Building models in the UI](#building) | 3 files, 6 tests | – | 1 files, 9 tests | 13 files, 145 tests | 160 of 160 |
 | [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 359 of 362 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
-| [Running, learning and debugging](#running) | 10 files, 27 tests | – | 8 files, 86 tests | 51 files, 252 tests | 365 of 365 |
+| [Running, learning and debugging](#running) | 11 files, 28 tests | – | 8 files, 86 tests | 51 files, 252 tests | 366 of 366 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 54 tests | – | 28 files, 262 tests | 19 files, 322 tests | 638 of 638 |
 | [Look and style conventions](#style) | 13 files, 31 tests | – | 8 files, 47 tests | – | 76 of 78 |
 | [Layout, views and compositions](#layout) | 21 files, 47 tests | – | 21 files, 151 tests | 5 files, 56 tests | 253 of 254 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 15 files, 99 tests | 18 files, 194 tests | 309 of 312 |
+| [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 15 files, 105 tests | 19 files, 198 tests | 319 of 322 |
 
 <a id="tutorials"></a>
 
@@ -591,6 +591,7 @@ No tests yet.
 | `pytorch-view.spec.ts` | Browser | 3 | yes | #230 | PyTorch (autodiff) view (#230). |
 | `reference-models-runnable.spec.ts` | Browser | 2 | yes | #818, #577, #652 | Reference-model runnability gate (#818, #577, #652). |
 | `run-array-inputs.spec.ts` | Browser | 1 | yes | #330, #331 | Trial inputs as arrays (#330), arranged by trial by default (#331). |
+| `run-multiport-inputs.spec.ts` | Browser | 1 | yes | #332 | Input nodes with several input ports (#332). |
 | `run-panel-grouping.spec.ts` | Browser | 1 | yes | #570 | Run-panel input-grouping toggle (#570). |
 | `run-record-yaml.spec.ts` | Browser | 1 | yes | #525 | Run-record YAML export/import round-trip (#525). |
 | `run-set-survives-edit.spec.ts` | Browser | 1 | yes | #57 | A chosen run set survives a parameter edit (#57). |
@@ -681,6 +682,7 @@ No tests yet.
 | reference models: load + run without crashing › coverage: spec lists every bundled reference model | `reference-models-runnable.spec.ts` | Browser | yes | #818 |
 | reference models: load + run without crashing › loads + runs without white-screen: ${label} | `reference-models-runnable.spec.ts` | Browser | yes | #818 |
 | trial inputs are typed as arrays and sent as typed | `run-array-inputs.spec.ts` | Browser | yes | #330 |
+| a two-port input node takes one array per port | `run-multiport-inputs.spec.ts` | Browser | yes | #332 |
 | run panel input grouping › toggles between by-trial and by-node layouts | `run-panel-grouping.spec.ts` | Browser | yes | #570 |
 | run record YAML round-trip › exports YAML and re-imports it | `run-record-yaml.spec.ts` | Browser | yes | #525 |
 | a parameter edit keeps the run set the learner chose | `run-set-survives-edit.spec.ts` | Browser | yes | #57 |
@@ -1220,7 +1222,7 @@ No tests yet.
 | `errorDetail.test.ts` | Frontend unit | 4 | yes |  |  |
 | `joinNames.test.ts` | Frontend unit | 1 | yes |  | Mirrors the formatter in PresenceIndicator — kept as a pure function test so the phrasing is pinned without rendering the component. |
 | `nodeSelector.test.ts` | Frontend unit | 2 | yes | #1236 | #1236: a node name is any Python string, and must never make an invalid selector. |
-| `tensorInput.test.ts` | Frontend unit | 15 | yes |  |  |
+| `tensorInput.test.ts` | Frontend unit | 21 | yes |  |  |
 | `waitLog.test.ts` | Frontend unit | 10 | yes | #177 | The action-logging setting is remembered in localStorage (#177); the suite runs on node, so stub it. |
 | `test_activity_log.py` | Backend | 7 | yes | #177 | The page's activity log on disk (#177): batches appended as sent, the file rotated at start so the previous launch is kept, a size cap, and the actions removed when action logging is turned off. |
 | `test_anchor_collisions.py` | Backend | 5 | yes | #1134 | The anchor collision detector must tell apart three fates (#1134). |
@@ -1233,6 +1235,7 @@ No tests yet.
 | `test_e2e_reset.py` | Backend | 4 | yes | #147 | Unit tests for the test-only /api/test/reset endpoint (#147). |
 | `test_frontend_cache_headers.py` | Backend | 6 | yes | #2 | The built page is served so an update can't be hidden by a cached copy (#2). |
 | `test_model_warnings.py` | Backend | 11 | yes | #1101 | Showing what PsyNeuLink said about a model that ran fine (#1101). |
+| `test_multiport_inputs.py` | Backend | 4 | yes | #332 | An input node with several input ports gets one array per port (#332). |
 | `test_no_event_loop_blocking.py` | Backend | 4 | yes | #860 | Regression guards against backend freezes (#860). |
 | `test_request_guard.py` | Backend | 10 | yes |  | The server refuses requests from another site or under another name. |
 | `test_test_extractor.py` | Backend | 15 | yes |  | Tests for app.services.test_extractor. |
