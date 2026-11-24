@@ -3380,7 +3380,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - Components panel opening state (#113) › keeps a stored word-list choice, sections folded (#345) · CI · #113
 - Components panel opening state (#113) › lists the icon strip first in Settings (#345) · CI · #113
 - Components panel opening state (#113) › ignores anything else stored, and the old remembered strip · CI · #113
-- Components panel opening state (#113) › the ◀/▶ button switches the panel for the session without remembering it · CI · #113
+- Components panel opening state (#113) › the ◀/› button switches the panel for the session without remembering it · CI · #113
 - Components panel opening state (#113) › setStart remembers the choice · CI · #113
 
 **`frontend/src/stores/edgeLineStore.test.ts`** (Frontend unit (vitest))
