@@ -682,11 +682,26 @@ settings:
     control: setting-components-strip-shortcuts
     notes: >-
       Off by default (#372): the icon strip shows just the four category
-      menus, under a small "All" heading. On, your favourite and
-      recently used components sit at the bottom of the strip, under a small
-      "Recent" heading, favourites first and each once. The word
-      list's Favorites and Recently Used sections are not affected. A stored
-      choice is kept.
+      menus. On, your favourite and recently used components sit at the
+      bottom of the strip, favourites first and each once, set apart by a
+      thin divider (or a small "Recent" heading when the strip's headings
+      are on, #395). The word list's Favorites and Recently Used sections
+      are not affected. A stored choice is kept.
+
+  - id: components-strip-headings
+    label: Appearance ▸ Components panel ▸ Show headings in the icon strip
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.components.stripHeadings); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-components-strip-headings
+    notes: >-
+      Off by default (#395): the icon strip shows no words. On, a tiny
+      "Components" heading sits over the category menus and "Recent" over
+      the favourite and recent shortcuts (when those are shown). Each
+      heading stays on one line within the strip's icon column at every
+      Text size: it starts at the smallest text size and shrinks to fit if
+      still too wide (to no less than 5 px). The strip's width and icon sizes do not
+      change. A stored choice is kept.
 
   - id: allow-blank-screen
     label: Appearance ▸ Panels ▸ Allow a blank screen
