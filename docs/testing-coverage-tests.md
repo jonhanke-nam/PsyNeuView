@@ -4503,6 +4503,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - dropping a new .py file (#227) › a file whose name is not in the models folder is created there and opens · CI · #227
 
+**`frontend/e2e/failed-open-banner.spec.ts`** (Browser (Playwright))
+
+- a failed open is marked on the canvas (#401) › names both files, keeps Stroop open and usable, and Try again re-attempts · CI · #401
+
 **`frontend/e2e/github-file-loader.spec.ts`** (Browser (Playwright))
 
 - @smoke github file loader › dropdown → modal → pick path → Open round-trips through save-as · CI · #258
@@ -4605,6 +4609,9 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - a failed open says which model is still open › names the open model · CI · #386
 - a failed open says which model is still open › names a bundle by the bundle, not its working copy · CI · #386
 - a failed open says which model is still open › says nothing more when no model is open · CI · #386
+- a failed open is kept for the banner over the graph (#401) › keeps what was tried, why, which model is still open, and how to try again · CI · #401
+- a failed open is kept for the banner over the graph (#401) › an error object is shown by its message, and an empty reason still says something · CI · #401
+- a failed open is kept for the banner over the graph (#401) › starting another open clears it · CI · #401
 
 **`frontend/src/utils/recentPaths.test.ts`** (Frontend unit (vitest))
 

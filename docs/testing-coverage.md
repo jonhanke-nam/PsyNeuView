@@ -9,9 +9,9 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 177 | 470 | 460 tests in 172 files |
+| Browser (Playwright) | 178 | 471 | 461 tests in 173 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 149 | 1309 | 1309 tests in 149 files |
+| Frontend unit (vitest) | 149 | 1312 | 1312 tests in 149 files |
 | Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -33,7 +33,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
-| [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 5 files, 43 tests | 15 files, 121 tests | 189 of 190 |
+| [Opening models, catalogs and the library](#opening) | 15 files, 27 tests | – | 5 files, 46 tests | 15 files, 121 tests | 193 of 194 |
 | [App shell, diagnostics and everything else](#shell) | 14 files, 28 tests | – | 21 files, 138 tests | 21 files, 206 tests | 369 of 372 |
 
 <a id="tutorials"></a>
@@ -1179,6 +1179,7 @@ No tests yet.
 | `developer-tests-loader.spec.ts` | Browser | 3 | yes | #274, #249 | E2E smoke for the "Open ▾ → Developer / Tests…" modal (#274 / Phase 3 of #249). |
 | `diagnostics-load-messages.spec.ts` | Browser | 1 | yes | #879 | #879: load-time messages (version mismatch, module-level-driver notices) are surfaced persistently in the Model Diagnostics bar for EVERY load path — including reference models, which previously dropped them silently… |
 | `drop-new-model-file.spec.ts` | Browser | 1 | yes | #227 | Dropping a .py file the models folder has never seen (#227). |
+| `failed-open-banner.spec.ts` | Browser | 1 | yes | #401 | A failed open is marked on the canvas, not only in a message (#401). |
 | `github-file-loader.spec.ts` | Browser | 2 | yes | #258 | E2E smoke for the "Open ▾ → From GitHub repo…" modal (#258). |
 | `load-time-display.spec.ts` | Browser | 1 | yes | #874 | #874: model load time is surfaced in the UI. |
 | `open-menu-custom-catalogs.spec.ts` | Browser | 1 | yes | #1229 | Your own catalogs in the Open menu, and My Project Folder (#1229). |
@@ -1192,7 +1193,7 @@ No tests yet.
 | `modelLoadView.test.ts` | Frontend unit | 2 | yes | #257 | Every model load and preview asks for the view the user is looking at (#257). |
 | `openMenuOrder.test.ts` | Frontend unit | 21 | yes |  | The suite runs on node, not jsdom (see vitest.config.ts), so the two browser APIs this module touches are stubbed rather than pulling in a DOM. |
 | `importModelFiles.test.ts` | Frontend unit | 11 | yes |  |  |
-| `modelOpenSequence.test.ts` | Frontend unit | 7 | yes | #386 | The newest model open wins (#386). |
+| `modelOpenSequence.test.ts` | Frontend unit | 10 | yes | #386 | The newest model open wins (#386). |
 | `recentPaths.test.ts` | Frontend unit | 2 | yes |  |  |
 | `test_catalog_sources.py` | Backend | 1 | yes | #853 | `/catalog-sources` returns the resolved source dir for each Open-menu catalog (#853). |
 | `test_catalogs.py` | Backend | 6 | yes | #1229 | The user's own Open-menu catalogs and project folder (#1229). |
@@ -1220,6 +1221,7 @@ No tests yet.
 | @smoke developer tests loader › Developer / Tests… entry is hidden when developer mode is off | `developer-tests-loader.spec.ts` | Browser | yes | #274 |
 | surfaces a reference model's version-mismatch warning in the Diagnostics bar | `diagnostics-load-messages.spec.ts` | Browser | yes | #879 |
 | dropping a new .py file (#227) › a file whose name is not in the models folder is created there and opens | `drop-new-model-file.spec.ts` | Browser | yes | #227 |
+| a failed open is marked on the canvas (#401) › names both files, keeps Stroop open and usable, and Try again re-attempts | `failed-open-banner.spec.ts` | Browser | yes | #401 |
 | @smoke github file loader › dropdown → modal → pick path → Open round-trips through save-as | `github-file-loader.spec.ts` | Browser | yes | #258 |
 | @smoke github file loader › Escape closes the modal | `github-file-loader.spec.ts` | Browser | yes | #258 |
 | surfaces model load time in the Model Diagnostics bar | `load-time-display.spec.ts` | Browser | yes | #874 |
