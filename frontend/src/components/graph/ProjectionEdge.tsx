@@ -24,7 +24,7 @@ import {
 } from "@xyflow/react";
 import { routeAroundObstacles, renderStyledPathSafe, routeWaypoints, expandedCorners, type Rect } from "@/utils/edgeRouter";
 import { useShowGraphCurves, curveFits } from "@/stores/showGraphCurvesStore";
-import { curvePath, curveBends, pointAlong } from "@/utils/showGraphLayout";
+import { piecesPath, curveBends, pointAlong } from "@/utils/showGraphLayout";
 import {
   ovalOf, ovalBoundaryPoint, ellipsePoint, fanAttachPoint, laneOffsetFor, offsetAttach,
 } from "@/utils/edgeLanes";
@@ -342,7 +342,8 @@ export function ProjectionEdge({
       : routeWaypoints({ x: sx, y: sy }, { x: tx, y: ty }, collectObstacles(), { lateralOffset: bowOffset, margin: edgeNodeClearance });
   let edgePath: string;
   if (curve) {
-    edgePath = curvePath(curve.points);
+    // #416: show_graph's own Bézier pieces, exactly.
+    edgePath = piecesPath(curve.pieces);
   } else if (handleCurve) {
     // #39: a curve shaped with handles is drawn exactly as shaped, through
     // the user's bends with the user's tangents.

@@ -5,16 +5,19 @@ import {
   applyShowGraphPlacement,
   applyShowGraphPlacementWithCurves,
   computeShowGraphPlacement,
+  coursePieces,
   curveBends,
-  curvePath,
+  cutToOutlines,
   getShowGraphPlacement,
   graphSignature,
   memberAtPort,
+  piecesPath,
   placementFromGraphviz,
   placementKey,
   scaleFor,
   simplify,
-  trimToBoxes,
+  splitCubic,
+  type Cubic,
   type ShowGraphRequest,
 } from "./showGraphLayout";
 import { curveFits } from "@/stores/showGraphCurvesStore";
@@ -226,7 +229,7 @@ describe("Like show_graph edges (#23)", () => {
       // BT: show_graph draws upward, so every Stroop edge rises.
       expect(c.points[c.points.length - 1].y).toBeLessThan(c.points[0].y);
       expect(curveFits(c, box(e.source), box(e.target))).toBe(true);
-      expect(curvePath(c.points)).toMatch(/^M [-\d.]+ [-\d.]+( C [-\d. ]+)+$/);
+      expect(piecesPath(c.pieces)).toMatch(/^M [-\d.]+ [-\d.]+( C [-\d. ]+)+$/);
     }
   });
 
@@ -239,29 +242,83 @@ describe("Like show_graph edges (#23)", () => {
   });
 
   it("stops fitting once a node moves", () => {
-    const curve = { points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], source: { x: 10, y: 20 }, target: { x: 30, y: 40 } };
+    const curve = { pieces: [], points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], source: { x: 10, y: 20 }, target: { x: 30, y: 40 } };
     expect(curveFits(curve, { x: 10.4, y: 20 }, { x: 30, y: 40 })).toBe(true);
     expect(curveFits(curve, { x: 60, y: 20 }, { x: 30, y: 40 })).toBe(false);
     expect(curveFits(curve, undefined, { x: 30, y: 40 })).toBe(false);
   });
 
-  it("trims a course to the boxes it joins", () => {
-    const source = { x: 0, y: 0, w: 10, h: 10 };
-    const target = { x: 0, y: 40, w: 10, h: 10 };
-    const course = [0, 5, 10, 20, 30, 40, 45].map((y) => ({ x: 5, y }));
-    const t = trimToBoxes(course, source, target)!;
-    expect(t[0].y).toBeCloseTo(10, 3);
-    expect(t[t.length - 1].y).toBeCloseTo(40, 3);
-    expect(trimToBoxes(course, source, { x: -100, y: -100, w: 300, h: 300 })).toBeNull();
+  // #416: show_graph's Bézier pieces are drawn exactly, only cut at the outlines.
+  const at = ([p0, p1, p2, p3]: Cubic, t: number) => {
+    const u = 1 - t;
+    return {
+      x: u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x,
+      y: u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y,
+    };
+  };
+
+  it("splits a Bézier piece into two that trace the same curve", () => {
+    const c: Cubic = [{ x: 0, y: 0 }, { x: 40, y: 90 }, { x: 120, y: -30 }, { x: 160, y: 60 }];
+    const [a, b] = splitCubic(c, 0.3);
+    for (const t of [0, 0.25, 0.5, 1]) {
+      expect(at(a, t).x).toBeCloseTo(at(c, 0.3 * t).x, 6);
+      expect(at(b, t).y).toBeCloseTo(at(c, 0.3 + 0.7 * t).y, 6);
+    }
   });
 
-  it("leads a course that stops short of a box in from the box's edge", () => {
+  it("cuts a course at the ovals, keeping the pieces between exactly", () => {
+    const source = { x: 0, y: 0, w: 40, h: 20 };
+    const target = { x: 100, y: 200, w: 40, h: 20 };
+    const spline = [
+      { x: 20, y: 10 }, { x: 20, y: 60 }, { x: 80, y: 60 }, { x: 80, y: 100 },
+      { x: 80, y: 140 }, { x: 120, y: 160 }, { x: 120, y: 200 },
+    ];
+    const pieces = coursePieces(spline, { x: 120, y: 210 }); // two pieces and the tip
+    expect(pieces).toHaveLength(3);
+    const cut = cutToOutlines(pieces, source, target)!;
+    // The tip's piece is inside the target oval, so it goes.
+    expect(cut).toHaveLength(2);
+    // Starts on the source oval, ends on the target oval.
+    const onOval = (p: { x: number; y: number }, b: typeof source) =>
+      ((p.x - b.x - b.w / 2) / (b.w / 2)) ** 2 + ((p.y - b.y - b.h / 2) / (b.h / 2)) ** 2;
+    expect(onOval(cut[0][0], source)).toBeCloseTo(1, 3);
+    expect(onOval(cut[1][3], target)).toBeCloseTo(1, 3);
+    // Each cut piece lies on the piece it was cut from.
+    for (const [i, c] of cut.entries()) {
+      for (const t of [0.25, 0.5, 0.75]) {
+        const p = at(c, t);
+        let nearest = Infinity;
+        for (let k = 0; k <= 2000; k++) {
+          const q = at(pieces[i], k / 2000);
+          nearest = Math.min(nearest, Math.hypot(p.x - q.x, p.y - q.y));
+        }
+        expect(nearest).toBeLessThan(0.1);
+      }
+    }
+    // Nothing left outside both: no course.
+    expect(cutToOutlines(pieces, source, { x: -100, y: -100, w: 400, h: 400 })).toBeNull();
+  });
+
+  it("cuts at an octagon's outline, outside the oval", () => {
+    const box = { x: 0, y: 0, w: 40, h: 40 };
+    const target = { x: 0, y: 300, w: 40, h: 40 };
+    // Leaving towards the octagon's corner at 22.5°, where it reaches 8% past the oval.
+    const pieces = coursePieces([{ x: 20, y: 20 }, { x: 120, y: 61.4 }, { x: 120, y: 61.4 }, { x: 20, y: 300 }]);
+    const oval = cutToOutlines(pieces, box, target, "oval")!;
+    const octagon = cutToOutlines(pieces, box, target, "octagon")!;
+    const r = (p: { x: number; y: number }) => Math.hypot(p.x - 20, p.y - 20);
+    expect(r(oval[0][0])).toBeCloseTo(20, 2);
+    expect(r(octagon[0][0])).toBeGreaterThan(21); // the octagon's corner reaches further
+  });
+
+  it("leads a course that stops short of an outline in from it", () => {
     const source = { x: 0, y: 0, w: 10, h: 10 };
     const target = { x: 0, y: 40, w: 10, h: 10 };
-    const short = [15, 20, 25].map((y) => ({ x: 5, y })); // touches neither box
-    const t = trimToBoxes(short, source, target)!;
-    expect(t[0]).toEqual({ x: 5, y: expect.closeTo(10, 3) });
-    expect(t[t.length - 1]).toEqual({ x: 5, y: expect.closeTo(40, 3) });
+    const short = coursePieces([15, 18, 22, 25].map((y) => ({ x: 5, y }))); // touches neither
+    const cut = cutToOutlines(short, source, target)!;
+    expect(cut).toHaveLength(3);
+    expect(cut[0][0]).toEqual({ x: 5, y: expect.closeTo(10, 3) });
+    expect(cut[2][3]).toEqual({ x: 5, y: expect.closeTo(40, 3) });
   });
 
   it("simplifies a straight run to its ends, and grabs a curve by its turning points", () => {
