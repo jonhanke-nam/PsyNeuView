@@ -136,6 +136,7 @@ tour-menu-reopens.spec.ts
 tour-ring-behind-dialogs.spec.ts
 tour-ring-clear-of-text.spec.ts
 tour-ring-on-node.spec.ts
+trace-autoplay-label.spec.ts
 tutorial-known-state.spec.ts
 tutorial-resume.spec.ts
 tutorials-hide-course.spec.ts
