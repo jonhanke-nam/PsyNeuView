@@ -24,11 +24,23 @@ export function hashSource(source: string): string {
 let lastSource: string | null = null;
 let lastHash = "";
 
+// For the e2e suite only (a browser under automation, as `__pnvUndoTest`):
+// the text behind each hash, so a test that finds results stale can show what
+// differs (#366). Off in the app, where it would only hold memory.
+const automated = typeof navigator !== "undefined" && !!navigator.webdriver;
+const textByHash = new Map<string, string>();
+
 /** `hashSource`, remembered for the most recent source string. */
 export function cachedSourceHash(source: string): string {
   if (source !== lastSource) {
     lastSource = source;
     lastHash = hashSource(source);
+    if (automated) textByHash.set(lastHash, source);
   }
   return lastHash;
+}
+
+/** The text a hash was made from, under automation only (#366). */
+export function sourceForHash(hash: string): string | undefined {
+  return textByHash.get(hash);
 }

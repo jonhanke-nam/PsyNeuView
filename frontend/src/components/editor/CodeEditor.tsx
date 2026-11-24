@@ -27,6 +27,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useTextScale } from "@/stores/textSizeStore";
 import type { MechanismData } from "@/stores/modelStore";
 import { recordAction, recordSave } from "@/utils/history";
+import { historyMoveCount } from "@/hooks/useUndoRedo";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useStatusStore } from "@/stores/statusStore";
 import { parseYamlMapping, findEntryAtLine, findLineFor } from "@/utils/yamlMapping";
@@ -432,6 +433,7 @@ export function CodeEditor() {
     const savedAtSend = useModelStore.getState().savedSource;
     if (currentSource === savedAtSend) return;
     if (useExternalChangeStore.getState().pending) return;
+    const movesAtSend = historyMoveCount();
 
     if (previewAbortRef.current) previewAbortRef.current.abort();
     previewAbortRef.current = new AbortController();
@@ -457,7 +459,9 @@ export function CodeEditor() {
       // out. Its answer describes the buffer we had then; adopting it would put
       // the old graph under the new file's source.
       const now = useModelStore.getState();
-      if (now.filePath !== filePath || now.savedSource !== savedAtSend) {
+      // An Undo or Redo since (#366) put other code in the editor: the graph
+      // built from this text would sit under it, and Run would run it.
+      if (now.filePath !== filePath || now.savedSource !== savedAtSend || historyMoveCount() !== movesAtSend) {
         setSyncStatusWithClear("idle");
         return;
       }

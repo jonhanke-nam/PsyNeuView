@@ -40,6 +40,29 @@ column's own elements (`scroll-margin-top`), so the card scrolls flush again
 and the inputs still stop below the row (`run-followups.spec.ts` and
 `run-sticky-node-headers.spec.ts` still pass).
 
+## Undo right after a code edit said "Nothing to undo" (2026-11-24)
+
+**Caught by:** `e2e` → `stale-run-results.spec.ts`, "Undo makes the results
+current", failing on both attempts on the 0.6.17 batch's run (#355) and passing
+on a Mac (#366)
+
+A code edit becomes a History step only when its live preview has rebuilt the
+model: the 1.5 s pause after typing, then the build. The kept trace showed all
+three Undo presses landing within 1.4 s of the edit, before the preview was
+sent, and each said "Nothing to undo". The edit stayed in the editor, so the
+run's results stayed marked as from an earlier version. Anyone pressing Undo
+just after typing got the same. It passed on a Mac only because the test
+browser reports Windows (Playwright's Desktop Chrome), so the app's Undo is
+Ctrl+Z there; the test's Cmd+Z went to the code editor's own text undo
+instead, and never used PsyNeuView's Undo. The two hash inputs, now attached
+by the test on failure, differed only at the edit (`gain=1.1` against
+`gain=1.7`), with the same length and the same composition: not line endings,
+a trailing newline or a reload's rewrite. Fixed by taking the edit as a step
+when Undo is pressed, and by dropping a preview sent before an Undo or Redo so
+its graph can't land under the restored code. The test presses Ctrl+Z, once,
+right after the edit, on every machine, then Redo
+([#366](https://github.com/jonhanke-nam/PsyNeuView/issues/366)).
+
 ## Two clicks near nodes' rims could add a projection (2026-11-23)
 
 **Caught by:** `e2e` → `graph-hit-areas.spec.ts`, "a click anywhere in a node
