@@ -9,7 +9,7 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 158 | 430 | 380 tests in 137 files |
+| Browser (Playwright) | 158 | 430 | 382 tests in 138 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 134 | 1203 | 1203 tests in 134 files |
 | Backend (pytest) | 188 | 1747 | 1747 tests in 188 files |
@@ -31,7 +31,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 286 of 304 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 166 of 168 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 54 tests | – | 28 files, 262 tests | 19 files, 322 tests | 626 of 638 |
-| [Look and style conventions](#style) | 13 files, 31 tests | – | 8 files, 47 tests | – | 76 of 78 |
+| [Look and style conventions](#style) | 13 files, 31 tests | – | 8 files, 47 tests | – | 78 of 78 |
 | [Layout, views and compositions](#layout) | 21 files, 47 tests | – | 21 files, 151 tests | 5 files, 56 tests | 253 of 254 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 180 of 183 |
 | [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 13 files, 78 tests | 18 files, 194 tests | 287 of 291 |
@@ -958,7 +958,7 @@ No tests yet.
 | `node-text-proportion.spec.ts` | Browser | 3 | yes | #210 | Node text in proportion to show_graph (#210). |
 | `reactflow-credit.spec.ts` | Browser | 2 | yes | #290 | No "React Flow" credit in the canvas corner; About credits it instead (#290). |
 | `shape-mismatch-explained.spec.ts` | Browser | 1 | yes | #1235 | A shape mismatch says where and why, on the graph and on Run (#1235). |
-| `style-conventions.spec.ts` | Browser | 2 | no | #1302 | The palette and the button kinds, as the browser draws them (#1302). |
+| `style-conventions.spec.ts` | Browser | 2 | yes | #1302 | The palette and the button kinds, as the browser draws them (#1302). |
 | `style-sizes.spec.ts` | Browser | 4 | yes | #1302 | A restyle keeps the old size: colour moves, size stays (#1302). |
 | `toolbar-menus-over-dividers.spec.ts` | Browser | 3 | yes | #1391 | Toolbar menus draw above the panel dividers, and the Tutorials menu fits the window (#1391). |
 | `toolbar-no-split-buttons.spec.ts` | Browser | 1 | yes | #6 | Toolbar buttons never break onto two lines (#6). |
@@ -996,8 +996,8 @@ No tests yet.
 | React Flow credit (#290) › the canvas shows no React Flow credit after a model loads | `reactflow-credit.spec.ts` | Browser | yes | #290 |
 | React Flow credit (#290) › Settings ▸ About credits React Flow, with a link | `reactflow-credit.spec.ts` | Browser | yes | #290 |
 | A shape mismatch is explained › the broken connection is drawn, named, and Run gives the reason | `shape-mismatch-explained.spec.ts` | Browser | yes | #1235 |
-| Settings: Close is primary and the default button; small and danger row actions | `style-conventions.spec.ts` | Browser | no | #1302 |
-| the Open menu's dialogs: the action primary, Cancel secondary | `style-conventions.spec.ts` | Browser | no | #1302 |
+| Settings: Close is primary and the default button; small and danger row actions | `style-conventions.spec.ts` | Browser | yes | #1302 |
+| the Open menu's dialogs: the action primary, Cancel secondary | `style-conventions.spec.ts` | Browser | yes | #1302 |
 | Settings and the dialogs keep their button heights | `style-sizes.spec.ts` | Browser | yes | #1302 |
 | the first-launch offer keeps its button heights | `style-sizes.spec.ts` | Browser | yes | #1302 |
 | the Inspector and the toolbars keep their row heights | `style-sizes.spec.ts` | Browser | yes | #1302 |
@@ -1565,7 +1565,7 @@ Nodes: show_graph's nodes the canvas draws. Rows: pairs of nodes whose above, le
 
 ## Browser tests CI doesn't run
 
-21 browser spec files aren't in CI at all. Each says why in a `Not in CI:` line in its header; this table is read from those lines. (Every tutorial runs, in the tutorials job.)
+20 browser spec files aren't in CI at all. Each says why in a `Not in CI:` line in its header; this table is read from those lines. (Every tutorial runs, in the tutorials job.)
 
 | Spec | Why | Detail |
 |---|---|---|
@@ -1588,7 +1588,6 @@ Nodes: show_graph's nodes the canvas draws. Rows: pairs of nodes whose above, le
 | `pycharm-live.local.spec.ts` | local only | it drives a real PyCharm on macOS, which the runners don't have; external-edit-sync.spec.ts is the CI version |
 | `save-copy-sidecars.spec.ts` | should be added | passes locally in about 21 s (2026-11-23); never tagged |
 | `saves-in-history.spec.ts` | should be added | passes locally in about 33 s (2026-11-23); never tagged |
-| `style-conventions.spec.ts` | broken | two tests fail on devel (2026-11-23), expecting 13px buttons that the default Text size (1.1, since #111) draws at 14.3px. Fix, then add |
 | `whats-running.spec.ts` | should be added | passes locally in about 2 s (2026-11-23); never tagged |
 
 Spec files in CI that hold tests CI skips (untagged, or a measurement run only on request):
