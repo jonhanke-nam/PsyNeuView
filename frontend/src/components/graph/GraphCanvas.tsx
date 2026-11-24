@@ -1199,6 +1199,7 @@ export function GraphCanvas() {
           {armed && (
             <div
               data-testid="place-component-hint"
+              role="status"
               style={{
                 position: "absolute",
                 top: 12,
@@ -1217,12 +1218,13 @@ export function GraphCanvas() {
               {isFunctionType(armed.type) ? (
                 <>
                   Click a mechanism to give it this function (<b>{armed.label}</b>).{" "}
-                  <span style={{ opacity: 0.8 }}>Esc to cancel.</span>
+                  {/* Full white: at 0.8 it fell below WCAG AA on the blue. */}
+                  <span>Esc to cancel.</span>
                 </>
               ) : (
                 <>
                   Click where the new <b>{armed.label}</b> should go.{" "}
-                  <span style={{ opacity: 0.8 }}>Option-click to put down several. Esc to cancel.</span>
+                  <span>Option-click to put down several. Esc to cancel.</span>
                 </>
               )}
             </div>
