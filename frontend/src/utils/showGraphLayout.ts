@@ -220,7 +220,10 @@ export function placementFromGraphviz(json: GvJson, signature: string): ShowGrap
 
 /** Identifies a layout: the graph's nodes and the show_graph options used. */
 export function placementKey(nodes: Node[], req: ShowGraphRequest): string {
-  return `${graphSignature(nodes)}#${req.compositionName}#${JSON.stringify(req.options)}`;
+  // The file too (#386): two models can share every node name (Cohen & Huston
+  // 1994 and the conflict-monitoring model do) and still differ, so one
+  // model's layout is never taken for another's.
+  return `${req.filePath}#${graphSignature(nodes)}#${req.compositionName}#${JSON.stringify(req.options)}`;
 }
 
 export interface ShowGraphRequest {
@@ -262,6 +265,9 @@ function fit(nodes: Node[], placement: ShowGraphPlacement): number {
 // The layout menu and the background watcher (useShowGraphLayout) can ask for
 // the same layout at the same moment; they share one fetch.
 const inFlight = new Map<string, Promise<ShowGraphPlacement>>();
+// The layout asked for last. A slower answer for an earlier graph (the model
+// before a switch) must not become the layout in use after it (#386).
+let newestKey: string | null = null;
 
 /** Fetch show_graph's description, lay it out, and store the result. */
 export function computeShowGraphPlacement(
@@ -269,6 +275,7 @@ export function computeShowGraphPlacement(
   nodes: Node[],
 ): Promise<ShowGraphPlacement> {
   const key = placementKey(nodes, req);
+  newestKey = key;
   let pending = inFlight.get(key);
   if (!pending) {
     // Graphviz runs in the page: the wheel shows while it lays out (#38).
@@ -322,7 +329,7 @@ async function computeOnce(
     }
   }
   if (note) placement.note = note;
-  current = placement;
+  if (key === newestKey) current = placement;
   return placement;
 }
 
