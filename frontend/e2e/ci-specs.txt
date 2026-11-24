@@ -113,6 +113,7 @@ round-trips.spec.ts
 run-panel-grouping.spec.ts
 run-record-yaml.spec.ts
 run-set-survives-edit.spec.ts
+run-trial-seconds.spec.ts
 save-copy-sidecars.spec.ts
 saves-in-history.spec.ts
 scheduling-arrows-setting.spec.ts

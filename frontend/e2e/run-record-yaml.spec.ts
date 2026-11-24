@@ -45,6 +45,8 @@ test.describe("run record YAML round-trip", { tag: "@ci" }, () => {
     // It must be real YAML (block mapping, not JSON braces) carrying the payload.
     expect(yamlText).toMatch(/^format: psyneuview-run\/v1/m);
     expect(yamlText).toContain("single_transfer");
+    // #334: the per-trial run times travel with the exported record.
+    expect(yamlText).toMatch(/trial_seconds:/);
     expect(yamlText.trimStart().startsWith("{")).toBe(false);
 
     // Change the form so a successful import is observable, then re-import the
