@@ -96,7 +96,7 @@ import { SAVE_COPY_EVENT, requestSaveCopy } from "@/utils/saveRequest";
 import { stripProtectionLine } from "@/utils/protectionLine";
 import { AutosaveStatus } from "./AutosaveStatus";
 import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
-import { beginModelOpen, isNewestModelOpen, withStillShowing } from "@/utils/modelOpenSequence";
+import { beginModelOpen, isNewestModelOpen, reportFailedOpen } from "@/utils/modelOpenSequence";
 import { ioRowViolations } from "@/utils/ioRows";
 import { canvasTidyHandle } from "@/stores/ioRowsStore";
 
@@ -834,6 +834,8 @@ export function Toolbar() {
     clearNotifications();
     const fileName = bundlePath.split("/").pop() || bundlePath;
     setStatus(`Opening bundle: ${fileName}…`);
+    // #401: nothing new opened; marked over the graph, with Try again.
+    const failedOpen = (why: unknown) => reportFailedOpen(fileName, why, () => void loadFromPath(bundlePath));
     try {
       const resp = await fetch("/api/model/open-project", {
         method: "POST",
@@ -844,7 +846,7 @@ export function Toolbar() {
       if (!isNewestModelOpen(ticket)) return;
       if (!resp.ok) {
         const detail = await errorDetail(resp);
-        addNotification("error", withStillShowing(`Failed to open bundle: ${detail}`));
+        failedOpen(detail);
         return;
       }
       const data = await resp.json();
@@ -863,7 +865,7 @@ export function Toolbar() {
       }
       addNotification("success", `Opened ${fileName}`);
     } catch (e) {
-      if (isNewestModelOpen(ticket)) addNotification("error", withStillShowing(`Failed to open bundle: ${e}`));
+      if (isNewestModelOpen(ticket)) failedOpen(e);
     } finally {
       if (isNewestModelOpen(ticket)) clearStatus();
     }
@@ -903,6 +905,8 @@ export function Toolbar() {
     const fileName = path.split("/").pop() || path;
     const t0 = performance.now();
     setStatus(`Loading model: ${fileName}…`);
+    // #401: nothing new opened; marked over the graph, with Try again.
+    const failedOpen = (why: unknown) => reportFailedOpen(fileName, why, () => void loadFromPath(path, { fresh }));
     try {
       const resp = await fetch("/api/model/load", {
         method: "POST",
@@ -921,7 +925,7 @@ export function Toolbar() {
         // Nothing was opened, so the open model stays, and the error says so
         // (#386). Not marked fresh yet: its layout mode and undo history stay.
         const detail = await errorDetail(resp);
-        addNotification("error", withStillShowing(`Failed to load: ${detail}`));
+        failedOpen(detail);
         return;
       }
       const data = await resp.json();
@@ -986,7 +990,7 @@ export function Toolbar() {
       // accommodate models (incl. verbatim PsyNeuLink examples) as-is. Conversion
       // stays available opt-in via the Inspector's "Convert to Standard Format".
     } catch (e) {
-      if (isNewestModelOpen(ticket)) addNotification("error", withStillShowing(`Failed to load model: ${e}`));
+      if (isNewestModelOpen(ticket)) failedOpen(e);
     } finally {
       if (isNewestModelOpen(ticket)) clearStatus();
     }
@@ -1002,6 +1006,8 @@ export function Toolbar() {
     setDropdownOpen(false);
     clearNotifications();
     setStatus(`Loading demo: ${demo.label}…`);
+    // #401: nothing new opened; marked over the graph, with Try again.
+    const failedOpen = (why: unknown) => reportFailedOpen(demo.label, why, () => void loadDemo(demo, { byTutorial }));
     const t0 = performance.now();
     const ticket = beginModelOpen(); // #386
     try {
@@ -1014,7 +1020,7 @@ export function Toolbar() {
       if (!isNewestModelOpen(ticket)) return;
       if (!resp.ok) {
         const detail = await errorDetail(resp);
-        addNotification("error", withStillShowing(`Failed to load demo: ${detail}`));
+        failedOpen(detail);
         return;
       }
       const data = await resp.json();
@@ -1044,7 +1050,7 @@ export function Toolbar() {
       setRecentPaths(getRecentPaths());
       addNotification("success", `Loaded demo: ${demo.label}`);
     } catch (e) {
-      if (isNewestModelOpen(ticket)) addNotification("error", withStillShowing(`Failed to load demo: ${e}`));
+      if (isNewestModelOpen(ticket)) failedOpen(e);
     } finally {
       if (isNewestModelOpen(ticket)) clearStatus();
     }
@@ -1188,6 +1194,8 @@ export function Toolbar() {
     setDropdownOpen(false);
     clearNotifications();
     setStatus(`Loading reference model: ${rm.label}…`);
+    // #401: nothing new opened; marked over the graph, with Try again.
+    const failedOpen = (why: unknown) => reportFailedOpen(rm.label, why, () => void loadReference(rm, { restore, byTutorial }));
     const t0 = performance.now();
     const ticket = beginModelOpen(); // #386
     try {
@@ -1200,7 +1208,7 @@ export function Toolbar() {
       if (!isNewestModelOpen(ticket)) return;
       if (!resp.ok) {
         const detail = await errorDetail(resp);
-        addNotification("error", withStillShowing(`Failed to load reference model: ${detail}`));
+        failedOpen(detail);
         return;
       }
       const data = await resp.json();
@@ -1251,7 +1259,7 @@ export function Toolbar() {
       setRecentPaths(getRecentPaths());
       addNotification("success", `Loaded reference model: ${rm.label}`);
     } catch (e) {
-      if (isNewestModelOpen(ticket)) addNotification("error", withStillShowing(`Failed to load reference model: ${e}`));
+      if (isNewestModelOpen(ticket)) failedOpen(e);
     } finally {
       if (isNewestModelOpen(ticket)) clearStatus();
     }
@@ -1266,6 +1274,8 @@ export function Toolbar() {
     setDropdownOpen(false);
     clearNotifications();
     setStatus(`Loading PsyNeuLink example: ${m.label}…`);
+    // #401: nothing new opened; marked over the graph, with Try again.
+    const failedOpen = (why: unknown) => reportFailedOpen(m.label, why, () => void loadPnlExample(m));
     const t0 = performance.now();
     const ticket = beginModelOpen(); // #386
     try {
@@ -1278,7 +1288,7 @@ export function Toolbar() {
       if (!isNewestModelOpen(ticket)) return;
       if (!resp.ok) {
         const detail = await errorDetail(resp);
-        addNotification("error", withStillShowing(`Failed to load example: ${detail}`));
+        failedOpen(detail);
         return;
       }
       const data = await resp.json();
@@ -1307,7 +1317,7 @@ export function Toolbar() {
       setRecentPaths(getRecentPaths());
       addNotification("success", `Loaded PsyNeuLink example: ${m.label}`);
     } catch (e) {
-      if (isNewestModelOpen(ticket)) addNotification("error", withStillShowing(`Failed to load example: ${e}`));
+      if (isNewestModelOpen(ticket)) failedOpen(e);
     } finally {
       if (isNewestModelOpen(ticket)) clearStatus();
     }
