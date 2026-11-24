@@ -65,7 +65,8 @@ test.describe("Course walkthroughs open their model", () => {
 
     // The Library's EGO has the demo's nodes, but it is not the demo: opening
     // it would leave the walkthrough, so the app asks (#172).
-    await page.getByRole("button", { name: "Giallanza2024 EGO Study2", exact: true }).click();
+    // It has the Reference Model's name since #422, so it is found by its file.
+    await page.locator('button[title*="library/models/Giallanza2024_EGO_Study2.py" i]').click();
     await expect(page.getByTestId("tutorial-choice")).toBeVisible();
     await page.getByTestId("tutorial-choice-stay").click();
     await expect(page.getByTestId("tour-bar")).toContainText("step 1 of");
