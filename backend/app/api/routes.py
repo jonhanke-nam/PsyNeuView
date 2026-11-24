@@ -64,6 +64,7 @@ from app.services.sidecar_index import (
 )
 from app.services import app_settings
 from app.services import deployment_mode
+from app.services import run_limits
 from app.services.sidecar_placement import CONCRETE as PLACEMENT_CONCRETE, migrate as migrate_placement
 from app.services import sidecar_copy
 from app.services.converter import is_standardized_format, detect_format_issues, convert_to_standard_format, convert_star_imports
@@ -2816,6 +2817,9 @@ def convert_model(request: ConvertRequest):
     except UnreviewedAssistantCode:
         # The review 409 naming the file, so the page offers the review,
         # not a "conversion failed" (#187).
+        raise
+    except run_limits.RunStopped:
+        # The run limits' 422 with its plain-English reason (#179, B3).
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Conversion failed: {e}")
