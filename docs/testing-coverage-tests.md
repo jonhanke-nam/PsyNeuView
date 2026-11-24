@@ -3858,8 +3858,8 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/style-conventions.spec.ts`** (Browser (Playwright))
 
-- Settings: Close is primary and the default button; small and danger row actions · not in CI · #1302
-- the Open menu's dialogs: the action primary, Cancel secondary · not in CI · #1302
+- Settings: Close is primary and the default button; small and danger row actions · CI · #1302
+- the Open menu's dialogs: the action primary, Cancel secondary · CI · #1302
 
 **`frontend/e2e/style-sizes.spec.ts`** (Browser (Playwright))
 
