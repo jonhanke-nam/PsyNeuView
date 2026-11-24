@@ -152,18 +152,18 @@ test.describe("Run results go stale after an edit (#337)", { tag: "@ci" }, () =>
     await expect(warning).toBeVisible();
 
     // One Undo, at once: the edit's preview has not run yet. The test browser
-    // reports Windows (Playwright's Desktop Chrome), so the app's Undo is
-    // Ctrl+Z on every machine. ControlOrMeta+Z was Cmd+Z on a Mac, which the
-    // app left to the code editor's own text undo, so the test passed there
-    // without ever using PsyNeuView's Undo.
-    await page.keyboard.press("Control+z");
+    // reports the platform it really runs on (#402), so ControlOrMeta+Z is the
+    // app's own Undo on every machine: Cmd+Z on a Mac, Ctrl+Z on Linux CI.
+    // (When the browser reported Windows, Cmd+Z on a Mac went to the code
+    // editor's own text undo, and the test never used PsyNeuView's Undo.)
+    await page.keyboard.press("ControlOrMeta+z");
     await withStalenessDiagnosis(page, info, before, async () => {
       await expect(warning).toHaveCount(0, { timeout: 10_000 });
       await expect(panel.getByTestId("run-results-body")).toHaveAttribute("data-stale", "false");
     });
 
     // Redo brings the edit back, and the warning with it.
-    await page.keyboard.press("Control+Shift+z");
+    await page.keyboard.press("ControlOrMeta+Shift+z");
     await expect(warning).toBeVisible({ timeout: 10_000 });
   });
 
@@ -189,17 +189,17 @@ test.describe("Run results go stale after an edit (#337)", { tag: "@ci" }, () =>
     await editor.click();
     await page.keyboard.press("ControlOrMeta+a");
     await page.keyboard.insertText(original.replace("gain=1.1", "gain=1.7"));
-    await page.keyboard.press("Control+z");
+    await page.keyboard.press("ControlOrMeta+z");
     await expect.poll(source).toContain("gain=1.1");
 
     // Type, then Redo at once, before the preview has run.
     await page.keyboard.press("ControlOrMeta+a");
     await page.keyboard.insertText(original.replace("gain=1.1", "gain=2.5"));
-    await page.keyboard.press("Control+Shift+z");
+    await page.keyboard.press("ControlOrMeta+Shift+z");
     await expect.poll(source).toContain("gain=1.7");
 
     // Undo brings back what was typed.
-    await page.keyboard.press("Control+z");
+    await page.keyboard.press("ControlOrMeta+z");
     // (The model store, not the editor's DOM: the editor draws only the lines
     // in view, and the gain line is below them.)
     await expect.poll(source).toContain("gain=2.5");
