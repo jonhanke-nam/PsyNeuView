@@ -21,6 +21,7 @@ import { addNodeToModel } from "@/utils/nodeActions";
 import { useDismiss } from "@/components/common/dialog/useDismiss";
 import { iconForCategory, iconForType } from "@/utils/componentIcons";
 import { ComponentIcon } from "./ComponentIcon";
+import { Button } from "@/components/common/Button";
 
 /** #354: the drag is over, dropped or not. */
 const endDrag = () => usePaletteStore.getState().setDraggingFunction(null);
@@ -61,6 +62,7 @@ export function PaletteSidebar() {
   const favorites = usePaletteStore((s) => s.favorites);
   const recentlyUsed = usePaletteStore((s) => s.recentlyUsed);
   const compactFlyoutNodeId = usePaletteStore((s) => s.compactFlyoutNodeId);
+  const showStripShortcuts = usePaletteStore((s) => s.showStripShortcuts);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return null;
@@ -84,6 +86,15 @@ export function PaletteSidebar() {
         .filter(Boolean) as PnlObjectDef[],
     [recentlyUsed],
   );
+
+  // #372: the icon strip's shortcuts, favourites first, then recents, once each.
+  const stripShortcuts = useMemo(() => {
+    const favTypes = new Set(favoriteItems.map((i) => i.type));
+    return [
+      ...favoriteItems.map((item) => ({ item, kind: "favourite" as const })),
+      ...recentItems.filter((i) => !favTypes.has(i.type)).map((item) => ({ item, kind: "recent" as const })),
+    ];
+  }, [favoriteItems, recentItems]);
 
   // Show ports (#112): the Ports section is there only while ports are shown.
   const showPorts = useGraphSettings((st) => st.showPortDots);
@@ -141,11 +152,13 @@ export function PaletteSidebar() {
       {/* Header */}
       <div
         style={{
-          padding: isCompact ? "8px 4px" : "8px 12px",
+          // #372: in the strip, a small chevron at the top edge, not a
+          // component-sized box.
+          padding: isCompact ? "2px 4px" : "8px 12px",
           borderBottom: "1px solid var(--pnv-border-faint)",
           display: "flex",
           alignItems: "center",
-          justifyContent: isCompact ? "center" : "space-between",
+          justifyContent: isCompact ? "flex-end" : "space-between",
           gap: 4,
           flexShrink: 0,
         }}
@@ -155,10 +168,12 @@ export function PaletteSidebar() {
         )}
         <div style={{ display: "flex", gap: 2 }}>
           <IconButton
-            title={isCompact ? "Expand palette" : "Compact mode"}
+            title={isCompact ? "Show the full Components panel" : "Compact mode"}
+            testId={isCompact ? "palette-strip-expand" : undefined}
+            small={isCompact}
             onClick={() => usePaletteStore.getState().toggleCompact()}
           >
-            {isCompact ? "\u25B6" : "\u25C0"}
+            {isCompact ? "\u203A" : "\u25C0"}
           </IconButton>
           {!isCompact && (
             <IconButton
@@ -222,15 +237,15 @@ export function PaletteSidebar() {
         ) : (
           <>
             {/* Favorites */}
-            {favoriteItems.length > 0 && (
-              <div style={{ padding: isCompact ? 0 : 8 }}>
-                {!isCompact && <SectionHeader label="Favorites" icon={"\u2605"} />}
-                {isCompact && <CompactDivider color="var(--pnv-favorite)" />}
+            {/* #372: the strip shows these at the bottom, behind a setting. */}
+            {!isCompact && favoriteItems.length > 0 && (
+              <div style={{ padding: 8 }}>
+                <SectionHeader label="Favorites" icon={"\u2605"} />
                 {favoriteItems.map((item) => (
                   <PaletteLeaf
                     key={`fav-${item.type}`}
                     item={item}
-                    compact={isCompact}
+                    compact={false}
                     depth={0}
                     isFavorite={true}
                     onAdd={handleAdd}
@@ -242,15 +257,14 @@ export function PaletteSidebar() {
             )}
 
             {/* Recently Used */}
-            {recentItems.length > 0 && (
-              <div style={{ padding: isCompact ? 0 : 8 }}>
-                {!isCompact && <SectionHeader label="Recently Used" icon={"\u29D6"} />}
-                {isCompact && <CompactDivider color="var(--pnv-primary)" />}
+            {!isCompact && recentItems.length > 0 && (
+              <div style={{ padding: 8 }}>
+                <SectionHeader label="Recently Used" icon={"\u29D6"} />
                 {recentItems.map((item) => (
                   <PaletteLeaf
                     key={`recent-${item.type}`}
                     item={item}
-                    compact={isCompact}
+                    compact={false}
                     depth={0}
                     isFavorite={favorites.includes(item.type)}
                     onAdd={handleAdd}
@@ -265,9 +279,7 @@ export function PaletteSidebar() {
             <div style={{ padding: isCompact ? 0 : "4px 0" }}>
               {isCompact ? (
                 <>
-                  {(favoriteItems.length > 0 || recentItems.length > 0) && (
-                    <CompactDivider color="var(--pnv-text-hint)" />
-                  )}
+                  <StripHeading testId="palette-strip-heading-components" label="All components">{"All"}</StripHeading>
                   {taxonomy.map((node) => (
                     <CompactCategoryIcon
                       key={node.id}
@@ -277,6 +289,24 @@ export function PaletteSidebar() {
                          compactFlyoutNodeId.startsWith(node.id + "."))}
                     />
                   ))}
+                  {showStripShortcuts && stripShortcuts.length > 0 && (
+                    <div data-testid="palette-strip-shortcuts" style={{ marginTop: 6 }}>
+                      <StripHeading testId="palette-strip-heading-shortcuts" label="Recent and favourite components">{"Recent"}</StripHeading>
+                      {stripShortcuts.map(({ item, kind }) => (
+                        <PaletteLeaf
+                          key={`strip-${item.type}`}
+                          item={item}
+                          compact={true}
+                          depth={0}
+                          isFavorite={kind === "favourite"}
+                          shortcut={kind}
+                          onAdd={handleAdd}
+                          onDragStart={handleDragStart}
+                          onToggleFavorite={() => usePaletteStore.getState().toggleFavorite(item.type)}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </>
               ) : (
                 taxonomy.map((node) => (
@@ -460,6 +490,7 @@ function PaletteLeaf({
   depth,
   isFavorite,
   isDefault = false,
+  shortcut,
   onAdd,
   onDragStart,
   onToggleFavorite,
@@ -469,6 +500,8 @@ function PaletteLeaf({
   depth: number;
   isFavorite: boolean;
   isDefault?: boolean;
+  /** #372: a shortcut in the icon strip, which the tooltip names. */
+  shortcut?: "favourite" | "recent";
   onAdd: (item: PnlObjectDef) => void;
   onDragStart: (e: DragEvent, item: PnlObjectDef) => void;
   onToggleFavorite: () => void;
@@ -480,6 +513,13 @@ function PaletteLeaf({
   // fallback; componentIcons.test.ts checks every item has an icon.
   const icon = iconForType(item.type);
   if (compact) {
+    const name = item.label || item.type;
+    const title =
+      shortcut === "favourite"
+        ? `Favourite: ${name}. Click, then click the graph to place it`
+        : shortcut === "recent"
+          ? `Recently used: ${name}. Click, then click the graph to place it`
+          : `${item.type} \u2014 drag onto the graph, or click it and then click where it goes`;
     return (
       <div
         draggable
@@ -488,9 +528,10 @@ function PaletteLeaf({
         onClick={() => onAdd(item)}
         data-testid="palette-item"
         data-type={item.type}
+        data-shortcut={shortcut}
         data-armed={armed ? "true" : undefined}
         aria-pressed={armed}
-        title={`${item.type} \u2014 drag onto the graph, or click it and then click where it goes`}
+        title={title}
         style={{
           ...armedStyle,
           width: 32,
@@ -524,6 +565,7 @@ function PaletteLeaf({
       data-type={item.type}
       data-armed={armed ? "true" : undefined}
       aria-pressed={armed}
+      className="pnv-palette-row"
       style={{
         ...armedStyle,
         display: "flex",
@@ -568,23 +610,33 @@ function PaletteLeaf({
           </span>
         )}
       </span>
-      {/* Favorite star */}
-      <span
+      {/* Favourite star (#372): the empty star shows on hover or keyboard
+          focus only (index.css .pnv-fav-star); a starred row keeps a small
+          filled star. */}
+      <Button
+        kind="link"
+        className="pnv-fav-star"
+        data-testid="palette-fav-star"
+        data-starred={isFavorite ? "true" : "false"}
+        aria-label={isFavorite ? `Remove ${item.label || item.type} from favorites` : `Add ${item.label || item.type} to favorites`}
+        aria-pressed={isFavorite}
+        title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        draggable={false}
         onClick={(e) => {
           e.stopPropagation();
           onToggleFavorite();
         }}
         style={{
-          fontSize: "var(--pnv-fs-13)",
+          fontSize: isFavorite ? "var(--pnv-fs-11)" : "var(--pnv-fs-13)",
           color: isFavorite ? "var(--pnv-favorite)" : "var(--pnv-text-faint)",
-          cursor: "pointer",
+          textDecoration: "none",
           lineHeight: 1,
+          padding: 0,
           flexShrink: 0,
         }}
-        title={isFavorite ? "Remove from favorites" : "Add to favorites"}
       >
         {isFavorite ? "\u2605" : "\u2606"}
-      </span>
+      </Button>
     </div>
   );
 }
@@ -610,17 +662,29 @@ function SectionHeader({ label, icon }: { label: string; icon?: string }) {
   );
 }
 
-function CompactDivider({ color }: { color: string }) {
+/** #372: the icon strip's tiny group headings, in the smallest text. */
+function StripHeading({ children, testId, label }: { children: React.ReactNode; testId: string; label: string }) {
   return (
     <div
+      data-testid={testId}
+      role="heading"
+      aria-level={3}
+      aria-label={label}
       style={{
-        height: 2,
-        background: color,
-        margin: "4px 8px",
-        borderRadius: 1,
-        opacity: 0.4,
+        fontSize: "var(--pnv-fs-9)",
+        fontWeight: 600,
+        color: "var(--pnv-text-hint)",
+        textAlign: "center",
+        lineHeight: 1.15,
+        // The strip's full width (its 4px padding given back). The headings
+        // are one short word each ("All", "Recent"), so they never wrap.
+        margin: "0 -4px",
+        padding: "4px 0 2px",
+        whiteSpace: "nowrap",
       }}
-    />
+    >
+      {children}
+    </div>
   );
 }
 
@@ -628,18 +692,25 @@ function IconButton({
   children,
   title,
   onClick,
+  small = false,
+  testId,
 }: {
   children: React.ReactNode;
   title: string;
   onClick: () => void;
+  /** #372: the strip's fold-out chevron, well under a component icon's size. */
+  small?: boolean;
+  testId?: string;
 }) {
   return (
     <button
       onClick={onClick}
       title={title}
+      aria-label={title}
+      data-testid={testId}
       style={{
-        width: 22,
-        height: 22,
+        width: small ? 14 : 22,
+        height: small ? 14 : 22,
         border: "1px solid var(--pnv-border)",
         borderRadius: 3,
         background: "var(--pnv-surface)",
@@ -647,7 +718,7 @@ function IconButton({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: "var(--pnv-fs-10)",
+        fontSize: small ? "var(--pnv-fs-11)" : "var(--pnv-fs-10)",
         color: "var(--pnv-text-muted)",
         padding: 0,
         lineHeight: 1,

@@ -420,3 +420,15 @@ body:has([data-pnv-customized="true"]) .pnv-inspector-legend {
   display: flex;
 }
 
+
+/* #372: a Components row's empty ☆ shows only on hover or keyboard focus; a
+   starred row keeps its small ★. Opacity, not display, so the star stays in
+   the tab order and its place in the row. */
+.pnv-palette-row .pnv-fav-star[data-starred="false"] {
+  opacity: 0;
+}
+.pnv-palette-row:hover .pnv-fav-star,
+.pnv-palette-row:focus-within .pnv-fav-star,
+.pnv-fav-star:focus-visible {
+  opacity: 1;
+}

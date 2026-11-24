@@ -9,9 +9,9 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 174 | 457 | 447 tests in 169 files |
+| Browser (Playwright) | 175 | 460 | 450 tests in 170 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 146 | 1284 | 1284 tests in 146 files |
+| Frontend unit (vitest) | 147 | 1287 | 1287 tests in 147 files |
 | Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -34,7 +34,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 12 files, 23 tests | – | 19 files, 130 tests | 21 files, 206 tests | 356 of 359 |
+| [App shell, diagnostics and everything else](#shell) | 13 files, 26 tests | – | 20 files, 133 tests | 21 files, 206 tests | 362 of 365 |
 
 <a id="tutorials"></a>
 
@@ -1245,6 +1245,7 @@ No tests yet.
 | `docs-shots-saving.spec.ts` | Browser | 2 | no | #662 | Docs pictures for saving and changes since save (#662). |
 | `graph-edit-broke-model.spec.ts` | Browser | 1 | yes | #353, #349 | When an edit made on the graph writes a line that doesn't run, the warning names that edit ("Adding X broke the model at line N.") and offers Undo, which puts the file back as it was (#353). |
 | `harness.spec.ts` | Browser | 1 | yes | #147 | Proves the test harness wiring end-to-end (#147): playwright.config env vars → backend in test mode → /api/test/reset open → mutatingTest fixture fires it. |
+| `icon-strip-shortcuts.spec.ts` | Browser | 3 | yes | #372 | The Components icon strip (#372). |
 | `notification-dwell.spec.ts` | Browser | 1 | yes | #879 | #879: info/success toasts dwell long enough to read. |
 | `pycharm-live.local.spec.ts` | Browser | 1 | no |  | LOCAL ONLY — the full two-headed loop with a real PyCharm. |
 | `read-only-badge-note.spec.ts` | Browser | 1 | yes | #50 | Clicking the "PsyNeuLink from … · read only" tag explains it (#50). |
@@ -1260,6 +1261,7 @@ No tests yet.
 | `e2eDistFreshness.test.ts` | Frontend unit | 3 | yes |  |  |
 | `retrySummary.test.ts` | Frontend unit | 4 | yes | #359 | The "Passed only on retry" job summary (#359): scripts/retry-summary.mjs reads the merged Playwright JSON report and lists every test that failed first and passed on retry. |
 | `errorReveal.test.ts` | Frontend unit | 4 | yes | #1103 | Clicking a model error to jump to its line (#1103). |
+| `stripShortcuts.test.ts` | Frontend unit | 3 | yes |  | The suite runs on node, not jsdom (vitest.config.ts): stub localStorage, as componentsPanelStart.test.ts does. |
 | `uiStoreInputs.test.ts` | Frontend unit | 6 | yes | #331, #330 | The Run panel's input arrangement (#331) and the per-element grid setting (#330): their defaults, and a choice made before being kept. |
 | `activityLog.test.ts` | Frontend unit | 17 | yes | #1287 | The activity log's rules (#1287): the cap, the order, `~` for the home folder, and no secrets — the value of a key that looks like a token or a password is never recorded, however it gets in. |
 | `diagnostics.test.ts` | Frontend unit | 16 | yes | #1287 | The diagnostics snapshot (#1287): its shape, what it reads from the stores, and that a server that can't be reached leaves `{error}` in its place rather than failing the whole call. |
@@ -1308,6 +1310,9 @@ No tests yet.
 | Docs pictures: saving › Changes since save, after a change outside PsyNeuView | `docs-shots-saving.spec.ts` | Browser | no | #662 |
 | an edit that breaks the model is named, with Undo (#353) › adding a node that writes a failing line: the warning names the add; Undo restores the file | `graph-edit-broke-model.spec.ts` | Browser | yes | #353 |
 | @smoke harness › mutatingTest fixture reaches /api/test/reset | `harness.spec.ts` | Browser | yes | #147 |
+| Components icon strip (#372) › a fresh strip shows the All heading, four categories and no shortcuts | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
+| Components icon strip (#372) › with the setting on, favourites and recents sit below the categories under their heading | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
+| Components icon strip (#372) › a row's empty star shows on hover or focus; a starred row keeps its star | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
 | success toast dwells past the old 2s window | `notification-dwell.spec.ts` | Browser | yes | #879 |
 | a real PyCharm save updates the PsyNeuView canvas | `pycharm-live.local.spec.ts` | Browser | no |  |
 | the read-only tag explains itself and offers Save a copy as… (#50) | `read-only-badge-note.spec.ts` | Browser | yes | #50 |

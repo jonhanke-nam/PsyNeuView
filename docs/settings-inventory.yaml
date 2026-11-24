@@ -657,6 +657,20 @@ settings:
       (psyneuview_palette_compact) is not read, so nobody stays stuck on the
       strip. Which sections are unfolded is still remembered by the panel.
 
+  - id: components-strip-shortcuts
+    label: Appearance ▸ Components panel ▸ Show favourite and recently used components in the icon strip
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.components.stripShortcuts); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-components-strip-shortcuts
+    notes: >-
+      Off by default (#372): the icon strip shows just the four category
+      menus, under a small "All" heading. On, your favourite and
+      recently used components sit at the bottom of the strip, under a small
+      "Recent" heading, favourites first and each once. The word
+      list's Favorites and Recently Used sections are not affected. A stored
+      choice is kept.
+
   - id: allow-blank-screen
     label: Appearance ▸ Panels ▸ Allow a blank screen
     home: settings
