@@ -369,7 +369,9 @@ def collect_e2e() -> list[TestFile]:
             tf.tests.append(Test(title, ci, issues_in(title) or file_issues))
         tf.ci = any(t.ci for t in tf.tests) if tf.tests else file_ci
         tf.issues = file_issues
-        m = NOT_IN_CI.search(header) or NOT_IN_CI.search(src)
+        # Only the header counts (#392): a "Not in CI:" further down, in a
+        # test's comment or a string, is not the file saying why.
+        m = NOT_IN_CI.search(header)
         if m:
             tf.not_in_ci = (m.group(1).lower(), m.group(2).strip().rstrip("."))
         tf.area = area_of(rel.replace(".spec.ts", ""))
