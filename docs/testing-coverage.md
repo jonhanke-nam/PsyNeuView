@@ -9,10 +9,10 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 158 | 430 | 418 tests in 152 files |
+| Browser (Playwright) | 159 | 431 | 419 tests in 153 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 134 | 1203 | 1203 tests in 134 files |
-| Backend (pytest) | 188 | 1747 | 1747 tests in 188 files |
+| Backend (pytest) | 189 | 1750 | 1750 tests in 189 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
 
@@ -27,14 +27,14 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Building models in the UI](#building) | 3 files, 6 tests | – | 1 files, 9 tests | 13 files, 145 tests | 160 of 160 |
 | [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 359 of 362 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
-| [Running, learning and debugging](#running) | 9 files, 26 tests | – | 8 files, 84 tests | 51 files, 252 tests | 362 of 362 |
+| [Running, learning and debugging](#running) | 10 files, 27 tests | – | 8 files, 84 tests | 51 files, 252 tests | 363 of 363 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 54 tests | – | 28 files, 262 tests | 19 files, 322 tests | 638 of 638 |
 | [Look and style conventions](#style) | 13 files, 31 tests | – | 8 files, 47 tests | – | 76 of 78 |
 | [Layout, views and compositions](#layout) | 21 files, 47 tests | – | 21 files, 151 tests | 5 files, 56 tests | 253 of 254 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 13 files, 78 tests | 18 files, 194 tests | 288 of 291 |
+| [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 13 files, 78 tests | 19 files, 197 tests | 291 of 294 |
 
 <a id="tutorials"></a>
 
@@ -593,6 +593,7 @@ No tests yet.
 | `run-panel-grouping.spec.ts` | Browser | 1 | yes | #570 | Run-panel input-grouping toggle (#570). |
 | `run-record-yaml.spec.ts` | Browser | 1 | yes | #525 | Run-record YAML export/import round-trip (#525). |
 | `run-set-survives-edit.spec.ts` | Browser | 1 | yes | #57 | A chosen run set survives a parameter edit (#57). |
+| `run-trial-seconds.spec.ts` | Browser | 1 | yes | #334 | Per-trial run times beside each trial number (#334). |
 | `stroop-lc-reference.spec.ts` | Browser | 2 | yes |  | Stroop + LC reference model — LC feedback edges render after the swap. |
 | `value-grid.spec.ts` | Browser | 1 | yes | #1387 | A layer's values as a grid (#1387). |
 | `BusyIndicator.test.ts` | Frontend unit | 3 | yes | #169 | The busy indicator's styles (#169): every one takes the same space, and everything that moves stands still under reduced motion. |
@@ -682,6 +683,7 @@ No tests yet.
 | run panel input grouping › toggles between by-node and by-trial layouts | `run-panel-grouping.spec.ts` | Browser | yes | #570 |
 | run record YAML round-trip › exports YAML and re-imports it | `run-record-yaml.spec.ts` | Browser | yes | #525 |
 | a parameter edit keeps the run set the learner chose | `run-set-survives-edit.spec.ts` | Browser | yes | #57 |
+| per-trial run times (#334) › each trial row shows how many seconds it took | `run-trial-seconds.spec.ts` | Browser | yes | #334 |
 | stroop_with_lc reference model › loads and renders all four LC modulatory edges | `stroop-lc-reference.spec.ts` | Browser | yes |  |
 | stroop_with_lc reference model › runs a trial without the scalar-conflict shape error | `stroop-lc-reference.spec.ts` | Browser | yes |  |
 | a layer's values as a grid (#1387) › the Hopfield letter as a grid: in the results, while stepping, and after reopening | `value-grid.spec.ts` | Browser | yes | #1387 |
@@ -1233,6 +1235,7 @@ No tests yet.
 | `test_request_guard.py` | Backend | 10 | yes |  | The server refuses requests from another site or under another name. |
 | `test_test_extractor.py` | Backend | 15 | yes |  | Tests for app.services.test_extractor. |
 | `test_test_map.py` | Backend | 6 | yes | #319 | The What's tested page reads the test files correctly (#319). |
+| `test_trial_seconds.py` | Backend | 3 | yes | #334 | Per-trial run times (#334). |
 | `test_validation.py` | Backend | 20 | yes |  | Tests for file validation, error handling, and diagnostics. |
 | `test_version_only_diff.py` | Backend | 9 | yes | #299 | A version-bump-only diff lets CI skip its heavy jobs; nothing else may (#299). |
 | `test_ws_broadcast.py` | Backend | 3 | yes | #305 | Broadcasts while windows come and go (#305). |

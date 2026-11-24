@@ -1826,6 +1826,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - a parameter edit keeps the run set the learner chose · CI · #57
 
+**`frontend/e2e/run-trial-seconds.spec.ts`** (Browser (Playwright))
+
+- per-trial run times (#334) › each trial row shows how many seconds it took · CI · #334
+
 **`frontend/e2e/stroop-lc-reference.spec.ts`** (Browser (Playwright))
 
 - stroop_with_lc reference model › loads and renders all four LC modulatory edges · CI
@@ -4995,6 +4999,12 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - test_issue_numbers_skip_colours_and_urls · CI · #319
 - test_area_overrides_win_over_name_patterns · CI · #319
 - test_the_published_page_is_current: The same check CI's Frontend workflow runs, so a backend-only change sees it too. · CI · #319
+
+**`backend/tests/test_trial_seconds.py`** (Backend (pytest))
+
+- test_three_trial_run_returns_three_trial_times: The served run path (sandbox worker) returns one time per trial. · CI · #334
+- test_in_process_run_returns_trial_times_too · CI · #334
+- test_existing_trial_callbacks_are_chained_not_replaced: A callback already passed to run() still fires, with its context. · CI · #334
 
 **`backend/tests/test_validation.py`** (Backend (pytest))
 
