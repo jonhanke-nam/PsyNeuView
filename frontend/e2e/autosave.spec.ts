@@ -10,8 +10,6 @@
  * file, shared by every spec in a run, so each test here puts it back to off.
  *
  * Screenshots land in `$SHOTS_DIR` when it is set.
- *
- * Not in CI: should be added: passes locally in about 76 s for five tests (2026-11-23); never tagged.
  */
 import type { Page } from "@playwright/test";
 import { readOnlyTest as test, expect } from "./test-base";
@@ -89,7 +87,7 @@ async function holdsFor(page: Page, ms: number, check: () => void) {
 
 const status = (page: Page) => page.getByTestId("autosave-status");
 
-test.describe("autosave (#1347)", () => {
+test.describe("autosave (#1347)", { tag: "@ci" }, () => {
   test.afterEach(async ({ page }) => {
     await setAutosave(page, { enabled: false, seconds: 10 });
   });

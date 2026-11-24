@@ -15,8 +15,6 @@
  *   - with autosave on, the marker says automatic.
  *
  * Screenshots land in `$SHOTS_DIR` when it is set.
- *
- * Not in CI: should be added: passes locally in about 33 s (2026-11-23); never tagged.
  */
 import { mutatingTest as test, expect } from "./test-base";
 import { readFileSync, writeFileSync, mkdtempSync } from "fs";
@@ -90,7 +88,7 @@ async function setAutosave(page: Page, setting: { enabled?: boolean; seconds?: n
   expect(r.ok()).toBe(true);
 }
 
-test.describe("Saves in History (#1349)", () => {
+test.describe("Saves in History (#1349)", { tag: "@ci" }, () => {
   test("two saves, undo past the latest, revert to the earlier one", async ({ page }) => {
     test.setTimeout(240_000);
     const model = scratchModel();

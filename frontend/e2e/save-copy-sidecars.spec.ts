@@ -9,8 +9,6 @@
  *
  * A file already at the destination gets the same question the `.py` gets:
  * the backend answers 409 naming the file, and the app asks before overwriting.
- *
- * Not in CI: should be added: passes locally in about 21 s (2026-11-23); never tagged.
  */
 import type { Page } from "@playwright/test";
 import { mutatingTest as test, expect, canvasNode } from "./test-base";
@@ -78,7 +76,7 @@ async function saveCopyAs(page: Page, name: string) {
 
 const lockTag = (page: Page) => page.getByTestId("edit-mode-badge");
 
-test("the copy gets the layout and labels, named to match, and starts unlocked (#1244)", async ({ page }) => {
+test("the copy gets the layout and labels, named to match, and starts unlocked (#1244)", { tag: "@ci" }, async ({ page }) => {
   test.setTimeout(180_000);
   const original = originalModel();
   await openModel(page, original);
@@ -128,7 +126,7 @@ test("the copy gets the layout and labels, named to match, and starts unlocked (
   expect(readFileSync(sidecarOf(original, ".pnlview.json")!, "utf8")).toBe(originalBytes);
 });
 
-test("a layout file already at the destination gets the same overwrite question as the .py (#1244)", async ({ page }) => {
+test("a layout file already at the destination gets the same overwrite question as the .py (#1244)", { tag: "@ci" }, async ({ page }) => {
   test.setTimeout(180_000);
   const original = originalModel();
   await openModel(page, original);

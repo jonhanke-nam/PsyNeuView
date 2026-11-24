@@ -8,8 +8,6 @@
  * PsyNeuLink in use starts open. The data is a developer's real Settings
  * (pnl-switch-stub.ts): a managed Princeton clone on devel in use, six of
  * its branches, three of a fork, one checkout, nine releases.
- *
- * Not in CI: should be added: passes locally in about 3 s (2026-11-23); never tagged.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 import { CHECKOUT, FORK, FORK_BRANCHES, PRINCETON, openDeveloper, stubSwitchBackend } from "./pnl-switch-stub";
@@ -30,7 +28,7 @@ async function openList(page: Page) {
 
 const heading = (page: Page, groupTestId: string) => page.getByTestId(groupTestId).getByTestId("pnl-switch-group-heading");
 
-test("the list opens short: Another… first, only the group in use open, a folded group saying it holds the one in use", async ({ page }) => {
+test("the list opens short: Another… first, only the group in use open, a folded group saying it holds the one in use", { tag: "@ci" }, async ({ page }) => {
   await stubSwitchBackend(page);
   await openDeveloper(page);
   const listbox = await openList(page);
@@ -69,7 +67,7 @@ test("the list opens short: Another… first, only the group in use open, a fold
   await expect(listbox.getByRole("option")).toHaveCount(8);
 });
 
-test("unfolding a repo shows its branches alone; picking one shows the full source and Apply", async ({ page }) => {
+test("unfolding a repo shows its branches alone; picking one shows the full source and Apply", { tag: "@ci" }, async ({ page }) => {
   await stubSwitchBackend(page);
   await openDeveloper(page);
   const group = page.getByTestId("settings-group-pnl-install");
@@ -104,7 +102,7 @@ test("unfolding a repo shows its branches alone; picking one shows the full sour
   await expect(group.getByTestId("install-apply")).toBeVisible();
 });
 
-test("the releases: the newest five, then Show older reveals the rest, the incompatible ones disabled with the reason", async ({ page }) => {
+test("the releases: the newest five, then Show older reveals the rest, the incompatible ones disabled with the reason", { tag: "@ci" }, async ({ page }) => {
   await stubSwitchBackend(page);
   await openDeveloper(page);
   const group = page.getByTestId("settings-group-pnl-install");
@@ -131,7 +129,7 @@ test("the releases: the newest five, then Show older reveals the rest, the incom
   await expect(group.getByTestId("install-apply")).toBeVisible();
 });
 
-test("keyboard: Up and Down over headings and rows, Right and Left unfold and fold, Enter picks, Escape closes", async ({ page }) => {
+test("keyboard: Up and Down over headings and rows, Right and Left unfold and fold, Enter picks, Escape closes", { tag: "@ci" }, async ({ page }) => {
   await stubSwitchBackend(page);
   await openDeveloper(page);
   const group = page.getByTestId("settings-group-pnl-install");
@@ -199,7 +197,7 @@ test("keyboard: Up and Down over headings and rows, Right and Left unfold and fo
   await expect(group.getByTestId("install-apply")).toBeVisible();
 });
 
-test("nothing matches what is in use: every group starts folded", async ({ page }) => {
+test("nothing matches what is in use: every group starts folded", { tag: "@ci" }, async ({ page }) => {
   await stubSwitchBackend(page, () => ({
     version: "0.19.1.0", source: "github", branch: "feature/x", repo: "someone-else/PsyNeuLink", commit: "abcdef0",
     path: "/Users/someone/.psyneuview/sources/PsyNeuLink-someone-else",

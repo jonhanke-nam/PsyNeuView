@@ -16,8 +16,6 @@
  *
  * What is installed, the releases, the branches and the install job are
  * answered here: a real install takes minutes and changes the environment.
- *
- * Not in CI: should be added: passes locally in about 8 s (2026-11-23); never tagged.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 import { stubFolderCheck } from "./pnl-switch-stub";
@@ -71,7 +69,7 @@ async function openDeveloper(page: Page) {
   await page.getByTestId("settings-section-developer").click();
 }
 
-test("Developer: no button until a valid choice differs from what's installed; gone again after applying", async ({ page }) => {
+test("Developer: no button until a valid choice differs from what's installed; gone again after applying", { tag: "@ci" }, async ({ page }) => {
   let installed: object = devel;
   const posted: Array<Record<string, unknown>> = [];
   await stubBackend(page, () => installed);
@@ -151,7 +149,7 @@ test("Developer: no button until a valid choice differs from what's installed; g
   await expect(inUse).toHaveText("✓ In use now: Your PsyNeuLink checkout · jonhanke-nam/PsyNeuLink @ jonhanke-dev (1a2b3c4)");
 });
 
-test("Developer: picking the installed release is nothing to apply; another release is", async ({ page }) => {
+test("Developer: picking the installed release is nothing to apply; another release is", { tag: "@ci" }, async ({ page }) => {
   let installed: object = pypi("0.19.1.0");
   await stubBackend(page, () => installed);
 

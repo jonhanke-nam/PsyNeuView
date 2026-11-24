@@ -24,7 +24,10 @@
  *   3. dragging a selection out of the editor and dropping it on the canvas,
  *      where the app's file-drop handler lives.
  *
- * Not in CI: should be added: passes locally in about 26 s (2026-11-23); never tagged.
+ * Not in CI: broken: on the Linux runners the forwards-and-backwards test finds
+ * no text selected after the drag (0 characters, both attempts, PR #326), though
+ * it passes on macOS; probably window.getSelection() not reflecting
+ * CodeMirror's selection there. Measure the selection another way, then add.
  */
 import type { Page } from "@playwright/test";
 import { readOnlyTest as test, expect } from "./test-base";

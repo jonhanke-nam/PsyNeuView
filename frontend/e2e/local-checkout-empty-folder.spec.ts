@@ -12,8 +12,6 @@
  * (`/api/settings/install/check-folder`, which only reads the disk). What is
  * installed, the known sources and the install job itself are answered here,
  * so nothing is downloaded or installed.
- *
- * Not in CI: should be added: passes locally in about 8 s, nothing downloaded (2026-11-23); never tagged.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
@@ -62,7 +60,7 @@ async function stubInstall(page: Page, posted: Array<Record<string, unknown>>) {
   await page.route(`**/api/settings/install/${JOB}`, (r) => r.fulfill({ json: job("succeeded") }));
 }
 
-test("an empty folder: the offer to download PsyNeuLink appears, and Apply downloads it", async ({ page }) => {
+test("an empty folder: the offer to download PsyNeuLink appears, and Apply downloads it", { tag: "@ci" }, async ({ page }) => {
   const folder = path.join(root, "PNV--my-local-PNL-repo");
   mkdirSync(folder);
   const posted: Array<Record<string, unknown>> = [];
@@ -93,13 +91,13 @@ test("an empty folder: the offer to download PsyNeuLink appears, and Apply downl
   expect(posted).toEqual([{ source: "local", path: folder, download_repo: FORK, download_ref: "jonhanke-dev" }]);
 });
 
-test("a folder that doesn't exist yet is offered the download too", async ({ page }) => {
+test("a folder that doesn't exist yet is offered the download too", { tag: "@ci" }, async ({ page }) => {
   const group = await typePath(page, path.join(root, "PsyNeuLink"));
   await expect(group.getByTestId("install-download-offer")).toContainText("This folder doesn't exist yet: it will be made.");
   await expect(group.getByTestId("install-apply")).toBeEnabled();
 });
 
-test("a folder of other files: the reason under the field, and no Apply", async ({ page }) => {
+test("a folder of other files: the reason under the field, and no Apply", { tag: "@ci" }, async ({ page }) => {
   const folder = path.join(root, "Thesis-notes");
   mkdirSync(folder);
   writeFileSync(path.join(folder, "chapter1.md"), "notes");
