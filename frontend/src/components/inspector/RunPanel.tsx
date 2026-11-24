@@ -10,6 +10,8 @@ import { useModelStore, type DebuggerSnapshot, selectExecPath } from "@/stores/m
 import { useStatusStore } from "@/stores/statusStore";
 import { useRunRecords, type RunRecord } from "@/stores/runRecordsStore";
 import { useRunResults } from "@/stores/runResultsStore";
+import { STALE_STYLE, recheckRunStaleness, watchRunStaleness } from "@/stores/runStaleness";
+import { cachedSourceHash } from "@/utils/sourceHash";
 import { useRunTimingStore } from "@/stores/runTimingStore";
 import yaml from "js-yaml";
 import { useUIStore, type InputGrouping } from "@/stores/uiStore";
@@ -93,6 +95,9 @@ interface RunResults {
   outputLabels?: string[];
   logs: Record<string, { trials: number[]; values: number[][][] }>;
   numTrials: number;
+  // #337: the version of the model this run ran (see runResultsStore).
+  sourceHash?: string;
+  compositionName?: string;
 }
 
 // Snapshot of the inputs that actually produced a run's results, taken at
@@ -142,6 +147,11 @@ export function RunPanel() {
     Array<{ trial: number; values: Record<string, string[]> }>
   >([]);
   const [results, setResults] = useState<RunResults | null>(null);
+  // #337: the results ran an earlier version of the open model.
+  const resultsStale = useRunResults((s) => s.stale);
+  useEffect(() => {
+    watchRunStaleness();
+  }, []);
   const [submitted, setSubmitted] = useState<SubmittedInput[] | null>(null);
   const [running, setRunning] = useState(false);
   // #764: execution backend for the forward run. Mirrors the Learn panel's
@@ -376,6 +386,8 @@ export function RunPanel() {
       setResults(null);
       setSubmitted(null);
       setStatus("Running model (this may take a few seconds)…");
+      // #337: tag the run with the source it runs, hashed once, here.
+      const sourceHash = cachedSourceHash(useModelStore.getState().source);
 
       const t0 = performance.now();
       // For the activity log (#1287): started now, finished in `finally` with
@@ -419,6 +431,8 @@ export function RunPanel() {
         }
 
         const data = await resp.json();
+        data.sourceHash = sourceHash;
+        data.compositionName = compositionName;
         outcome = "ok";
         setResults(data);
         setModelWarnings(data.model_warnings ?? null);
@@ -435,6 +449,8 @@ export function RunPanel() {
         // Trajectory card (#465) and any future cross-panel views can read them
         // without prop-drilling through the panel tree.
         useRunResults.getState().setResults(data);
+        // An edit made while the run was in flight already makes it stale.
+        recheckRunStaleness();
         // Freeze the inputs that produced this run so later textarea edits don't
         // retroactively rewrite the per-trial cards (#463).
         const frozen = inputNodes.map((n) => ({
@@ -1016,6 +1032,16 @@ export function RunPanel() {
               )}
             </div>
 
+            {/* #337: the model was edited since this run. The results stay,
+                dimmed, until a re-run (or Undo back to the source that ran). */}
+            {resultsStale && (
+              <StaleResultsNote onRunAgain={handleRun} disabled={running || hasInvalid} />
+            )}
+            <div
+              data-testid="run-results-body"
+              data-stale={resultsStale ? "true" : "false"}
+              style={resultsStale ? STALE_STYLE : undefined}
+            >
             {/* #766: the concrete PsyNeuLink call this run made. */}
             <PnlCallLine
               call={(results as { pnlCall?: string }).pnlCall}
@@ -1120,11 +1146,47 @@ export function RunPanel() {
                 </tbody>
               </table>
             </details>
+            </div>
           </div>
         )}
       </div>
 
       <RecentRunsList onRerun={rerunRecord} onImport={importRunFile} running={running} />
+    </div>
+  );
+}
+
+/** #337: the results ran an earlier version of the open model, or another composition in it. */
+function StaleResultsNote({ onRunAgain, disabled }: { onRunAgain: () => void; disabled: boolean }) {
+  // Which kind of stale: another composition chosen, or the code edited.
+  const activeComposition = useModelStore((s) => s.activeComposition);
+  const ran = useRunResults((s) => s.results?.compositionName);
+  const ranComposition = ran && activeComposition && ran !== activeComposition ? ran : null;
+  return (
+    <div
+      data-testid="stale-results-warning"
+      role="status"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        margin: "4px 0 8px",
+        padding: "6px 8px",
+        border: "1px solid var(--pnv-warning-border)",
+        borderRadius: 4,
+        background: "var(--pnv-warning-tint)",
+        color: "var(--pnv-warning-text-on-tint)",
+        fontSize: "var(--pnv-fs-12)",
+      }}
+    >
+      <span style={{ flex: 1 }}>
+        {ranComposition
+          ? `These results are from the composition ${ranComposition}. Run again to run the one now chosen.`
+          : "These results are from an earlier version of the model. Run again to update them."}
+      </span>
+      <Button kind="small" onClick={onRunAgain} disabled={disabled} data-testid="stale-results-run-again">
+        Run again
+      </Button>
     </div>
   );
 }
