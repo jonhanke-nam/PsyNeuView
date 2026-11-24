@@ -278,3 +278,12 @@ export async function openTimed(page: Page, label: string, opts: { quietMs?: num
   const t = await waitGraph(page, { prevIds, quietMs: opts.quietMs });
   return { ...t, longTasks: await longTaskMs(page) };
 }
+
+/**
+ * Put the code editor's cursor at the end of the file. Select all, then the
+ * right arrow: the same on every platform (Ctrl+End is not, on macOS).
+ */
+export async function toEndOfFile(page: Page) {
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.press("ArrowRight");
+}

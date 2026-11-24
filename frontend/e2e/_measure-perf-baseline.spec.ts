@@ -39,6 +39,7 @@ import {
   frameAfter,
   graphIds,
   installProbes,
+  toEndOfFile,
   longTaskMs,
   median,
   openTimed,
@@ -223,7 +224,7 @@ async function measureOnce(page: Page, label: string): Promise<Sample> {
   const editor = page.locator(".cm-content").first();
   if (await editor.isVisible().catch(() => false)) {
     await editor.click();
-    await page.keyboard.press("ControlOrMeta+End");
+    await toEndOfFile(page);
     await page.keyboard.press("Enter");
     const preview = page.waitForResponse((r) => r.url().endsWith("/api/model/preview"), { timeout: 60_000 }).catch(() => null);
     await startKeyLatency(page);
