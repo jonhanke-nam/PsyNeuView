@@ -9,7 +9,7 @@ unavailable / non-learnable options disabled and explained — extending the
 #475 capability surface. Pure read: no mutation, no network, no model load.
 
 Install-level, only PyTorch trains: it is the backend of an
-``AutodiffComposition``, whose Python and LLVM modes execute the forward graph
+``AutodiffComposition``, whose Python and LLVM modes execute the forward pass
 but not the autograd backward pass. Which backend can train a *particular*
 composition is per-structure (``composition_execution_modes``, #763): a plain
 Composition with learning pathways trains under Python, through PsyNeuLink's
@@ -68,7 +68,7 @@ def get_execution_modes() -> list[ExecutionModeInfo]:
     if not llvm_ok:
         llvm_reason = "LLVM backend unavailable in this PsyNeuLink build."
     else:
-        llvm_reason = "LLVM runs the compiled forward graph; autodiff training runs under PyTorch."
+        llvm_reason = "LLVM compiles and runs the model's forward pass; autodiff training runs under PyTorch."
 
     return [
         {
@@ -80,10 +80,10 @@ def get_execution_modes() -> list[ExecutionModeInfo]:
         },
         {
             "id": "Python",
-            "label": "Python (graph)",
+            "label": "Python",
             "available": True,
             "learnable": False,
-            "reason": "Python mode executes the forward graph; autodiff training runs under PyTorch.",
+            "reason": "Python mode executes the model's forward pass; autodiff training runs under PyTorch.",
         },
         {
             "id": "LLVM",
@@ -149,12 +149,12 @@ def composition_execution_modes(
         reason = base["reason"] if not available else None
         if available and not supported:
             reason = (
-                f"{base['label']} runs only an AutodiffComposition's compiled graph; "
+                f"{base['label']} runs only an AutodiffComposition; "
                 "this is a plain Composition."
             )
         elif available and supported and not can_learn:
             if is_autodiff:
-                reason = f"{base['label']} executes the forward graph; autodiff training runs under PyTorch."
+                reason = f"{base['label']} executes the model's forward pass; autodiff training runs under PyTorch."
             elif mode_id == "Python" and not has_learning:
                 reason = "This Composition has no learning pathways, so there is nothing to train."
             else:
