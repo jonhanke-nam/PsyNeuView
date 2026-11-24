@@ -100,11 +100,15 @@ def test_layout_after_a_show_graph_load_does_not_reload(tmp_path, demo, runner_c
     assert calls == []
 
 
-def test_plain_load_keeps_nothing(tmp_path, runner_calls):
+def test_plain_load_keeps_only_the_answer_its_shapes_came_from(tmp_path, runner_calls):
+    """A plain load asks show_graph once, for its node shapes (#385), and keeps
+    that answer; any other options still ask."""
     path = copy_demo(tmp_path, "feedforward_network.py")
     model = client.post("/api/model/load", json={"file_path": str(path)}).json()["model"]
     calls = runner_calls()
     assert layout_request(path, outermost(model)).status_code == 200
+    assert calls == []
+    assert layout_request(path, outermost(model), show_learning=True).status_code == 200
     assert calls == ["show_graph"]
 
 
