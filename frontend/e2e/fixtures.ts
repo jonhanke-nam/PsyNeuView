@@ -21,7 +21,8 @@ export type FixtureName =
   | "with_controller"
   | "recurrent_self"
   | "nested_minimal"
-  | "deep_nested";
+  | "deep_nested"
+  | "does_not_build";
 
 export function fixturePath(name: FixtureName): string {
   return path.join(FIXTURES_DIR, `${name}.py`);

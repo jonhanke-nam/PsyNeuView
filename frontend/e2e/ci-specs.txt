@@ -79,6 +79,7 @@ mac-auto-install-updates.spec.ts
 mdf-gap-warnings.spec.ts
 menus-above-walkthrough-ring.spec.ts
 model-lock.spec.ts
+model-switch.spec.ts
 modulatory-param-edges.spec.ts
 multiport-labels-learn.spec.ts
 narration-matches-bar.spec.ts
