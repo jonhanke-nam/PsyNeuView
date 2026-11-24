@@ -22,6 +22,8 @@ import {
   type AssistantEvent,
   type AssistantSettings,
   type ConversationItem,
+  type McpSetup,
+  type McpStatus,
   type ModelListResponse,
   type Proposal,
   type SandboxStatus,
@@ -129,6 +131,19 @@ interface AssistantState {
   offerReview: (offer: { path: string; message: string; openAfter?: boolean }) => Promise<void>;
   approveReviewed: () => Promise<void>;
   dismissReview: () => void;
+
+  /** Claude over MCP (#201): the setup text with the token; null until fetched. */
+  mcpSetup: McpSetup | null;
+  mcpSetupError: string | null;
+  mcpStatus: McpStatus | null;
+  loadMcpSetup: () => Promise<void>;
+  /** A new connection token: clients set up with the old one are refused from now on. */
+  replaceMcpToken: () => Promise<void>;
+  loadMcpStatus: () => Promise<McpStatus | null>;
+  /** Share the open model, as far as visibility allows, for Claude's read_open_model. */
+  shareMcpContext: () => Promise<void>;
+  /** While the agent is Claude over MCP: follow its session's tool calls and proposals. Returns a stop function. */
+  watchMcp: () => () => void;
 }
 
 let itemSeq = 0;
@@ -469,7 +484,97 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
   },
 
   dismissReview: () => set({ reviewOffer: null }),
+
+  mcpSetup: null,
+  mcpSetupError: null,
+  mcpStatus: null,
+
+  loadMcpSetup: async () => {
+    try {
+      const resp = await fetch("/api/assistant/mcp/setup");
+      const body = await readJson(resp);
+      if (!resp.ok) {
+        const detail = body.detail;
+        set({ mcpSetupError: typeof detail === "string" ? detail : `The setup couldn't be fetched (HTTP ${resp.status})` });
+        return;
+      }
+      set({ mcpSetup: body as unknown as McpSetup, mcpSetupError: null });
+    } catch {
+      set({ mcpSetupError: "Couldn't reach PsyNeuView's backend" });
+    }
+  },
+
+  replaceMcpToken: async () => {
+    const resp = await fetch("/api/assistant/mcp/token", { method: "POST" });
+    if (resp.ok) {
+      set({ mcpSetup: (await readJson(resp)) as unknown as McpSetup, mcpSetupError: null });
+      record("assistant", "MCP connection token replaced");
+    }
+  },
+
+  loadMcpStatus: async () => {
+    try {
+      const resp = await fetch("/api/assistant/mcp/status");
+      if (!resp.ok) return null;
+      const status = (await readJson(resp)) as unknown as McpStatus;
+      set({ mcpStatus: status });
+      return status;
+    } catch {
+      return null;
+    }
+  },
+
+  shareMcpContext: async () => {
+    const { settings } = get();
+    if (!settings.enabled || settings.agent.type !== "claude_mcp") return;
+    const model = useModelStore.getState();
+    const context = contextFor(settings, {
+      filePath: model.filePath,
+      source: model.source,
+      selection: model.selectedNodeId ?? null,
+      errors: [],
+    });
+    await fetch("/api/assistant/mcp/context", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ context }),
+    }).catch(() => undefined);
+  },
+
+  watchMcp: () => {
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const tick = async () => {
+      if (stopped) return;
+      const status = await get().loadMcpStatus();
+      const sid = status?.session_id ?? null;
+      if (sid && sid !== get().sessionId) {
+        // A new MCP session (the backend restarted): start its conversation afresh.
+        set({ sessionId: sid, next: 0, items: [], proposals: {}, lastDone: null, tokensUsed: 0 });
+      }
+      if (sid) await get().poll();
+      if (!stopped) timer = setTimeout(() => void tick(), MCP_POLL_MS);
+    };
+    void get().shareMcpContext();
+    void tick();
+    // Share the open model again whenever it, or the selection, changes.
+    let shareTimer: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribe = useModelStore.subscribe((m, prev) => {
+      if (m.source === prev.source && m.filePath === prev.filePath && m.selectedNodeId === prev.selectedNodeId) return;
+      if (shareTimer) clearTimeout(shareTimer);
+      shareTimer = setTimeout(() => void get().shareMcpContext(), 300);
+    });
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      if (shareTimer) clearTimeout(shareTimer);
+      unsubscribe();
+    };
+  },
 }));
+
+/** How often the Assistant tab asks for Claude's tool calls and proposals while Claude over MCP is the agent. */
+const MCP_POLL_MS = 1500;
 
 /** The settings as the backend sent them, without what it adds to a GET (`available`). */
 function fromBackend(body: Partial<AssistantSettings>): AssistantSettings {

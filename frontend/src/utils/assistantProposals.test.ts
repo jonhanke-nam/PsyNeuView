@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_ASSISTANT_SETTINGS, type Proposal } from "@/stores/assistantTypes";
-import { contextFor, destinationHost, modelLabel, needsConsent, pendingProposals, setProposalState, sharedWords, whereDataGoes, withProposal } from "./assistantProposals";
+import { contextFor, destinationHost, mcpConnectionWords, modelLabel, needsConsent, pendingProposals, setProposalState, sharedWords, whereDataGoes, withProposal } from "./assistantProposals";
 
 const base = DEFAULT_ASSISTANT_SETTINGS;
 
@@ -84,5 +84,29 @@ describe("modelLabel (#370)", () => {
     expect(modelLabel({ ...anthropic, agent: { ...anthropic.agent, model: "claude-x" } }, list)).toBe("claude-x");
     expect(modelLabel({ ...base, agent: { type: "openai_compatible", model: "", base_url: "http://localhost:1" } }, [])).toBe("the server's default model");
     expect(modelLabel(base, list)).toBe("");
+  });
+});
+
+describe("Claude over MCP (#201)", () => {
+  const mcp = { type: "claude_mcp" as const, model: "", base_url: "" };
+
+  it("asks before switching to it while on, naming Claude Desktop or Claude Code", () => {
+    const on = { ...base, enabled: true, agent: { type: "anthropic" as const, model: "", base_url: "" } };
+    const raised = needsConsent(on, { ...on, agent: mcp });
+    expect(raised).toHaveLength(1);
+    expect(raised[0]).toContain("Claude Desktop or Claude Code");
+  });
+
+  it("says where messages go and that no key is kept", () => {
+    expect(destinationHost(mcp)).toBe("Claude Desktop or Claude Code on this machine");
+    expect(whereDataGoes(mcp)).toContain("your own Claude subscription");
+    expect(whereDataGoes(mcp)).toContain("No API key is kept in PsyNeuView");
+    expect(modelLabel({ ...base, agent: mcp }, [])).toBe("Claude, via Claude Desktop or Claude Code");
+  });
+
+  it("words the connection status", () => {
+    expect(mcpConnectionWords(null)).toContain("No Claude client has connected yet");
+    expect(mcpConnectionWords({ connected: true, seconds_ago: 2, client: "claude-code 2.1" })).toBe("Claude is connected (claude-code 2.1), last heard from just now.");
+    expect(mcpConnectionWords({ connected: false, seconds_ago: 600, client: "" })).toBe("Not connected. A Claude client was last heard from 10 minutes ago.");
   });
 });

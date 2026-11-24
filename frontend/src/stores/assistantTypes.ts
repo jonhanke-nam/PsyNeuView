@@ -6,7 +6,12 @@
  * shown through SafeText and never as markup.
  */
 
-export type AgentType = "none" | "anthropic" | "openai_compatible";
+/**
+ * `claude_mcp` (#201): no agent is called from PsyNeuView. Claude Desktop or
+ * Claude Code, signed in with the user's subscription, connects to
+ * PsyNeuView's MCP server and uses the same tools; proposals still come here.
+ */
+export type AgentType = "none" | "anthropic" | "openai_compatible" | "claude_mcp";
 export type Autonomy = "answer" | "suggest" | "app_edits";
 export type Saving = "always_ask" | "structured_without_asking";
 export type FolderAccess = "read" | "read_write";
@@ -77,6 +82,32 @@ export interface SandboxStatus {
   not_enforced: string[];
   reason: string | null;
   forced: "on" | "off" | null;
+}
+
+/** GET /api/assistant/mcp/setup (#201): what to paste into Claude Code and Claude Desktop. */
+export interface McpSetup {
+  url: string;
+  command: string;
+  args: string[];
+  env_names: string[];
+  /** The `claude mcp add …` line, token included. */
+  claude_code: string;
+  /** The `mcpServers` JSON for claude_desktop_config.json, token included. */
+  claude_desktop: string;
+  token: string;
+}
+
+/** GET /api/assistant/mcp/status (#201). */
+export interface McpStatus {
+  connected: boolean;
+  /** Seconds since the epoch, or null when no client has been heard from. */
+  last_seen: number | null;
+  seconds_ago: number | null;
+  client: string;
+  /** The assistant is on with Claude over MCP chosen. */
+  active: boolean;
+  /** The MCP session the page polls for tool calls and proposals; null unless active. */
+  session_id: string | null;
 }
 
 /** The keys a PUT may carry: what the backend stores, and nothing it adds to a GET (`available`). */

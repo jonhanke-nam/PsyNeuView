@@ -15,7 +15,7 @@ import type { AssistantContext, AssistantSettings, Proposal } from "@/stores/ass
 export function needsConsent(prev: AssistantSettings, next: AssistantSettings): string[] {
   if (!prev.enabled && next.enabled) return ["turning the assistant on", `sending messages to ${destination(next.agent)}`];
   const moved = next.agent.type !== prev.agent.type || next.agent.base_url !== prev.agent.base_url;
-  const sends = next.agent.type === "anthropic" || Boolean(next.agent.base_url);
+  const sends = next.agent.type === "anthropic" || next.agent.type === "claude_mcp" || Boolean(next.agent.base_url);
   if (prev.enabled && next.enabled && moved && sends) {
     return [`sending messages to ${destination(next.agent)} instead of ${destination(prev.agent)}`];
   }
@@ -33,6 +33,7 @@ export function modelLabel(
   defaultId = "",
 ): string {
   if (settings.agent.type === "none") return "";
+  if (settings.agent.type === "claude_mcp") return "Claude, via Claude Desktop or Claude Code";
   const id = settings.agent.model || (settings.agent.type === "anthropic" ? defaultId || ANTHROPIC_DEFAULT_MODEL : "");
   if (!id) return "the server's default model";
   const alias = settings.model_aliases[id];
@@ -46,6 +47,7 @@ export const ANTHROPIC_DEFAULT_MODEL = "claude-opus-5-5";
 /** The host messages go to, for a short summary: "api.anthropic.com", "localhost:11434". */
 export function destinationHost(agent: AssistantSettings["agent"]): string | null {
   if (agent.type === "none") return null;
+  if (agent.type === "claude_mcp") return "Claude Desktop or Claude Code on this machine";
   const where = destination(agent);
   try {
     return new URL(where).host || where;
@@ -116,10 +118,14 @@ export async function sha256Hex(text: string): Promise<string> {
 
 export const ANTHROPIC_URL = "https://api.anthropic.com";
 
+/** Where messages go with Claude over MCP (#201); the backend's settings.MCP_DESTINATION. */
+export const MCP_DESTINATION = "Claude Desktop or Claude Code on this machine, under your Claude subscription";
+
 /** The real address messages go to for `agent`, as the backend sees it. */
 export function destination(agent: AssistantSettings["agent"]): string {
   if (agent.type === "anthropic") return agent.base_url || ANTHROPIC_URL;
   if (agent.type === "openai_compatible") return agent.base_url || "(no server address yet)";
+  if (agent.type === "claude_mcp") return MCP_DESTINATION;
   return "nowhere (no agent)";
 }
 
@@ -134,7 +140,20 @@ export function whereDataGoes(agent: AssistantSettings["agent"]): string {
       return agent.base_url
         ? `Messages and the context you allow are sent to ${agent.base_url}. If that is on this machine, nothing leaves it; otherwise it goes wherever that server is.`
         : "Messages and the context you allow are sent to the server address you give below.";
+    case "claude_mcp":
+      return "You talk to Claude in Claude Desktop or Claude Code, under your own Claude subscription and Anthropic's terms. When Claude asks, PsyNeuView gives it the context you allow below through its tools, and its changes come here as proposals for you to accept or reject. No API key is kept in PsyNeuView.";
     default:
       return "No agent is chosen, so nothing is sent anywhere.";
   }
+}
+
+/** The status line for Claude over MCP (#201): connected, when last heard from, or how to connect. */
+export function mcpConnectionWords(
+  status: { connected: boolean; seconds_ago: number | null; client: string } | null,
+  { inSettings = false }: { inSettings?: boolean } = {},
+): string {
+  if (!status || status.seconds_ago === null) return inSettings ? "No Claude client has connected yet." : "No Claude client has connected yet. The setup is in Settings ▸ AI assistant.";
+  const who = status.client ? ` (${status.client})` : "";
+  const when = status.seconds_ago < 5 ? "just now" : status.seconds_ago < 120 ? `${status.seconds_ago} seconds ago` : `${Math.round(status.seconds_ago / 60)} minutes ago`;
+  return status.connected ? `Claude is connected${who}, last heard from ${when}.` : `Not connected. A Claude client${who} was last heard from ${when}.`;
 }
