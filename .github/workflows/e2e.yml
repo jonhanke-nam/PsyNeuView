@@ -380,6 +380,14 @@ jobs:
           npx playwright merge-reports --reporter=html,json ./all-blob-reports
           mv results.json playwright-report/results.json
 
+      # #359: a test that failed and then passed on retry leaves the run green,
+      # so list it where it will be seen. Its failed attempt's trace and
+      # screenshot are in the merged report (retain-on-failure).
+      - name: List tests that passed only on retry
+        if: steps.merge.outcome == 'success'
+        working-directory: frontend
+        run: node scripts/retry-summary.mjs playwright-report/results.json >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload merged Playwright report
         if: steps.merge.outcome == 'success'
         uses: actions/upload-artifact@v4
