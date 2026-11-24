@@ -49,7 +49,8 @@ import { PnlCallLine } from "./PnlCallLine";
 import { Button } from "@/components/common/Button";
 import { GridLegend, ValueGrid, ValueViewToggle, poolValues, useNodeGrid } from "@/components/common/ValueGrid";
 import { MIN_GRID_SIZE, numericVector } from "@/utils/valueGrid";
-import { roleColorFor } from "@/constants/pnlTypes";
+import { roleColorFor, roleNameFor } from "@/constants/pnlTypes";
+import { classifyStepRow, type StepStatus } from "@/utils/stepHighlight";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 
 interface InputPortInfo {
@@ -2220,6 +2221,9 @@ function TrialOutputs({
   const traceStep = useModelStore((s) => s.traceStep);
   const setTraceStep = useModelStore((s) => s.setTraceStep);
   const traceStepValues = useModelStore((s) => s.traceStepValues);
+  // #365: the trace step's active nodes, the one source of truth the graph
+  // also reads, so the card's highlighted rows match the graph's step ring.
+  const executionTrace = useModelStore((s) => s.executionTrace);
   // #786: trial-to-trial Δ diff is opt-in (off by default).
   const showTrialDeltas = useUIStore((s) => s.showTrialDeltas);
   const toggleTrialDeltas = useUIStore((s) => s.toggleTrialDeltas);
@@ -2227,6 +2231,8 @@ function TrialOutputs({
   const customRoleColors = useGraphSettings((s) => s.customRoleColors);
   // (Called while rendering the cards, after nodeMeta below is set.)
   const bandFor = (name: string) => roleColorFor(nodeMeta.get(name)?.roles, customRoleColors);
+  // #365: the band is the role colour, never the step: its tooltip says so.
+  const bandRole = (name: string) => roleNameFor(nodeMeta.get(name)?.roles);
 
   // #524: group the debugger-captured per-step values by trial and node so a
   // card can show how a node's value evolved *within* its trial. Empty on
@@ -2423,6 +2429,12 @@ function TrialOutputs({
         {results.results.map((r, trialPos) => {
           const active = activeTrialIdx === trialPos;
           const stepTarget = boundaries[trialPos];
+          // #365: within the current trial card only, each node's rows say
+          // where it stands at the step: active (blue), done, or pending (dim).
+          const stepOf = (...names: (string | undefined)[]): StepStatus | undefined =>
+            active && traceStep !== null
+              ? classifyStepRow(executionTrace, traceStep, stepTarget ?? 0, names)
+              : undefined;
           const clickable = stepTarget !== undefined;
           return (
             <div
@@ -2479,7 +2491,7 @@ function TrialOutputs({
                       ? resolveInputLabels(modelLabels, s.name, portName, meta?.inputPorts)
                       : null;
                     return (
-                      <NodeBand key={`in-${s.varName}`} color={bandFor(s.name)} node={s.name}>
+                      <NodeBand key={`in-${s.varName}`} color={bandFor(s.name)} role={bandRole(s.name)} node={s.name} step={stepOf(s.name, s.varName, meta?.label, meta?.varName)}>
                       <ValueRow
                         kind="in"
                         node={s.name}
@@ -2529,7 +2541,7 @@ function TrialOutputs({
                     ? expandMultiPort(prevValue, meta?.outputPorts, nodeName, modelLabels)
                     : null;
                   return (
-                    <NodeBand key={`out-${nodeName}`} color={bandFor(nodeName)} node={nodeName} style={{ marginBottom: 2 }}>
+                    <NodeBand key={`out-${nodeName}`} color={bandFor(nodeName)} role={bandRole(nodeName)} node={nodeName} step={stepOf(nodeName, meta?.label, meta?.varName)} style={{ marginBottom: 2 }}>
                       <div style={{ color: "var(--pnv-text-hint)", fontFamily: "var(--pnv-font-mono)" }}>
                         {nodeName.replace(/-\d+$/, "")}
                       </div>
@@ -2549,7 +2561,7 @@ function TrialOutputs({
                 }
                 const labels = resolveOutputLabels(modelLabels, nodeName, undefined, meta?.outputPorts);
                 return (
-                  <NodeBand key={`out-${nodeName}`} color={bandFor(nodeName)} node={nodeName}>
+                  <NodeBand key={`out-${nodeName}`} color={bandFor(nodeName)} role={bandRole(nodeName)} node={nodeName} step={stepOf(nodeName, meta?.label, meta?.varName)}>
                     <ValueRow
                       kind="out"
                       node={nodeName.replace(/-\d+$/, "")}
@@ -2749,14 +2761,23 @@ function ValueText({ text }: { text: string }) {
 // #335: a node's rows in a Per-trial values card, with a left band in the
 // node's role colour so it can be followed from trial to trial. The band sits
 // in the card's padding (negative margin), so the rows don't move.
+// #365: in the current trial card, `step` says where the node stands at the
+// trace step: "active" rows get the selection-blue highlight the graph's step
+// ring uses, "pending" rows (not reached yet this trial) are dimmed, "done"
+// rows read normally. The highlight is a background and an inset ring, so the
+// rows don't move. The band itself stays the role colour, and says so.
 function NodeBand({
   color,
+  role,
   node,
+  step,
   style,
   children,
 }: {
   color: string;
+  role: string;
   node: string;
+  step?: StepStatus;
   style?: CSSProperties;
   children: ReactNode;
 }) {
@@ -2764,7 +2785,24 @@ function NodeBand({
     <div
       data-testid="run-trial-node-band"
       data-node={node.replace(/-\d+$/, "")}
-      style={{ ...style, borderLeft: `3px solid ${color}`, marginLeft: -7, paddingLeft: 4 }}
+      data-step={step}
+      className={step === "active" ? "pnv-step-active" : undefined}
+      title={`Band: role colour (${role}), as on the graph. The current step is shown in blue.`}
+      style={{
+        ...style,
+        borderLeft: `3px solid ${color}`,
+        marginLeft: -7,
+        paddingLeft: 4,
+        ...(step === "active"
+          ? {
+              background: "var(--pnv-step-active-row)",
+              boxShadow: "inset 0 0 0 1px var(--pnv-step-active-ring)",
+              borderRadius: "0 3px 3px 0",
+            }
+          : step === "pending"
+            ? { opacity: "var(--pnv-step-pending-opacity)" }
+            : {}),
+      }}
     >
       {children}
     </div>

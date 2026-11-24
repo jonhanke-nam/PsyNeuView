@@ -311,7 +311,8 @@ export function RunStatePanel() {
 
       {/* #387: Consideration queue with per-step status. Each phase is a
           concurrent consideration set; nodes are colored by whether they're
-          firing now (green), already spent (grey), or still pending (outline).
+          firing now (the selection blue the graph's step ring uses, #365),
+          already spent (grey), or still pending (outline).
           The hover ties a node back to the condition that gates it.
           #533: foldable — defaults to open so the section keeps the same
           first-use feel, but lets the user collapse it on busy compositions
@@ -361,7 +362,12 @@ export function RunStatePanel() {
                       padding: "1px 6px",
                       borderRadius: 3,
                       ...(status === "active"
-                        ? { background: "var(--pnv-trace-value)", color: "var(--pnv-on-primary)", fontWeight: 600 }
+                        ? {
+                            background: "var(--pnv-step-active-fill)",
+                            color: "var(--pnv-step-active-text)",
+                            boxShadow: "inset 0 0 0 1px var(--pnv-step-active-ring)",
+                            fontWeight: 600,
+                          }
                         : status === "fired"
                           ? { background: "var(--pnv-surface-sunken)", color: "var(--pnv-text-faint)" }
                           : { border: "1px solid var(--pnv-border)", color: "var(--pnv-text-secondary)" }),
@@ -370,6 +376,10 @@ export function RunStatePanel() {
                       <span
                         key={node}
                         style={style}
+                        data-testid="run-state-queue-node"
+                        data-node={node}
+                        data-step={status}
+                        className={status === "active" ? "pnv-step-active" : undefined}
                         title={expl ? `${node} — ${expl}` : node}
                       >
                         {node}
@@ -381,7 +391,7 @@ export function RunStatePanel() {
             ))}
           </div>
           <div style={{ marginTop: 6, display: "flex", gap: 12, fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-hint)" }}>
-            <span><span style={{ display: "inline-block", width: 8, height: 8, background: "var(--pnv-trace-value)", borderRadius: 2, marginRight: 4 }} />firing now</span>
+            <span><span style={{ display: "inline-block", width: 8, height: 8, background: "var(--pnv-step-active-fill)", boxShadow: "inset 0 0 0 1px var(--pnv-step-active-ring)", borderRadius: 2, marginRight: 4 }} />firing now</span>
             <span><span style={{ display: "inline-block", width: 8, height: 8, background: "var(--pnv-surface-sunken)", border: "1px solid var(--pnv-border-light)", borderRadius: 2, marginRight: 4 }} />fired</span>
             <span><span style={{ display: "inline-block", width: 8, height: 8, border: "1px solid var(--pnv-border)", borderRadius: 2, marginRight: 4 }} />pending</span>
           </div>
