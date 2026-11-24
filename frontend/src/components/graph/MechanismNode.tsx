@@ -14,7 +14,9 @@ import { useGraphSettings, type GraphDirection } from "@/stores/graphSettingsSto
 import { useModelStore, NODE_HEIGHT, NODE_WIDTH } from "@/stores/modelStore";
 import { outlineThickness, ovalBoxFor } from "@/utils/nodeBox";
 import { TYPE_COLORS, ROLE_COLORS, ROLE_TEXT_COLORS, ROLE_PRIORITY } from "@/constants/pnlTypes";
-import { toggleCompositionCollapse } from "@/utils/nodeActions";
+import { functionRefusal, toggleCompositionCollapse } from "@/utils/nodeActions";
+import { usePaletteStore } from "@/stores/paletteStore";
+import { isFunctionType } from "@/constants/pnlTypes";
 import { formatTraceValue } from "@/utils/traceValues";
 import { ValueGrid, poolValues, useNodeGrid } from "@/components/common/ValueGrid";
 import { useValueViews, valueViewFor } from "@/stores/valueViewStore";
@@ -181,7 +183,14 @@ export const MechanismNode = memo(function MechanismNode({
   const pointerOnHere = useConnection((c) => c.inProgress && c.toNode?.id === id);
   const connectReason = useConnectTargets((s) => (s.targets ? s.targets[d.varName || ""] : undefined));
   const connectStatus = useConnectTargets((s) => targetStatus(s.targets, d.varName));
-  const dropStatus = connecting && !dragFromHere ? connectStatus : null;
+  // #348: a function picked up in the Components panel goes onto a
+  // mechanism. Those that can take it glow like a connection's drop targets
+  // (#253); one that can't shows a not-allowed pointer and says why.
+  const armedFunction = usePaletteStore((s) => (s.armed && isFunctionType(s.armed.type) ? s.armed.type : null));
+  const functionReason = armedFunction ? functionRefusal(d, armedFunction) : null;
+  const dropStatus = connecting && !dragFromHere
+    ? connectStatus
+    : armedFunction ? (functionReason ? "invalid" : "valid") : null;
   const nodeBorderWidthEmphasis = nodeBorderWidth + NODE_OUTLINE_EMPHASIS_EXTRA;
   const expanded = useGraphSettings((s) => s.expandedNodes.has(d.label || ""));
 
@@ -484,11 +493,13 @@ export const MechanismNode = memo(function MechanismNode({
       onDoubleClick={onDoubleClick}
       data-node-shape={shape}
       data-connect-target={dropStatus ?? undefined}
+      data-function-target={armedFunction ? (functionReason ? "invalid" : "valid") : undefined}
       // #253: a valid drop target pulses a teal halo (index.css), held steady
       // under the pointer; a halo, so it doesn't read as the selection ring,
       // and nothing moves or resizes.
       className={dropStatus === "valid" ? `pnv-connect-target${pointerOnHere ? " pnv-connect-locked" : ""}` : undefined}
-      title={nodeTooltip}
+      // #348: with a function picked up, the pointer says why it can't go here.
+      title={functionReason ?? nodeTooltip}
       style={{
         opacity: dropStatus === "invalid" ? 0.4 : undefined,
         padding,
