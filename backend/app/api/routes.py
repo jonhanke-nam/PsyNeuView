@@ -796,6 +796,9 @@ class LoadModelResponse(BaseModel):
     # consistent end-to-end breakdown instead of guessing where the seconds go.
     # {introspect_ms, total_ms, misc_ms?}. None on paths that don't measure.
     timings: dict | None = None
+    # #422: which model this is, as the menus name it — label, file, source.
+    # Set by every route that opens a model, so the toolbar never guesses.
+    identity: dict | None = None
 
 
 class GetSidecarRequest(BaseModel):
@@ -1205,6 +1208,7 @@ def load_model(request: LoadModelRequest):
         formatIssues=issues,
         starImportConverted=star_converted,
         timings=_load_timings((t2 - t1) * 1000, t0, misc_ms=(t3 - t2) * 1000),
+        identity=model_identity(path).model_dump(),
     )
 
 
@@ -2888,6 +2892,7 @@ def reset_demo(request: ResetDemoRequest):
         layout=layout,
         file_path=str(working),
         timings=_load_timings(introspect_ms, t0),
+        identity=model_identity(working).model_dump(),
     )
 
 
@@ -3052,6 +3057,7 @@ def load_reference_model(request: LoadReferenceRequest):
         },
         file_path=str(working),
         timings=_load_timings(introspect_ms, t0),
+        identity=model_identity(working).model_dump(),
     )
 
 
@@ -3209,6 +3215,7 @@ def load_psyneulink_example(request: LoadPnlExampleRequest):
         sidecars=sidecars,
         file_path=str(working),
         timings=_load_timings(introspect_ms, t0),
+        identity=model_identity(working).model_dump(),
     )
 
 
@@ -3228,6 +3235,83 @@ LIBRARY_MODEL_NAMES = [
     "MontagueDayanSejnowski96",
     "Nieuwenhuis2005Model",
 ]
+
+
+class ModelIdentity(BaseModel):
+    """Which model is open, as the menus name it (#422).
+
+    Worked out on the server from the file's path, the one place that knows
+    every catalog, so the toolbar never has to guess. ``source`` says where
+    the model came from: ``reference`` (the bundled Reference Models),
+    ``library`` (the PsyNeuLink Library), ``example`` (PsyNeuLink's own
+    examples), ``demo`` (the bundled demos) or ``user`` (the user's own file).
+    ``label`` is the name the menu shows; None for a user's file, whose file
+    name is its name. ``file`` is the file name, always shown beside the
+    label. ``path`` is the full path of the file that is open, and
+    ``original`` the catalog file it was copied from, when it is a working
+    copy.
+    """
+
+    source: Literal["reference", "library", "example", "demo", "user"]
+    label: str | None = None
+    file: str
+    path: str
+    original: str | None = None
+    workingCopy: bool = False
+
+
+def _within(path: Path, folder: Path | None) -> bool:
+    if folder is None:
+        return False
+    try:
+        path.resolve().relative_to(folder.resolve())
+        return True
+    except (ValueError, OSError):
+        return False
+
+
+def model_identity(file_path: str | Path) -> ModelIdentity:
+    """The menu label and source of the model at ``file_path`` (#422).
+
+    Matched by where the file is: in a catalog's own folder, or in the
+    working-copies folder (including a tutorial's copy) under a catalog
+    model's file name. Anything else is the user's own file.
+    """
+    path = Path(file_path)
+    stem, name = path.stem, path.name
+    references = {e["name"]: e["label"] for e in REFERENCE_MODELS}
+    working = _within(path, _demo_working_dir())
+
+    if stem in references and (working or _within(path, REFERENCE_DIR)):
+        return ModelIdentity(
+            source="reference", label=references[stem], file=name, path=str(path),
+            original=str(REFERENCE_DIR / name), workingCopy=working,
+        )
+    if (working or _within(path, DEMOS_DIR)) and (DEMOS_DIR / name).exists():
+        return ModelIdentity(
+            source="demo", label=_format_label(stem), file=name, path=str(path),
+            original=str(DEMOS_DIR / name), workingCopy=working,
+        )
+    lib = _library_models_dir()
+    if _within(path, lib):
+        known = {n.lower(): n for n in LIBRARY_MODEL_NAMES}
+        return ModelIdentity(
+            source="library", label=_format_label(known.get(stem.lower(), stem)), file=name, path=str(path),
+        )
+    scripts = _pnl_scripts_dir()
+    if _within(path, scripts) or (working and scripts is not None and (scripts / name).exists()):
+        return ModelIdentity(
+            source="example", label=_format_label(stem), file=name, path=str(path),
+            original=str(scripts / name) if scripts else None, workingCopy=working,
+        )
+    return ModelIdentity(source="user", label=None, file=name, path=str(path))
+
+
+@router.get("/model/identity", response_model=ModelIdentity)
+def get_model_identity(file_path: str):
+    """The menu label and source of a model file (#422), for a model opened
+    without one of the load routes below (a Recent entry, a saved copy)."""
+    return model_identity(file_path)
 
 
 def _library_models_dir() -> Path | None:
