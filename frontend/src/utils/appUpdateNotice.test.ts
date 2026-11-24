@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  lastCheckLine,
+  noticeKind,
+  readyNoticeText,
+  updatedNoticeText,
   UPDATE_NOTICE_DISMISS_KEY,
   UPDATE_NOTICE_SNOOZE_MS,
   loadDismissal,
@@ -122,5 +126,41 @@ describe("the notice's words", () => {
     expect(updateNoticeText({ available: true, version: "0.6.5-rc1", candidate: true })).toBe(
       "PsyNeuView 0.6.5-rc1 (release candidate) is available",
     );
+  });
+});
+
+describe("ready, available and updated notices (PsyNeuView-MacApp#79)", () => {
+  it("says ready when the update has downloaded, available otherwise", () => {
+    expect(noticeKind({ ...waiting, readyToInstall: true }, null, null, NOW)).toBe("ready");
+    expect(noticeKind(waiting, null, null, NOW)).toBe("available");
+    expect(noticeKind({ available: false }, null, null, NOW)).toBeNull();
+  });
+
+  it("says what the app updated to after a restart, so nothing changes silently", () => {
+    expect(noticeKind({ available: false }, { version: "0.6.15" }, null, NOW)).toBe("updated");
+    expect(updatedNoticeText("0.6.15")).toBe("Updated to 0.6.15.");
+    // A newer waiting update takes the place.
+    expect(noticeKind(waiting, { version: "0.5.9" }, null, NOW)).toBe("available");
+  });
+
+  it("words the ready notice plainly", () => {
+    expect(readyNoticeText({ available: true, version: "0.6.15" })).toBe(
+      "PsyNeuView 0.6.15 is ready. It installs when you quit.",
+    );
+    expect(readyNoticeText({ available: true, version: "0.6.15-rc2", candidate: true })).toBe(
+      "PsyNeuView 0.6.15-rc2 (release candidate) is ready. It installs when you quit.",
+    );
+  });
+
+  it("Later puts off the ready notice too", () => {
+    expect(noticeKind({ ...waiting, readyToInstall: true }, null, { version: "0.6.0", at: NOW - 1000 }, NOW)).toBeNull();
+  });
+
+  it("says when the app last checked, and nothing for an app that doesn't say", () => {
+    expect(lastCheckLine({ lastUpdateCheck: null })).toBe("Not yet");
+    expect(lastCheckLine({})).toBeNull();
+    expect(lastCheckLine(null)).toBeNull();
+    const twoHoursAgo = new Date(NOW - 2 * 3600_000).toISOString();
+    expect(lastCheckLine({ lastUpdateCheck: twoHoursAgo }, new Date(NOW))).toMatch(/\(2 hours ago\)$/);
   });
 });

@@ -2866,6 +2866,17 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - the Mac app's Settings… (⌘,) opens this Settings, even before the page is ready · CI · #1279
 - inside the Mac app, Problem reports' two settings go through the bridge · CI · #1279
 
+**`frontend/e2e/mac-auto-install-updates.spec.ts`** (Browser (Playwright))
+
+- Install updates automatically (PsyNeuView-MacApp#79) › asks once, and Yes turns it on · CI
+- Install updates automatically (PsyNeuView-MacApp#79) › No, ask me each time leaves it off · CI
+- Install updates automatically (PsyNeuView-MacApp#79) › Escape closes the question without answering it · CI
+- Install updates automatically (PsyNeuView-MacApp#79) › Settings ▸ General ▸ Updates has the one switch, and About says when it last checked · CI
+- Install updates automatically (PsyNeuView-MacApp#79) › off: an available update offers What's new and Install and restart · CI
+- Install updates automatically (PsyNeuView-MacApp#79) › on: a downloaded update says it installs when you quit, with Restart now · CI
+- Install updates automatically (PsyNeuView-MacApp#79) › after an update, says what it updated to until OK · CI
+- Install updates automatically (PsyNeuView-MacApp#79) › in a browser, none of it shows · CI
+
 **`frontend/e2e/project-folder-move.spec.ts`** (Browser (Playwright))
 
 - Move… carries the models and sidecars, and lists them from the new place · CI · #1295
@@ -2897,6 +2908,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - Settings ▸ About dates (#15) › adds the release date only for the copy included with the app · CI · #15
 - the notice's words › names the waiting version · CI
 - the notice's words › says when the waiting version is a release candidate · CI
+- ready, available and updated notices (PsyNeuView-MacApp#79) › says ready when the update has downloaded, available otherwise · CI
+- ready, available and updated notices (PsyNeuView-MacApp#79) › says what the app updated to after a restart, so nothing changes silently · CI
+- ready, available and updated notices (PsyNeuView-MacApp#79) › words the ready notice plainly · CI
+- ready, available and updated notices (PsyNeuView-MacApp#79) › Later puts off the ready notice too · CI
+- ready, available and updated notices (PsyNeuView-MacApp#79) › says when the app last checked, and nothing for an app that doesn't say · CI
 
 **`frontend/src/utils/macAppSettings.test.ts`** (Frontend unit (vitest))
 
@@ -2907,6 +2923,9 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - Mac app settings bridge (PsyNeuView-MacApp#200) › adopts the app's developer mode, and reports the toggle back · CI
 - Mac app settings bridge (PsyNeuView-MacApp#200) › sets the report settings as text (PsyNeuView-MacApp#202) · CI
 - Mac app settings bridge (PsyNeuView-MacApp#200) › turns release candidates on through the app · CI
+- automatic install over the bridge (PsyNeuView-MacApp#79) › sends the setting, the offer's answer, Restart now and the dismissal · CI
+- automatic install over the bridge (PsyNeuView-MacApp#79) › dismissing is harmless with an app that doesn't know the op · CI
+- automatic install over the bridge (PsyNeuView-MacApp#79) › hears the update-ready event with its version · CI
 
 **`frontend/src/utils/revealPath.test.ts`** (Frontend unit (vitest))
 

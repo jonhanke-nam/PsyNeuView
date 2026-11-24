@@ -106,6 +106,52 @@ export function MacAppLaunchToggles() {
 }
 
 /**
+ * General ▸ Updates ▸ Install updates automatically (when you quit)
+ * (PsyNeuView-MacApp#79). Sparkle's own setting, kept by the app: off until
+ * the user says yes (consent first). Off, an update shows a quiet notice with
+ * Install and restart; on, it downloads and installs when the app quits. An
+ * app that can't update itself sends no value, and nothing shows.
+ */
+export function MacAppUpdates() {
+  const { settings, setSettings } = useMacAppSettings();
+  const [error, setError] = useState<string | null>(null);
+  if (typeof settings?.autoInstallUpdates !== "boolean") return null;
+
+  const toggle = async (value: boolean) => {
+    setError(null);
+    setSettings({ ...settings, autoInstallUpdates: value }); // optimistic
+    try {
+      setSettings(await setMacAppSetting("autoInstallUpdates", value));
+    } catch (e: any) {
+      setSettings({ ...settings });
+      setError(String(e?.message ?? e));
+    }
+  };
+
+  return (
+    <Group id="updates" title="Updates">
+      <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+        <label style={checkRow}>
+          <input
+            type="checkbox"
+            data-testid="setting-mac-auto-install-updates"
+            checked={settings.autoInstallUpdates}
+            onChange={(e) => toggle(e.target.checked)}
+          />
+          Install updates automatically (when you quit)
+        </label>
+        <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-hint)", marginLeft: 20 }}>
+          {settings.autoInstallUpdates
+            ? "A new version downloads in the background and installs when you quit. You'll see what it updated to."
+            : "When a new version is out, a small notice offers to install it."}
+        </div>
+        {error && <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-danger)", marginTop: 6 }}>{error}</div>}
+      </div>
+    </Group>
+  );
+}
+
+/**
  * Developer ▸ Get release candidates: the app's own update notice also offers
  * test versions before everyone gets them. The app keeps the setting and
  * Sparkle reads it; an app that can't do this sends no value, and nothing

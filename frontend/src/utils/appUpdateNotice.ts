@@ -64,6 +64,46 @@ export function saveDismissal(
 }
 
 /**
+ * What the toolbar notice says (PsyNeuView-MacApp#79): an update that has
+ * downloaded and installs on quit ("ready"), one that is there to install
+ * ("available"), or, after a restart, what the app updated to ("updated"),
+ * so nobody wonders why something changed. Never a silent change.
+ */
+export type NoticeKind = "ready" | "available" | "updated";
+
+export function noticeKind(
+  update: MacAppUpdate | null | undefined,
+  justUpdated: MacAppSettings["justUpdated"],
+  dismissal: Dismissal | null,
+  now: number,
+): NoticeKind | null {
+  if (shouldShowUpdateNotice(update, dismissal, now)) return update!.readyToInstall ? "ready" : "available";
+  if (justUpdated?.version) return "updated";
+  return null;
+}
+
+/** "PsyNeuView 0.6.15 is ready. It installs when you quit." */
+export function readyNoticeText(update: MacAppUpdate): string {
+  const what = update.candidate ? `${update.version} (release candidate)` : update.version;
+  return `PsyNeuView ${what} is ready. It installs when you quit.`;
+}
+
+/** "Updated to 0.6.15." */
+export function updatedNoticeText(version: string): string {
+  return `Updated to ${version}.`;
+}
+
+/** The one-time question (#79), word for word. */
+export const AUTO_INSTALL_QUESTION = "Install PsyNeuView updates automatically when you quit?";
+export const AUTO_INSTALL_QUESTION_HINT = "You can change this any time in Settings ▸ General ▸ Updates.";
+
+/** About's "Last checked for updates" (#79), or null when the app doesn't say. */
+export function lastCheckLine(settings: Pick<MacAppSettings, "lastUpdateCheck"> | null | undefined, now: Date = new Date()): string | null {
+  if (!settings || settings.lastUpdateCheck === undefined) return null;
+  return datePhrase(settings.lastUpdateCheck, now) ?? "Not yet";
+}
+
+/**
  * The notice's words: "PsyNeuView 0.6.5 is available, released …", and for a
  * release candidate "PsyNeuView 0.6.5-rc1 (release candidate) is available",
  * so a person who asked for candidates knows they're getting a test version.

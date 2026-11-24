@@ -1,7 +1,8 @@
 /**
  * Settings ▸ General: the everyday settings. (#1290)
  *
- * In the Mac app, the two switches the app acts on; everywhere, which
+ * In the Mac app, the two switches the app acts on and Updates
+ * (PsyNeuView-MacApp#79); everywhere, which
  * PsyNeuLink version to use (the simple view of Developer's full form,
  * #1295), autosave (#1347), and where new models' layout files go. The
  * narration voice is in Tutorials and Voice. My Project
@@ -23,7 +24,7 @@ import { AUTOSAVE_MAX_SECONDS, AUTOSAVE_MIN_SECONDS, clampAutosaveSeconds } from
 import { hasSettingsBridge } from "@/utils/macAppSettings";
 import type { PsyNeuLinkInfo } from "@/utils/pnlSources";
 import { getPlacementDefault, setPlacementDefault } from "@/utils/sidecarApi";
-import { MacAppLaunchToggles } from "../MacAppSettingsSection";
+import { MacAppLaunchToggles, MacAppUpdates } from "../MacAppSettingsSection";
 import { PnlUpdateStatus } from "./PnlUpdateStatus";
 import { PnlVersionChoice } from "./PnlVersionChoice";
 import { Group, SettingLabel, errorStyle, mutedStyle } from "./shared";
@@ -47,6 +48,8 @@ export function GeneralSection({
           <MacAppLaunchToggles />
         </Group>
       )}
+      {/* Install updates automatically (PsyNeuView-MacApp#79); hidden in a browser. */}
+      {hasSettingsBridge() && <MacAppUpdates />}
       <Group id="pnl-version" title="PsyNeuLink version">
         {loadError && <div style={errorStyle}>Failed to load: {loadError}</div>}
         {!loadError && !(info && capabilities) && <div style={mutedStyle}>Loading…</div>}
