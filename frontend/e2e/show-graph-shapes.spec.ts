@@ -19,6 +19,7 @@
 import { mutatingTest as test, expect, closePalette } from "./test-base";
 import type { Page, TestInfo } from "@playwright/test";
 import { Graphviz } from "@hpcc-js/wasm-graphviz";
+import { writeFileSync } from "fs";
 import path from "path";
 import { placementFromGraphviz, type ShowGraphPlacement } from "../src/utils/showGraphLayout";
 import { measureShapes, ASPECT_TOLERANCE, type ShapeMismatch } from "../src/utils/layoutAgreement";
@@ -126,8 +127,10 @@ async function attachSheet(page: Page, gv: Graphviz, found: Found[], testInfo: T
       .first()
       .screenshot()
       .catch(() => null);
+    // Both at one height, so the shapes compare at a glance (the canvas may
+    // be zoomed far out).
     const img = (b: Buffer | null) =>
-      b ? `<img style="max-height:160px" src="data:image/png;base64,${b.toString("base64")}">` : "(not found)";
+      b ? `<img style="height:90px;width:auto" src="data:image/png;base64,${b.toString("base64")}">` : "(not found)";
     rows.push(
       `<tr><td>${f.model}<br>${f.view}<br><b>${f.node}</b></td>` +
         `<td>${img(f.canvasPng)}<br>${f.actual.shape}, ${ratio(f.actual.aspect)}</td>` +
@@ -140,10 +143,11 @@ async function attachSheet(page: Page, gv: Graphviz, found: Found[], testInfo: T
     <table cellpadding="8" border="1" style="border-collapse:collapse">
       <tr><th>Where</th><th>PsyNeuView</th><th>show_graph</th></tr>${rows.join("")}
     </table></body>`);
-  await testInfo.attach("shape-mismatches.png", {
-    body: await sheet.screenshot({ fullPage: true }),
-    contentType: "image/png",
-  });
+  // Written beside the test's other results (test-results/, uploaded by CI)
+  // as well as attached to the report.
+  const png = testInfo.outputPath("shape-mismatches.png");
+  await sheet.screenshot({ path: png, fullPage: true });
+  await testInfo.attach("shape-mismatches.png", { path: png, contentType: "image/png" });
   await sheet.close();
 }
 
@@ -214,7 +218,9 @@ test("every reference model, every view: each node has show_graph's shape and pr
   expect(measured.some((m) => m.kinds.includes("octagon")), "an octagon was checked").toBe(true);
 
   if (found.length) {
-    await testInfo.attach("shape-mismatches.md", { body: table(found), contentType: "text/markdown" });
+    const md = testInfo.outputPath("shape-mismatches.md");
+    writeFileSync(md, `${table(found)}\n`);
+    await testInfo.attach("shape-mismatches.md", { path: md, contentType: "text/markdown" });
     await attachSheet(page, gv, found, testInfo);
   }
   expect(found.length, `nodes not in show_graph's shape:\n${table(found)}`).toBe(0);
