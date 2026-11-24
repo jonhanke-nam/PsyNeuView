@@ -3181,6 +3181,9 @@ def psyneulink_examples_status():
 
 class LoadPnlExampleRequest(BaseModel):
     name: str
+    # #422/#1010: opt in to discarding working-copy edits and copying the
+    # example afresh. Reopening keeps the edits; restoring has to be asked for.
+    restore_pristine: bool = False
 
 
 @router.post("/psyneulink-examples/load", response_model=LoadModelResponse)
@@ -3201,11 +3204,20 @@ def load_psyneulink_example(request: LoadPnlExampleRequest):
     if not src.resolve().is_relative_to(d.resolve()) or not src.exists():
         raise HTTPException(status_code=404, detail=f"Unknown PsyNeuLink example: {request.name}")
 
+    working_copy = None
     if pnl_source_guard.active_kind() == "local":
         working = src
     else:
         working = _demo_working_dir() / src.name
-        shutil.copy2(src, working)
+        # #1010 applies here too: reopening is a re-read. Copy only when there
+        # is nothing to lose; otherwise keep the edits and say so, and copy
+        # afresh only when asked (restore_pristine).
+        pristine_text = src.read_text()
+        had_edits = working.exists() and working.read_text() != pristine_text
+        restored = bool(had_edits and request.restore_pristine)
+        if not had_edits or restored:
+            shutil.copy2(src, working)
+        working_copy = {"diverged": bool(had_edits and not restored), "restored": restored}
     source = working.read_text()
     t0 = time.time()
     model = load_and_introspect(str(working))
@@ -3227,6 +3239,7 @@ def load_psyneulink_example(request: LoadPnlExampleRequest):
         labels=labels,
         bundle=[{"kind": "source", "name": working.name}],
         sidecars=sidecars,
+        workingCopy=working_copy,
         file_path=str(working),
         timings=_load_timings(introspect_ms, t0),
         identity=model_identity(working).model_dump(),

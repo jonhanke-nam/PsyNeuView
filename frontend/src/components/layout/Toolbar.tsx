@@ -1273,9 +1273,14 @@ export function Toolbar() {
   // Load a live PsyNeuLink example (#843): the backend copies the *current*
   // source file into a working dir before loading, so the open reflects the
   // live source yet edits never mutate the PsyNeuLink source clone.
-  const loadPnlExample = async (m: LibraryModel) => {
-    if (!(await guardOpen({ kind: "file", name: m.label }))) return;
-    if (!confirmDiscard()) return;
+  const loadPnlExample = async (m: LibraryModel, { restore = false }: { restore?: boolean } = {}) => {
+    if (restore) {
+      // #1010 for examples (#422): putting it back is asked for, never inferred.
+      if (!window.confirm(`Put ${m.label} back to PsyNeuLink's version? Your edits to it will be lost.`)) return;
+    } else {
+      if (!(await guardOpen({ kind: "file", name: m.label }))) return;
+      if (!confirmDiscard()) return;
+    }
     setDropdownOpen(false);
     clearNotifications();
     setStatus(`Loading PsyNeuLink example: ${m.label}…`);
@@ -1287,7 +1292,7 @@ export function Toolbar() {
       const resp = await fetch("/api/psyneulink-examples/load", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: m.name }),
+        body: JSON.stringify(restore ? { name: m.name, restore_pristine: true } : { name: m.name }),
       });
       const apiDoneAt = performance.now();
       if (!isNewestModelOpen(ticket)) return;
@@ -1317,6 +1322,18 @@ export function Toolbar() {
         buildDoneAt: performance.now(),
         backend: data.timings,
       });
+      // #1010 for examples (#422): an edited copy is kept, and said so; the
+      // toolbar's Reset to Original puts it back.
+      setReferenceEdited(!!data.workingCopy?.diverged);
+      if (data.workingCopy?.diverged) {
+        addNotification(
+          "info",
+          `Loaded your edited copy of ${m.label} — your changes were kept. PsyNeuLink's version is unchanged.`,
+          8000,
+        );
+      } else if (data.workingCopy?.restored) {
+        addNotification("info", `Restored ${m.label} to PsyNeuLink's version.`, 6000);
+      }
       setCurrentDemo(null);
       setPristineSource(null);
       addRecentPath(data.file_path ?? m.path);
@@ -2507,7 +2524,13 @@ export function Toolbar() {
         <button
           onClick={() => {
             const rm = referenceModels.find((r) => r.name === currentReference);
-            if (rm) void loadReference(rm, { restore: true });
+            if (rm) {
+              void loadReference(rm, { restore: true });
+              return;
+            }
+            // A PsyNeuLink example's edited copy, too (#422).
+            const ex = pnlExamples.find((e) => e.name === currentReference);
+            if (ex) void loadPnlExample(ex, { restore: true });
           }}
           data-testid="reference-reset"
           style={{
