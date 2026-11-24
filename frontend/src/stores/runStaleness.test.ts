@@ -23,6 +23,7 @@ describe("run results staleness (#337)", () => {
     watchRunStaleness();
     useModelStore.getState().setSource(RAN);
     useRunResults.getState().clearResults();
+    useModelStore.setState({ activeComposition: "stroop" });
   });
   afterEach(() => vi.useRealTimers());
 
@@ -65,6 +66,17 @@ describe("run results staleness (#337)", () => {
     runOn(EDITED);
     expect(useRunResults.getState().stale).toBe(false);
     useRunResults.getState().clearResults();
+    expect(useRunResults.getState().stale).toBe(false);
+  });
+
+  it("choosing another composition makes results stale; choosing back makes them current", () => {
+    runOn(RAN);
+    useModelStore.setState({ activeComposition: "other" });
+    vi.advanceTimersByTime(CHECK_DELAY_MS);
+    expect(useRunResults.getState().stale).toBe(true);
+    expect(isStale(RAN, "other")).toBe(true);
+    useModelStore.setState({ activeComposition: "stroop" });
+    vi.advanceTimersByTime(CHECK_DELAY_MS);
     expect(useRunResults.getState().stale).toBe(false);
   });
 });

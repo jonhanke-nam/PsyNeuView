@@ -12,6 +12,10 @@
  * the exact source that ran makes the hashes match, and the results current.
  * Layout and fold or expand changes leave the source text alone, so they never
  * make results stale.
+ *
+ * Switching to another composition in the same file makes them stale too: they
+ * describe the composition that ran, not the one now chosen. Switching back
+ * makes them current again.
  */
 import { useModelStore } from "./modelStore";
 import { useRunResults } from "./runResultsStore";
@@ -22,15 +26,25 @@ export const CHECK_DELAY_MS = 150;
 /** How results from an earlier version of the model look: dimmed. */
 export const STALE_STYLE = { opacity: 0.45 } as const;
 
-/** Is `source` a different version from the one the current results ran? */
-export function isStale(source: string): boolean {
+/** Did the composition that ran differ from `composition`, the one now chosen? */
+export function isOtherComposition(composition: string | null | undefined): boolean {
+  const ran = useRunResults.getState().results?.compositionName;
+  return !!ran && !!composition && ran !== composition;
+}
+
+/**
+ * Do the current results describe something other than `source` (a different
+ * version of the model) or `composition` (a different composition in it)?
+ */
+export function isStale(source: string, composition?: string | null): boolean {
   const ran = useRunResults.getState().results?.sourceHash;
   if (!ran) return false;
-  return cachedSourceHash(source) !== ran;
+  return cachedSourceHash(source) !== ran || isOtherComposition(composition);
 }
 
 function check(): void {
-  const stale = isStale(useModelStore.getState().source);
+  const { source, activeComposition } = useModelStore.getState();
+  const stale = isStale(source, activeComposition);
   const runs = useRunResults.getState();
   if (stale === runs.stale) return;
   runs.setStale(stale);
@@ -59,7 +73,7 @@ export function watchRunStaleness(): void {
   if (installed) return;
   installed = true;
   useModelStore.subscribe((s, prev) => {
-    if (s.source !== prev.source) schedule();
+    if (s.source !== prev.source || s.activeComposition !== prev.activeComposition) schedule();
   });
 }
 

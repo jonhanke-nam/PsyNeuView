@@ -1156,8 +1156,12 @@ export function RunPanel() {
   );
 }
 
-/** #337: the results ran an earlier version of the open model. */
+/** #337: the results ran an earlier version of the open model, or another composition in it. */
 function StaleResultsNote({ onRunAgain, disabled }: { onRunAgain: () => void; disabled: boolean }) {
+  // Which kind of stale: another composition chosen, or the code edited.
+  const activeComposition = useModelStore((s) => s.activeComposition);
+  const ran = useRunResults((s) => s.results?.compositionName);
+  const ranComposition = ran && activeComposition && ran !== activeComposition ? ran : null;
   return (
     <div
       data-testid="stale-results-warning"
@@ -1176,7 +1180,9 @@ function StaleResultsNote({ onRunAgain, disabled }: { onRunAgain: () => void; di
       }}
     >
       <span style={{ flex: 1 }}>
-        These results are from an earlier version of the model. Run again to update them.
+        {ranComposition
+          ? `These results are from the composition ${ranComposition}. Run again to run the one now chosen.`
+          : "These results are from an earlier version of the model. Run again to update them."}
       </span>
       <Button kind="small" onClick={onRunAgain} disabled={disabled} data-testid="stale-results-run-again">
         Run again

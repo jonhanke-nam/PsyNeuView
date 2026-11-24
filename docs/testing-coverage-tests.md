@@ -1874,6 +1874,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - run results staleness (#337) › an edit makes results stale and clears the trace; undo makes them current · CI · #337
 - run results staleness (#337) › the same text set again (a fold toggle's reload) is not stale · CI · #337
 - run results staleness (#337) › new results and clearing both reset staleness · CI · #337
+- run results staleness (#337) › choosing another composition makes results stale; choosing back makes them current · CI · #337
 
 **`frontend/src/stores/valueViewStore.test.ts`** (Frontend unit (vitest))
 

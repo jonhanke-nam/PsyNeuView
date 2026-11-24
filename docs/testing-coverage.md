@@ -11,7 +11,7 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 |---|---|---|---|
 | Browser (Playwright) | 159 | 432 | 420 tests in 153 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 135 | 1208 | 1208 tests in 135 files |
+| Frontend unit (vitest) | 135 | 1209 | 1209 tests in 135 files |
 | Backend (pytest) | 188 | 1747 | 1747 tests in 188 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -27,7 +27,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Building models in the UI](#building) | 3 files, 6 tests | – | 1 files, 9 tests | 13 files, 145 tests | 160 of 160 |
 | [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 359 of 362 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
-| [Running, learning and debugging](#running) | 10 files, 28 tests | – | 9 files, 89 tests | 51 files, 252 tests | 369 of 369 |
+| [Running, learning and debugging](#running) | 10 files, 28 tests | – | 9 files, 90 tests | 51 files, 252 tests | 370 of 370 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 54 tests | – | 28 files, 262 tests | 19 files, 322 tests | 638 of 638 |
@@ -598,7 +598,7 @@ No tests yet.
 | `value-grid.spec.ts` | Browser | 1 | yes | #1387 | A layer's values as a grid (#1387). |
 | `BusyIndicator.test.ts` | Frontend unit | 3 | yes | #169 | The busy indicator's styles (#169): every one takes the same space, and everything that moves stands still under reduced motion. |
 | `busyStore.test.ts` | Frontend unit | 18 | yes |  | Node has no localStorage; a small stand-in. |
-| `runStaleness.test.ts` | Frontend unit | 5 | yes |  |  |
+| `runStaleness.test.ts` | Frontend unit | 6 | yes |  |  |
 | `valueViewStore.test.ts` | Frontend unit | 6 | yes | #1387 | #1387: a node's "list \| grid" choice, and its width, are kept in the model's layout file and come back when the model is opened again. |
 | `inputSets.test.ts` | Frontend unit | 10 | yes |  |  |
 | `learnPlan.test.ts` | Frontend unit | 19 | yes |  |  |
