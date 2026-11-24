@@ -4724,6 +4724,12 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - @smoke harness › mutatingTest fixture reaches /api/test/reset · CI · #147
 
+**`frontend/e2e/host-platform.spec.ts`** (Browser (Playwright))
+
+- The test browser reports the real platform (#402) › the page is told the host's platform, not Windows · CI · #402
+- The test browser reports the real platform (#402) › ControlOrMeta reaches the app's shortcuts, and they read ⌘ on a Mac, Ctrl elsewhere · CI · #402
+- The test browser reports the real platform (#402) › only the platform part of the user agent changes · CI · #402
+
 **`frontend/e2e/notification-dwell.spec.ts`** (Browser (Playwright))
 
 - success toast dwells past the old 2s window · CI · #879

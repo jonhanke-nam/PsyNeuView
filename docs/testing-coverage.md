@@ -9,7 +9,7 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 170 | 448 | 438 tests in 165 files |
+| Browser (Playwright) | 171 | 451 | 441 tests in 166 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 140 | 1253 | 1253 tests in 140 files |
 | Backend (pytest) | 191 | 1759 | 1759 tests in 191 files |
@@ -34,7 +34,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 11 files, 21 tests | – | 17 files, 114 tests | 21 files, 204 tests | 336 of 339 |
+| [App shell, diagnostics and everything else](#shell) | 12 files, 24 tests | – | 17 files, 114 tests | 21 files, 204 tests | 339 of 342 |
 
 <a id="tutorials"></a>
 
@@ -1230,6 +1230,7 @@ No tests yet.
 | `docs-shots-saving.spec.ts` | Browser | 2 | no | #662 | Docs pictures for saving and changes since save (#662). |
 | `graph-edit-broke-model.spec.ts` | Browser | 1 | yes | #353, #349 | When an edit made on the graph writes a line that doesn't run, the warning names that edit ("Adding X broke the model at line N.") and offers Undo, which puts the file back as it was (#353). |
 | `harness.spec.ts` | Browser | 1 | yes | #147 | Proves the test harness wiring end-to-end (#147): playwright.config env vars → backend in test mode → /api/test/reset open → mutatingTest fixture fires it. |
+| `host-platform.spec.ts` | Browser | 3 | yes | #402 | The test browser reports the platform it really runs on, so the app's ⌘/Ctrl agrees with Playwright's ControlOrMeta on a Mac and on Linux CI alike (#402). |
 | `notification-dwell.spec.ts` | Browser | 1 | yes | #879 | #879: info/success toasts dwell long enough to read. |
 | `pycharm-live.local.spec.ts` | Browser | 1 | no |  | LOCAL ONLY — the full two-headed loop with a real PyCharm. |
 | `read-only-badge-note.spec.ts` | Browser | 1 | yes | #50 | Clicking the "PsyNeuLink from … · read only" tag explains it (#50). |
@@ -1290,6 +1291,9 @@ No tests yet.
 | Docs pictures: saving › Changes since save, after a change outside PsyNeuView | `docs-shots-saving.spec.ts` | Browser | no | #662 |
 | an edit that breaks the model is named, with Undo (#353) › adding a node that writes a failing line: the warning names the add; Undo restores the file | `graph-edit-broke-model.spec.ts` | Browser | yes | #353 |
 | @smoke harness › mutatingTest fixture reaches /api/test/reset | `harness.spec.ts` | Browser | yes | #147 |
+| The test browser reports the real platform (#402) › the page is told the host's platform, not Windows | `host-platform.spec.ts` | Browser | yes | #402 |
+| The test browser reports the real platform (#402) › ControlOrMeta reaches the app's shortcuts, and they read ⌘ on a Mac, Ctrl elsewhere | `host-platform.spec.ts` | Browser | yes | #402 |
+| The test browser reports the real platform (#402) › only the platform part of the user agent changes | `host-platform.spec.ts` | Browser | yes | #402 |
 | success toast dwells past the old 2s window | `notification-dwell.spec.ts` | Browser | yes | #879 |
 | a real PyCharm save updates the PsyNeuView canvas | `pycharm-live.local.spec.ts` | Browser | no |  |
 | the read-only tag explains itself and offers Save a copy as… (#50) | `read-only-badge-note.spec.ts` | Browser | yes | #50 |
