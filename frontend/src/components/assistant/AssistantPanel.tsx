@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { registerCommand } from "@/shortcuts/commands";
 import { useAssistantStore } from "@/stores/assistantStore";
 import type { AssistantEvent, Proposal } from "@/stores/assistantTypes";
-import { modelLabel, pendingProposals } from "@/utils/assistantProposals";
+import { mcpConnectionWords, modelLabel, pendingProposals } from "@/utils/assistantProposals";
 import { Button } from "../common/Button";
 import { SafeText } from "./SafeText";
 import { hasInvisible, showInvisible } from "@/utils/safeText";
@@ -38,7 +38,15 @@ export function AssistantPanel() {
   const acceptMany = useAssistantStore((s) => s.acceptMany);
   const rejectProposal = useAssistantStore((s) => s.rejectProposal);
   const reviewOffer = useAssistantStore((s) => s.reviewOffer);
+  const watchMcp = useAssistantStore((s) => s.watchMcp);
+  const mcpStatus = useAssistantStore((s) => s.mcpStatus);
+  const viaMcp = settings.agent.type === "claude_mcp";
+  const visibilityKey = JSON.stringify(settings.visibility);
   const [draft, setDraft] = useState("");
+
+  // Claude over MCP: follow the connection, and share the open model as it
+  // changes. Again when what may be shared changes.
+  useEffect(() => (viaMcp ? watchMcp() : undefined), [viaMcp, visibilityKey, watchMcp]);
   const listRef = useRef<HTMLDivElement>(null);
 
   // The Stop shortcut (Mod+.) reaches here; it declines when nothing runs.
@@ -72,7 +80,7 @@ export function AssistantPanel() {
   return (
     <div data-testid="assistant-panel" style={{ display: "flex", flexDirection: "column", height: "100%", fontSize: "var(--pnv-fs-13)" }}>
       <div ref={listRef} style={{ flex: 1, overflowY: "auto", padding: "8px 12px" }}>
-        {items.length === 0 && (
+        {items.length === 0 && !viaMcp && (
           <div style={{ color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-12)" }}>
             Ask about the open model, or for a change to it. Nothing is changed until you accept a proposal.
           </div>
@@ -101,29 +109,38 @@ export function AssistantPanel() {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 8, alignItems: "flex-end", padding: "8px 12px", borderTop: "1px solid var(--pnv-border-faint)", background: "var(--pnv-surface-muted)" }}>
-        <textarea
-          data-testid="assistant-input"
-          value={draft}
-          rows={2}
-          placeholder="Message the assistant (Enter sends, Shift+Enter for a new line)"
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              submit();
-            }
-          }}
-          style={{ flex: 1, minWidth: 0, resize: "vertical", padding: "5px 8px", fontSize: "var(--pnv-fs-13)", border: "1px solid var(--pnv-border)", borderRadius: 4, background: "var(--pnv-surface)", font: "inherit" }}
-        />
-        <Button kind="primary" size="compact" data-testid="assistant-send" disabled={turn !== "idle" || !draft.trim()} onClick={submit}>
-          Send
-        </Button>
-        {/* Stop is always reachable: shown whatever the state, enabled while a turn runs. */}
-        <Button kind="danger" data-testid="assistant-stop" disabled={turn === "idle"} onClick={() => void stop()} title="Stop the assistant (⌘.)">
-          Stop
-        </Button>
-      </div>
+      {viaMcp ? (
+        <div data-testid="assistant-mcp-note" style={{ padding: "8px 12px", borderTop: "1px solid var(--pnv-border-faint)", background: "var(--pnv-surface-muted)", fontSize: "var(--pnv-fs-12)", lineHeight: 1.4 }}>
+          Use Claude Desktop or Claude Code to talk to the assistant; proposals appear here for you to accept or reject.
+          <span data-testid="assistant-mcp-connection" style={{ display: "block", marginTop: 2, color: mcpStatus?.connected ? "var(--pnv-success)" : "var(--pnv-text-hint)" }}>
+            {mcpConnectionWords(mcpStatus)}
+          </span>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-end", padding: "8px 12px", borderTop: "1px solid var(--pnv-border-faint)", background: "var(--pnv-surface-muted)" }}>
+          <textarea
+            data-testid="assistant-input"
+            value={draft}
+            rows={2}
+            placeholder="Message the assistant (Enter sends, Shift+Enter for a new line)"
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                submit();
+              }
+            }}
+            style={{ flex: 1, minWidth: 0, resize: "vertical", padding: "5px 8px", fontSize: "var(--pnv-fs-13)", border: "1px solid var(--pnv-border)", borderRadius: 4, background: "var(--pnv-surface)", font: "inherit" }}
+          />
+          <Button kind="primary" size="compact" data-testid="assistant-send" disabled={turn !== "idle" || !draft.trim()} onClick={submit}>
+            Send
+          </Button>
+          {/* Stop is always reachable: shown whatever the state, enabled while a turn runs. */}
+          <Button kind="danger" data-testid="assistant-stop" disabled={turn === "idle"} onClick={() => void stop()} title="Stop the assistant (⌘.)">
+            Stop
+          </Button>
+        </div>
+      )}
       <div style={{ display: "flex", gap: 12, padding: "2px 12px 6px", fontSize: "var(--pnv-fs-11)", background: "var(--pnv-surface-muted)" }}>
         <span data-testid="assistant-turn-state" style={{ flex: 1, minWidth: 0, color: loadError ? "var(--pnv-danger)" : "var(--pnv-text-muted)" }}>
           {loadError ?? state}
