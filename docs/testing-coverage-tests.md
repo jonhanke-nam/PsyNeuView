@@ -4799,9 +4799,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/icon-strip-shortcuts.spec.ts`** (Browser (Playwright))
 
-- Components icon strip (#372) › a fresh strip shows the All heading, four categories and no shortcuts · CI · #372
-- Components icon strip (#372) › with the setting on, favourites and recents sit below the categories under their heading · CI · #372
-- Components icon strip (#372) › a row's empty star shows on hover or focus; a starred row keeps its star · CI · #372
+- Components icon strip (#372, #395) › a fresh strip shows four categories, no shortcuts and no heading words · CI · #372
+- Components icon strip (#372, #395) › with shortcuts on and headings off, a divider with no words sets them below the categories · CI · #372
+- Components icon strip (#372, #395) › with the headings setting on, Components and Recent show above their groups · CI · #372
+- Components icon strip (#372, #395) › at Text size ${scale}, each heading sits on one line within the strip · CI · #372
+- Components icon strip (#372, #395) › a row's empty star shows on hover or focus; a starred row keeps its star · CI · #372
 
 **`frontend/e2e/notification-dwell.spec.ts`** (Browser (Playwright))
 
@@ -4897,6 +4899,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - revealModelError › bumps on each request · CI · #1103
 - revealModelError › keeps bumping, so repeated clicks each re-trigger the jump · CI · #1103
 - revealModelError › is independent of the error line itself · CI · #1103
+
+**`frontend/src/stores/stripHeadings.test.ts`** (Frontend unit (vitest))
+
+- Headings in the icon strip (#395) › are off by default · CI · #395
+- Headings in the icon strip (#395) › keep a stored choice across a reload · CI · #395
+- Headings in the icon strip (#395) › ignore anything else stored · CI · #395
+- Headings in the icon strip (#395) › are a separate choice from the shortcuts · CI · #395
 
 **`frontend/src/stores/stripShortcuts.test.ts`** (Frontend unit (vitest))
 
