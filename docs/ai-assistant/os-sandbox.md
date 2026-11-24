@@ -288,8 +288,9 @@ The state is one of:
 no sandbox can be applied ("Require the sandbox", on by default). The
 guard alone is a speed bump against deliberate model code, so turning the
 assistant on without the boundary should be a decision someone makes, not
-a default. Turning the requirement off asks first, as every other widening
-does. Files already tracked when the assistant is off still run under the
+a default. Turning the requirement off saves without a question since
+#369 (turning the assistant on is the one consent); while it is off the
+consent and the Settings summary say runs may be unsandboxed. Files already tracked when the assistant is off still run under the
 sandbox where one exists, and are still guarded where none does.
 
 ## Graphviz and `show_graph`

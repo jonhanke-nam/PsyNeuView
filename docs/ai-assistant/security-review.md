@@ -34,7 +34,15 @@ are the ones the checklist refers to.
 - [ ] The key is kept in the Keychain or system equivalent, never in
       `localStorage`, logs, reports or the runner's environment.
 - [ ] Only the user can set `base_url`; the panel shows where data goes.
-- [ ] First use explains what is shared and with whom; nothing is sent before.
+- [ ] One clear consent (#369): turning it on states what is shared, with
+      whom (the host, and that PsyNeuView can't limit the service), what it
+      can do and the folders, and nothing is sent before; a new destination
+      while on asks again; every other change saves directly and the
+      Settings summary shows the current state
+      (`test_only_turning_on_and_a_new_destination_while_on_need_consent`,
+      `ai-assistant.spec.ts` ("turning it on is the one consent")).
+- [ ] Settings changes are accepted only from the app's own page
+      (`test_settings_from_another_site_are_refused`).
 - [ ] Agent text is rendered as text: no HTML, no remote content, links need a
       click and show the full address (`ai-assistant.spec.ts` ("hostile text is inert")).
 - [ ] Limits on tool calls and minutes end the turn; Stop ends it at once.

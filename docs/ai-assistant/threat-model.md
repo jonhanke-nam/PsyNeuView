@@ -123,9 +123,24 @@ checks that following it is refused by the backend.
 | Route | Attacker | Defence | Test |
 |---|---|---|---|
 | Assistant routes | Another program, another account | **Assistant routes accept requests only from the app's own page** (`same_site`); a per-session credential is not built yet (open item below); off by default; off in `container` and `hosted` modes via the `assistant` capability | `test_off_by_default`, `test_capability_off_in_container_and_hosted`, `test_same_site_check`, `test_review_routes_accept_only_the_apps_own_page` |
-| Settings routes | Rogue agent | There is no tool that reaches `PUT /api/assistant/settings`; raising a permission needs `confirm_raise`, which only the page sends after asking the user | `test_non_allowlisted_tools_are_refused`, `test_raising_needs_confirmation_lowering_does_not` |
+| Settings routes | Rogue agent; another site | There is no tool that reaches `PUT /api/assistant/settings`, and it accepts requests only from the app's own page (`same_site`). Turning the assistant on, and a new destination while on, need `confirm_raise`, which only the page sends after the user's consent (#369) | `test_non_allowlisted_tools_are_refused`, `test_only_turning_on_and_a_new_destination_while_on_need_consent`, `test_settings_from_another_site_are_refused` |
 | Key routes | Rogue agent | `GET /api/assistant/key` returns `{"set": bool}` only; the key never appears in logs, reports or the runner's environment | `test_key_never_in_responses_logs_settings_or_environment` |
 | `/model/load`, watcher reload, autosave reload, undo, redo | Rogue agent via write-then-open; malicious file | Every route that executes a model consults `is_runnable`; unreviewed content is refused everywhere | `test_route_refuses_unreviewed`, `test_watchers_refuse_unreviewed`, `test_inprocess_and_sandbox_entry_points_refuse` |
+
+**Decision: one clear consent (#369, 2026-11-24).** Asking before every
+widening (each folder, autonomy, visibility, limit) was dropped: the owner's
+trial found the repeated "more than it has now" prompt unhelpful, and a
+prompt shown for every change trains people to click Allow. What stays: the
+user consents once, to turning the assistant on, with a clear statement of
+what is shared, with whom and what it can do; a new destination while it is
+on asks again, since that changes who receives the data; and Settings always
+shows what is shared and with whom. What does not change: only the app's own
+page can change settings (`same_site`); the agent has no route to them; the
+sandbox requirement (`sandbox.require`, the 400 `sandbox_required` when
+turning on), review before anything the assistant wrote runs, and accepting
+each proposal are all as before. The trade: a widening made later in
+Settings is the user's own action in the app's own page, shown in the
+summary, rather than a confirmed one.
 
 ### 4.5 Through files and folders
 
@@ -143,7 +158,7 @@ checks that following it is refused by the backend.
 | Route | Attacker | Defence | Test |
 |---|---|---|---|
 | Custom `base_url` | Rogue agent; misled user | Only the user sets it, in Settings; the panel shows where data goes; the agent has no tool for it | `test_non_allowlisted_tools_are_refused` |
-| The service itself | The service | Consent at first use (the explanation when it is turned on, and the raise confirmation for each folder); a per-folder consent at a cloud agent's first use of it is not built yet (open item below); model contents are what's sent, nothing more | `ai-assistant.spec.ts` ("turning it on asks, then explains what is shared") |
+| The service itself | The service | One consent before anything is sent (#369): turning it on shows what is shared, with whom (the service's host, and that PsyNeuView can't limit what it does with the data), what it can do and the folders; a new destination while on asks again. Settings always shows a summary of what is shared and with whom. A per-folder consent at a cloud agent's first use of it is not built (open item below); model contents are what's sent, nothing more | `ai-assistant.spec.ts` ("turning it on is the one consent", "once on, widening a permission saves without asking") |
 | New dependencies for the connection | Supply chain | Reviewed in the phase review | checklist item |
 
 ## 5. The tools, one by one, and in combination
@@ -543,12 +558,12 @@ it has its own issue.
 - **A per-session credential for the assistant routes.** The routes refuse a
   request that isn't the app's own page (`same_site`); a credential the page
   gets at startup and sends with each request is not built yet.
-- **Per-folder consent at a cloud agent's first use of it.** Designating a
-  folder asks (the raise confirmation), and turning the assistant on
-  explains what is shared; a further question the first time a cloud agent
-  reads each folder is not built yet.
-- **`saving: structured_without_asking`** is stored and shown, and raising it
-  asks, but the page still asks for every proposal. Nothing is saved without
+- **Per-folder consent at a cloud agent's first use of it.** Turning the
+  assistant on names the folders it may use, and the summary shows them;
+  since #369 adding a folder later saves without a question, and a further
+  question the first time a cloud agent reads each folder is not built.
+- **`saving: structured_without_asking`** is stored and shown, but the page
+  still asks for every proposal. Nothing is saved without
   an accept today, which is the safer side.
 - **Running models** (`limits` on run time, containment) is Phase 4; there
   is no run tool.

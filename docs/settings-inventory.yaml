@@ -742,7 +742,7 @@ settings:
     storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
     control: setting-assistant-enabled
     notes: >-
-      Off by default. Turning it on raises a permission: the backend answers with a 409 and the page asks first (confirm_raise). The first time, a short explanation says what is shared, with whom, and what it can do.
+      Off by default. Turning it on is the one consent (#369): the backend answers needs_confirmation and the page shows what is shared, with whom, what it can do and the folders, with Turn on / Cancel, before sending confirm_raise. A summary at the top of the section always says what is shared and with whom.
 
   - id: assistant-agent-type
     label: AI assistant ▸ Agent ▸ Which agent
@@ -790,7 +790,7 @@ settings:
     storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
     control: setting-assistant-autonomy
     notes: >-
-      answer, suggest or app_edits. Raising it asks for confirmation.
+      answer, suggest or app_edits. Saves directly (#369).
 
   - id: assistant-saving
     label: AI assistant ▸ What it may do ▸ Saving
@@ -799,7 +799,7 @@ settings:
     storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
     control: setting-assistant-saving
     notes: >-
-      always_ask or structured_without_asking. Raising it asks for confirmation.
+      always_ask or structured_without_asking. Saves directly (#369).
 
   - id: assistant-folders
     label: AI assistant ▸ What it may do ▸ Folders it may reach
@@ -808,7 +808,7 @@ settings:
     storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
     control: setting-assistant-folders
     notes: >-
-      A list of paths with read or read_write access; adding one or making it writable asks for confirmation.
+      A list of paths with read or read_write access; adding one or making it writable saves directly (#369).
 
   - id: assistant-visibility-model
     label: AI assistant ▸ What it can see ▸ The open model's code
@@ -869,7 +869,7 @@ settings:
     control: setting-assistant-limit-max-tokens
     notes: >
       Spending: the tokens the agent's service reports (input and output), summed over a session; the turn ends
-      with done reason "limit" when reached. Default 100000. Raising it asks for confirmation.
+      with done reason "limit" when reached. Default 100000. Saves directly (#369).
 
   - id: assistant-keep-log
     label: AI assistant ▸ Limits and log ▸ Keep a log of tool calls
@@ -888,7 +888,7 @@ settings:
     control: setting-assistant-sandbox-all-runs
     notes: >-
       Default on (#311). Off: runs are sandboxed only while files the assistant wrote are tracked. Turning it
-      off asks for confirmation. The state (on, unavailable and why) is shown above it from GET
+      off saves directly (#369). The state (on, unavailable and why) is shown above it from GET
       /api/assistant/sandbox; PSYNEUVIEW_OS_SANDBOX=on|off overrides it.
 
   - id: assistant-sandbox-require
@@ -899,7 +899,7 @@ settings:
     control: setting-assistant-sandbox-require
     notes: >-
       Default on (#311): the assistant refuses to turn on where no sandbox can be applied (native Windows, a
-      Linux kernel without Landlock). Turning it off asks for confirmation.
+      Linux kernel without Landlock). Turning it off saves directly (#369).
 
 # Remembered choices whose one control lives outside Settings. Settings has no
 # control for these (a second control would break "one control per setting");

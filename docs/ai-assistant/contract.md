@@ -49,10 +49,11 @@ is. The rules behind it are in issue #179; the threat model is in
 
 - `sandbox.all_runs`: every model run is sandboxed while the assistant is
   on, not only while something it wrote is tracked (those always are).
-  Turning it off is a raise.
+  Turning it off saves directly (#369); the summary shows it.
 - `sandbox.require`: turning the assistant on fails with 400
   `{"reason": "sandbox_required", "message"}` where no sandbox can be
-  applied. Turning it off is a raise.
+  applied. Turning it off saves directly (#369); turning the assistant on
+  is still refused with this 400 while it is on and no sandbox can be applied.
 - `GET /api/assistant/sandbox`: `{state: on | unavailable | available |
   off_unavailable, available, wanted, why, mechanism, platform,
   landlock_abi, enforced, not_enforced, reason, forced, all_runs, require}`.
@@ -77,15 +78,26 @@ is. The rules behind it are in issue #179; the threat model is in
   `conda-meta`, `site-packages`, `lib/pythonX.Y`) are refused with 400.
 - `agent.base_url` belongs to the type it was given for: changing the type
   without giving an address clears it. Changing where messages go (type or
-  address) is a raise, named with the real destination.
+  address) while the assistant is on needs consent, named with the real
+  destination and the old one (#369). An OpenAI-compatible type with no
+  address yet sends nothing, so it saves directly; giving the address asks.
 - `limits.max_tokens` is spending: the tokens the agent's service reports,
   input and output, summed over a session. A turn that reaches it ends with
   `done` reason `limit`. A service that reports no usage isn't limited this way.
-- A `PUT` that raises a permission must carry `"confirm_raise": true`, or it
-  saves nothing and answers 200 with `{"needs_confirmation": true, "reason":
-  "confirm_raise", "raised": [...], "message"}` (#367: not an error, so the
-  browser console stays clean).
-  The page asks the user first. Lowering applies at once.
+- **One clear consent (#369).** A `PUT` must carry `"confirm_raise": true`
+  only to turn the assistant on (`enabled` false to true), or to change
+  where messages go while it is on. Without it, it saves nothing and answers
+  200 with `{"needs_confirmation": true, "reason": "confirm_raise",
+  "raised": [...], "message"}` (#367: not an error, so the browser console
+  stays clean). Turning on, `raised` is `["turning the assistant on",
+  "sending messages to <address>"]`. The page shows the consent first: what
+  is shared, with whom (the service's host, and that PsyNeuView can't limit
+  what that service does with it), what it can do, and the folders, with
+  Turn on / Cancel. Every other change, widening or lowering (folders,
+  autonomy, saving, visibility, limits, the sandbox options, choosing an
+  agent while off), saves directly, and Settings always shows a short
+  summary of what is shared and with whom. The decision, and why it is
+  safe, is in [`threat-model.md`](threat-model.md) section 4.4.
 - A `GET` also carries `"available": bool` (the deployment's capability). It
   is not a setting: a `PUT` that includes it is a 400, so the page strips it.
 - Every other field is validated; an unknown key is 400.
