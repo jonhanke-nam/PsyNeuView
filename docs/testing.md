@@ -21,7 +21,7 @@ Frontend workflow run.
 | **Tutorials (e2e)** | `frontend/e2e/tutorials/*.tutorial.spec.ts` | The user-facing workflows in the [tutorials](tutorials/README.md) | Drives the real app in headless Chromium, asserts the workflow, and regenerates the doc screenshots |
 | **Broader e2e** | `frontend/e2e/*.spec.ts` | App smoke + feature surfaces, incl. the **reference-model runnability gate** (`reference-models-runnable.spec.ts`): loads + runs *every* bundled reference model and fails on a white screen / uncaught error | Same Playwright engine as tutorials |
 | **Typecheck** | `frontend` (`tsc -b`) | TypeScript type correctness | Compile-time; no runtime |
-| **Frontend unit tests** | `frontend/src/**/*.test.ts` (vitest) | Pure logic (stores, utils, shortcuts), plus two source guards: the settings inventory (`settingsInventory.test.ts`, one control per setting) the dialog inventory (`dialogInventory.test.ts`, every overlay uses the shared `useDismiss`/`DialogHeader` and is listed in [dialog-inventory.md](dialog-inventory.md)) the CI e2e set (`ciSpecs.test.ts`: every browser spec is tagged `@ci` or has a `Not in CI:` line saying why) and the style conventions (`styleConventions.test.ts`: no file writes a colour by hand, bar the listed exceptions, and buttons keep to the `Button` kinds, per [ui-style-conventions.md](ui-style-conventions.md); the same workflow runs `node scripts/style-report.mjs --check`) | Node; no browser. The dialogs' behaviour in a browser is `e2e/dialog-sweep.spec.ts`; their computed styles, `e2e/style-conventions.spec.ts`; the heights of the swept areas' buttons and rows against their pre-sweep sizes, `e2e/style-sizes.spec.ts` |
+| **Frontend unit tests** | `frontend/src/**/*.test.ts` (vitest) | Pure logic (stores, utils, shortcuts), plus two source guards: the settings inventory (`settingsInventory.test.ts`, one control per setting) the dialog inventory (`dialogInventory.test.ts`, every overlay uses the shared `useDismiss`/`DialogHeader` and is listed in [dialog-inventory.md](dialog-inventory.md)) the CI e2e set (`ciSpecs.test.ts`: every browser spec is tagged `@ci` or has a `Not in CI:` line in its header saying why) and the style conventions (`styleConventions.test.ts`: no file writes a colour by hand, bar the listed exceptions, and buttons keep to the `Button` kinds, per [ui-style-conventions.md](ui-style-conventions.md); the same workflow runs `node scripts/style-report.mjs --check`) | Node; no browser. The dialogs' behaviour in a browser is `e2e/dialog-sweep.spec.ts`; their computed styles, `e2e/style-conventions.spec.ts`; the heights of the swept areas' buttons and rows against their pre-sweep sizes, `e2e/style-sizes.spec.ts` |
 
 ### Reference-model equivalence (the "does PsyNeuView match PsyNeuLink?" check)
 
@@ -264,7 +264,9 @@ npx playwright show-report /tmp/pw-report
   `test.describe("…", { tag: "@ci" }, …)`, or each top-level test when there
   is no describe. A spec CI shouldn't run says why in a header line,
   `Not in CI: <slow | needs a network | superseded | broken | measurement |
-  pictures only | local only | should be added>: <detail>`. A vitest
+  pictures only | local only | should be added>: <detail>`, inside the file's
+  leading comment block (imports may come before it); one further down
+  doesn't count (#392). A vitest
   (`ciSpecs.test.ts`) fails on a spec with neither, so a dropped tag can't
   take a spec out of CI unnoticed; `python3 scripts/test_map.py --check` in
   the Frontend workflow and the docs build check the same. Tutorial specs are
