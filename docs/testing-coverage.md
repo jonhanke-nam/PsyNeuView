@@ -1368,9 +1368,9 @@ The 20 modules with the lowest line coverage among the larger ones: backend modu
 
 ## Agreement with show_graph
 
-`e2e/show-graph-agreement.spec.ts` opens every bundled model in every view, lays it out Like show_graph, and scores the canvas against show_graph's own picture. Full batch measured 2026-11-23 at commit `44ce5d77d4`: **169 of 175** views agree fully on nodes, rows and order.
+`e2e/show-graph-agreement.spec.ts` opens every bundled model in every view, lays it out Like show_graph, and scores the canvas against show_graph's own picture. Full batch measured 2026-11-23 at commit `44ce5d77d4`: **174 of 175** views agree fully on nodes, rows and order.
 
-**What CI holds it to.** The `@ci` test opens four representative models: the basic Stroop reference, EGO in each of its views (nested, flattened, PyTorch) and with CIMs shown, MontagueDayanSejnowski96 (learning), and `demos/nested_compositions.py` (a composition open inside another). In every view it requires all of show_graph's nodes on the canvas, rows and order at 100%, no overlapping boxes, nothing cut off after Fit, no frame button covered, and every edge show_graph draws between two canvas nodes drawn along its course (no exceptions are listed). Measured with the full batch: all of those pass at 100%. The full batch below has no thresholds; it is run before a release and its review sheets looked at.
+**What CI holds it to.** The `@ci` test opens four representative models: the basic Stroop reference, EGO in each of its views (nested, flattened, PyTorch), folded in each, and with CIMs shown, MontagueDayanSejnowski96 (learning), and `demos/nested_compositions.py` (a composition open inside another). In every view it requires all of show_graph's nodes on the canvas, rows and order at 100%, no overlapping boxes, nothing cut off after Fit, no frame button covered, and every edge show_graph draws between two canvas nodes drawn along its course (no exceptions are listed). Measured with the full batch: all of those pass at 100%. The full batch below has no thresholds; it is run before a release and its review sheets looked at.
 
 Nodes: show_graph's nodes the canvas draws. Rows: pairs of nodes whose above, level or below relation agrees. Order: pairs on one show_graph row whose left-to-right order agrees. Courses: edges drawn along show_graph's own course.
 
@@ -1378,11 +1378,6 @@ Nodes: show_graph's nodes the canvas draws. Rows: pairs of nodes whose above, le
 
 | Model | View | Nodes | Rows | Order | Courses | Why |
 |---|---|---|---|---|---|---|
-| Giallanza2024_ego_study2 | Flatten (all compositions) · compositions folded | 8/8 | 61% | 33% | 0/10 | Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed. |
-| Giallanza2024_ego_study2 | Flatten (all compositions) · Controller hidden | 21/21 | 59% | 43% | 0/31 | Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed. |
-| Giallanza2024_ego_study2 | Flatten (all compositions) · Learning shown | 21/21 | 59% | 43% | 0/31 | Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed. |
-| Giallanza2024_ego_study2 | Flatten (all compositions) · CIMs shown | 21/21 | 59% | 43% | 0/31 | Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed. |
-| Giallanza2024_ego_study2 | PyTorch view · compositions folded | 8/8 | 61% | 33% | 0/10 | Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed. |
 | stroop_with_control | the model · Controller hidden | 9/9 | 81% | 100% | 8/9 | Probably a measurement taken too early: the review sheet shows the canvas still busy (its spinner at 8 s) with the controller already hidden, while the show_graph picture the batch compared it with still draws CONTROL. With the controller shown, the same model agrees 100%. Not yet confirmed. |
 
 <details><summary>Every model and view</summary>
@@ -1402,12 +1397,12 @@ Nodes: show_graph's nodes the canvas draws. Rows: pairs of nodes whose above, le
 | Cohen_Huston1994 | the model · Learning shown | 7/7 | 100% | 100% | 11/11 | 0 | 0 |
 | Cohen_Huston1994 | the model · CIMs shown | 7/7 | 100% | 100% | 11/11 | 0 | 0 |
 | Giallanza2024_ego_study2 | Flatten (all compositions) | 21/21 | 100% | 100% | 31/31 | 0 | 0 |
-| Giallanza2024_ego_study2 | Flatten (all compositions) · compositions folded | 8/8 | 61% | 33% | 0/10 | 0 | 0 |
-| Giallanza2024_ego_study2 | Flatten (all compositions) · Controller hidden | 21/21 | 59% | 43% | 0/31 | 0 | 0 |
-| Giallanza2024_ego_study2 | Flatten (all compositions) · Learning shown | 21/21 | 59% | 43% | 0/31 | 0 | 0 |
-| Giallanza2024_ego_study2 | Flatten (all compositions) · CIMs shown | 21/21 | 59% | 43% | 0/31 | 0 | 0 |
+| Giallanza2024_ego_study2 | Flatten (all compositions) · compositions folded | 8/8 | 100% | 100% | 10/10 | 0 | 0 |
+| Giallanza2024_ego_study2 | Flatten (all compositions) · Controller hidden | 21/21 | 100% | 100% | 31/31 | 0 | 0 |
+| Giallanza2024_ego_study2 | Flatten (all compositions) · Learning shown | 21/21 | 100% | 100% | 31/31 | 0 | 0 |
+| Giallanza2024_ego_study2 | Flatten (all compositions) · CIMs shown | 21/21 | 100% | 100% | 31/31 | 0 | 0 |
 | Giallanza2024_ego_study2 | PyTorch view | 21/21 | 100% | 100% | 31/31 | 0 | 0 |
-| Giallanza2024_ego_study2 | PyTorch view · compositions folded | 8/8 | 61% | 33% | 0/10 | 0 | 0 |
+| Giallanza2024_ego_study2 | PyTorch view · compositions folded | 8/8 | 100% | 100% | 10/10 | 0 | 0 |
 | Giallanza2024_ego_study2 | EGO | 21/21 | 100% | 100% | 31/31 | 0 | 0 |
 | Giallanza2024_ego_study2 | EGO · compositions folded | 8/8 | 100% | 100% | 10/10 | 0 | 0 |
 | GilzenratModel | the model | 5/5 | 100% | 100% | 6/6 | 0 | 0 |

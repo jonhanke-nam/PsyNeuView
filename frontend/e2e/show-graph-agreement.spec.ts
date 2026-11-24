@@ -413,7 +413,8 @@ const OPTIONS = [
 /**
  * Measure each model in each view. With `variants`, also with its open
  * compositions folded, and with each show_graph option flipped (or just
- * those `options` gives for the model).
+ * those `options` gives for the model). `fold` asks for the folded step for
+ * a model without the other variants.
  */
 async function runBatch(
   page: Page,
@@ -422,7 +423,13 @@ async function runBatch(
     sheets,
     variants,
     options = () => (variants ? OPTIONS : []),
-  }: { sheets: boolean; variants: boolean; options?: (model: string) => typeof OPTIONS },
+    fold = () => variants,
+  }: {
+    sheets: boolean;
+    variants: boolean;
+    options?: (model: string) => typeof OPTIONS;
+    fold?: (model: string) => boolean;
+  },
 ): Promise<ViewResult[]> {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/");
@@ -482,7 +489,7 @@ async function runBatch(
       } catch (e) {
         results.push(failed(model, opened, e));
       }
-      if (variants) {
+      if (fold(model)) {
         const folded = `${view.label} · compositions folded`;
         try {
           const before = captured.all.length;
@@ -494,6 +501,9 @@ async function runBatch(
               return m;
             });
             await setFolded(page, false);
+            // Folding in a flattened view shows the model nested (#323): go
+            // back to the view, so what follows is measured where it says.
+            await enterView(page, view);
           }
         } catch (e) {
           results.push(failed(model, folded, e));
@@ -565,16 +575,27 @@ const REPRESENTATIVE = [
 const KNOWN_MISSING: Record<string, string[]> = {};
 
 test("representative models agree with show_graph in every view", { tag: "@ci" }, async ({ page }) => {
-  test.setTimeout(5 * 60_000);
+  test.setTimeout(8 * 60_000); // About 3 minutes locally, with the EGO fold steps (#323).
   // EGO with CIMs shown: that reloads the same graph, so nothing fetches or
   // re-applies the layout, and it has to survive the reload as it is (#34).
+  // EGO folded in each view: a fold in the flattened or PyTorch view shows it
+  // nested, and the layout has to follow show_graph there too (#323).
+  const ego = (model: string) => model.includes("ego_study2");
   const results = await runBatch(page, REPRESENTATIVE, {
     sheets: false,
     variants: false,
-    options: (model) => (model.includes("ego_study2") ? OPTIONS.filter((o) => o.label === "CIMs") : []),
+    options: (model) => (ego(model) ? OPTIONS.filter((o) => o.label === "CIMs") : []),
+    fold: ego,
   });
   for (const r of results) console.log(`${r.model} — ${r.view}: ${summaryLine(r)}`);
   expect(results.length, "views measured").toBeGreaterThanOrEqual(REPRESENTATIVE.length + 2);
+  // The fold step ran for EGO in the flattened and PyTorch views (#323).
+  for (const view of ["Flatten (all compositions)", "PyTorch view"]) {
+    expect(
+      results.some((r) => r.model === "Giallanza2024_ego_study2.py" && r.view === `${view} · compositions folded`),
+      `EGO folded in ${view} measured`,
+    ).toBe(true);
+  }
   for (const r of results) {
     const where = `${r.model} — ${r.view}`;
     expect(r.error, where).toBeUndefined();
