@@ -665,24 +665,38 @@ function SectionHeader({ label, icon }: { label: string; icon?: string }) {
 const STRIP_HEADING_MIN_PX = 5;
 
 /**
- * A tiny heading in the icon strip (#372), shown only when the strip's
- * headings are on (#395). The word always sits on one line within the strip:
- * it starts at the smallest text size and, if it is still too wide (as
- * "Components" is), its font shrinks until it fits. A hidden copy at the full
- * size is measured, so a change of Text size or font refits it.
+ * Every word the icon strip uses as a heading (#395). Each heading is sized to
+ * fit the widest of these on one line, so "Components" and "Recent" come out
+ * the same tiny size rather than "Recent" looking larger.
  */
-function StripHeading({ text, testId, label }: { text: string; testId: string; label: string }) {
+const STRIP_HEADING_WORDS = ["Components", "Recent"] as const;
+type StripHeadingWord = (typeof STRIP_HEADING_WORDS)[number];
+
+/**
+ * A tiny heading in the icon strip (#372), shown only when the strip's
+ * headings are on (#395). The word always sits on one line within the strip.
+ * It starts at the smallest text size; if the widest heading word
+ * ("Components") is still too wide at that size, the font shrinks until that
+ * word fits, and every heading takes that same size so they match. Hidden
+ * copies of each word are measured, so a change of Text size or font refits
+ * them.
+ */
+function StripHeading({ text, testId, label }: { text: StripHeadingWord; testId: string; label: string }) {
   const boxRef = useRef<HTMLDivElement>(null);
+  // Each heading word at the full smallest-text size, and at the fitted size.
   const measureRef = useRef<HTMLSpanElement>(null);
-  const textRef = useRef<HTMLSpanElement>(null);
+  const probeRef = useRef<HTMLSpanElement>(null);
   const [fitPx, setFitPx] = useState<number | null>(null);
+
+  const widest = (holder: HTMLElement | null) =>
+    holder ? Math.max(0, ...Array.from(holder.children, (c) => c.getBoundingClientRect().width)) : 0;
 
   useLayoutEffect(() => {
     const box = boxRef.current;
     const measure = measureRef.current;
     if (!box || !measure) return;
     const fit = () => {
-      const natural = measure.getBoundingClientRect().width;
+      const natural = widest(measure);
       const fullPx = parseFloat(getComputedStyle(measure).fontSize);
       // The strip's width inside its padding, less a pixel of air.
       const room = box.clientWidth - 1;
@@ -696,23 +710,27 @@ function StripHeading({ text, testId, label }: { text: string; testId: string; l
     fit();
     if (typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(fit);
-    ro.observe(measure);
+    // The word copies, not their zero-size holder, change size with the text.
+    for (const word of Array.from(measure.children)) ro.observe(word);
     ro.observe(box);
     return () => ro.disconnect();
-  }, [text]);
+  }, []);
 
   // Small text doesn't scale exactly (glyphs snap to pixels), so check the
-  // word as drawn and step it down a tenth of a pixel while it is too wide.
+  // widest word as drawn at the fitted size and step down a tenth of a pixel
+  // while it is too wide. Every heading checks the same words, so they all
+  // settle on the same size.
   useLayoutEffect(() => {
     const box = boxRef.current;
-    const shown = textRef.current;
-    if (fitPx === null || !box || !shown || fitPx <= STRIP_HEADING_MIN_PX) return;
-    if (shown.getBoundingClientRect().width > box.clientWidth - 1) {
+    if (fitPx === null || !box || fitPx <= STRIP_HEADING_MIN_PX) return;
+    if (widest(probeRef.current) > box.clientWidth - 1) {
       setFitPx(Math.max(STRIP_HEADING_MIN_PX, Math.round((fitPx - 0.1) * 10) / 10));
     }
   }, [fitPx]);
 
   const font = { fontWeight: 600, whiteSpace: "nowrap" } as const;
+  const size = fitPx === null ? "var(--pnv-fs-9)" : `${fitPx}px`;
+  const hidden = { position: "absolute", left: 0, top: 0, visibility: "hidden", pointerEvents: "none" } as const;
   return (
     <div
       ref={boxRef}
@@ -732,19 +750,18 @@ function StripHeading({ text, testId, label }: { text: string; testId: string; l
         overflow: "hidden",
       }}
     >
-      <span
-        ref={textRef}
-        data-testid={`${testId}-text`}
-        style={{ ...font, fontSize: fitPx === null ? "var(--pnv-fs-9)" : `${fitPx}px` }}
-      >
+      <span data-testid={`${testId}-text`} style={{ ...font, fontSize: size }}>
         {text}
       </span>
-      <span
-        ref={measureRef}
-        aria-hidden
-        style={{ ...font, fontSize: "var(--pnv-fs-9)", position: "absolute", left: 0, top: 0, visibility: "hidden", pointerEvents: "none" }}
-      >
-        {text}
+      <span ref={measureRef} aria-hidden style={{ ...hidden, fontSize: "var(--pnv-fs-9)" }}>
+        {STRIP_HEADING_WORDS.map((w) => (
+          <span key={w} style={{ ...font, position: "absolute", left: 0, top: 0 }}>{w}</span>
+        ))}
+      </span>
+      <span ref={probeRef} aria-hidden style={{ ...hidden, fontSize: size }}>
+        {STRIP_HEADING_WORDS.map((w) => (
+          <span key={w} style={{ ...font, position: "absolute", left: 0, top: 0 }}>{w}</span>
+        ))}
       </span>
     </div>
   );
