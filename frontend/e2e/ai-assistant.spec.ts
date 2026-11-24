@@ -2,8 +2,9 @@
  * The AI assistant's page (#179), against a stubbed backend (page.route), so
  * it runs whether or not the backend has the assistant yet.
  *
- * Hidden when the deployment has no assistant; turning it on asks first and
- * then explains; raising a permission asks; a conversation; hostile text
+ * Hidden when the deployment has no assistant; turning it on is the one
+ * consent, with what is shared and with whom, and later changes save
+ * without asking (#369); a conversation; hostile text
  * stays inert; a proposal accepted is one History entry and one undo; a
  * stale proposal says so; Stop ends the turn. Screenshots land in
  * `$SHOTS_DIR` when it is set.
@@ -31,7 +32,7 @@ const DEFAULTS = {
 
 type Event = Record<string, unknown> & { seq: number; type: string };
 
-/** The stubbed backend: settings with the needs-confirmation raise flow, one session, a queue of events. */
+/** The stubbed backend: settings with the one-consent flow (#369), one session, a queue of events. */
 interface Stub {
   settings: typeof DEFAULTS;
   events: Event[];
@@ -41,8 +42,6 @@ interface Stub {
   acceptStatus: number;
   puts: Record<string, unknown>[];
 }
-
-const RANK: Record<string, number> = { answer: 0, suggest: 1, app_edits: 2 };
 
 async function stubAssistant(page: Page, initial: Partial<typeof DEFAULTS> = {}): Promise<Stub> {
   const stub: Stub = {
@@ -59,9 +58,11 @@ async function stubAssistant(page: Page, initial: Partial<typeof DEFAULTS> = {})
     if (req.method() === "GET") return route.fulfill({ json: stub.settings });
     const body = req.postDataJSON() as typeof DEFAULTS & { confirm_raise?: boolean };
     stub.puts.push(body);
+    // The backend's rule (#369): only turning on, or a new destination while on, asks.
     const raised: string[] = [];
-    if (!stub.settings.enabled && body.enabled) raised.push("turn the assistant on");
-    if (RANK[body.autonomy] > RANK[stub.settings.autonomy]) raised.push("let it propose edits to the open model");
+    const moved = body.agent.type !== stub.settings.agent.type || body.agent.base_url !== stub.settings.agent.base_url;
+    if (!stub.settings.enabled && body.enabled) raised.push("turning the assistant on");
+    else if (stub.settings.enabled && body.enabled && moved && (body.agent.type === "anthropic" || body.agent.base_url)) raised.push(`sending messages to ${body.agent.base_url}`);
     if (raised.length && !body.confirm_raise) return route.fulfill({ status: 200, json: { needs_confirmation: true, reason: "confirm_raise", raised } });
     const { confirm_raise: _c, ...rest } = body;
     stub.settings = rest;
@@ -149,60 +150,67 @@ test.describe("AI assistant (#179)", { tag: "@ci" }, () => {
     await expect(page.getByTestId("settings-section-assistant")).toHaveCount(0);
   });
 
-  test("off by default; turning it on asks, then explains what is shared", async ({ page }) => {
-    const stub = await stubAssistant(page);
+  test("off by default; turning it on is the one consent, saying what is shared and with whom (#369)", async ({ page }) => {
+    const stub = await stubAssistant(page, { agent: { type: "anthropic", model: "", base_url: "" } });
     await page.goto("/");
     await expect(page.getByTestId("tab-assistant")).toHaveCount(0);
     await openSettings(page);
     await page.getByTestId("settings-section-assistant").click();
     const on = page.getByTestId("setting-assistant-enabled");
     await expect(on).not.toBeChecked();
+    await expect(page.getByTestId("assistant-summary")).toHaveText("Off: nothing is sent anywhere.");
     await expect(page.getByText("An external agent's own access can't be limited by PsyNeuView")).toBeVisible();
     await expect(page.getByTestId("assistant-api-key-state")).toHaveText("No key is set.");
     await shot(page, "01-settings-off");
 
+    // Cancel saves nothing.
     await on.click();
-    // The backend asks (needs_confirmation) before anything is raised, and nothing saved yet.
-    const confirm = page.getByTestId("assistant-raise-confirm");
-    await expect(confirm).toBeVisible();
-    await expect(confirm).toContainText("turn the assistant on");
+    const consent = page.getByTestId("assistant-raise-confirm");
+    await expect(consent).toHaveAttribute("data-kind", "turn-on");
+    await page.getByTestId("assistant-raise-confirm-no").click();
+    await expect(consent).toHaveCount(0);
+    await expect(on).not.toBeChecked();
     expect(stub.settings.enabled).toBe(false);
-    await page.getByTestId("assistant-raise-confirm-yes").click();
+
+    // The consent says what is shared, with whom, what it can do, and the folders.
+    await on.click();
+    await expect(consent).toContainText("What is shared:");
+    await expect(consent).toContainText("With whom:");
+    await expect(consent).toContainText("api.anthropic.com");
+    await expect(consent).toContainText("PsyNeuView can't limit what that service does");
+    await expect(consent).toContainText("What it can do:");
+    await expect(consent).toContainText("Folders:");
+    await shot(page, "02-consent");
+    await page.getByRole("button", { name: "Turn on", exact: true }).click();
+    await expect(consent).toHaveCount(0);
+    await expect(on).toBeChecked();
     expect(stub.settings.enabled).toBe(true);
     expect(stub.puts[stub.puts.length - 1].confirm_raise).toBe(true);
-
-    const explanation = page.getByTestId("assistant-explanation");
-    await expect(explanation).toBeVisible();
-    await expect(explanation).toContainText("What is shared:");
-    await expect(explanation).toContainText("With whom:");
-    await expect(explanation).toContainText("What it can do:");
-    await shot(page, "02-explanation");
-    await page.getByTestId("assistant-explanation-ok").click();
-    await expect(explanation).toHaveCount(0);
-    await expect(on).toBeChecked();
+    await expect(page.getByTestId("assistant-summary")).toContainText("Shares what you type, and your open model, selection, errors with api.anthropic.com");
     await shot(page, "03-settings-on");
 
-    // The tab appears once it is on, and goes when it is off.
+    // The tab appears once it is on.
     await page.getByRole("button", { name: "Close", exact: true }).click();
     await expect(page.getByTestId("tab-assistant")).toBeVisible();
   });
 
-  test("raising a permission asks, and keeping as it was changes nothing", async ({ page }) => {
-    const stub = await stubAssistant(page, { enabled: true });
+  test("once on, widening a permission saves without asking, and the summary follows (#369)", async ({ page }) => {
+    const stub = await stubAssistant(page, { enabled: true, agent: { type: "anthropic", model: "", base_url: "" } });
     await page.goto("/");
     await openSettings(page);
     await page.getByTestId("settings-section-assistant").click();
     await page.getByTestId("setting-assistant-autonomy").selectOption("app_edits");
-    const confirm = page.getByTestId("assistant-raise-confirm");
-    await expect(confirm).toContainText("let it propose edits to the open model");
-    await page.getByTestId("assistant-raise-confirm-no").click();
-    await expect(confirm).toHaveCount(0);
-    await expect(page.getByTestId("setting-assistant-autonomy")).toHaveValue("suggest");
-    expect(stub.settings.autonomy).toBe("suggest");
-    // Lowering never asks.
-    await page.getByTestId("setting-assistant-autonomy").selectOption("answer");
+    await expect.poll(() => stub.settings.autonomy).toBe("app_edits");
+    await page.getByTestId("setting-assistant-visibility-results").click();
+    await expect.poll(() => stub.settings.visibility.results).toBe(true);
     await expect(page.getByTestId("assistant-raise-confirm")).toHaveCount(0);
+    expect(stub.puts.every((p) => !(p as { confirm_raise?: boolean }).confirm_raise)).toBe(true);
+    await expect(page.getByTestId("assistant-summary")).toContainText("run results");
+    await expect(page.getByTestId("assistant-summary")).toContainText("Propose edits to the open model");
+    // Lowering never asks either.
+    await page.getByTestId("setting-assistant-autonomy").selectOption("answer");
     await expect.poll(() => stub.settings.autonomy).toBe("answer");
+    await expect(page.getByTestId("assistant-raise-confirm")).toHaveCount(0);
   });
 
   test("Test connection says whether the key, model and network work (#368)", async ({ page }) => {

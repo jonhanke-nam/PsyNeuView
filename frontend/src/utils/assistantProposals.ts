@@ -1,45 +1,44 @@
 /**
- * Proposal logic with no React in it (#179): which permissions a settings
- * change raises, what the page sends as context, and the state changes a
+ * Proposal logic with no React in it (#179): which settings changes need
+ * consent (#369), what the page sends as context, and the state changes a
  * proposal goes through.
  */
 
 import type { AssistantContext, AssistantSettings, Proposal } from "@/stores/assistantTypes";
 
-const AUTONOMY_RANK = { answer: 0, suggest: 1, app_edits: 2 } as const;
-
 /**
- * The permissions `next` raises over `prev`, in plain words. The backend is
- * the judge (its 409 names them); this is the same list, so the page can
- * ask before sending and say the same thing the backend would.
+ * What in `next` needs the user's consent before it is saved (#369): turning
+ * the assistant on, or, while it stays on, sending messages somewhere new.
+ * Everything else saves directly. The backend is the judge (it answers
+ * `needs_confirmation`); this is the same rule, so the page can say the same.
  */
-export function raisedPermissions(prev: AssistantSettings, next: AssistantSettings): string[] {
-  const raised: string[] = [];
-  if (!prev.enabled && next.enabled) raised.push("turn the assistant on");
-  if (
-    next.agent.type !== "none" &&
-    (next.agent.type !== prev.agent.type || next.agent.base_url !== prev.agent.base_url)
-  ) {
-    raised.push(`send messages to ${destination(next.agent)}`);
+export function needsConsent(prev: AssistantSettings, next: AssistantSettings): string[] {
+  if (!prev.enabled && next.enabled) return ["turning the assistant on", `sending messages to ${destination(next.agent)}`];
+  const moved = next.agent.type !== prev.agent.type || next.agent.base_url !== prev.agent.base_url;
+  const sends = next.agent.type === "anthropic" || Boolean(next.agent.base_url);
+  if (prev.enabled && next.enabled && moved && sends) {
+    return [`sending messages to ${destination(next.agent)} instead of ${destination(prev.agent)}`];
   }
-  if (AUTONOMY_RANK[next.autonomy] > AUTONOMY_RANK[prev.autonomy]) {
-    raised.push(next.autonomy === "app_edits" ? "let it propose edits to the open model" : "let it make suggestions");
+  return [];
+}
+
+/** The host messages go to, for a short summary: "api.anthropic.com", "localhost:11434". */
+export function destinationHost(agent: AssistantSettings["agent"]): string | null {
+  if (agent.type === "none") return null;
+  const where = destination(agent);
+  try {
+    return new URL(where).host || where;
+  } catch {
+    return null;
   }
-  if (prev.saving === "always_ask" && next.saving === "structured_without_asking") {
-    raised.push("let it save structured edits without asking");
-  }
-  for (const key of ["model", "selection", "errors", "results", "files"] as const) {
-    if (!prev.visibility[key] && next.visibility[key]) raised.push(`show it your ${VISIBILITY_WORDS[key]}`);
-  }
-  for (const f of next.folders) {
-    const before = prev.folders.find((p) => p.path === f.path);
-    if (!before) raised.push(`give it ${f.access === "read_write" ? "read and write" : "read"} access to ${f.path}`);
-    else if (before.access === "read" && f.access === "read_write") raised.push(`let it write in ${f.path}`);
-  }
-  if (next.limits.tool_calls > prev.limits.tool_calls) raised.push("allow more tool calls per turn");
-  if (next.limits.minutes > prev.limits.minutes) raised.push("allow longer turns");
-  if (next.limits.max_tokens > prev.limits.max_tokens) raised.push("allow more spending (tokens) per session");
-  return raised;
+}
+
+/** What leaves the page with each message, in plain words: typed text plus what `visibility` allows. */
+export function sharedWords(settings: AssistantSettings): string {
+  const sees = (Object.keys(VISIBILITY_WORDS) as (keyof typeof VISIBILITY_WORDS)[])
+    .filter((k) => settings.visibility[k])
+    .map((k) => VISIBILITY_WORDS[k]);
+  return sees.length ? `what you type, and your ${sees.join(", ")}` : "what you type, and nothing else";
 }
 
 export const VISIBILITY_WORDS = {

@@ -67,9 +67,8 @@ interface AssistantState {
   keySet: boolean;
   loadError: string | null;
   saving: boolean;
+  /** A change that needs consent first (#369): turning on, or a new destination while on. */
   pendingRaise: PendingRaise | null;
-  /** Shown the first time the assistant is turned on in this page, before anything is sent. */
-  explanation: AssistantSettings | null;
 
   sessionId: string | null;
   items: ConversationItem[];
@@ -85,11 +84,10 @@ interface AssistantState {
 
   load: () => Promise<void>;
   loadSandbox: () => Promise<void>;
-  /** Save `next`. A raise is confirmed through `pendingRaise` first, unless `confirmRaise`. */
+  /** Save `next`. Turning on, or a new destination while on, is confirmed through `pendingRaise` first, unless `confirmRaise` (#369). */
   save: (next: AssistantSettings, confirmRaise?: boolean) => Promise<boolean>;
   confirmRaise: () => Promise<boolean>;
   cancelRaise: () => void;
-  acknowledgeExplanation: () => void;
   setKey: (key: string) => Promise<boolean>;
   clearKey: () => Promise<boolean>;
   /** One small request to the saved agent with the saved key (#368). */
@@ -139,7 +137,6 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
   loadError: null,
   saving: false,
   pendingRaise: null,
-  explanation: null,
   sessionId: null,
   items: [],
   proposals: {},
@@ -211,7 +208,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
       }
       const saved = fromBackend(data as Partial<AssistantSettings>);
       const turnedOn = !get().settings.enabled && saved.enabled;
-      set({ settings: saved, pendingRaise: null, loadError: null, explanation: turnedOn ? saved : get().explanation });
+      set({ settings: saved, pendingRaise: null, loadError: null });
       record("assistant", turnedOn ? "Assistant turned on" : saved.enabled ? "Assistant settings changed" : "Assistant turned off");
       void get().loadSandbox();
       return true;
@@ -230,7 +227,6 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
   },
 
   cancelRaise: () => set({ pendingRaise: null }),
-  acknowledgeExplanation: () => set({ explanation: null }),
 
   setKey: async (key) => {
     const resp = await fetch("/api/assistant/key", {

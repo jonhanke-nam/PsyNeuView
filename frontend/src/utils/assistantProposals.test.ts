@@ -1,31 +1,44 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_ASSISTANT_SETTINGS, type Proposal } from "@/stores/assistantTypes";
-import { contextFor, pendingProposals, raisedPermissions, setProposalState, whereDataGoes, withProposal } from "./assistantProposals";
+import { contextFor, destinationHost, needsConsent, pendingProposals, setProposalState, sharedWords, whereDataGoes, withProposal } from "./assistantProposals";
 
 const base = DEFAULT_ASSISTANT_SETTINGS;
 
-describe("raisedPermissions (#179)", () => {
-  it("names turning on, more autonomy, more visibility and writable folders", () => {
-    const next = {
-      ...base,
-      enabled: true,
+describe("needsConsent (#369)", () => {
+  it("asks once, to turn on, naming where messages go", () => {
+    const next = { ...base, enabled: true, agent: { type: "anthropic" as const, model: "", base_url: "" } };
+    expect(needsConsent(base, next)).toEqual(["turning the assistant on", "sending messages to https://api.anthropic.com"]);
+  });
+
+  it("doesn't ask for widening anything else, on or off", () => {
+    const wider = {
       autonomy: "app_edits" as const,
       visibility: { ...base.visibility, files: true },
       folders: [{ path: "~/Models", access: "read_write" as const }],
+      agent: { type: "anthropic" as const, model: "", base_url: "" },
     };
-    expect(raisedPermissions(base, next)).toEqual([
-      "turn the assistant on",
-      "let it propose edits to the open model",
-      "show it your model files in the allowed folders",
-      "give it read and write access to ~/Models",
-    ]);
+    expect(needsConsent(base, { ...base, ...wider })).toEqual([]);
+    const on = { ...base, enabled: true, agent: wider.agent };
+    expect(needsConsent(on, { ...on, ...wider, limits: { ...on.limits, minutes: 60 } })).toEqual([]);
+    expect(needsConsent(on, { ...on, enabled: false })).toEqual([]);
   });
 
-  it("is empty for a lowering", () => {
-    const on = { ...base, enabled: true, autonomy: "app_edits" as const };
-    expect(raisedPermissions(on, { ...on, autonomy: "answer" })).toEqual([]);
-    expect(raisedPermissions(on, { ...on, enabled: false })).toEqual([]);
+  it("asks for a new destination while on, but not for one with no address yet", () => {
+    const on = { ...base, enabled: true, agent: { type: "anthropic" as const, model: "", base_url: "" } };
+    expect(needsConsent(on, { ...on, agent: { type: "openai_compatible", model: "", base_url: "" } })).toEqual([]);
+    expect(needsConsent(on, { ...on, agent: { type: "openai_compatible", model: "", base_url: "http://localhost:11434" } })).toEqual([
+      "sending messages to http://localhost:11434 instead of https://api.anthropic.com",
+    ]);
+  });
+});
+
+describe("destinationHost and sharedWords (#369)", () => {
+  it("names the host and what is shared", () => {
+    expect(destinationHost({ type: "anthropic", model: "", base_url: "" })).toBe("api.anthropic.com");
+    expect(destinationHost({ type: "openai_compatible", model: "", base_url: "http://localhost:11434/v1" })).toBe("localhost:11434");
+    expect(destinationHost({ type: "none", model: "", base_url: "" })).toBeNull();
+    expect(sharedWords(base)).toBe("what you type, and your open model, selection, errors");
   });
 });
 

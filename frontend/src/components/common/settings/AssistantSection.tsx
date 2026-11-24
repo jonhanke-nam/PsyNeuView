@@ -3,11 +3,12 @@
  *
  * One control per setting from docs/ai-assistant/contract.md, every value
  * stored by the backend (`/api/assistant/settings`), never in this browser.
- * Raising a permission — turning it on, more autonomy, more visibility, a
- * writable folder — is confirmed first: the backend answers the PUT with a
- * 409 naming what would be raised, and this section asks before sending it
- * again with `confirm_raise`. The first time it is turned on, a short
- * explanation says what is shared, with whom, and what it can do.
+ * One clear consent (#369): turning it on shows what is shared, with whom,
+ * what it can do and which folders, with Turn on / Cancel; the backend
+ * answers the PUT with `needs_confirmation` until the page sends it again
+ * with `confirm_raise`. A new destination while on asks the same way. Every
+ * other change saves directly, and a summary at the top always says what is
+ * shared and with whom.
  *
  * The API key is write-only: the page learns only whether one is set.
  */
@@ -16,7 +17,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { useAssistantStore, type ConnectionTest } from "@/stores/assistantStore";
 import type { AssistantSettings, Autonomy, AgentType, FolderAccess, SandboxStatus, Saving } from "@/stores/assistantTypes";
-import { VISIBILITY_WORDS, whereDataGoes } from "@/utils/assistantProposals";
+import { destinationHost, sharedWords, whereDataGoes } from "@/utils/assistantProposals";
 import { Button } from "../Button";
 import { Group, SettingLabel, errorStyle, inputStyle, mutedStyle, selectStyle } from "./shared";
 
@@ -43,7 +44,6 @@ export function AssistantSection() {
   const saving = useAssistantStore((s) => s.saving);
   const loadError = useAssistantStore((s) => s.loadError);
   const pendingRaise = useAssistantStore((s) => s.pendingRaise);
-  const explanation = useAssistantStore((s) => s.explanation);
   const sandbox = useAssistantStore((s) => s.sandbox);
 
   const change = (patch: Partial<AssistantSettings>) => void save({ ...settings, ...patch });
@@ -57,8 +57,8 @@ export function AssistantSection() {
           {loadError}
         </div>
       )}
-      {pendingRaise && <RaiseConfirm raised={pendingRaise.raised} />}
-      {explanation && <FirstTimeExplanation settings={explanation} />}
+      <PrivacySummary settings={settings} />
+      {pendingRaise && (pendingRaise.next.enabled && !settings.enabled ? <TurnOnConsent next={pendingRaise.next} /> : <RaiseConfirm raised={pendingRaise.raised} />)}
 
       <Group id="assistant-on" title="On or off">
         <Check
@@ -127,7 +127,7 @@ export function AssistantSection() {
 
       <Group id="assistant-permissions" title="What it may do">
         <SettingLabel title="Autonomy" htmlFor="setting-assistant-autonomy">
-          Nothing is changed without you accepting a proposal. Raising this asks for confirmation.
+          Nothing is changed without you accepting a proposal.
         </SettingLabel>
         <select
           id="setting-assistant-autonomy"
@@ -352,22 +352,30 @@ function Check({ input, title, children }: { input: ReactNode; title: string; ch
   );
 }
 
-/** The backend's 409: what the change would allow, confirmed before it is sent again. */
+/** Always shown (#369): what is shared and with whom, now, in one or two lines. */
+function PrivacySummary({ settings }: { settings: AssistantSettings }) {
+  const host = destinationHost(settings.agent);
+  const folders = settings.folders.length
+    ? settings.folders.map((f) => `${f.path} (${f.access === "read_write" ? "read and write" : "read"})`).join(", ")
+    : "none";
+  let text: string;
+  if (!settings.enabled) text = "Off: nothing is sent anywhere.";
+  else if (!host) text = "On, but no agent is chosen, so nothing is sent anywhere.";
+  else text = `On. Shares ${sharedWords(settings)} with ${host}. ${AUTONOMY_LABELS[settings.autonomy]}. Folders: ${folders}.`;
+  return (
+    <div data-testid="assistant-summary" data-enabled={String(settings.enabled)} style={{ ...mutedStyle, marginBottom: 12, maxWidth: 560 }}>
+      {text}
+    </div>
+  );
+}
+
+/** A new destination while the assistant is on (#369): who receives the data changes, so it asks. */
 function RaiseConfirm({ raised }: { raised: string[] }) {
   const confirmRaise = useAssistantStore((s) => s.confirmRaise);
   const cancelRaise = useAssistantStore((s) => s.cancelRaise);
   return (
-    <div
-      data-testid="assistant-raise-confirm"
-      style={{
-        border: "1px solid var(--pnv-warning)",
-        background: "var(--pnv-warning-tint)",
-        borderRadius: 6,
-        padding: "10px 12px",
-        marginBottom: 14,
-      }}
-    >
-      <div style={{ fontWeight: 600 }}>This change gives the assistant more than it has now</div>
+    <div data-testid="assistant-raise-confirm" data-kind="destination" style={{ ...consentBoxStyle, marginBottom: 14 }}>
+      <div style={{ fontWeight: 600 }}>Send messages somewhere new?</div>
       <ul style={{ margin: "6px 0 8px 18px", padding: 0 }}>
         {raised.map((r) => (
           <li key={r}>{r}</li>
@@ -385,40 +393,60 @@ function RaiseConfirm({ raised }: { raised: string[] }) {
   );
 }
 
-/** Shown once, the first time the assistant is turned on: what is shared, with whom, what it can do. */
-function FirstTimeExplanation({ settings }: { settings: AssistantSettings }) {
-  const acknowledge = useAssistantStore((s) => s.acknowledgeExplanation);
-  const sees = (Object.keys(VISIBILITY_WORDS) as (keyof typeof VISIBILITY_WORDS)[])
-    .filter((k) => settings.visibility[k])
-    .map((k) => VISIBILITY_WORDS[k]);
+const consentBoxStyle = {
+  border: "1px solid var(--pnv-warning)",
+  background: "var(--pnv-warning-tint)",
+  borderRadius: 6,
+  padding: "10px 12px",
+  maxWidth: 620,
+} as const;
+
+/**
+ * The one consent (#369), before the assistant is turned on: what is shared,
+ * with whom, what it can do, and the folders. Nothing is saved until Turn on.
+ */
+function TurnOnConsent({ next }: { next: AssistantSettings }) {
+  const confirmRaise = useAssistantStore((s) => s.confirmRaise);
+  const cancelRaise = useAssistantStore((s) => s.cancelRaise);
+  const host = destinationHost(next.agent);
   return (
-    <div
-      data-testid="assistant-explanation"
-      style={{
-        border: "1px solid var(--pnv-primary)",
-        background: "var(--pnv-primary-tint)",
-        borderRadius: 6,
-        padding: "10px 12px",
-        marginBottom: 14,
-      }}
-    >
-      <div style={{ fontWeight: 600 }}>The assistant is on. Here is what that means.</div>
+    <div data-testid="assistant-raise-confirm" data-kind="turn-on" style={{ ...consentBoxStyle, marginBottom: 14 }}>
+      <div style={{ fontWeight: 600 }}>Turn on the AI assistant? Privacy and permissions</div>
       <ul style={{ margin: "6px 0 8px 18px", padding: 0, lineHeight: 1.5 }}>
         <li>
-          <b>What is shared:</b> what you type in the Assistant tab, and {sees.length ? `your ${sees.join(", ")}` : "nothing else"}.
+          <b>What is shared:</b> {sharedWords(next)}, with each message you send in the Assistant tab.
         </li>
         <li>
-          <b>With whom:</b> {whereDataGoes(settings.agent)}
+          <b>With whom:</b>{" "}
+          {host ? (
+            <>
+              {host}. {whereDataGoes(next.agent)} PsyNeuView can't limit what that service does with what it receives.
+            </>
+          ) : (
+            "no one yet: no agent is chosen, so nothing is sent until you choose one."
+          )}
         </li>
         <li>
-          <b>What it can do:</b> {AUTONOMY_LABELS[settings.autonomy].toLowerCase()}. It never runs a model, and nothing
-          it writes runs until you have reviewed it. PsyNeuView can't limit what the agent's own service does with
-          what it receives.
+          <b>What it can do:</b> {AUTONOMY_LABELS[next.autonomy].toLowerCase()}. Nothing changes until you accept a
+          proposal, and nothing it writes runs until you have reviewed it.
+          {next.sandbox.all_runs ? " Model runs are sandboxed while it is on." : " Model runs are sandboxed only while something it wrote is unreviewed."}
+        </li>
+        <li>
+          <b>Folders:</b>{" "}
+          {next.folders.length
+            ? next.folders.map((f) => `${f.path} (${f.access === "read_write" ? "read and write" : "read only"})`).join(", ")
+            : "none; it can't list or read your files."}
         </li>
       </ul>
-      <Button kind="secondary" size="compact" data-testid="assistant-explanation-ok" onClick={acknowledge}>
-        Got it
-      </Button>
+      <div style={{ ...mutedStyle, marginBottom: 8 }}>After this, changes here save without asking; the summary above always shows the current state.</div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <Button kind="primary" size="compact" data-testid="assistant-raise-confirm-yes" onClick={() => void confirmRaise()}>
+          Turn on
+        </Button>
+        <Button kind="secondary" size="compact" data-testid="assistant-raise-confirm-no" onClick={cancelRaise}>
+          Cancel
+        </Button>
+      </div>
     </div>
   );
 }

@@ -157,7 +157,7 @@ async function closeSettings(page: Page) {
   await expect(page.getByTestId("settings-panel")).toHaveCount(0);
 }
 
-/** The backend's 409 for a raised permission: confirm it when it is asked. */
+/** The backend's needs_confirmation (turning on, a new destination while on, #369): confirm it. */
 async function allowIfAsked(page: Page) {
   const confirm = page.getByTestId("assistant-raise-confirm");
   await expect(confirm).toBeVisible({ timeout: 10_000 });
@@ -243,9 +243,9 @@ test.describe("AI assistant, for real (#179)", { tag: "@ci" }, () => {
     await expect(page.getByTestId("setting-assistant-enabled")).not.toBeChecked();
 
     await page.getByTestId("setting-assistant-enabled").click();
+    // The one consent (#369): what is shared, with whom, what it can do.
+    await expect(page.getByTestId("assistant-raise-confirm")).toContainText("What is shared:");
     await allowIfAsked(page);
-    await expect(page.getByTestId("assistant-explanation")).toContainText("What is shared:");
-    await page.getByTestId("assistant-explanation-ok").click();
     await expect(page.getByTestId("setting-assistant-enabled")).toBeChecked();
     // Model runs are sandboxed by the operating system now (#311): macOS and
     // Linux (CI) both have one, so the state is "on" and there is no warning.
@@ -255,9 +255,10 @@ test.describe("AI assistant, for real (#179)", { tag: "@ci" }, () => {
     await expect(page.getByTestId("setting-assistant-sandbox-require")).toBeChecked();
 
     // The agent: an OpenAI-compatible server on this machine.
-    // Where messages go is a raise, confirmed with the real destination shown.
+    // With no address yet nothing can be sent, so choosing the type doesn't
+    // ask; the address, a new destination while on, does, naming it (#369).
     await page.getByTestId("setting-assistant-agent-type").selectOption("openai_compatible");
-    await allowIfAsked(page);
+    await expect(page.getByTestId("assistant-raise-confirm")).toHaveCount(0);
     const url = page.getByTestId("setting-assistant-agent-base-url");
     await expect(url).toBeVisible();
     await url.fill(agent.url);
@@ -268,13 +269,13 @@ test.describe("AI assistant, for real (#179)", { tag: "@ci" }, () => {
 
     // A folder it may write in, and files visible.
     await page.getByLabel("Folder to add").fill(folder);
+    // Once on, these save without asking (#369).
     await page.getByRole("button", { name: "Add (read only)" }).click();
-    await allowIfAsked(page);
     await expect(page.getByTestId("setting-assistant-folders")).toContainText(folder);
     await page.getByLabel(`Access to ${folder}`).selectOption("read_write");
-    await allowIfAsked(page);
+    await expect(page.getByLabel(`Access to ${folder}`)).toHaveValue("read_write");
     await page.getByTestId("setting-assistant-visibility-files").click();
-    await allowIfAsked(page);
+    await expect(page.getByTestId("assistant-raise-confirm")).toHaveCount(0);
     await expect(page.getByTestId("setting-assistant-visibility-files")).toBeChecked();
     // Limits are folded by default; the spending limit is there with its default.
     await page.getByTestId("settings-group-assistant-limits").getByRole("button").first().click();

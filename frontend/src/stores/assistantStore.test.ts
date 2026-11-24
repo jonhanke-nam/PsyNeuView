@@ -1,6 +1,6 @@
 /**
  * The assistant store against a stubbed backend (#179): availability, the
- * 409 raise flow, the first-time explanation, the write-only key, sending
+ * consent flow (#369), the write-only key, sending
  * with only the allowed context, polling, Stop, and a stale proposal.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,7 +22,7 @@ beforeEach(() => {
   answers = {};
   useAssistantStore.setState({
     available: null, settings: DEFAULT_ASSISTANT_SETTINGS, keySet: false, loadError: null, saving: false,
-    pendingRaise: null, explanation: null, sessionId: null, items: [], proposals: {}, next: 0, turn: "idle",
+    pendingRaise: null, sessionId: null, items: [], proposals: {}, next: 0, turn: "idle",
     lastDone: null, tokensUsed: 0, reviewOffer: null,
   });
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -66,7 +66,7 @@ describe("assistantStore (#179)", () => {
     expect(useAssistantStore.getState().sandbox?.state).toBe("unavailable");
   });
 
-  it("asks before a raise, then sends confirm_raise, and explains the first time it is on", async () => {
+  it("asks before turning on, then sends confirm_raise (#369)", async () => {
     answers["PUT /api/assistant/settings"] = (init) => {
       const body = JSON.parse(String(init?.body));
       if (body.enabled && !body.confirm_raise) return json({ needs_confirmation: true, reason: "confirm_raise", raised: ["turn the assistant on"] });
@@ -84,9 +84,6 @@ describe("assistantStore (#179)", () => {
     const s = useAssistantStore.getState();
     expect(s.settings.enabled).toBe(true);
     expect(s.pendingRaise).toBeNull();
-    expect(s.explanation?.enabled).toBe(true);
-    s.acknowledgeExplanation();
-    expect(useAssistantStore.getState().explanation).toBeNull();
   });
 
   it("keeps the old settings when the raise is cancelled", async () => {
