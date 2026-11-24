@@ -11,13 +11,20 @@
  * shared and with whom.
  *
  * The API key is write-only: the page learns only whether one is set.
+ *
+ * Claude over MCP (#201) is one more agent choice: the user's own Claude
+ * subscription, through Claude Desktop or Claude Code, which connect to
+ * PsyNeuView's MCP server. Choosing it shows the setup to copy (with the
+ * connection token) and whether a client is connected, instead of the model
+ * and the API key.
  */
 
 import { useEffect, useState, type ReactNode } from "react";
 
 import { agentKey, useAssistantStore, type ConnectionTest } from "@/stores/assistantStore";
 import type { AssistantSettings, Autonomy, AgentType, FolderAccess, SandboxStatus, Saving } from "@/stores/assistantTypes";
-import { ANTHROPIC_DEFAULT_MODEL, destinationHost, sharedWords, whereDataGoes } from "@/utils/assistantProposals";
+import { ANTHROPIC_DEFAULT_MODEL, destinationHost, mcpConnectionWords, sharedWords, whereDataGoes } from "@/utils/assistantProposals";
+import { copyToClipboard } from "@/utils/revealPath";
 import { Button } from "../Button";
 import { Group, SettingLabel, errorStyle, inputStyle, mutedStyle, selectStyle } from "./shared";
 
@@ -25,6 +32,7 @@ const AGENT_LABELS: Record<AgentType, string> = {
   none: "None (off)",
   anthropic: "Anthropic (Claude), with your API key",
   openai_compatible: "An OpenAI-compatible server (local or remote)",
+  claude_mcp: "Claude (your subscription, via Claude Desktop or Claude Code)",
 };
 
 const AUTONOMY_LABELS: Record<Autonomy, string> = {
@@ -95,7 +103,7 @@ export function AssistantSection() {
             </option>
           ))}
         </select>
-        <ModelChoice settings={settings} disabled={saving} onChange={change} />
+        {settings.agent.type === "claude_mcp" ? <McpSetupPanel /> : <ModelChoice settings={settings} disabled={saving} onChange={change} />}
         {settings.agent.type === "openai_compatible" && (
           <div style={{ marginTop: 12 }}>
             <SettingLabel title="Server address" htmlFor="setting-assistant-agent-base-url">
@@ -111,7 +119,7 @@ export function AssistantSection() {
             />
           </div>
         )}
-        <ApiKeySetting />
+        {settings.agent.type !== "claude_mcp" && <ApiKeySetting />}
       </Group>
 
       <Group id="assistant-permissions" title="What it may do">
@@ -403,7 +411,8 @@ function TurnOnConsent({ next }: { next: AssistantSettings }) {
       <div style={{ fontWeight: 600 }}>Turn on the AI assistant? Privacy and permissions</div>
       <ul style={{ margin: "6px 0 8px 18px", padding: 0, lineHeight: 1.5 }}>
         <li>
-          <b>What is shared:</b> {sharedWords(next)}, with each message you send in the Assistant tab.
+          <b>What is shared:</b> {sharedWords(next)},{" "}
+          {next.agent.type === "claude_mcp" ? "when Claude asks for it through PsyNeuView's tools." : "with each message you send in the Assistant tab."}
         </li>
         <li>
           <b>With whom:</b>{" "}
@@ -568,12 +577,113 @@ export function AssistantModelIdSetting() {
         id="setting-assistant-agent-model-id"
         data-testid="setting-assistant-agent-model-id"
         value={settings.agent.model}
-        disabled={saving || settings.agent.type === "none"}
+        disabled={saving || settings.agent.type === "none" || settings.agent.type === "claude_mcp"}
         placeholder={settings.agent.type === "none" ? "Choose an agent in AI assistant first" : "claude-opus-5-5"}
         onCommit={(model) => void save({ ...settings, agent: { ...settings.agent, model } })}
       />
     </>
   );
+}
+
+/**
+ * Claude over MCP (#201): the two setups to copy, the connection token they
+ * carry, and whether a client is connected. Claude Desktop and Claude Code
+ * are signed in with the user's subscription; PsyNeuView keeps no API key.
+ */
+function McpSetupPanel() {
+  const setup = useAssistantStore((s) => s.mcpSetup);
+  const setupError = useAssistantStore((s) => s.mcpSetupError);
+  const status = useAssistantStore((s) => s.mcpStatus);
+  const loadMcpSetup = useAssistantStore((s) => s.loadMcpSetup);
+  const loadMcpStatus = useAssistantStore((s) => s.loadMcpStatus);
+  const replaceMcpToken = useAssistantStore((s) => s.replaceMcpToken);
+  const assistantOn = useAssistantStore((s) => s.settings.enabled);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  useEffect(() => void loadMcpSetup(), [loadMcpSetup]);
+  useEffect(() => {
+    void loadMcpStatus();
+    const timer = setInterval(() => void loadMcpStatus(), 5000);
+    return () => clearInterval(timer);
+  }, [loadMcpStatus]);
+
+  const copy = async (which: string, text: string) => {
+    try {
+      await copyToClipboard(text);
+      setCopied(which);
+    } catch {
+      setCopied(`${which}-failed`);
+    }
+  };
+
+  return (
+    <div data-testid="assistant-mcp-setup" style={{ marginTop: 12, maxWidth: 620 }}>
+      <div
+        data-testid="assistant-mcp-status"
+        data-connected={String(Boolean(status?.connected))}
+        role="status"
+        style={{ color: status?.connected ? "var(--pnv-success)" : "var(--pnv-text-hint)" }}
+      >
+        {status?.connected ? "● " : "○ "}
+        {mcpConnectionWords(status, { inSettings: true })}
+        {!assistantOn && " Claude can connect only while the assistant is on."}
+      </div>
+      {setupError && <div style={{ ...errorStyle, marginTop: 6 }}>{setupError}</div>}
+
+      <div style={{ marginTop: 12 }}>
+        <SettingLabel title="Claude Code">Run this once in Terminal. It adds PsyNeuView for every project.</SettingLabel>
+      </div>
+      <SetupText testId="assistant-mcp-claude-code" text={setup?.claude_code ?? "…"} />
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
+        <Button kind="small" data-testid="assistant-mcp-copy-claude-code" disabled={!setup} onClick={() => setup && void copy("claude-code", setup.claude_code)}>
+          Copy
+        </Button>
+        <CopiedNote which="claude-code" copied={copied} />
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <SettingLabel title="Claude Desktop">
+          In Claude Desktop, open Settings ▸ Developer ▸ Edit Config. Add this to claude_desktop_config.json (inside an
+          existing "mcpServers", add only the "psyneuview" entry), save, and restart Claude Desktop.
+        </SettingLabel>
+      </div>
+      <SetupText testId="assistant-mcp-claude-desktop" text={setup?.claude_desktop ?? "…"} />
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
+        <Button kind="small" data-testid="assistant-mcp-copy-claude-desktop" disabled={!setup} onClick={() => setup && void copy("claude-desktop", setup.claude_desktop)}>
+          Copy
+        </Button>
+        <CopiedNote which="claude-desktop" copied={copied} />
+      </div>
+
+      <div style={{ ...mutedStyle, marginTop: 12 }}>
+        Both include a connection token, kept in your Keychain, that lets the command in; without it PsyNeuView refuses
+        the connection. Treat it like a password. Claude can read the open model and the files you allow, and propose
+        changes; it can't change these settings, accept its own proposals, or run anything you haven't reviewed.{" "}
+        <Button kind="link" data-testid="assistant-mcp-replace-token" onClick={() => void replaceMcpToken()}>
+          Make a new token
+        </Button>{" "}
+        (then copy the setup again; the old one stops working).
+      </div>
+    </div>
+  );
+}
+
+function SetupText({ text, testId }: { text: string; testId: string }) {
+  return (
+    <pre
+      data-testid={testId}
+      dir="ltr"
+      style={{ margin: "6px 0 0", padding: "6px 8px", background: "var(--pnv-surface-sunken)", border: "1px solid var(--pnv-border-faint)", borderRadius: 4, fontFamily: "var(--pnv-font-mono)", fontSize: "var(--pnv-fs-12)", whiteSpace: "pre-wrap", overflowWrap: "anywhere", maxHeight: 220, overflowY: "auto" }}
+    >
+      {text}
+    </pre>
+  );
+}
+
+function CopiedNote({ which, copied }: { which: string; copied: string | null }) {
+  if (copied === which) return <span data-testid={`assistant-mcp-copied-${which}`} style={{ color: "var(--pnv-success)", fontSize: "var(--pnv-fs-12)" }}>Copied.</span>;
+  if (copied === `${which}-failed`) return <span style={{ ...errorStyle, fontSize: "var(--pnv-fs-12)" }}>Couldn't copy; select the text and copy it.</span>;
+  return null;
 }
 
 /** Write-only: the page shows set or not set, and never the key. */
