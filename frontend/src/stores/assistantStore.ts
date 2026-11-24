@@ -28,7 +28,7 @@ import {
 
 export type TurnState = "idle" | "running" | "stopping";
 
-/** A settings change the backend asked the user to confirm (its 409). */
+/** A settings change the backend asked the user to confirm (`needs_confirmation`). */
 export interface PendingRaise {
   next: AssistantSettings;
   raised: string[];
@@ -192,7 +192,13 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
         set({ loadError: `Could not save: ${message}` });
         return false;
       }
-      const saved = fromBackend((await readJson(resp)) as Partial<AssistantSettings>);
+      const data = await readJson(resp);
+      // Nothing was saved: the change raises a permission and needs the user's OK (#367).
+      if (data.needs_confirmation === true) {
+        set({ pendingRaise: { next, raised: raisedFrom(data) } });
+        return false;
+      }
+      const saved = fromBackend(data as Partial<AssistantSettings>);
       const turnedOn = !get().settings.enabled && saved.enabled;
       set({ settings: saved, pendingRaise: null, loadError: null, explanation: turnedOn ? saved : get().explanation });
       record("assistant", turnedOn ? "Assistant turned on" : saved.enabled ? "Assistant settings changed" : "Assistant turned off");

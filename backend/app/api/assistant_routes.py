@@ -57,7 +57,9 @@ async def put_settings(body: dict = Body(...)):
     try:
         new = assistant_settings.update_settings(body, confirm_raise=confirm)
     except assistant_settings.RaiseNeedsConfirmation as e:
-        raise HTTPException(status_code=409, detail={"reason": "confirm_raise", "raised": e.raised, "message": str(e)})
+        # Not an error: nothing is saved and the page asks the user (#367). A
+        # 200 keeps the browser console free of a red failed request.
+        return {"needs_confirmation": True, "reason": "confirm_raise", "raised": e.raised, "message": str(e)}
     except assistant_settings.SandboxRequired as e:
         raise HTTPException(status_code=400, detail={"reason": "sandbox_required", "message": str(e)})
     except assistant_settings.SettingsError as e:

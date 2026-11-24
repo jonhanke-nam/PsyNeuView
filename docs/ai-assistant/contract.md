@@ -82,7 +82,9 @@ is. The rules behind it are in issue #179; the threat model is in
   input and output, summed over a session. A turn that reaches it ends with
   `done` reason `limit`. A service that reports no usage isn't limited this way.
 - A `PUT` that raises a permission must carry `"confirm_raise": true`, or it
-  gets 409 with `detail: {"reason": "confirm_raise", "raised": [...], "message"}`.
+  saves nothing and answers 200 with `{"needs_confirmation": true, "reason":
+  "confirm_raise", "raised": [...], "message"}` (#367: not an error, so the
+  browser console stays clean).
   The page asks the user first. Lowering applies at once.
 - A `GET` also carries `"available": bool` (the deployment's capability). It
   is not a setting: a `PUT` that includes it is a 400, so the page strips it.

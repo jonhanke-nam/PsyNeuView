@@ -31,7 +31,7 @@ const DEFAULTS = {
 
 type Event = Record<string, unknown> & { seq: number; type: string };
 
-/** The stubbed backend: settings with the 409 raise flow, one session, a queue of events. */
+/** The stubbed backend: settings with the needs-confirmation raise flow, one session, a queue of events. */
 interface Stub {
   settings: typeof DEFAULTS;
   events: Event[];
@@ -62,7 +62,7 @@ async function stubAssistant(page: Page, initial: Partial<typeof DEFAULTS> = {})
     const raised: string[] = [];
     if (!stub.settings.enabled && body.enabled) raised.push("turn the assistant on");
     if (RANK[body.autonomy] > RANK[stub.settings.autonomy]) raised.push("let it propose edits to the open model");
-    if (raised.length && !body.confirm_raise) return route.fulfill({ status: 409, json: { detail: { raised } } });
+    if (raised.length && !body.confirm_raise) return route.fulfill({ status: 200, json: { needs_confirmation: true, reason: "confirm_raise", raised } });
     const { confirm_raise: _c, ...rest } = body;
     stub.settings = rest;
     return route.fulfill({ json: stub.settings });
@@ -162,7 +162,7 @@ test.describe("AI assistant (#179)", { tag: "@ci" }, () => {
     await shot(page, "01-settings-off");
 
     await on.click();
-    // The backend's 409: asked before anything is raised, and nothing saved yet.
+    // The backend asks (needs_confirmation) before anything is raised, and nothing saved yet.
     const confirm = page.getByTestId("assistant-raise-confirm");
     await expect(confirm).toBeVisible();
     await expect(confirm).toContainText("turn the assistant on");

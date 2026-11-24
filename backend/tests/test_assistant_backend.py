@@ -125,13 +125,14 @@ def test_capability_off_in_container_and_hosted(client, monkeypatch):
 
 def test_raising_needs_confirmation_lowering_does_not(client, tmp_path):
     r = client.put("/api/assistant/settings", json={"enabled": True})
-    assert r.status_code == 409 and "turning the assistant on" in r.json()["detail"]["raised"]
+    assert r.status_code == 200 and r.json()["needs_confirmation"] is True
+    assert "turning the assistant on" in r.json()["raised"]
     assert client.get("/api/assistant/settings").json()["enabled"] is False
     turn_on(client, tmp_path, autonomy="app_edits", visibility={"files": True})
     r = client.put("/api/assistant/settings", json={"autonomy": "answer", "visibility": {"files": False}})
     assert r.status_code == 200 and r.json()["autonomy"] == "answer"
     r = client.put("/api/assistant/settings", json={"folders": [{"path": str(tmp_path), "access": "read_write"}]})
-    assert r.status_code == 409
+    assert r.status_code == 200 and r.json()["needs_confirmation"] is True
 
 
 def test_settings_reject_bad_values_and_folders(client):

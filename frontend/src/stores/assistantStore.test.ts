@@ -69,7 +69,7 @@ describe("assistantStore (#179)", () => {
   it("asks before a raise, then sends confirm_raise, and explains the first time it is on", async () => {
     answers["PUT /api/assistant/settings"] = (init) => {
       const body = JSON.parse(String(init?.body));
-      if (body.enabled && !body.confirm_raise) return json({ detail: { raised: ["turn the assistant on"] } }, 409);
+      if (body.enabled && !body.confirm_raise) return json({ needs_confirmation: true, reason: "confirm_raise", raised: ["turn the assistant on"] });
       return json({ ...DEFAULT_ASSISTANT_SETTINGS, enabled: body.enabled });
     };
     const ok = await useAssistantStore.getState().save({ ...DEFAULT_ASSISTANT_SETTINGS, enabled: true });
