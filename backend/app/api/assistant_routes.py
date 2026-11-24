@@ -102,18 +102,27 @@ async def delete_key():
     return {"set": False}
 
 
+#: What Test connection and the model list say while the assistant is off.
+OFF_NOTHING_SENT = "Turn the assistant on first; nothing is sent until you do."
+
+
 @router.post("/test-connection")
 def test_connection():
     """Send one minimal request to the saved agent with the saved key (#368)
     and say whether it worked: ``{ok, agent, model, ms, message}``, always a
     200, the message plain English and never the key.
 
-    Works with the assistant off, since you test before turning it on, but
-    only once an agent is chosen: saving the agent type is where sending to
-    that address was confirmed. A plain ``def`` so the up-to-15-second wait
-    runs in the thread pool, not on the event loop."""
+    Only while the assistant is on: turning it on is the one consent to
+    sending anything to the chosen service (#369), so while it is off this
+    answers ``OFF_NOTHING_SENT`` and sends nothing. A plain ``def`` so the
+    up-to-15-second wait runs in the thread pool, not on the event loop."""
     available()
-    agent_settings = assistant_settings.get_settings()["agent"]
+    current = assistant_settings.get_settings()
+    agent_settings = current["agent"]
+    if not current["enabled"]:
+        return agents.ConnectionResult(
+            ok=False, agent=agent_settings.get("type", "none"), model=agent_settings.get("model", ""), ms=None,
+            message=OFF_NOTHING_SENT).as_dict() | {"reason": "off"}
     if agent_settings.get("type", "none") == "none":
         return agents.test_connection(agent_settings, key=None).as_dict()
     result = agents.test_connection(agent_settings, key=keys.get_key())
@@ -125,10 +134,16 @@ def test_connection():
 def get_models():
     """The models the saved agent's service offers (#370), fetched with the
     saved key: ``{ok, agent, models: [{id, display_name}], default,
-    message}``, always a 200, never the key. Like Test connection it works
-    with the assistant off, once an agent is chosen."""
+    message}``, always a 200, never the key. Like Test connection, only
+    while the assistant is on; while off it answers ``OFF_NOTHING_SENT``
+    with no models and sends nothing."""
     available()
-    agent_settings = assistant_settings.get_settings()["agent"]
+    current = assistant_settings.get_settings()
+    agent_settings = current["agent"]
+    if not current["enabled"]:
+        return agents.ModelList(
+            ok=False, agent=agent_settings.get("type", "none"), models=[], default="",
+            message=OFF_NOTHING_SENT).as_dict() | {"reason": "off"}
     if agent_settings.get("type", "none") == "none":
         return agents.list_models(agent_settings, key=None).as_dict()
     result = agents.list_models(agent_settings, key=keys.get_key())

@@ -70,7 +70,9 @@ def http_error(code: int) -> urllib.error.HTTPError:
 
 
 def choose(client, agent: dict, *, key: str | None = SECRET):
-    assert client.put("/api/assistant/settings", json={"agent": agent}).status_code == 200
+    # On: the list is fetched only while the assistant is on (#369).
+    r = client.put("/api/assistant/settings", json={"enabled": True, "agent": agent, "confirm_raise": True})
+    assert r.status_code == 200, r.text
     if key:
         assert client.put("/api/assistant/key", json={"key": key}).status_code == 200
 
@@ -138,11 +140,21 @@ def test_errors_in_plain_english(client, opener, caplog, error, expected):
 
 
 def test_no_key_and_no_agent_send_nothing(client, opener):
+    choose(client, {"type": "none"}, key=None)
     body = fetch(client)
     assert body["ok"] is False and body["message"] == "No agent is chosen."
     choose(client, {"type": "anthropic"}, key=None)
     body = fetch(client)
     assert body["ok"] is False and "No API key is saved" in body["message"]
+    assert opener["requests"] == []
+
+
+def test_sends_nothing_while_the_assistant_is_off(client, opener):
+    assert client.put("/api/assistant/settings", json={"agent": {"type": "anthropic"}}).status_code == 200
+    assert client.put("/api/assistant/key", json={"key": SECRET}).status_code == 200
+    body = fetch(client)
+    assert body == {"ok": False, "agent": "anthropic", "models": [], "default": "",
+                    "message": "Turn the assistant on first; nothing is sent until you do.", "reason": "off"}
     assert opener["requests"] == []
 
 

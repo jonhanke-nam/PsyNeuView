@@ -65,7 +65,8 @@ def http_error(code: int, message: str = "") -> urllib.error.HTTPError:
 
 
 def choose(client, agent: dict, *, key: str | None = SECRET):
-    r = client.put("/api/assistant/settings", json={"agent": agent, "confirm_raise": True})
+    # On: a test sends to the service only while the assistant is on (#369).
+    r = client.put("/api/assistant/settings", json={"enabled": True, "agent": agent, "confirm_raise": True})
     assert r.status_code == 200, r.text
     if key:
         assert client.put("/api/assistant/key", json={"key": key}).status_code == 200
@@ -92,10 +93,19 @@ def test_success_sends_one_minimal_request(client, opener):
     assert sent["timeout"] == agents.TEST_TIMEOUT_SECONDS
 
 
-def test_works_while_the_assistant_is_off(client, opener):
-    choose(client, {"type": "anthropic"})
+def test_sends_nothing_while_the_assistant_is_off(client, opener):
+    """Turning the assistant on is the consent to sending (#369): while off,
+    Test connection says so and makes no request, key and agent chosen or not."""
+    assert client.put("/api/assistant/settings", json={"agent": {"type": "anthropic"}}).status_code == 200
+    assert client.put("/api/assistant/key", json={"key": SECRET}).status_code == 200
     assert client.get("/api/assistant/settings").json()["enabled"] is False
-    assert check(client)["ok"] is True
+    body = check(client)
+    assert body["ok"] is False and body["reason"] == "off"
+    assert body["message"] == "Turn the assistant on first; nothing is sent until you do."
+    assert opener["requests"] == []
+    # Turned on, the same click sends.
+    choose(client, {"type": "anthropic"}, key=None)
+    assert check(client)["ok"] is True and len(opener["requests"]) == 1
 
 
 def test_openai_compatible(client, opener):
@@ -136,7 +146,7 @@ def test_no_key_saved(client, opener):
 
 
 def test_no_agent_chosen(client, opener):
-    assert client.put("/api/assistant/key", json={"key": SECRET}).status_code == 200
+    choose(client, {"type": "none"})
     body = check(client)
     assert body == {"ok": False, "agent": "none", "model": "", "ms": None, "message": body["message"]}
     assert "No agent is chosen" in body["message"]

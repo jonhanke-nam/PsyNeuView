@@ -9,7 +9,11 @@ is. The rules behind it are in issue #179; the threat model is in
 - **The agent is untrusted, always.** Limits are enforced by the backend, never
   by instructions to the agent and never by the page.
 - **Off by default.** With the setting off, no assistant route does anything but
-  report that it's off, and nothing is sent anywhere.
+  report that it's off, and nothing is sent anywhere: Test connection and the
+  model list say to turn the assistant on first. The MCP setup route still
+  makes and shows the token while off, since Claude is set up before it is
+  turned on; the token opens nothing until the assistant is on with Claude
+  over MCP chosen.
 - **Off in `container` and `hosted` modes**, via the `assistant` capability in
   `backend/app/services/deployment_mode.py`.
 - **Writing a model and opening it amount to running code.** Unreviewed
@@ -128,10 +132,13 @@ is refused, and it waits at most 15 seconds (`TEST_TIMEOUT_SECONDS`).
 key saved, "The key was refused (HTTP 401)" (or 403), "The model name isn't
 recognised: X" (404, or a 400 naming the model), "Rate limited or out of
 credit (HTTP 429)", "Couldn't reach <host>" (no network, refused, timed out),
-or "Connected to Anthropic, model X, in N ms". It works with the assistant
-off, since you test before turning it on, but sends nothing until an agent is
-chosen: saving the agent type is where sending to that address is confirmed.
-Like every assistant route it is same-site only, and 403 `unavailable` where
+or "Connected to Anthropic, model X, in N ms". It sends only while the
+assistant is on: turning it on is the one consent to sending anything to the
+chosen service (#369), and choosing an agent while off asks nothing. While
+off it answers `ok: false`, `reason: "off"` and "Turn the assistant on first;
+nothing is sent until you do.", with no request to the service, and Settings
+greys out the button with the same words. Like every assistant route it is
+same-site only, needs the page secret, and 403 `unavailable` where
 the deployment has no assistant.
 
 `GET /api/assistant/models` (#370) asks the saved agent's service which
@@ -141,7 +148,9 @@ path; its own `{"models": [{"name"}]}` shape is read too). It goes only to
 the chosen service, through the same request handling as the agent calls
 (redirects refused, a 15-second wait, the key never logged or echoed), and
 answers 200 with `{"ok": bool, "agent", "models": [{"id", "display_name"}],
-"default", "message"}`. `default` is what Settings preselects when no model
+"default", "message"}`. Like Test connection, only while the assistant is on;
+while off it answers the same "Turn the assistant on first" with no models,
+sends nothing, and Settings neither asks for the list nor offers Refresh. `default` is what Settings preselects when no model
 is saved: `claude-opus-5-5` for Anthropic when it is listed, else the
 newest; `""` (the server's own) for an OpenAI-compatible server. Errors are
 plain English, as for Test connection: no agent, no key, the key refused,

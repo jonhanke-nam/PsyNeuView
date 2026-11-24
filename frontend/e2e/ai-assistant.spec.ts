@@ -215,7 +215,7 @@ test.describe("AI assistant (#179)", { tag: "@ci" }, () => {
   });
 
   test("Test connection says whether the key, model and network work (#368)", async ({ page }) => {
-    await stubAssistant(page, { agent: { type: "anthropic", model: "claude-test", base_url: "" } });
+    await stubAssistant(page, { enabled: true, agent: { type: "anthropic", model: "claude-test", base_url: "" } });
     const answers = [
       { ok: true, agent: "anthropic", model: "claude-test", ms: 412, message: "Connected to Anthropic, model claude-test, in 412 ms" },
       { ok: false, agent: "anthropic", model: "claude-test", ms: 120, message: "The key was refused (HTTP 401)" },
@@ -291,7 +291,7 @@ test.describe("AI assistant (#179)", { tag: "@ci" }, () => {
   });
 
   test("a saved model the service no longer offers is flagged, not changed (#370)", async ({ page }) => {
-    const stub = await stubAssistant(page, { agent: { type: "anthropic", model: "claude-old-1", base_url: "" } });
+    const stub = await stubAssistant(page, { enabled: true, agent: { type: "anthropic", model: "claude-old-1", base_url: "" } });
     await page.route("**/api/assistant/models", (route) =>
       route.fulfill({ json: { ok: true, agent: "anthropic", default: "claude-opus-5-5", message: "1 model offered.", models: [{ id: "claude-opus-5-5", display_name: "Claude Opus 5.5" }] } }),
     );
@@ -303,6 +303,30 @@ test.describe("AI assistant (#179)", { tag: "@ci" }, () => {
     await expect(model.locator("option:checked")).toHaveText("claude-old-1 — no longer offered by the service");
     await expect(page.getByTestId("assistant-models-message")).toContainText("claude-old-1 is no longer offered by the service");
     expect(stub.puts).toEqual([]);
+  });
+
+  test("while off, Test connection and the model list send nothing and say why (#369)", async ({ page }) => {
+    await stubAssistant(page, { agent: { type: "anthropic", model: "claude-test", base_url: "" } });
+    const sent: string[] = [];
+    await page.route("**/api/assistant/test-connection", (route) => {
+      sent.push("test-connection");
+      return route.fulfill({ json: { ok: true, agent: "anthropic", model: "claude-test", ms: 1, message: "sent" } });
+    });
+    await page.route("**/api/assistant/models", (route) => {
+      sent.push("models");
+      return route.fulfill({ json: { ok: true, agent: "anthropic", default: "", message: "", models: [] } });
+    });
+    await page.goto("/");
+    await openSettings(page);
+    await page.getByTestId("settings-section-assistant").click();
+    const off = "Turn the assistant on first; nothing is sent until you do.";
+    await expect(page.getByTestId("assistant-test-connection")).toBeDisabled();
+    await expect(page.getByTestId("assistant-test-connection")).toHaveAttribute("title", off);
+    await expect(page.getByTestId("assistant-test-connection-off")).toContainText(off);
+    await expect(page.getByTestId("assistant-models-refresh")).toBeDisabled();
+    await expect(page.getByTestId("assistant-models-off")).toContainText(off);
+    await shot(page, "off-nothing-sent");
+    expect(sent).toEqual([]);
   });
 
   test("Test connection is disabled until an agent is chosen (#368)", async ({ page }) => {

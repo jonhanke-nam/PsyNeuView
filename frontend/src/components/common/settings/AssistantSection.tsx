@@ -35,6 +35,9 @@ const AGENT_LABELS: Record<AgentType, string> = {
   claude_mcp: "Claude (your subscription, via Claude Desktop or Claude Code)",
 };
 
+/** Why Test connection and the model list wait (#369): the backend says the same. */
+const OFF_NOTHING_SENT = "Turn the assistant on first; nothing is sent until you do.";
+
 const AUTONOMY_LABELS: Record<Autonomy, string> = {
   answer: "Answer questions only, with no proposals of any kind",
   suggest: "Suggest edits as proposals you accept or reject",
@@ -475,10 +478,12 @@ function ModelChoice({
   const keySet = useAssistantStore((s) => s.keySet);
   const agent = settings.agent;
   const key = agentKey(agent);
+  // Only while on: turning the assistant on is the consent to sending (#369).
+  const on = settings.enabled;
   useEffect(() => {
-    if (agent.type !== "none") void loadModels();
-    // Fetch again when the agent, its address or the key changes; `agent.type` is in `key`.
-  }, [key, keySet, loadModels]);
+    if (on && agent.type !== "none") void loadModels();
+    // Fetch again when the agent, its address, the key or on/off changes; `agent.type` is in `key`.
+  }, [key, keySet, on, loadModels]);
 
   const current = models.forAgent === key ? models : null;
   const list = current?.list ?? [];
@@ -521,14 +526,19 @@ function ModelChoice({
         <Button
           kind="small"
           data-testid="assistant-models-refresh"
-          disabled={agent.type === "none" || models.loading}
-          title="Ask the service for its list of models again"
+          disabled={agent.type === "none" || !on || models.loading}
+          title={on ? "Ask the service for its list of models again" : OFF_NOTHING_SENT}
           onClick={() => void loadModels()}
         >
           Refresh
         </Button>
       </div>
-      {agent.type !== "none" && (current?.loading || current?.ok === false || notOffered) && (
+      {agent.type !== "none" && !on && (
+        <div data-testid="assistant-models-off" style={{ marginTop: 4, color: "var(--pnv-text-hint)" }}>
+          {OFF_NOTHING_SENT} The list is asked for once it is on.
+        </div>
+      )}
+      {agent.type !== "none" && on && (current?.loading || current?.ok === false || notOffered) && (
         <div data-testid="assistant-models-message" data-ok={String(current?.ok)} style={{ marginTop: 4, color: current?.loading ? "var(--pnv-text-hint)" : "var(--pnv-warning)" }}>
           {current?.loading
             ? "Fetching the list…"
@@ -697,6 +707,7 @@ function ApiKeySetting() {
   const setKey = useAssistantStore((s) => s.setKey);
   const clearKey = useAssistantStore((s) => s.clearKey);
   const agentType = useAssistantStore((s) => s.settings.agent.type);
+  const on = useAssistantStore((s) => s.settings.enabled);
   const testConnection = useAssistantStore((s) => s.testConnection);
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<ConnectionTest | null>(null);
@@ -753,13 +764,20 @@ function ApiKeySetting() {
         <Button
           kind="small"
           data-testid="assistant-test-connection"
-          disabled={agentType === "none" || testing}
-          title={agentType === "none" ? "Choose an agent first" : "Send one small request to check the key, the model and the network"}
+          disabled={agentType === "none" || !on || testing}
+          title={
+            agentType === "none" ? "Choose an agent first" : !on ? OFF_NOTHING_SENT : "Send one small request to check the key, the model and the network"
+          }
           onClick={() => void test()}
         >
           Test connection
         </Button>
       </div>
+      {agentType !== "none" && !on && (
+        <div data-testid="assistant-test-connection-off" style={{ marginTop: 4, color: "var(--pnv-text-hint)" }}>
+          {OFF_NOTHING_SENT} Test connection works once it is on.
+        </div>
+      )}
       {failed && <div style={{ ...errorStyle, marginTop: 4 }}>The key was not saved.</div>}
       {(testing || result) && (
         <div
