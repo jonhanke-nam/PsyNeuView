@@ -47,8 +47,9 @@ relevant code, as of this branch:
   started with `subprocess.Popen([sys.executable, WORKER_PATH, "--persistent"])`
   and no changes to the environment, working folder or permissions. The
   "cold" fallback (`_run_cold`) is `subprocess.run(...)` with
-  `cwd=<model's folder>`. The worker inherits every environment variable the
-  server has. **This "sandbox" protects the server from crashes and hangs.
+  `cwd=<model's folder>`. Before #179 the worker inherited every environment
+  variable the server had; it now gets an allow-listed environment
+  (`model_env.py`: no tokens, keys or credentials; known-gaps B2). **This "sandbox" protects the server from crashes and hangs.
   It is not a security boundary.** The containment experiment measures what
   a real one would cost.
 - **`sandbox_worker.load_module`** reads the file and executes it with
@@ -188,8 +189,9 @@ that test, because whatever the page can fetch, `curl` can fetch. So:
      bookmarks or a shared screenshot. `make dev` makes one secret for both
      servers, so `--reload` keeps it, and prints the dev server's link.
    - The variables are removed from the backend's environment as soon as
-     they are read, before any worker starts, so model runs (which inherit
-     the environment, known-gaps B2) never see the secret.
+     they are read, before any worker starts. Model runs also get only an
+     allow-listed environment (`model_env.py`, known-gaps B2, fixed), which
+     drops any name that looks like a secret, so they couldn't see it either.
    - **Tests**: the e2e harness gets the secret from `GET
      /api/test/page-secret`, which exists only with `PSYNEUVIEW_TEST_MODE=1`,
      and seeds each page with it (`e2e/test-base.ts`), as the user script
@@ -611,7 +613,14 @@ What remains with the sandbox in use:
 - **The warm worker** isn't sandboxed: it runs only while the sandbox
   isn't wanted (assistant off, nothing tracked).
 - **The fork server's parent** isn't sandboxed (it runs no model code).
-- **Time and memory** aren't limited by the sandbox; the task timeout is.
+- **Time, memory and processes** aren't limited by the sandbox itself. They
+  are limited for every model run, sandboxed or not (`run_limits.py`,
+  known-gaps B3): `setrlimit` in the task's own process (processor time and
+  process count everywhere, memory on Linux) and the server's watch of each
+  task's processes (memory per process on macOS, where the kernel refuses a
+  memory limit). A run over a limit is stopped with a plain-English reason.
+  The process limit counts all the user's processes, so it is approximate
+  while other programs start and end many.
 - **On Linux below Landlock ABI 6** a model can signal the user's other
   processes, and the names (not contents) in a folder above a denied file
   can be listed.
@@ -658,9 +667,13 @@ reviewers, not boundaries.
 | `assistant/keys.py` | The Keychain's `security` tool |
 
 - **The state file** (`~/.psyneuview/assistant-review.json`) is the record
-  of what is tracked. Deleting or truncating it reads as nothing tracked
-  (fail open); a file that can't be parsed fails closed instead (its
-  `.bak` is read first). The agent's tools can't reach it (hidden folder,
+  of what is tracked. It **fails closed**: a file that can't be parsed, or
+  a missing or truncated record once the assistant has written anything
+  (the `.written` marker beside it, `review.py`), is read from its `.bak`
+  if that is good, and otherwise as "state unknown", so nothing assistant-
+  written runs. Only deleting the record, its backup and the marker
+  together reads as nothing tracked; all three are protected like the
+  record. The agent's tools can't reach it (hidden folder,
   app folder). Model code can: while something is tracked, the model's
   own Python code in the worker can't write, move or remove it (layer 2),
   but a process the model starts can (`cp` a forged record, `rm` it and

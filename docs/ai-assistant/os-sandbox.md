@@ -87,15 +87,16 @@ files it changed (`~/.psyneuview/assistant/previous`) and its log.
 
 "Declared output folders" are the assistant's read-write folders plus
 `PSYNEUVIEW_OS_SANDBOX_WRITE_FOLDERS`. A model that writes next to itself
-(`open("results.csv", "w")` in the model's own folder) is refused unless
-that folder is declared. See "Decisions for the user" below.
+(`open("results.csv", "w")` in the model's own folder) works without
+declaring anything, since the model's own folder is writable (above); a
+declared folder is needed only to write somewhere else.
 
 ## Per platform
 
 | Where | Mechanism | Enforced | Not enforced | How it's detected |
 |---|---|---|---|---|
-| Mac app, macOS with a browser | Seatbelt, through `sandbox_init` (the call `sandbox-exec` makes), from a profile rendered per task (`render_sbpl`) | Reads, writes, renames and links by path; programs; network; Mach services; signals | Time and memory (the task timeout applies); a hard link made *before* a file was tracked, under another name (Seatbelt matches paths, not files; the import guard matches the file) | `os_sandbox_apply.py --probe`: applies a small policy in a process of its own and checks that a denied read, a write outside and a connect are refused and the task folder is writable |
-| Linux | Landlock (kernel 5.13+) for files and programs; a seccomp filter for sockets, `io_uring`, `memfd_create` and `execveat` | Reads and writes (by file, not path, so renames and links can't get round it), programs, network; with ABI 2+ links across folders are checked; with ABI 4+ TCP too; with ABI 6+ signals and abstract sockets | Time and memory; signals to the user's other processes below ABI 6 (Linux 6.12); the *names* in a folder above a denied file can be listed (Landlock's listing right is inherited by subfolders), not their contents | The probe, plus the Landlock ABI version from `landlock_create_ruleset` |
+| Mac app, macOS with a browser | Seatbelt, through `sandbox_init` (the call `sandbox-exec` makes), from a profile rendered per task (`render_sbpl`) | Reads, writes, renames and links by path; programs; network; Mach services; signals | Time and memory aren't limited by Seatbelt (the run limits are, below); a hard link made *before* a file was tracked, under another name (Seatbelt matches paths, not files; the import guard matches the file) | `os_sandbox_apply.py --probe`: applies a small policy in a process of its own and checks that a denied read, a write outside and a connect are refused and the task folder is writable |
+| Linux | Landlock (kernel 5.13+) for files and programs; a seccomp filter for sockets, `io_uring`, `memfd_create` and `execveat` | Reads and writes (by file, not path, so renames and links can't get round it), programs, network; with ABI 2+ links across folders are checked; with ABI 4+ TCP too; with ABI 6+ signals and abstract sockets | Time and memory aren't limited by Landlock (the run limits are, below); signals to the user's other processes below ABI 6 (Linux 6.12); the *names* in a folder above a denied file can be listed (Landlock's listing right is inherited by subfolders), not their contents | The probe, plus the Landlock ABI version from `landlock_create_ruleset` |
 | Windows via WSL2 | As Linux. WSL2's kernel is 5.15 or later, new enough; whether Landlock is enabled in its default build wasn't checked here (no Windows machine), so the probe decides | As Linux | As Linux | As Linux; the state says which ABI, or why not |
 | Containers (Docker, Apptainer) and CI | As Linux, inside the container. A runtime whose own seccomp profile refuses the Landlock calls leaves it unavailable, and the state says so | As Linux | As Linux | As Linux. CI (ubuntu-latest) asserts the sandbox is available, so it can't skip silently |
 | Native Windows | None. PsyNeuView isn't supported there (no `fork`, #187) | Nothing | Everything | The state is `unavailable` / `off_unavailable`: "PsyNeuView has no sandbox for native Windows; run it under WSL2 instead" |
@@ -303,9 +304,78 @@ failure (GilzenratModel, which calls `show_graph()` at module level) came
 from denying `fork`; it is allowed here. No shell is allowed, so a library
 that runs `dot` through `sh -c` would fail; none in use does.
 
+## The environment and the run limits (every run, sandboxed or not)
+
+**Environment** (`model_env.py`, review packet B2). Every process that runs
+model code (the warm worker, the fork server and its children, pool
+workers, the one-shot fallback, Learn jobs, the sandboxed converter) starts
+with an allow-listed environment, never the server's: `PATH`, `HOME`, the
+locale (`LANG`, `LC_*`), the temporary folders, Python's and the
+virtual environment's variables, the native-library and thread-count
+variables numpy and torch read, matplotlib's and numba's caches,
+Graphviz's, PsyNeuLink's (`PNL_*`) and the runner's own `PSYNEUVIEW_*`.
+Any name that looks like a secret is dropped whatever its prefix: a part
+`TOKEN`, `KEY`, `SECRET`, `PASSWORD`, `CREDENTIALS`, `AUTH`, `SESSION` and
+the like, or a credential prefix (`AWS_`, `GITHUB_`, `GH_`, `AZURE_`,
+`GOOGLE_`, `ANTHROPIC_`, `OPENAI_`, `HF_`, `SSH_` and others). Tested by
+planting secrets in the server's environment and reading `os.environ` from
+a model (`test_model_env.py`).
+
+**Limits** (`run_limits.py`, review packet B3). Each run is limited in
+memory per process, processor time and number of processes, on every
+platform, in two layers:
+
+| Layer | Where | What |
+|---|---|---|
+| `setrlimit`, in the task's own process before any model code runs | `os_sandbox_apply.apply_run_limits`, called from `sandbox_worker._handle_one_task` | Processor seconds (`RLIMIT_CPU`; the model gets a `RunLimitExceeded` at the limit, the kernel ends it 5 s later) and processes (`RLIMIT_NPROC`, counted over all the user's processes, so the allowance is added to what the user has now) everywhere; memory (`RLIMIT_DATA`) on Linux. Hard limits in a process that runs one task (a fork server's child, a pool worker, the one-shot fallback, a Learn job); soft ones, reset per task, in the warm worker |
+| The server's watch, from a thread, every 0.25 s | `run_limits.Watch`, in every way a task is sent, and the sandboxed converter | Each process's memory (macOS refuses any memory `setrlimit`), the number of processes the task started and their processor time together. Over a limit, it ends them all |
+
+A run a limit stopped answers 422 with `reason: "run_limit"` and a
+plain-English message naming the limit and the variable that raises it; it
+is never retried in the one-shot fallback. Defaults are generous: memory,
+half the computer's memory (at least 2 GB) per process,
+`PSYNEUVIEW_RUN_MEMORY_MB`, 256 MB up to all of it; processor time, 7200 s,
+`PSYNEUVIEW_RUN_CPU_SECONDS`, 2 to 86,400; processes, 256 more than the user
+has, `PSYNEUVIEW_RUN_PROCESSES`, 8 to 4096 (on Linux the kernel counts
+threads here). Limits apply to every run, whether or not the assistant is
+on. Tested with models that allocate without end, spin and fork over and
+over (`test_run_limits.py`), through the warm worker, the fork server, the
+pool and the one-shot fallback, with and without the sandbox.
+
+Known limits of the limits: the process count is approximate while other
+programs start and end many processes (it is counted once per 10 s); memory
+is per process, so many processes each under the limit can together use
+more (the process limit bounds how many); the watch samples every 0.25 s,
+so a fast allocation can overshoot the limit by what it allocates in that
+time; Windows has no `setrlimit` (the watch still holds there).
+
 ## Timing
 
-_Measured on macOS after the runner integration; see the PR for the table._
+Measured 2026-11-24 on an Apple M4 Max (36 GB, macOS 26.7) at the branch's
+head, through `POST /api/model/load` in the test client: the median of 10
+loads after a warm-up, a small model (`stroop_reference_basic.py`) and EGO
+(`Giallanza2024_ego_study2.py`). "Off" is the sandbox not in use; the fork
+and pool rows have an assistant-written file tracked, so each task runs in
+a fresh process. Other sessions were using the machine, so differences of
+about 0.1 s are noise.
+
+| Sandbox | Isolation | Small model | EGO |
+|---|---|---|---|
+| off | warm worker (nothing tracked) | 0.94 s | 2.96 s |
+| off | fork server | 0.67 s | 2.28 s |
+| off | pool | 0.68 s | 2.22 s |
+| on | fork server | 0.66 s | 2.31 s |
+| on | pool | 0.63 s | 2.20 s |
+
+The sandbox adds nothing measurable to a load in either mode. The run
+limits add nothing measurable either: loads with them on and off,
+alternated one by one in the same process, had medians of 0.74 s and
+0.76 s (warm worker, small model); in the table's runs fork and pool were
+within 0.1 s with and without them. EGO's worker peaked at about 1.5 GB,
+well inside the default memory limit (18 GB on this machine). The
+independent review's rounds 4 and 5 measured the same order: about 0.37 s
+per load or preview in fork mode, about 2.5 s for a pool-mode preview
+and 2.7 s for a Learn job.
 
 ## Tests
 
@@ -324,17 +394,18 @@ _Measured on macOS after the runner integration; see the PR for the table._
 
 ## Decisions for the user
 
-1. **Models that write next to themselves** are refused while sandboxed,
-   unless the folder is one of the assistant's read-write folders or is
-   declared. Allowing each model's own folder would keep such models
-   working, at the cost of letting a hostile model write files beside
-   itself (another model the user later opens, for one). Recommended:
-   keep refusing, and add a "declared output folders" list to Settings if
-   users hit it.
-2. **The model converter** (`/model/convert`, the MDF import's tidy-up)
-   runs model code in the server's own process, which isn't sandboxed.
-   A model the user converts can do anything the server can. Moving the
-   converter into the runner would close it; until then it is listed as
-   not covered.
+1. **Models that write next to themselves**: decided on #312, the model's
+   own folder is writable, so such models keep working. The cost is that a
+   hostile model can leave data files beside itself (never code: the rules
+   in "The model's own folder is writable" above still hold there).
+2. **The model converter** (`/model/convert`, the MDF import's tidy-up):
+   under the sandbox it runs the model in a sandboxed process of its own
+   (`converter._standard_source_in_sandbox`), not in the server, so a model
+   converted is held to the same boundary as one loaded. Only where the
+   sandbox isn't in use does it run in the server's own process, as every
+   run then runs unsandboxed. Its sandboxed process gets the allow-listed
+   environment and is watched against the run limits by the server (the
+   in-process `setrlimit` layer isn't applied there); its own timeout
+   (300 s) applies.
 3. **`sandbox_init` on macOS** is deprecated. Acceptable now; the App
    Sandbox helper is the plan B for the Mac app.

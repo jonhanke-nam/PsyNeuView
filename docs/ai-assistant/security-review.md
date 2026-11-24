@@ -89,9 +89,18 @@ are the ones the checklist refers to.
 
 - [ ] Containment tests from inside the runner: read a file outside the
       allowed area, write outside the output folder, open a socket, resolve a
-      name, read an environment variable, start a process, fork. All refused.
-- [ ] Time, memory and process limits enforced and tested.
-- [ ] A clean environment: no server variables, no tokens, no key.
+      name: all refused. Starting Python and Graphviz, and forking, are
+      allowed by design (`show_graph`, child Pythons; `os-sandbox.md`);
+      other programs are refused. Reads are a deny-list, not an allow-list
+      (`os-sandbox.md` "The policy").
+- [ ] Time, memory and process limits enforced and tested
+      (`run_limits.py`; `test_run_limits.py`: a model that allocates without
+      end, spins, or forks over and over is stopped with a plain-English
+      reason, through the warm worker, the fork server, the pool and the
+      one-shot fallback).
+- [ ] A clean environment: no server variables, no tokens, no key
+      (`model_env.py`; `test_model_env.py`: secrets planted in the server's
+      environment are invisible to a model in every way a run starts).
 - [ ] The runner's allowed read set is listed and justified
       (`containment.md`, profile).
 - [ ] Outside review completed and recorded below.
@@ -163,8 +172,8 @@ fails: the marker never appears.
 Built on the branch after the second re-check, to the issue's "Done when".
 Each attack is a test through the real route and the real worker in
 `backend/tests/test_assistant_runner_guard.py`, asserting a marker file the
-attack tries to create never appears. **Not yet re-checked by the
-independent reviewer** (placeholder row above).
+attack tries to create never appears. Re-checked by the independent
+reviewer at `5149e0da` (2026-11-22, the record above).
 
 | # | What | Change | Proof |
 |---|---|---|---|
@@ -181,8 +190,8 @@ independent reviewer** (placeholder row above).
 
 The first independent review of this follow-up found the following; each
 is now a test in `test_assistant_runner_guard.py` (sections 9 to 14) that
-fails on the branch before the fix. **Not yet re-checked** (placeholder
-row above).
+fails on the branch before the fix. Re-checked at `5149e0da` (2026-11-22,
+every round-1 attack re-run; the record above).
 
 | # | Severity | Finding | Fix | Proof |
 |---|---|---|---|---|
@@ -191,7 +200,7 @@ row above).
 | S3 | Medium | The write renamed the text into place before recording it as unreviewed; a failed save (a read-only state folder) left the assistant's text on disk untracked, and the first edit of a user's file had a window where it ran untracked | Recorded first; a failed record refuses the write (`cannot_record`) and nothing is written; a failed rename puts the entry back | `test_a_write_is_refused_when_the_review_state_cant_be_saved`, `test_a_write_whose_rename_fails_leaves_the_entry_as_it_was` |
 | S4 | Low to medium | The guard's state is reachable from model code (`__main__._guard`) and persisted across warm-worker tasks: setting its busy flag or clearing its tracked set switched it off for later tasks of other models | First fixed by putting the guard's state back before every task and restarting the worker when its functions were replaced; **the second round (R1) showed that was not enough**. Later tasks now run in a process no earlier model touched: while anything is tracked, each task runs in a child forked from a parent that has run no model code (round 3), and a model can't change the review record on disk (F1). Tampering within a model's own task is not defended | `test_a_model_cannot_switch_the_guard_off_for_later_tasks` (5 ways); R1's tests below (7 more) |
 | S5 | Low | The process check was by word: a shell glob, a redirect, a name in the environment, a name on stdin and `python -c "exec(open(...))"` ran | The text of a shell or interpreter (`-c`, `-e`, `os.system`, `shell=True`) and the environment (`env=`, `os.environ`) are checked for a tracked name, its module name and shell patterns matching it. Stdin and names built inside the child remain, documented | `test_a_process_whose_text_mentions_an_unreviewed_file_is_refused` (7 ways) |
-| S6 | Low | `os.open(name, dir_fd=d)` was resolved against the working folder; `ctypes` raises no audit event | A relative open with a tracked file's name that isn't that file from the working folder is checked as that file. `ctypes` documented as not covered | `test_an_open_relative_to_another_folder_is_refused_by_name` |
+| S6 | Low | `os.open(name, dir_fd=d)` was resolved against the working folder; `ctypes` raises no audit event | A relative open with a tracked file's name that isn't that file from the working folder is checked as that file. `ctypes` documented as not covered | `test_an_open_relative_to_another_folder_is_not_covered` (renamed from `..._is_refused_by_name` when F5 made it a record of what isn't covered) |
 | S7 | Low | A task naming a state file that doesn't exist read as nothing tracked | The worker reads the named state and the default one | `test_a_task_naming_a_missing_state_file_still_sees_the_tracked_files` |
 | S8 | Note | With the in-process step skipped, the guard's refusal surfaced as a failed request, not the 409 | Answered as the review 409 by the app | `test_the_guards_refusal_is_a_409_even_when_the_servers_step_is_skipped` |
 | S9 | Note | No test started a thread; the converter's hook didn't follow a thread the model started | Threads started from an in-process load carry the hook | `test_a_thread_in_the_worker_is_refused`, `test_a_thread_in_the_in_process_converter_is_refused` |
@@ -207,7 +216,7 @@ under another name made beforehand and then read as text; sourceless
 ### The second round of review of PR #310, and the fixes (#187)
 
 Each finding is a test in `test_assistant_runner_guard.py` (section 15)
-that fails at `5149e0da`. **Not yet re-checked** (round 3 placeholder above).
+that fails at `5149e0da`. Re-checked in round 3 at `dadca2c5` (the record above).
 
 | # | Severity | Finding | Fix | Proof | What remains |
 |---|---|---|---|---|---|
@@ -219,8 +228,8 @@ that fails at `5149e0da`. **Not yet re-checked** (round 3 placeholder above).
 ### The third round of review of PR #310, the fork server, and the fixes (#187)
 
 Each finding is a test in `test_assistant_runner_guard.py` (sections 16
-and 17); those for F1, F4 and F6 fail at `dadca2c5`. **Not yet re-checked**
-(round 4 placeholder above).
+and 17); those for F1, F4 and F6 fail at `dadca2c5`. Re-checked in round 4
+at `8482a0a6` (the record above).
 
 | # | Severity | Finding | Fix | Proof | What remains |
 |---|---|---|---|---|---|
@@ -240,7 +249,7 @@ and 17); those for F1, F4 and F6 fail at `dadca2c5`. **Not yet re-checked**
 This was the last in-process round: what is left needs the operating-system
 sandbox (#311; the threat model's section 7 lists what it must close).
 Tests are in `test_assistant_runner_guard.py`, section 18; G3's, G4's and
-G1's fail at `8482a0a6`. **Not yet re-checked** (round 5 placeholder above).
+G1's fail at `8482a0a6`. Re-checked in round 5 at `5835146a` (the record above).
 
 | # | Severity | Finding | Fix | Proof | What remains |
 |---|---|---|---|---|---|
