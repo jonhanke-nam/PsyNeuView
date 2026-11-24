@@ -37,6 +37,8 @@ export interface SettingsInfo {
   health?: unknown;
   /** The update state in short (#1304): status, last check, a ready update, the last automatic install. */
   updates?: Record<string, unknown>;
+  /** Whether model runs are sandboxed by the operating system (#311): state, mechanism, reason. */
+  os_sandbox?: { state: string; mechanism?: string | null; reason?: string | null; why?: string } & Record<string, unknown>;
 }
 
 export interface InstallCapabilities {

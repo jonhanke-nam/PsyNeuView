@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app import __version__
+from app.api.assistant_review_routes import router as assistant_review_router
+from app.api.assistant_routes import router as assistant_router
 from app.api.routes import router
 from app.api.ws import handle_websocket
 from app.frontend_files import FrontendFiles
@@ -27,6 +29,7 @@ from app.services import (
     startup_phases,
     working_copies,
 )
+from app.services.assistant import import_guard, review as assistant_review
 from app.services.sandbox import _get_warm_worker
 
 
@@ -164,6 +167,56 @@ def _prewarm_model_runner() -> None:
 
 app = FastAPI(title="PsyNeuView", version=__version__, lifespan=lifespan)
 
+
+def _review_409(path: str, message: str, reason: str) -> JSONResponse:
+    return JSONResponse(status_code=409, content={
+        "detail": message, "reason": reason, "path": path,
+        # The page asks /status for the content and its hash, shows it, and
+        # approves exactly that hash.
+        "approve": {"method": "POST", "url": "/api/assistant/review/approve",
+                    "body": {"path": path, "content_hash": "<sha256 of the content shown>"},
+                    "status": {"method": "POST", "url": "/api/assistant/review/status", "body": {"path": path}}},
+    })
+
+
+class _UnreviewedImportAs409:
+    """The import guard's own refusal, wherever it surfaces in a route (#187).
+
+    ``UnreviewedImport`` is deliberately not an ``Exception``, so a model
+    can't catch it, and so the app's exception handlers don't see it either.
+    The in-process loaders turn it into ``UnreviewedAssistantCode`` (the
+    usual 409); if that step was skipped or replaced, the refusal still
+    stands, and this answers it as the same 409 instead of a failed request.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+        started = False
+
+        async def sending(message):
+            nonlocal started
+            if message.get("type") == "http.response.start":
+                started = True
+            await send(message)
+
+        try:
+            await self.app(scope, receive, sending)
+        except import_guard.UnreviewedImport as exc:
+            if started:
+                raise
+            reason = assistant_review.REASON_UNREADABLE if exc.state_unreadable else assistant_review.REASON
+            await _review_409(exc.path, str(exc), reason)(scope, receive, send)
+
+
+# First added, so innermost: right around the routes, where the guard's
+# refusal comes from.
+app.add_middleware(_UnreviewedImportAs409)
+
 # Allow frontend dev servers on any port (SLOT-based multi-branch testing)
 app.add_middleware(
     CORSMiddleware,
@@ -177,6 +230,8 @@ app.add_middleware(
 app.add_middleware(RequestGuard)
 
 app.include_router(router, prefix="/api")
+app.include_router(assistant_router, prefix="/api")
+app.include_router(assistant_review_router, prefix="/api")
 
 
 @app.exception_handler(pnl_source_guard.PsyNeuLinkFileIsProtected)
@@ -189,6 +244,16 @@ async def _pnl_file_is_protected(request, exc: pnl_source_guard.PsyNeuLinkFileIs
         "detail": exc.ownership["message"], "reason": "psyneulink_source_protected",
         "path": exc.path, "kind": exc.ownership["kind"], "root": exc.ownership["root"],
     })
+
+from app.services import os_sandbox as _os_sandbox  # noqa: E402
+
+
+@app.exception_handler(_os_sandbox.SandboxRefused)
+async def _sandbox_refused(request, exc: _os_sandbox.SandboxRefused):
+    """A run that must be sandboxed and can't be (#311): refused, never run
+    unsandboxed, with the reason."""
+    return JSONResponse(status_code=409, content={"detail": str(exc), "reason": "sandbox_required"})
+
 
 @app.exception_handler(edit_lock.ModelIsViewOnly)
 async def _model_is_view_only(request, exc: edit_lock.ModelIsViewOnly):
@@ -206,6 +271,14 @@ async def _model_is_view_only(request, exc: edit_lock.ModelIsViewOnly):
         # protection line in the file) — all subclasses of ModelIsViewOnly.
         "detail": str(exc), "reason": exc.reason, "path": exc.model_path,
     })
+
+@app.exception_handler(assistant_review.UnreviewedAssistantCode)
+async def _assistant_code_unreviewed(request, exc: assistant_review.UnreviewedAssistantCode):
+    """A route refused to execute assistant-written content the user hasn't
+    approved (#179). 409 with a reason the page recognises, and the route that
+    approves it, from wherever the execution began: open, reload, run, learn,
+    show_graph, export, import."""
+    return _review_409(exc.path, str(exc), exc.reason)
 
 @app.exception_handler(Exception)
 async def _unhandled_error(request, exc: Exception):

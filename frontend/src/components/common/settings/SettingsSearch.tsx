@@ -8,16 +8,19 @@
  */
 import { forwardRef, useEffect, type RefObject } from "react";
 import { searchSettings, type SettingsSearchEntry } from "./settingsSearchIndex";
+import { REVEAL_SETTING_EVENT } from "./shared";
 
 interface Props {
   query: string;
   onQueryChange: (q: string) => void;
   inMacApp: boolean;
+  /** Whether this deployment has the AI assistant (#179); its settings are found only then. */
+  assistant?: boolean;
   onChoose: (entry: SettingsSearchEntry) => void;
 }
 
 export const SettingsSearchField = forwardRef<HTMLInputElement, Props>(function SettingsSearchField(
-  { query, onQueryChange, inMacApp, onChoose },
+  { query, onQueryChange, inMacApp, assistant = false, onChoose },
   ref,
 ) {
   return (
@@ -39,7 +42,7 @@ export const SettingsSearchField = forwardRef<HTMLInputElement, Props>(function 
           // Return takes you to the best match, not to the Close button.
           e.preventDefault();
           e.stopPropagation();
-          const best = searchSettings(query, { inMacApp }).matches[0];
+          const best = searchSettings(query, { inMacApp, assistant }).matches[0];
           if (best) onChoose(best);
         }
       }}
@@ -58,8 +61,8 @@ export const SettingsSearchField = forwardRef<HTMLInputElement, Props>(function 
   );
 });
 
-export function SettingsSearchResults({ query, inMacApp, onChoose }: Omit<Props, "onQueryChange">) {
-  const { matches, closest } = searchSettings(query, { inMacApp });
+export function SettingsSearchResults({ query, inMacApp, assistant = false, onChoose }: Omit<Props, "onQueryChange">) {
+  const { matches, closest } = searchSettings(query, { inMacApp, assistant });
   const item = (e: SettingsSearchEntry) => (
     <button
       key={e.id}
@@ -157,6 +160,8 @@ export function revealSettingControl(
 ): () => void {
   let cancelled = false;
   const started = Date.now();
+  // A folded group that holds it unfolds first.
+  window.dispatchEvent(new CustomEvent(REVEAL_SETTING_EVENT, { detail: control }));
   const look = () => {
     if (cancelled || !root) return;
     const el = root.querySelector<HTMLElement>(`[data-testid="${control}"]`);

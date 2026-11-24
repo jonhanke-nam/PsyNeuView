@@ -5,14 +5,17 @@
  * developer changes or needs: which PsyNeuView the Mac app runs, which
  * PsyNeuLink is installed, where the two are installed, the installed
  * PsyNeuLink's details, the managed PsyNeuLink copies and checkouts
- * (#1295), and the update options for your own checkouts (#1304).
+ * (#1295), the update options for your own checkouts (#1304), and typing
+ * the AI assistant's model id (#370).
  */
 
+import { useAssistantStore } from "@/stores/assistantStore";
 import { useUIStore } from "@/stores/uiStore";
 import { hasSettingsBridge } from "@/utils/macAppSettings";
 import type { PsyNeuLinkInfo } from "@/utils/pnlSources";
 import { DeveloperBadge } from "../DeveloperBadge";
 import { MacAppInstallSwitcher, MacAppReleaseCandidates } from "../MacAppSettingsSection";
+import { AssistantModelIdSetting } from "./AssistantSection";
 import { CheckoutUpdates } from "./CheckoutUpdates";
 import { InstallControls } from "./InstallControls";
 import { PnlDetails } from "./PnlDetails";
@@ -37,6 +40,7 @@ export function DeveloperSection({
   // One fetch of /api/locations for the two groups that read it.
   const locations = useLocations();
   const macInstall = useMacAppInstall();
+  const assistantAvailable = useAssistantStore((s) => s.available) === true;
   return (
     <>
       {/* Most useful first, the esoteric last (#95). */}
@@ -70,6 +74,13 @@ export function DeveloperSection({
 
       {/* Update options for your own checkouts (#1304). */}
       {capabilities?.enabled && <CheckoutUpdates />}
+
+      {/* Typing the AI assistant's model id, the escape from its list (#370). */}
+      {assistantAvailable && (
+        <Group id="assistant-model-id" title="AI assistant model" badge={<DeveloperBadge audience="developers" />}>
+          <AssistantModelIdSetting />
+        </Group>
+      )}
 
       {/* Developer mode, named for what it shows (#95), and last: it is the
           least used thing here. The group id stays, so links keep working. */}

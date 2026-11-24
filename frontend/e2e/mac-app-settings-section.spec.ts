@@ -201,7 +201,7 @@ test("inside the Mac app, Problem reports' two settings go through the bridge", 
   await page.getByTestId("settings-button").click();
   // Its own section, listed only inside the app, and open from the start.
   await expect(page.getByTestId("settings-sidebar").getByRole("button")).toHaveText([
-    "About", "General", "Appearance", "Tutorials and Voice", "Open menu", "Folders", "Keyboard shortcuts", "Problem reports", "Developer (advanced)",
+    "About", "General", "Appearance", "Tutorials and Voice", "Open menu", "Folders", "AI assistant", "Keyboard shortcuts", "Problem reports", "Developer (advanced)",
   ]);
   await page.getByTestId("settings-section-reports").click();
   await expect(page.getByTestId("settings-group-problem-reports-summary")).toHaveCount(0);

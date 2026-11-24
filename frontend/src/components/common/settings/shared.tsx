@@ -7,7 +7,14 @@
  * (docs/settings-etiquette.md).
  */
 
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+
+/**
+ * Sent by Settings search before it looks for a control (#271): a folded
+ * group that lists the control in its `controls` unfolds, so the search can
+ * take you to it.
+ */
+export const REVEAL_SETTING_EVENT = "pnv-reveal-setting";
 
 export function Group({
   id,
@@ -15,6 +22,7 @@ export function Group({
   summary,
   defaultFolded = false,
   badge,
+  controls,
   children,
 }: {
   /** Stable, for the test id `settings-group-<id>`. */
@@ -25,9 +33,20 @@ export function Group({
   defaultFolded?: boolean;
   /** A mark after the title, like the Developer badge (#1291). */
   badge?: ReactNode;
+  /** The test ids of the controls inside a folded group, so a search for one unfolds it. */
+  controls?: string[];
   children: ReactNode;
 }) {
   const [folded, setFolded] = useState(defaultFolded);
+  useEffect(() => {
+    if (!controls?.length) return;
+    const onReveal = (e: Event) => {
+      if (controls.includes((e as CustomEvent<string>).detail)) setFolded(false);
+    };
+    window.addEventListener(REVEAL_SETTING_EVENT, onReveal);
+    return () => window.removeEventListener(REVEAL_SETTING_EVENT, onReveal);
+    // The list is written out where the group is used; its contents say when it changes.
+  }, [controls?.join(" ")]);
   return (
     <div data-testid={`settings-group-${id}`} style={{ marginBottom: 18 }}>
       <button

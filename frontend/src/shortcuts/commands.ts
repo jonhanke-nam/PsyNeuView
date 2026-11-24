@@ -18,7 +18,9 @@ export type CommandId =
   | "inspector.focus"
   // #289: the canvas owns its viewport, so it registers these while mounted.
   | "graph.fit"
-  | "graph.actualSize";
+  | "graph.actualSize"
+  /** Stop the assistant's turn (#179). */
+  | "assistant.stop";
 
 const handlers = new Map<CommandId, () => void>();
 

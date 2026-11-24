@@ -160,7 +160,7 @@ describe("settings sections (#1290)", () => {
   it("puts every setting in a section that exists, with its label leading with it", () => {
     const labels: Record<string, string> = {
       about: "About", general: "General", appearance: "Appearance", "tutorials-voice": "Tutorials and Voice", "open-menu": "Open menu", folders: "Folders",
-      shortcuts: "Keyboard shortcuts", reports: "Problem reports", developer: "Developer",
+      assistant: "AI assistant", shortcuts: "Keyboard shortcuts", reports: "Problem reports", developer: "Developer",
     };
     for (const e of inventory) {
       expect(doc.sections, `${e.id}: section ${e.section}`).toContain(e.section);

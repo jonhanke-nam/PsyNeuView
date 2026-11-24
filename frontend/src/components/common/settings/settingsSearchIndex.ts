@@ -35,6 +35,8 @@ export interface SettingsSearchEntry {
   section: SettingsSectionId;
   control: string;
   macAppOnly: boolean;
+  /** In the AI assistant's section (#179): found only where the assistant is available. */
+  needsAssistant: boolean;
   /** For a control that isn't always shown: when it is. */
   shownWhen?: string;
   /** Where to go if the control isn't shown: a simple view's full form. */
@@ -42,6 +44,11 @@ export interface SettingsSearchEntry {
   keywords: string[];
   notes: string;
 }
+
+const needsAssistant = (id: string) => {
+  const s = SETTINGS_SECTIONS.find((x) => x.id === id);
+  return !!s && "needsAssistant" in s && !!s.needsAssistant;
+};
 
 const sectionLabel = (id: string) => SETTINGS_SECTIONS.find((s) => s.id === id)?.label ?? id;
 
@@ -62,6 +69,7 @@ export function buildSettingsIndex(text: string = inventoryText): SettingsSearch
       section,
       control,
       macAppOnly: e.home === "settings:mac-app",
+      needsAssistant: needsAssistant(section) || needsAssistant(e.section),
       shownWhen: e.shown_when,
       fallback: control !== e.control ? { section: e.section, control: e.control } : undefined,
       keywords: e.keywords ?? [],
@@ -95,9 +103,13 @@ export interface SettingsSearchResult {
 
 export function searchSettings(
   query: string,
-  opts: { inMacApp: boolean; index?: SettingsSearchEntry[] },
+  opts: { inMacApp: boolean; assistant?: boolean; index?: SettingsSearchEntry[] },
 ): SettingsSearchResult {
-  const index = (opts.index ?? SETTINGS_INDEX).filter((e) => opts.inMacApp || !e.macAppOnly);
+  // The AI assistant's settings stay hidden, like its section, where the
+  // deployment doesn't have it (#179).
+  const index = (opts.index ?? SETTINGS_INDEX).filter(
+    (e) => (opts.inMacApp || !e.macAppOnly) && (opts.assistant || !e.needsAssistant),
+  );
   const terms = norm(query).split(" ").filter(Boolean);
   if (terms.length === 0) return { matches: [], closest: [] };
   const scored = index.map((e) => {

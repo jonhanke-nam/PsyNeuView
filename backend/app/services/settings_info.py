@@ -86,6 +86,7 @@ class SettingsInfo(TypedDict):
     features: PnlFeaturesInfo
     deployment: DeploymentInfo
     updates: dict
+    os_sandbox: dict
 
 
 def _safe_version(pkg_name: str) -> Optional[str]:
@@ -394,7 +395,22 @@ def get_settings_info() -> SettingsInfo:
         # last automatic update's outcome (#1304), from the last check's record:
         # no network, so Report a Problem can read it any time.
         "updates": _updates_summary(),
+        # Whether model runs are sandboxed by the operating system (#311), for
+        # About and Report a Problem: never silently unsandboxed.
+        "os_sandbox": _os_sandbox_summary(),
     }
+
+
+def _os_sandbox_summary() -> dict:
+    from app.services import os_sandbox
+
+    try:
+        st = os_sandbox.status()
+        return {k: st.get(k) for k in ("state", "available", "wanted", "why", "mechanism", "platform",
+                                       "landlock_abi", "enforced", "not_enforced", "reason", "forced")}
+    except Exception:  # noqa: BLE001 — the versions must still be reported
+        logger.exception("settings_info: couldn't read the sandbox state")
+        return {"state": "unknown"}
 
 
 def _updates_summary() -> dict:

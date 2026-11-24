@@ -48,6 +48,7 @@ Canvas controls, #289), not a shortcut.
 | Save model | `model.save` | ⌘S | Ctrl+S | File | Apple HIG: File ▸ Save |
 | Undo | `history.undo` | ⌘Z | Ctrl+Z | Edit | Apple HIG: Edit ▸ Undo. Covers the whole model, so it also wins inside the code editor |
 | Redo | `history.redo` | ⇧⌘Z | Ctrl+Shift+Z | Edit | Apple HIG: Edit ▸ Redo |
+| Stop the assistant | `assistant.stop` | ⌘. | Ctrl+. | Edit | Apple HIG: ⌘. cancels an operation in progress ([#179](https://github.com/jonhanke-nam/PsyNeuView/issues/179)). Works while typing; passes the key on when the assistant isn't answering |
 | Show Inspector | `inspector.focus` | ⌘I | Ctrl+I | View | Apple HIG: Show Inspector (Xcode, Pages, Keynote) |
 | Show or hide the graph | `layout.toggleGraph` | ⌘1 | Ctrl+1 | View | Xcode: ⌘1–⌘9 show its navigators ([#191](https://github.com/jonhanke-nam/PsyNeuView/issues/191)). A browser keeps it |
 | Show or hide the code editor | `layout.toggleCode` | ⌘2 | Ctrl+2 | View | As above |

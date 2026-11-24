@@ -62,6 +62,15 @@ describe("searching Settings", () => {
     expect(ids("log in", true)).toContain("mac-launch-at-login");
   });
 
+  it("lists the AI assistant's settings only where the assistant is available (#179)", () => {
+    const found = (assistant: boolean) => [
+      ...searchSettings("assistant", { inMacApp: false, assistant }).matches,
+      ...searchSettings("assistant", { inMacApp: false, assistant }).closest,
+    ].map((e) => e.id);
+    expect(found(false).filter((id) => id.startsWith("assistant-"))).toEqual([]);
+    expect(found(true)).toContain("assistant-enabled");
+  });
+
   it("offers the closest when nothing matches every word", () => {
     expect(searchSettings("zzqx", { inMacApp: false })).toEqual({ matches: [], closest: [] });
     const r = searchSettings("voice zzqx", { inMacApp: false });

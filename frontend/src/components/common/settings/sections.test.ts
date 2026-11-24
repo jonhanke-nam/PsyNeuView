@@ -61,6 +61,10 @@ describe("Settings sections (#1290)", () => {
       "about", "general", "appearance", "tutorials-voice", "open-menu", "folders", "shortcuts", "developer",
     ]);
     expect(availableSectionOrDefault("reports", true)).toBe("reports");
+    // AI assistant (#179) only where the backend has the capability.
+    expect(availableSections(false, true).map((s) => s.id)).toContain("assistant");
+    expect(availableSectionOrDefault("assistant", false)).toBe("about");
+    expect(availableSectionOrDefault("assistant", false, true)).toBe("assistant");
     expect(availableSectionOrDefault("reports", false)).toBe("about");
     expect(availableSectionOrDefault("folders", false)).toBe("folders");
     expect(availableSectionOrDefault(null, false)).toBe("about");

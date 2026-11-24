@@ -30,11 +30,12 @@ def _run(monkeypatch, stderr, tmp_path):
     """Drive the cold-start path, which is where stderr is summarised.
 
     run_in_sandbox goes through a warm worker first and only falls back to a
-    subprocess, so patching subprocess.run there reaches nothing.
+    subprocess, so patching it there reaches nothing. The cold path starts its
+    worker through ``bounded_run.run`` (output read with a cap, #311).
     """
-    import subprocess
+    from app.services import bounded_run
 
-    monkeypatch.setattr(subprocess, "run", lambda *a, **k: _Result(1, stderr))
+    monkeypatch.setattr(bounded_run, "run", lambda *a, **k: bounded_run.Result(1, "", stderr))
     return _run_cold("introspect", {"file_path": str(tmp_path / "m.py")}, 30)
 
 

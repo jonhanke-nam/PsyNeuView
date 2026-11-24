@@ -1,0 +1,68 @@
+;; Containment experiment for the AI assistant (#179, Phase 0).
+;; A sandbox-exec profile for a PsyNeuLink model runner. Everything is denied
+;; unless listed here. run_experiment.py fills in the @...@ placeholders.
+;;
+;; Allowed:  read the Python install and the virtualenv, read the model file's
+;;           folder, write only to the scratch output folder, no network,
+;;           no child processes.
+;; Not a boundary claim: sandbox-exec is deprecated by Apple and this profile
+;; was tuned by hand. See ../containment.md for what it does and doesn't cover.
+
+(version 1)
+(deny default)
+
+;; --- What every process needs to start ------------------------------------
+;; The framework python3.13 re-executes Python.app/Contents/MacOS/Python, so
+;; the whole framework version folder is allowed for exec, not one binary.
+(allow process-exec (literal "/usr/bin/env") (literal "@PYTHON@")
+                    (subpath "@PYTHON_FRAMEWORK@"))
+(allow sysctl-read)
+(allow mach-lookup (global-name "com.apple.system.logger")
+                   (global-name "com.apple.system.notification_center")
+                   (global-name "com.apple.SecurityServer"))
+(allow ipc-posix-shm-read-data (ipc-posix-name-regex #"^/tmp/com\.apple\.csseed\."))
+(allow file-read-metadata)
+
+;; --- Code: Python framework, the virtualenv, system libraries --------------
+(allow file-read*
+  (literal "/")
+  (literal "/usr")
+  (literal "/private")
+  (subpath "/usr/bin")
+  (subpath "/bin")
+  (subpath "/Library/Frameworks/Python.framework")
+  (subpath "@VENV@")
+  (subpath "@VENV_REAL@")
+  (subpath "/usr/lib")
+  (subpath "/usr/share")
+  (subpath "/System/Library")
+  (subpath "/private/var/db/dyld")
+  (subpath "/System/Volumes/Preboot/Cryptexes/OS")
+  (literal "/dev/dtracehelper")
+  (subpath "/private/var/db/timezone")
+  (subpath "/Library/Preferences/Logging")
+  (literal "/dev/null")
+  (literal "/dev/urandom")
+  (literal "/dev/random")
+  (literal "/dev/zero")
+  (literal "/private/etc/localtime")
+  (literal "/etc")
+  (literal "/private/etc")
+  (literal "/private/etc/hosts")
+  (literal "/private/etc/passwd"))
+(allow file-write-data (literal "/dev/null"))
+(allow file-ioctl (literal "/dev/null") (literal "/dev/tty"))
+
+;; --- Experiment code and the model under test -------------------------------
+(allow file-read* (subpath "@PROBE_DIR@"))
+(allow file-read* (subpath "@MODEL_DIR@"))
+
+;; --- The only place the runner may write ------------------------------------
+(allow file-read* file-write* (subpath "@OUT@"))
+
+;; --- Explicitly refused (deny default already covers these; listed so the
+;;     intent is readable and the refusals are logged) -----------------------
+(deny network*)
+(deny process-fork)
+(deny file-read* (subpath "@HOME@/.ssh"))
+(deny file-read* (literal "@MARKER@"))

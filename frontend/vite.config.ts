@@ -73,10 +73,17 @@ export default defineConfig(({ command }) => ({
   server: {
     port: frontendPort,
     proxy: {
-      "/api": `http://localhost:${backendPort}`,
+      // Keep the page's own Host (changeOrigin: false). The string shorthand
+      // rewrites Host to the backend's port, and the assistant routes refuse a
+      // request whose Origin and Host differ (same_site.py, #367).
+      "/api": {
+        target: `http://localhost:${backendPort}`,
+        changeOrigin: false,
+      },
       "/ws": {
         target: `ws://localhost:${backendPort}`,
         ws: true,
+        changeOrigin: false,
       },
     },
   },
