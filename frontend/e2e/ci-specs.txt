@@ -23,6 +23,7 @@ diagnostics-load-messages.spec.ts
 diagnostics.spec.ts
 dialog-sweep.spec.ts
 drag-function-onto-mechanism.spec.ts
+drag-to-connect-pathway.spec.ts
 drag-to-connect-stage2.spec.ts
 drag-to-connect-stage3.spec.ts
 drag-to-connect.spec.ts
