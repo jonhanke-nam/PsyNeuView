@@ -17,6 +17,9 @@ on:
       - "Makefile"
       - "backend/reference_models/**"
       - "scripts/docs_surface_check.py"
+      # The What's tested pages are built during the docs build (#380).
+      - "scripts/test_map.py"
+      - "scripts/mkdocs_hooks.py"
       - ".github/workflows/docs-build.yml"
   workflow_dispatch: {}
 
