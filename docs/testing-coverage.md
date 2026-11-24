@@ -11,7 +11,7 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 |---|---|---|---|
 | Browser (Playwright) | 159 | 431 | 419 tests in 153 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 134 | 1203 | 1203 tests in 134 files |
+| Frontend unit (vitest) | 135 | 1207 | 1207 tests in 135 files |
 | Backend (pytest) | 188 | 1749 | 1749 tests in 188 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -34,7 +34,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Look and style conventions](#style) | 13 files, 31 tests | – | 8 files, 47 tests | – | 76 of 78 |
 | [Layout, views and compositions](#layout) | 21 files, 47 tests | – | 21 files, 151 tests | 5 files, 56 tests | 253 of 254 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 13 files, 78 tests | 18 files, 194 tests | 288 of 291 |
+| [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 14 files, 82 tests | 18 files, 194 tests | 292 of 295 |
 
 <a id="tutorials"></a>
 
@@ -1213,6 +1213,7 @@ No tests yet.
 | `exportFormats.test.ts` | Frontend unit | 8 | yes |  |  |
 | `useMenuInWindow.test.ts` | Frontend unit | 5 | yes | #109 | A 160×120 menu in a 1000×700 window (#109). |
 | `e2eDistFreshness.test.ts` | Frontend unit | 3 | yes |  |  |
+| `retrySummary.test.ts` | Frontend unit | 4 | yes | #359 | The "Passed only on retry" job summary (#359): scripts/retry-summary.mjs reads the merged Playwright JSON report and lists every test that failed first and passed on retry. |
 | `errorReveal.test.ts` | Frontend unit | 4 | yes | #1103 | Clicking a model error to jump to its line (#1103). |
 | `activityLog.test.ts` | Frontend unit | 17 | yes | #1287 | The activity log's rules (#1287): the cap, the order, `~` for the home folder, and no secrets — the value of a key that looks like a token or a password is never recorded, however it gets in. |
 | `diagnostics.test.ts` | Frontend unit | 16 | yes | #1287 | The diagnostics snapshot (#1287): its shape, what it reads from the stores, and that a server that can't be reached leaves `{error}` in its place rather than failing the whole call. |

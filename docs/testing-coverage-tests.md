@@ -4720,6 +4720,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - e2e refuses a stale frontend/dist › accepts a build newer than every source file · CI
 - e2e refuses a stale frontend/dist › refuses a build older than a source edit, and names the file · CI
 
+**`frontend/src/retrySummary.test.ts`** (Frontend unit (vitest))
+
+- retry summary (#359) › lists only the tests that passed on retry, with describe titles · CI · #359
+- retry summary (#359) › keeps the first line of the failed attempt's error, without colour codes · CI · #359
+- retry summary (#359) › writes a Markdown table, escaping pipes inside cells · CI · #359
+- retry summary (#359) › says so when nothing needed a retry · CI · #359
+
 **`frontend/src/stores/errorReveal.test.ts`** (Frontend unit (vitest))
 
 - revealModelError › starts at zero, which means nobody has asked yet · CI · #1103
