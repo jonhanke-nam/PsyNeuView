@@ -110,8 +110,12 @@ def run_model(
     use_sandbox: bool = True,
     execution_mode: str | None = None,
     log_nodes: list[str] | None = None,
+    on_progress=None,
 ) -> dict:
     """Execute a composition from a .py file with the given inputs.
+
+    ``on_progress({"trial": k, "seconds": s})`` is called as each trial
+    finishes, on the sandboxed path (#357).
 
     Args:
         file_path: Path to the .py model file.
@@ -132,7 +136,8 @@ def run_model(
             "inputs": inputs,
             "execution_mode": execution_mode,
             "log_nodes": log_nodes,
-        })
+            "stream_progress": on_progress is not None,
+        }, on_progress=on_progress)
     return _run_model_inprocess(file_path, composition_name, inputs, execution_mode)
 
 
@@ -617,6 +622,7 @@ def _get_input_nodes_inprocess(file_path: str, composition_name: str) -> dict:
         # learning machinery (e.g. dropped STATE and surfaced [BIAS] on the
         # Giallanza EGO model, #363).
         from app.services.pathway_learning import is_generated_learning_node
+        from app.services.sandbox_worker import input_port_shapes
 
         input_nodes = []
         for node in comp.get_nodes_by_role(pnl.NodeRole.INPUT):
@@ -635,7 +641,9 @@ def _get_input_nodes_inprocess(file_path: str, composition_name: str) -> dict:
             input_nodes.append({
                 "name": node.name,
                 "varName": var_name or node.name,
-                "shape": shape,
+                "shape": shape,  # the first port's, as before
+                # Every input port's name and shape, in order (#358).
+                "ports": input_port_shapes(node),
             })
 
         return {"inputNodes": input_nodes}

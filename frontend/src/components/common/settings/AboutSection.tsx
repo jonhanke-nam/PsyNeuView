@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { downloadDiagnostics } from "@/utils/diagnostics";
-import { macAppLine, psyneuviewVersionLine } from "@/utils/appUpdateNotice";
+import { lastCheckLine, macAppLine, psyneuviewVersionLine } from "@/utils/appUpdateNotice";
 import {
   getMacAppSettings,
   hasSettingsBridge,
@@ -60,6 +60,11 @@ export function AboutSection({ info, loadError }: { info: SettingsInfo | null; l
           {macAppLine(mac?.app) && (
             <div data-testid="about-mac-app">
               <Row label="Mac app" value={macAppLine(mac?.app)!} />
+            </div>
+          )}
+          {lastCheckLine(mac) && (
+            <div data-testid="about-mac-last-check">
+              <Row label="Last checked for updates" value={lastCheckLine(mac)!} />
             </div>
           )}
           <RunningFrom {...running} />

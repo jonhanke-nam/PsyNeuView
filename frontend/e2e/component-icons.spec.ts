@@ -21,6 +21,8 @@ async function open(page: Page, colorScheme: "light" | "dark") {
   await page.emulateMedia({ colorScheme });
   await page.addInitScript((favs) => {
     localStorage.setItem("psyneuview_palette_favorites", JSON.stringify(favs));
+    // #372: the strip shows favourites only with this setting on.
+    localStorage.setItem("psyneuview.components.stripShortcuts", "true");
   }, FAVOURITES);
   await page.goto("/");
   const palette = page.getByTestId("palette-sidebar");

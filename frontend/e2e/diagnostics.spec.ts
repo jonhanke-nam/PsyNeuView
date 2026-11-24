@@ -60,6 +60,15 @@ test.describe("Diagnostics", { tag: "@ci" }, () => {
     await page.getByTestId("tab-run").click();
     await page.getByRole("button", { name: /Run Model/ }).click();
     await expect(page.getByText(/single_transfer\b.*trial/).first()).toBeVisible({ timeout: 30_000 });
+    // Live progress (#357) shows trial text while the run is still going: wait
+    // until the run has finished and been recorded before taking the snapshot.
+    await expect
+      .poll(async () => page.evaluate(async () => {
+        const s = await (window as any).__pnvDiagnostics();
+        return (s.activity as { kind: string; text: string }[])
+          .filter((e) => e.kind === "run").some((e) => /^Run (finished|failed): /.test(e.text));
+      }), { timeout: 30_000 })
+      .toBe(true);
 
     const snap: Snapshot = await page.evaluate(() => (window as any).__pnvDiagnostics());
     expect(snap.version).toBe(1);

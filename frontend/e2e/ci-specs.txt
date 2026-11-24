@@ -57,6 +57,7 @@ gsc-edge-ids.spec.ts
 gsc-row-selects-edge.spec.ts
 harness.spec.ts
 help-keyboard-shortcuts.spec.ts
+icon-strip-shortcuts.spec.ts
 inspector-condition-undo.spec.ts
 inspector-legend.spec.ts
 io-role-rows.spec.ts
@@ -74,10 +75,12 @@ load-time-display.spec.ts
 local-checkout-empty-folder.spec.ts
 lock-in-checkout.spec.ts
 mac-app-settings-section.spec.ts
+mac-auto-install-updates.spec.ts
 mdf-gap-warnings.spec.ts
 menus-above-walkthrough-ring.spec.ts
 model-lock.spec.ts
 modulatory-param-edges.spec.ts
+multiport-labels-learn.spec.ts
 narration-matches-bar.spec.ts
 narration-voice-setting.spec.ts
 nested-cluster-frames.spec.ts
@@ -117,10 +120,12 @@ reference-models-runnable.spec.ts
 restore-saved-layout.spec.ts
 round-trips.spec.ts
 run-array-inputs.spec.ts
+run-followups.spec.ts
 run-multiport-inputs.spec.ts
 run-panel-grouping.spec.ts
 run-record-yaml.spec.ts
 run-set-survives-edit.spec.ts
+run-sticky-node-headers.spec.ts
 run-trial-seconds.spec.ts
 save-copy-sidecars.spec.ts
 saves-in-history.spec.ts
@@ -137,6 +142,7 @@ show-ports.spec.ts
 sidecar-placement.spec.ts
 spline-straightness.spec.ts
 stale-run-results.spec.ts
+step-highlight.spec.ts
 stroop-lc-reference.spec.ts
 style-conventions.spec.ts
 style-sizes.spec.ts

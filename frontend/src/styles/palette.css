@@ -94,12 +94,22 @@
   --pnv-trace-value: #1b5e20;
   --pnv-trace-tint: #f0fff0;
   --pnv-trace-border: #b6e0b6;
-  /* The node firing at the current trace step, on the canvas: its outline,
-     its execution-count badge and the glow round it; and the value pill on
-     it, a shade deeper than the node's own tint so it reads on it. */
-  --pnv-trace-active: #4caf50;
-  --pnv-trace-glow: 0 0 12px rgba(76, 175, 80, 0.4);
-  --pnv-trace-pill: #e6f4e6;
+  /* The nodes active at the current trace step (#365): the selection-blue
+     family, never a role colour, so a firing node can't be read as an input
+     (show_graph's green). On the canvas: a pale-blue fill, a blue ring
+     outside the role outline (which keeps show_graph's colour), a soft blue
+     glow, the execution-count badge and the value pill. In the current trial
+     card and Run State: the active rows and chips. Defined from the
+     selection tokens, so they follow them in every theme. */
+  --pnv-step-active-fill: var(--pnv-selection-fill);
+  --pnv-step-active-ring: var(--pnv-selection-border);
+  --pnv-step-active-text: var(--pnv-selection-text);
+  --pnv-step-active-glow: 0 0 10px color-mix(in srgb, var(--pnv-selection-border) 45%, transparent);
+  /* An active node's rows in the current trial card, a shade deeper than the
+     card's own selection fill so they read on it. */
+  --pnv-step-active-row: color-mix(in srgb, var(--pnv-selection-border) 14%, var(--pnv-selection-fill));
+  /* A row in the current trial card for a node not reached yet this trial. */
+  --pnv-step-pending-opacity: 0.5;
 
   /* A layer's values drawn as a grid of shaded cells (#1387): in the Run
      panel's results, Run State and the value pill. Low is light, high is

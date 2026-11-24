@@ -133,6 +133,7 @@ describe("settings inventory (#1279)", () => {
     // NativeWindowPolicyTests keeps a copy of these. Change all three together.
     const keys = inventory.filter((e) => e.home === "settings:mac-app").map((e) => e.bridge_key);
     expect(keys.sort()).toEqual([
+      "autoInstallUpdates",
       "autoRestart",
       "install",
       "launchAtLogin",

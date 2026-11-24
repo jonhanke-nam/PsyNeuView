@@ -205,6 +205,23 @@ settings:
     control: setting-mac-launch-at-login
     bridge_key: launchAtLogin
 
+  - id: mac-auto-install-updates
+    label: General ▸ Updates ▸ Install updates automatically (when you quit)
+    keywords: ["update", "automatic", "auto-update", "upgrade", "sparkle"]
+    home: settings:mac-app
+    section: general
+    storage: Mac app UserDefaults (SUAutomaticallyUpdate, Sparkle's automaticallyDownloadsUpdates)
+    control: setting-mac-auto-install-updates
+    bridge_key: autoInstallUpdates
+    notes: >-
+      Consent first, default off (PsyNeuView-MacApp#79). The page asks once,
+      "Install PsyNeuView updates automatically when you quit?" (Yes / No, ask
+      me each time); the answer, or changing this switch, is kept by the app
+      and never asked again. Off, a ready update shows a quiet toolbar notice
+      with Install and restart; on, it installs on quit and the next launch
+      says "Updated to X". Apps that can't update themselves send no value,
+      and the switch is hidden. Release candidates stay in Developer.
+
   - id: project-folder
     label: Folders ▸ My Project Folder
     keywords: ["directory", "location", "workspace"]
@@ -656,6 +673,20 @@ settings:
       setting; it is no longer remembered, and the old remembered value
       (psyneuview_palette_compact) is not read, so nobody stays stuck on the
       strip. Which sections are unfolded is still remembered by the panel.
+
+  - id: components-strip-shortcuts
+    label: Appearance ▸ Components panel ▸ Show favourite and recently used components in the icon strip
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.components.stripShortcuts); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-components-strip-shortcuts
+    notes: >-
+      Off by default (#372): the icon strip shows just the four category
+      menus, under a small "All" heading. On, your favourite and
+      recently used components sit at the bottom of the strip, under a small
+      "Recent" heading, favourites first and each once. The word
+      list's Favorites and Recently Used sections are not affected. A stored
+      choice is kept.
 
   - id: allow-blank-screen
     label: Appearance ▸ Panels ▸ Allow a blank screen

@@ -47,6 +47,7 @@ Escape, which every row has.
 | Move My Project Folder | dialog | `common/settings/FoldersSection.tsx` | `project-folder-move-dialog` | Settings ▸ Folders ▸ Move… | ×, click outside, Cancel (Settings stays open) |
 | Switch to (the PsyNeuLink list) | menu | `common/settings/SwitchListbox.tsx` | `pnl-switch-listbox` | Settings ▸ Developer ▸ Which PsyNeuLink is installed ▸ Switch to | click outside, a pick (Settings stays open) |
 | New to PsyNeuView? (the orientation offer) | dialog | `common/OrientationOffer.tsx` | `orientation-offer` | the first launch in a browser | ×, click outside, any of its three answers |
+| Install updates automatically? (the one-time offer) | dialog | `common/AutoInstallOffer.tsx` | `auto-install-offer` | the first launch of the Mac app after PsyNeuView-MacApp#79, until answered | ×, click outside (both: asked again next launch), either answer |
 | Open menu | menu | `layout/Toolbar.tsx` | `open-menu-list` | Open ▾ | the Open button, click outside |
 | New model | dialog | `common/PromptModal.tsx` | `prompt-modal` | Open ▾ New Model | ×, click outside, Cancel, OK |
 | Open a model | dialog | `common/FileBrowserModal.tsx` | `file-browser-modal` | Open ▾ Open from path… (in a browser) | ×, click outside, Cancel, a pick |

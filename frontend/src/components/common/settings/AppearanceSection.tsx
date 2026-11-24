@@ -142,6 +142,9 @@ export function AppearanceSection() {
       </Group>
       <Group id="components-panel" title="Components panel">
         <ComponentsStartRow />
+        <div style={{ marginTop: 14 }}>
+          <StripShortcutsRow />
+        </div>
       </Group>
       <Group id="panels" title="Panels">
         <AllowBlankScreenRow />
@@ -347,6 +350,31 @@ function ComponentsStartRow() {
         ))}
       </select>
     </div>
+  );
+}
+
+// #372: favourites and recents in the icon strip, off by default.
+function StripShortcutsRow() {
+  const show = usePaletteStore((s) => s.showStripShortcuts);
+  const setShow = usePaletteStore((s) => s.setShowStripShortcuts);
+  return (
+    <label style={{ fontSize: "var(--pnv-fs-13)", display: "flex", gap: 8, alignItems: "flex-start" }}>
+      <input
+        type="checkbox"
+        data-testid="setting-components-strip-shortcuts"
+        checked={show}
+        onChange={(e) => setShow(e.target.checked)}
+        style={{ marginTop: 3 }}
+      />
+      <span>
+        Show favourite and recently used components in the icon strip
+        <span style={{ ...mutedStyle, display: "block" }}>
+          They sit at the bottom of the strip, under the category menus, with
+          a small "Favourites &amp; recent" heading. Off, the strip shows just
+          the four category menus.
+        </span>
+      </span>
+    </label>
   );
 }
 

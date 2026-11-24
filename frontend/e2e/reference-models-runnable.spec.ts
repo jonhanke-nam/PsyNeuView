@@ -67,7 +67,7 @@ test.describe("reference models: load + run without crashing", { tag: "@ci" }, (
       // Run a trial. Allow a graceful backend error; forbid a frontend crash.
       await page.getByRole("button", { name: "Run", exact: true }).click();
       const runDone = page
-        .waitForResponse((r) => r.url().includes("/api/model/run"), { timeout: 120000 })
+        .waitForResponse((r) => r.url().endsWith("/api/model/run"), { timeout: 120000 })
         .catch(() => null);
       await page.getByRole("button", { name: /Run Model/ }).click();
       await runDone;

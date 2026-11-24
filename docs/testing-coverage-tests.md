@@ -1180,6 +1180,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - the lock items are hidden for a protected PsyNeuLink file (#1309) · CI · #1309
 - your own checkout: the editing badge, and protecting it (#1305, for the docs) · CI · #1305
 
+**`frontend/e2e/multiport-labels-learn.spec.ts`** (Browser (Playwright))
+
+- the grid names a multi-port node's elements per port · CI · #358
+- the Learn panel edits each input port and sends one array per port · CI · #358
+
 **`frontend/e2e/node-name-special-characters.spec.ts`** (Browser (Playwright))
 
 - Node names with special characters › render without crashing, and the reference model can be reset · CI · #1236
@@ -1284,6 +1289,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - toSideBySide (#1348) › pairs a removal with the addition that replaced it · CI · #1348
 - toSideBySide (#1348) › leaves a blank on the shorter side · CI · #1348
 - toSideBySide (#1348) › keeps a gap as a gap · CI · #1348
+
+**`frontend/src/utils/portElementLabels.test.ts`** (Frontend unit (vitest))
+
+- portElementLabels (#358) › names each port's elements from the sidecar's per-port labels · CI · #358
+- portElementLabels (#358) › prefers the model's own port labels · CI · #358
+- portElementLabels (#358) › falls back to positions when the labels don't fit the port · CI · #358
+- portElementLabels (#358) › applies the node-level shorthand to the first port only · CI · #358
 
 **`frontend/src/utils/previewBreak.test.ts`** (Frontend unit (vitest))
 
@@ -1830,6 +1842,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - trial inputs are typed as arrays and sent as typed · CI · #330
 
+**`frontend/e2e/run-followups.spec.ts`** (Browser (Playwright))
+
+- Run and Learn follow-ups (#357) › a run in flight shows which trial it is on · CI · #357
+- Run and Learn follow-ups (#357) › Learn shows each trial's time · CI · #357
+- Run and Learn follow-ups (#357) › a saved run says whether it matches the open file · CI · #357
+- Run and Learn follow-ups (#357) › arranged by node, the sticky Run row never covers a node header · CI · #357
+
 **`frontend/e2e/run-multiport-inputs.spec.ts`** (Browser (Playwright))
 
 - a two-port input node takes one array per port · CI · #332
@@ -1845,6 +1864,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 **`frontend/e2e/run-set-survives-edit.spec.ts`** (Browser (Playwright))
 
 - a parameter edit keeps the run set the learner chose · CI · #57
+
+**`frontend/e2e/run-sticky-node-headers.spec.ts`** (Browser (Playwright))
+
+- Run panel sticky node headers (#363) › arranged by node, the current node's header stays just below the Run row · CI · #363
 
 **`frontend/e2e/run-trial-seconds.spec.ts`** (Browser (Playwright))
 
@@ -1947,12 +1970,25 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - formatMetricValue › switches to scientific for a value that has fallen near zero · CI
 - formatMetricValue › says n/a for nothing · CI
 
+**`frontend/src/utils/learnPorts.test.ts`** (Frontend unit (vitest))
+
+- Learn panel grids for multi-port nodes (#358) › edits every input port of a multi-port input node · CI · #358
+- Learn panel grids for multi-port nodes (#358) › keeps one port for a one-port node and for targets · CI · #358
+- Learn panel grids for multi-port nodes (#358) › sends a multi-port trial as one array per port · CI · #358
+- Learn panel grids for multi-port nodes (#358) › sends a one-port trial as its vector, as before · CI · #358
+- Learn panel grids for multi-port nodes (#358) › lays a declared multi-port trial out across the ports · CI · #358
+
 **`frontend/src/utils/runEcho.test.ts`** (Frontend unit (vitest))
 
 - echoesSubmitted › is true when the node passed its input through unchanged · CI · #49
 - echoesSubmitted › is false when the node changed it (slope 2, or a Hopfield update) · CI · #49
 - echoesSubmitted › is false for a node nothing was submitted to · CI · #49
 - echoesSubmitted › matches a session-suffixed log name · CI · #49
+
+**`frontend/src/utils/runProgress.test.ts`** (Frontend unit (vitest))
+
+- formatRunProgress (#357) › reads trials finished of the total, and the last one's time · CI · #357
+- formatRunProgress (#357) › leaves the time out until a trial has one · CI · #357
 
 **`frontend/src/utils/timeline.test.ts`** (Frontend unit (vitest))
 
@@ -2302,6 +2338,17 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - test_execution_modes_endpoint_advertises_default_run: The Run selector seeds itself from `defaultRun`; Learn uses defaultLearn. · CI · #764
 - test_default_run_mode_is_actually_available: A default nothing can run under would break every omitted-mode request. · CI · #764
 - test_run_request_accepts_execution_mode_field: RunModelRequest gained the field LearnModelRequest already had. · CI · #764
+
+**`backend/tests/test_run_progress.py`** (Backend (pytest))
+
+- test_the_timing_hook_reports_each_finished_trial · CI · #357
+- test_a_failing_progress_callback_never_fails_the_run · CI · #357
+- test_the_sandboxed_run_streams_one_event_per_trial · CI · #357
+- test_progress_entries_live_only_while_their_run_does · CI · #357
+- test_a_run_with_a_progress_id_succeeds_and_cleans_up · CI · #357
+- test_mean_trial_seconds_averages_each_trial_over_the_epochs · CI · #357
+- test_learn_returns_one_time_per_trial · CI · #357
+- test_autodiff_learn_returns_one_time_per_trial · CI · #357
 
 **`backend/tests/test_run_warnings_contract.py`** (Backend (pytest))
 
@@ -2819,6 +2866,17 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - the Mac app's Settings… (⌘,) opens this Settings, even before the page is ready · CI · #1279
 - inside the Mac app, Problem reports' two settings go through the bridge · CI · #1279
 
+**`frontend/e2e/mac-auto-install-updates.spec.ts`** (Browser (Playwright))
+
+- Install updates automatically (PsyNeuView-MacApp#79) › asks once, and Yes turns it on · CI
+- Install updates automatically (PsyNeuView-MacApp#79) › No, ask me each time leaves it off · CI
+- Install updates automatically (PsyNeuView-MacApp#79) › Escape closes the question without answering it · CI
+- Install updates automatically (PsyNeuView-MacApp#79) › Settings ▸ General ▸ Updates has the one switch, and About says when it last checked · CI
+- Install updates automatically (PsyNeuView-MacApp#79) › off: an available update offers What's new and Install and restart · CI
+- Install updates automatically (PsyNeuView-MacApp#79) › on: a downloaded update says it installs when you quit, with Restart now · CI
+- Install updates automatically (PsyNeuView-MacApp#79) › after an update, says what it updated to until OK · CI
+- Install updates automatically (PsyNeuView-MacApp#79) › in a browser, none of it shows · CI
+
 **`frontend/e2e/project-folder-move.spec.ts`** (Browser (Playwright))
 
 - Move… carries the models and sidecars, and lists them from the new place · CI · #1295
@@ -2850,6 +2908,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - Settings ▸ About dates (#15) › adds the release date only for the copy included with the app · CI · #15
 - the notice's words › names the waiting version · CI
 - the notice's words › says when the waiting version is a release candidate · CI
+- ready, available and updated notices (PsyNeuView-MacApp#79) › says ready when the update has downloaded, available otherwise · CI
+- ready, available and updated notices (PsyNeuView-MacApp#79) › says what the app updated to after a restart, so nothing changes silently · CI
+- ready, available and updated notices (PsyNeuView-MacApp#79) › words the ready notice plainly · CI
+- ready, available and updated notices (PsyNeuView-MacApp#79) › Later puts off the ready notice too · CI
+- ready, available and updated notices (PsyNeuView-MacApp#79) › says when the app last checked, and nothing for an app that doesn't say · CI
 
 **`frontend/src/utils/macAppSettings.test.ts`** (Frontend unit (vitest))
 
@@ -2860,6 +2923,9 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - Mac app settings bridge (PsyNeuView-MacApp#200) › adopts the app's developer mode, and reports the toggle back · CI
 - Mac app settings bridge (PsyNeuView-MacApp#200) › sets the report settings as text (PsyNeuView-MacApp#202) · CI
 - Mac app settings bridge (PsyNeuView-MacApp#200) › turns release candidates on through the app · CI
+- automatic install over the bridge (PsyNeuView-MacApp#79) › sends the setting, the offer's answer, Restart now and the dismissal · CI
+- automatic install over the bridge (PsyNeuView-MacApp#79) › dismissing is harmless with an app that doesn't know the op · CI
+- automatic install over the bridge (PsyNeuView-MacApp#79) › hears the update-ready event with its version · CI
 
 **`frontend/src/utils/revealPath.test.ts`** (Frontend unit (vitest))
 
@@ -3465,6 +3531,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - a checkout's status line in Developer › says uncommitted changes mean no pull · CI
 - a checkout's status line in Developer › passes on a diverged branch's sentence · CI
 - a checkout's status line in Developer › reports the last pull at launch · CI
+
+**`frontend/src/utils/recordVersion.test.ts`** (Frontend unit (vitest))
+
+- recordVersion (#357) › matches when the open source hashes the same · CI · #357
+- recordVersion (#357) › is from an earlier version when the hash differs · CI · #357
+- recordVersion (#357) › is from another file when the paths differ · CI · #357
+- recordVersion (#357) › can't tell for an unhashed record or before the open source is hashed · CI · #357
 
 **`backend/tests/test_app_config.py`** (Backend (pytest))
 
@@ -4724,6 +4797,12 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - @smoke harness › mutatingTest fixture reaches /api/test/reset · CI · #147
 
+**`frontend/e2e/icon-strip-shortcuts.spec.ts`** (Browser (Playwright))
+
+- Components icon strip (#372) › a fresh strip shows the All heading, four categories and no shortcuts · CI · #372
+- Components icon strip (#372) › with the setting on, favourites and recents sit below the categories under their heading · CI · #372
+- Components icon strip (#372) › a row's empty star shows on hover or focus; a starred row keeps its star · CI · #372
+
 **`frontend/e2e/notification-dwell.spec.ts`** (Browser (Playwright))
 
 - success toast dwells past the old 2s window · CI · #879
@@ -4743,6 +4822,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - round trips between the graph and the code (#319) › rename a node: in the Inspector, to the code and back; and in the code, to the graph · CI · #319
 - round trips between the graph and the code (#319) › connect: dragged in the graph, to the code and back; and typed in the code, to the graph · CI · #319
 - round trips between the graph and the code (#319) › a parameter: changed in the Inspector, to the code and back; and in the code, to the Inspector · CI · #319
+
+**`frontend/e2e/step-highlight.spec.ts`** (Browser (Playwright))
+
+- step highlight (#365) › graph and current trial card highlight the same nodes in the selection blue · CI · #365
+- step highlight (#365) › a collapsed composition lights up when a node inside it runs (EGO) · CI · #365
 
 **`frontend/e2e/trace-autoplay-label.spec.ts`** (Browser (Playwright))
 
@@ -4795,12 +4879,25 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - e2e refuses a stale frontend/dist › accepts a build newer than every source file · CI
 - e2e refuses a stale frontend/dist › refuses a build older than a source edit, and names the file · CI
 
+**`frontend/src/retrySummary.test.ts`** (Frontend unit (vitest))
+
+- retry summary (#359) › lists only the tests that passed on retry, with describe titles · CI · #359
+- retry summary (#359) › keeps the first line of the failed attempt's error, without colour codes · CI · #359
+- retry summary (#359) › writes a Markdown table, escaping pipes inside cells · CI · #359
+- retry summary (#359) › says so when nothing needed a retry · CI · #359
+
 **`frontend/src/stores/errorReveal.test.ts`** (Frontend unit (vitest))
 
 - revealModelError › starts at zero, which means nobody has asked yet · CI · #1103
 - revealModelError › bumps on each request · CI · #1103
 - revealModelError › keeps bumping, so repeated clicks each re-trigger the jump · CI · #1103
 - revealModelError › is independent of the error line itself · CI · #1103
+
+**`frontend/src/stores/stripShortcuts.test.ts`** (Frontend unit (vitest))
+
+- Favourites and recents in the icon strip (#372) › are hidden by default · CI · #372
+- Favourites and recents in the icon strip (#372) › keeps a stored choice across a reload · CI · #372
+- Favourites and recents in the icon strip (#372) › ignores anything else stored · CI · #372
 
 **`frontend/src/stores/uiStoreInputs.test.ts`** (Frontend unit (vitest))
 
@@ -4875,6 +4972,21 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - nodeSelector › leaves no raw newline, quote or backslash in the value for %j · CI · #1236
 - nodeSelector › leaves an ordinary name alone · CI · #1236
+
+**`frontend/src/utils/stepHighlight.test.ts`** (Frontend unit (vitest))
+
+- ranAtStep (#365) › is false with no step · CI · #365
+- ranAtStep (#365) › matches any of the node's names · CI · #365
+- ranAtStep (#365) › is false past the end of the trace · CI · #365
+- classifyStepRow (#365) › marks the nodes at the current step active · CI · #365
+- classifyStepRow (#365) › marks nodes that ran earlier in this trial done · CI · #365
+- classifyStepRow (#365) › marks nodes not reached yet in this trial pending · CI · #365
+- classifyStepRow (#365) › does not count steps from an earlier trial · CI · #365
+- classifyStepRow (#365) › tries a log name without its -N suffix · CI · #365
+- classifyStepRow (#365) › ignores empty and missing names · CI · #365
+- compositionMemberNames (#365) › lists every node inside, at any depth, with and without its -N suffix · CI · #365
+- compositionMemberNames (#365) › is empty for a composition with no nodes · CI · #365
+- compositionMemberNames (#365) › lets a collapsed composition match a member's step · CI · #365
 
 **`frontend/src/utils/tensorInput.test.ts`** (Frontend unit (vitest))
 
@@ -5085,6 +5197,8 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - test_trial_array_ragged_ports_become_one_array_each · CI · #332
 - test_two_port_inputs_reach_composition_run_in_process · CI · #332
 - test_two_port_inputs_run_in_the_sandbox · CI · #332
+- test_input_nodes_lists_every_port_in_process · CI · #332
+- test_input_nodes_lists_every_port_through_the_api · CI · #332
 
 **`backend/tests/test_no_event_loop_blocking.py`** (Backend (pytest))
 

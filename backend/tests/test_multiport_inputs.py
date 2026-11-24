@@ -56,3 +56,34 @@ def test_two_port_inputs_run_in_the_sandbox():
     result = run_model(MODEL, "two_port_input", INPUTS)
     assert "error" not in result, result.get("error")
     assert result["numTrials"] == 2
+
+
+# /api/model/input-nodes reports every port's shape, not only the first (#358).
+EXPECTED_PORTS = [{"name": "RED_task", "shape": [2]}, {"name": "WORD_task", "shape": [1]}]
+
+
+def _task_demand(result):
+    assert "error" not in result, result.get("error")
+    return next(n for n in result["inputNodes"] if n["name"] == "task_demand")
+
+
+def test_input_nodes_lists_every_port_in_process():
+    from app.services.executor import get_input_nodes
+
+    node = _task_demand(get_input_nodes(MODEL, "two_port_input", use_sandbox=False))
+    assert node["ports"] == EXPECTED_PORTS
+    assert node["shape"] == [2]  # the first port's, unchanged
+
+
+def test_input_nodes_lists_every_port_through_the_api():
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    resp = TestClient(app).post(
+        "/api/model/input-nodes", json={"file_path": MODEL, "composition_name": "two_port_input"}
+    )
+    assert resp.status_code == 200, resp.text
+    node = _task_demand(resp.json())
+    assert node["ports"] == EXPECTED_PORTS
+    color = next(n for n in resp.json()["inputNodes"] if n["name"] == "color_input")
+    assert [p["shape"] for p in color["ports"]] == [[2]]

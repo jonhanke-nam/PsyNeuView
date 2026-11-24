@@ -25,9 +25,11 @@ import { realInputNodes } from "@/utils/learnPlan";
 import { useModelStore, type DebuggerSnapshot, selectExecPath } from "@/stores/modelStore";
 import { useStatusStore } from "@/stores/statusStore";
 import { useRunRecords, type RunRecord } from "@/stores/runRecordsStore";
+import { formatRunProgress, newRunId, pollRunProgress, type RunProgress } from "@/utils/runProgress";
 import { useRunResults } from "@/stores/runResultsStore";
-import { STALE_STYLE, recheckRunStaleness, watchRunStaleness } from "@/stores/runStaleness";
+import { CHECK_DELAY_MS, STALE_STYLE, recheckRunStaleness, watchRunStaleness } from "@/stores/runStaleness";
 import { cachedSourceHash } from "@/utils/sourceHash";
+import { recordVersion } from "@/utils/recordVersion";
 import { useRunTimingStore } from "@/stores/runTimingStore";
 import yaml from "js-yaml";
 import { useUIStore, type InputGrouping } from "@/stores/uiStore";
@@ -38,6 +40,7 @@ import {
   formatLabeledValue,
   formatDelta,
   expandMultiPort,
+  portElementLabels,
 } from "@/utils/labels";
 import { formatTraceValue } from "@/utils/traceValues";
 import { echoesSubmitted } from "@/utils/runEcho";
@@ -47,7 +50,8 @@ import { PnlCallLine } from "./PnlCallLine";
 import { Button } from "@/components/common/Button";
 import { GridLegend, ValueGrid, ValueViewToggle, poolValues, useNodeGrid } from "@/components/common/ValueGrid";
 import { MIN_GRID_SIZE, numericVector } from "@/utils/valueGrid";
-import { roleColorFor } from "@/constants/pnlTypes";
+import { roleColorFor, roleNameFor } from "@/constants/pnlTypes";
+import { classifyStepRow, type StepStatus } from "@/utils/stepHighlight";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 
 interface InputPortInfo {
@@ -265,6 +269,21 @@ export function RunPanel() {
   }, [running]);
   const runElapsedS =
     running && runStartedAt ? Math.max(0, (runTick - runStartedAt) / 1000) : 0;
+  // #357: the sticky Run row's height, which grows when its controls wrap,
+  // kept as the panel's scroll padding so nothing scrolls in under it.
+  const [stickyRowHeight, setStickyRowHeight] = useState(0);
+  const stickyRowObserver = useRef<ResizeObserver | null>(null);
+  const stickyRowRef = useCallback((el: HTMLDivElement | null) => {
+    stickyRowObserver.current?.disconnect();
+    stickyRowObserver.current = null;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setStickyRowHeight(el.getBoundingClientRect().height));
+    ro.observe(el);
+    stickyRowObserver.current = ro;
+  }, []);
+  // #357: how far the run in flight has got — trials finished of the total and
+  // how long the last one took — polled from the backend while it runs.
+  const [runProgress, setRunProgress] = useState<RunProgress | null>(null);
   // #894: the last completed run's timing, for the "· ran in X.Xs" record.
   const lastRunTiming = useRunTimingStore((s) => s.last);
 
@@ -424,6 +443,11 @@ export function RunPanel() {
       // #337: tag the run with the source it runs, hashed once, here.
       const sourceHash = cachedSourceHash(useModelStore.getState().source);
 
+      // #357: name the run so its progress can be asked for while it goes.
+      const progressId = newRunId();
+      setRunProgress(null);
+      const stopPolling = pollRunProgress(progressId, setRunProgress);
+
       const t0 = performance.now();
       // For the activity log (#1287): started now, finished in `finally` with
       // how it went and how long it took.
@@ -439,6 +463,7 @@ export function RunPanel() {
             composition_name: compositionName,
             inputs,
             execution_mode: executionMode,
+            progress_id: progressId,
           }),
         });
 
@@ -544,6 +569,7 @@ export function RunPanel() {
           runMs, // #894: preserve this run's duration in its record
           serverRunMs,
           pnlVersion: useModelStore.getState().diagnostics?.pnlVersion,
+          sourceHash,
           executionTrace: data.executionTrace || [],
           debuggerSnapshots: data.debuggerSnapshots || [],
         };
@@ -558,6 +584,8 @@ export function RunPanel() {
           durationMs: Math.round(performance.now() - t0),
           ...(reason ? { reason: String(reason).slice(0, 300) } : {}),
         });
+        stopPolling();
+        setRunProgress(null);
         setRunning(false);
         clearStatus();
       }
@@ -776,12 +804,21 @@ export function RunPanel() {
       }}
     >
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", padding: "12px 0" }}>
-        {/* Input configuration */}
-        <div style={{ minWidth: 250 }}>
+        {/* Input configuration. #357: anything in it scrolled into view — a
+            node's header, a focused trial input — stops below the sticky Run
+            row, not under it. Only this column: the row is sticky inside it,
+            so it never covers the results, and a trial card scrolled into
+            view while stepping should not stop short of it. */}
+        <div
+          className="pnv-run-inputs"
+          style={{ minWidth: 250, ["--run-sticky-row-h" as string]: `${stickyRowHeight}px` }}
+        >
           {/* Header + Run Model button live in a sticky strip at the top of
               the Run panel so the button is always reachable without scrolling
               past a tall list of input textareas. */}
           <div
+            ref={stickyRowRef}
+            data-testid="run-sticky-row"
             style={{
               position: "sticky",
               top: 0,
@@ -884,6 +921,18 @@ export function RunPanel() {
                     ? `Running… ${runElapsedS.toFixed(1)}s`
                     : "Run Model"}
                 </Button>
+                {/* #357: live trial progress beside the running counter. */}
+                {running && runProgress && runProgress.trial > 0 && (
+                  <span
+                    data-testid="run-trial-progress"
+                    title={`Trial ${runProgress.trial} of ${runProgress.total} finished${
+                      runProgress.seconds != null ? ` in ${runProgress.seconds.toFixed(2)} s` : ""
+                    }`}
+                    style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-secondary)", whiteSpace: "nowrap" }}
+                  >
+                    {formatRunProgress(runProgress)}
+                  </span>
+                )}
               </div>
             </div>
             {error && (
@@ -1028,6 +1077,7 @@ export function RunPanel() {
                 onCell={setCell}
                 onRemoveTrial={removeTrial}
                 onApplyCsv={applyCsv}
+                stickyTop={stickyRowHeight}
               />
             ))
           ) : (
@@ -1434,6 +1484,57 @@ function parseRunFile(text: string): RunRecord {
 // Recent-runs history (#468). Each completed run is pinned here with its frozen
 // inputs; rows re-run (reproduce from those inputs), export a JSON sidecar, or
 // drop off. An Import affordance loads a shared run file's inputs into the form.
+/**
+ * The open model's source hash, recomputed only after edits pause (#357), and
+ * not at all while there are no saved runs to compare with: typing must not
+ * pay for it (the #337 rule).
+ */
+function useOpenSourceHash(enabled: boolean): string | null {
+  const source = useModelStore((s) => s.source);
+  const [hash, setHash] = useState<string | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    const id = setTimeout(() => setHash(cachedSourceHash(source)), CHECK_DELAY_MS);
+    return () => clearTimeout(id);
+  }, [enabled, source]);
+  return enabled ? hash : null;
+}
+
+/** One saved run's line saying whether it ran the model as it is now (#357). */
+function RecordVersionNote({
+  record,
+  openPath,
+  openSourceHash,
+}: {
+  record: RunRecord;
+  openPath: string | null;
+  openSourceHash: string | null;
+}) {
+  const v = recordVersion(record, openPath, openSourceHash);
+  if (!v) return null;
+  const text =
+    v === "matches" ? "Matches the open file"
+      : v === "earlier" ? "From an earlier version"
+        : "From another file";
+  const title =
+    v === "matches" ? "This run ran the model exactly as it is open now"
+      : v === "earlier" ? "The model has been edited since this run; re-running uses the current version"
+        : `This run ran ${record.modelPath}`;
+  return (
+    <div
+      data-testid="run-record-version"
+      data-version={v}
+      title={title}
+      style={{
+        fontSize: "var(--pnv-fs-10)",
+        color: v === "matches" ? "var(--pnv-text-faint)" : "var(--pnv-warning)",
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+
 function RecentRunsList({
   onRerun,
   onImport,
@@ -1446,6 +1547,8 @@ function RecentRunsList({
   const records = useRunRecords((s) => s.records);
   const removeRecord = useRunRecords((s) => s.removeRecord);
   const clearRecords = useRunRecords((s) => s.clear);
+  const openSourceHash = useOpenSourceHash(records.length > 0);
+  const openPath = useModelStore((s) => s.filePath);
   const fileRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -1545,6 +1648,11 @@ function RecentRunsList({
                   >
                     {when.toLocaleTimeString()} · {inputSummary}
                   </div>
+                  <RecordVersionNote
+                    record={r}
+                    openPath={openPath}
+                    openSourceHash={openSourceHash}
+                  />
                 </div>
                 <Button
                   kind="small" size="tall"
@@ -1634,6 +1742,7 @@ function InputNodeEditor({
   onCell,
   onRemoveTrial,
   onApplyCsv,
+  stickyTop,
 }: {
   node: InputNodeInfo;
   labels: string[];
@@ -1643,13 +1752,30 @@ function InputNodeEditor({
   onCell: (varName: string, trial: number, port: number, value: string) => void;
   onRemoveTrial: (trial: number) => void;
   onApplyCsv: (varName: string, text: string, width: number) => void;
+  /** The sticky Run row's height: the header pins just below it (#363). */
+  stickyTop: number;
 }) {
   const [csvText, setCsvText] = useState("");
   const width = labels.length;
   return (
     <div style={{ marginBottom: 12 }} data-testid={`run-input-${node.name}`}>
+      {/* #363: the header sticks just below the sticky Run row while this
+          node's trials scroll past; it stays inside this node's box, so the
+          next node's header pushes it up. A solid background keeps rows from
+          showing through, and padding (not margin) below it keeps the
+          layout the same while covering the gap under the text. */}
       <label
-        style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", display: "block", marginBottom: 3 }}
+        data-testid={`run-input-header-${node.name}`}
+        style={{
+          fontSize: "var(--pnv-fs-12)",
+          color: "var(--pnv-text-secondary)",
+          display: "block",
+          paddingBottom: 3,
+          position: "sticky",
+          top: stickyTop,
+          background: "var(--pnv-surface)",
+          zIndex: 1,
+        }}
       >
         {node.name}{" "}
         <span style={{ color: "var(--pnv-text-faint)" }}>
@@ -1774,6 +1900,9 @@ function TrialPorts({
   // under them the node's whole input as Composition.run takes it.
   const multi = shapes.length > 1;
   const portName = (p: number) => node.inputPorts[p]?.name ?? `port ${p}`;
+  // The grid labels a multi-port node's boxes by element name, per port (#358).
+  const modelLabels = useModelStore((s) => s.modelLabels);
+  const portLabels = multi ? portElementLabels(modelLabels, node.name, node.inputPorts, "input") : null;
   const fields = shapes.map((shape, p) => {
         const text = texts[p] ?? "";
         const check = parsed[p];
@@ -1791,7 +1920,7 @@ function TrialPorts({
               {shown.map((val, e) => (
                 <InputCell
                   key={e}
-                  label={(multi ? undefined : labels[e]) ?? `[${e}]`}
+                  label={(multi ? portLabels?.[p]?.[e] : labels[e]) ?? `[${e}]`}
                   value={val}
                   extra={e >= width}
                   onChange={(v) => {
@@ -2100,6 +2229,9 @@ function TrialOutputs({
   const traceStep = useModelStore((s) => s.traceStep);
   const setTraceStep = useModelStore((s) => s.setTraceStep);
   const traceStepValues = useModelStore((s) => s.traceStepValues);
+  // #365: the trace step's active nodes, the one source of truth the graph
+  // also reads, so the card's highlighted rows match the graph's step ring.
+  const executionTrace = useModelStore((s) => s.executionTrace);
   // #786: trial-to-trial Δ diff is opt-in (off by default).
   const showTrialDeltas = useUIStore((s) => s.showTrialDeltas);
   const toggleTrialDeltas = useUIStore((s) => s.toggleTrialDeltas);
@@ -2107,6 +2239,8 @@ function TrialOutputs({
   const customRoleColors = useGraphSettings((s) => s.customRoleColors);
   // (Called while rendering the cards, after nodeMeta below is set.)
   const bandFor = (name: string) => roleColorFor(nodeMeta.get(name)?.roles, customRoleColors);
+  // #365: the band is the role colour, never the step: its tooltip says so.
+  const bandRole = (name: string) => roleNameFor(nodeMeta.get(name)?.roles);
 
   // #524: group the debugger-captured per-step values by trial and node so a
   // card can show how a node's value evolved *within* its trial. Empty on
@@ -2303,6 +2437,12 @@ function TrialOutputs({
         {results.results.map((r, trialPos) => {
           const active = activeTrialIdx === trialPos;
           const stepTarget = boundaries[trialPos];
+          // #365: within the current trial card only, each node's rows say
+          // where it stands at the step: active (blue), done, or pending (dim).
+          const stepOf = (...names: (string | undefined)[]): StepStatus | undefined =>
+            active && traceStep !== null
+              ? classifyStepRow(executionTrace, traceStep, stepTarget ?? 0, names)
+              : undefined;
           const clickable = stepTarget !== undefined;
           return (
             <div
@@ -2359,7 +2499,7 @@ function TrialOutputs({
                       ? resolveInputLabels(modelLabels, s.name, portName, meta?.inputPorts)
                       : null;
                     return (
-                      <NodeBand key={`in-${s.varName}`} color={bandFor(s.name)} node={s.name}>
+                      <NodeBand key={`in-${s.varName}`} color={bandFor(s.name)} role={bandRole(s.name)} node={s.name} step={stepOf(s.name, s.varName, meta?.label, meta?.varName)}>
                       <ValueRow
                         kind="in"
                         node={s.name}
@@ -2409,7 +2549,7 @@ function TrialOutputs({
                     ? expandMultiPort(prevValue, meta?.outputPorts, nodeName, modelLabels)
                     : null;
                   return (
-                    <NodeBand key={`out-${nodeName}`} color={bandFor(nodeName)} node={nodeName} style={{ marginBottom: 2 }}>
+                    <NodeBand key={`out-${nodeName}`} color={bandFor(nodeName)} role={bandRole(nodeName)} node={nodeName} step={stepOf(nodeName, meta?.label, meta?.varName)} style={{ marginBottom: 2 }}>
                       <div style={{ color: "var(--pnv-text-hint)", fontFamily: "var(--pnv-font-mono)" }}>
                         {nodeName.replace(/-\d+$/, "")}
                       </div>
@@ -2429,7 +2569,7 @@ function TrialOutputs({
                 }
                 const labels = resolveOutputLabels(modelLabels, nodeName, undefined, meta?.outputPorts);
                 return (
-                  <NodeBand key={`out-${nodeName}`} color={bandFor(nodeName)} node={nodeName}>
+                  <NodeBand key={`out-${nodeName}`} color={bandFor(nodeName)} role={bandRole(nodeName)} node={nodeName} step={stepOf(nodeName, meta?.label, meta?.varName)}>
                     <ValueRow
                       kind="out"
                       node={nodeName.replace(/-\d+$/, "")}
@@ -2629,14 +2769,23 @@ function ValueText({ text }: { text: string }) {
 // #335: a node's rows in a Per-trial values card, with a left band in the
 // node's role colour so it can be followed from trial to trial. The band sits
 // in the card's padding (negative margin), so the rows don't move.
+// #365: in the current trial card, `step` says where the node stands at the
+// trace step: "active" rows get the selection-blue highlight the graph's step
+// ring uses, "pending" rows (not reached yet this trial) are dimmed, "done"
+// rows read normally. The highlight is a background and an inset ring, so the
+// rows don't move. The band itself stays the role colour, and says so.
 function NodeBand({
   color,
+  role,
   node,
+  step,
   style,
   children,
 }: {
   color: string;
+  role: string;
   node: string;
+  step?: StepStatus;
   style?: CSSProperties;
   children: ReactNode;
 }) {
@@ -2644,7 +2793,24 @@ function NodeBand({
     <div
       data-testid="run-trial-node-band"
       data-node={node.replace(/-\d+$/, "")}
-      style={{ ...style, borderLeft: `3px solid ${color}`, marginLeft: -7, paddingLeft: 4 }}
+      data-step={step}
+      className={step === "active" ? "pnv-step-active" : undefined}
+      title={`Band: role colour (${role}), as on the graph. The current step is shown in blue.`}
+      style={{
+        ...style,
+        borderLeft: `3px solid ${color}`,
+        marginLeft: -7,
+        paddingLeft: 4,
+        ...(step === "active"
+          ? {
+              background: "var(--pnv-step-active-row)",
+              boxShadow: "inset 0 0 0 1px var(--pnv-step-active-ring)",
+              borderRadius: "0 3px 3px 0",
+            }
+          : step === "pending"
+            ? { opacity: "var(--pnv-step-pending-opacity)" }
+            : {}),
+      }}
     >
       {children}
     </div>

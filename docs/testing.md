@@ -172,6 +172,13 @@ shard doesn't stop the others.
   `npx playwright merge-reports` into the **`playwright-results-<run id>`**
   artifact: the HTML report plus `results.json`, kept 14 days after a failure
   and 3 after a pass. Open it with `npx playwright show-report <folder>`.
+- **Passed only on retry.** CI retries a failed test once. Every attempt
+  records a trace, kept only when that attempt failed (`trace:
+  "retain-on-failure"`, #359), so a test that failed and then passed still has
+  its failed attempt's trace and screenshot in the merged report, under the
+  test's "Retry #0" tab. The `e2e` job lists such tests in its job summary
+  under **Passed only on retry** (`frontend/scripts/retry-summary.mjs`, run on
+  the merged `results.json`).
 - **Balance.** Playwright splits by test count, not time. Measured against a
   full `@ci` run (2026-11-18: about 65 minutes of tests in all) and today's
   127 files, that gives about 21, 21 and 24 minutes of tests per shard, plus
