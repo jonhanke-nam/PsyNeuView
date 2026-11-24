@@ -2926,18 +2926,32 @@ async def demo_pristine_source(name: str):
 REFERENCE_DIR = Path(__file__).resolve().parent.parent.parent / "reference_models"
 
 # Curated, ordered. `name` is the bundled filename stem; `label` is shown.
+# `library` declares that the model is the PsyNeuLink Library model of that
+# name (a pinned copy of it): the one case two models may share a file name,
+# and the Library then shows the same label (#422). A shared name that is not
+# declared fails test_model_names.py.
 REFERENCE_MODELS = [
-    {"name": "Giallanza2024_ego_study2", "label": "EGO — Giallanza et al. 2024 (Study 2)"},
+    {"name": "Giallanza2024_ego_study2", "label": "EGO — Giallanza et al. 2024 (Study 2)", "library": "Giallanza2024_EGO_Study2"},
     {"name": "stroop_reference_basic", "label": "Stroop — Basic"},
     {"name": "stroop_reference_with_lc", "label": "Stroop — with Locus Coeruleus (LC)"},
-    {"name": "Cohen_Huston1994", "label": "Stroop — Bidirectional (Cohen & Huston 1994)"},
-    {"name": "Cohen_Huston1994_horse_race", "label": "Stroop — Horse Race (Cohen & Huston 1994)"},
-    {"name": "Kalanthroff_PCTC_2018", "label": "Stroop — PCTC (Kalanthroff, Davelaar & Usher 2018)"},
-    {"name": "GilzenratModel", "label": "Locus Coeruleus — gain model (Gilzenrat et al.)"},
-    {"name": "Nieuwenhuis2005Model", "label": "Locus Coeruleus / P300 (Nieuwenhuis et al. 2005)"},
-    {"name": "MontagueDayanSejnowski96", "label": "TD Learning / dopamine (Montague, Dayan & Sejnowski 1996)"},
-    {"name": "Botvinick_conflict_monitoring_model", "label": "Conflict Monitoring — Stroop (Botvinick et al. 2001)"},
+    {"name": "Cohen_Huston1994", "label": "Stroop — Bidirectional (Cohen & Huston 1994)", "library": "Cohen_Huston1994"},
+    {"name": "Cohen_Huston1994_horse_race", "label": "Stroop — Horse Race (Cohen & Huston 1994)", "library": "Cohen_Huston1994_horse_race"},
+    {"name": "Kalanthroff_PCTC_2018", "label": "Stroop — PCTC (Kalanthroff, Davelaar & Usher 2018)", "library": "Kalanthroff_PCTC_2018"},
+    {"name": "GilzenratModel", "label": "Locus Coeruleus — gain model (Gilzenrat et al.)", "library": "GilzenratModel"},
+    {"name": "Nieuwenhuis2005Model", "label": "Locus Coeruleus / P300 (Nieuwenhuis et al. 2005)", "library": "Nieuwenhuis2005Model"},
+    {"name": "MontagueDayanSejnowski96", "label": "TD Learning / dopamine (Montague, Dayan & Sejnowski 1996)", "library": "MontagueDayanSejnowski96"},
+    {"name": "Botvinick_conflict_monitoring_model", "label": "Conflict Monitoring — Stroop (Botvinick et al. 2001)", "library": "Botvinick_conflict_monitoring_model"},
 ]
+
+
+def library_label(name: str) -> str:
+    """The Library's name for a model: the Reference Model's label when it is
+    declared as the same model (``library`` in REFERENCE_MODELS), so one model
+    has one name everywhere (#422); otherwise made from the file name."""
+    for entry in REFERENCE_MODELS:
+        if entry.get("library", "").lower() == name.lower():
+            return entry["label"]
+    return _format_label(name)
 
 
 @router.get("/reference-models")
@@ -3296,7 +3310,7 @@ def model_identity(file_path: str | Path) -> ModelIdentity:
     if _within(path, lib):
         known = {n.lower(): n for n in LIBRARY_MODEL_NAMES}
         return ModelIdentity(
-            source="library", label=_format_label(known.get(stem.lower(), stem)), file=name, path=str(path),
+            source="library", label=library_label(known.get(stem.lower(), stem)), file=name, path=str(path),
         )
     scripts = _pnl_scripts_dir()
     if _within(path, scripts) or (working and scripts is not None and (scripts / name).exists()):
@@ -3332,7 +3346,7 @@ async def list_library_models():
     for name, path in library_model_files(models_dir):
         models.append({
             "name": name,
-            "label": _format_label(name),
+            "label": library_label(name),
             "path": str(path),
         })
     return {"models": models}
