@@ -25,7 +25,7 @@ from pathlib import Path
 
 import os
 
-from app.services import bounded_run, os_sandbox
+from app.services import bounded_run, os_sandbox, run_limits
 from app.services.assistant import review as assistant_review
 from app.services.sandbox import WORKER_PATH, RESULT_MARKER
 
@@ -195,7 +195,8 @@ class JobManager:
             os_sandbox.sweep_survivors()
         policy = os_sandbox.policy(model_path=task_params.get("file_path")) if os_sandbox.active() else None
         extras = {"os_sandbox_key": policy["key"]} if policy else {}
-        payload = json.dumps({"task": task, "params": task_params, **assistant_review.worker_payload_extras(), **extras})
+        payload = json.dumps({"task": task, "params": task_params, **assistant_review.worker_payload_extras(), **extras,
+                              **run_limits.payload(True)})
         try:
             proc = subprocess.Popen(
                 [sys.executable, WORKER_PATH],
@@ -235,6 +236,8 @@ class JobManager:
         watchdog = threading.Timer(JOB_TIMEOUT, lambda: proc.poll() is None and proc.kill())
         watchdog.daemon = True
         watchdog.start()
+        # The run's memory, processor-time and process limits (#179, B3).
+        limit_watch = run_limits.Watch(lambda: proc.pid, lambda pid: proc.kill())
 
         try:
             proc.stdin.write(payload)
@@ -269,9 +272,14 @@ class JobManager:
             return
         finally:
             watchdog.cancel()
+            limit_reason = limit_watch.stop()
 
         if job._cancel_requested:
             job.finish("canceled")
+            return
+        limit_reason = limit_watch.reason or limit_reason or run_limits.exit_reason(returncode)
+        if limit_reason:
+            job.finish("error", error=run_limits.message(limit_reason))
             return
         if returncode != 0 or result_str is None:
             stderr = _available(proc.stderr)
@@ -295,7 +303,7 @@ class JobManager:
             job.finish("error", result={"unreviewed_import": result["unreviewed_import"], "reason": reason},
                        error=result.get("error"))
         elif isinstance(result, dict) and "error" in result:
-            job.finish("error", error=result["error"])
+            job.finish("error", error=run_limits.explain(result)["error"])
         else:
             # The request's mode is what was asked for; record what actually
             # trained too, since a plain Composition resolves to Python (#997).

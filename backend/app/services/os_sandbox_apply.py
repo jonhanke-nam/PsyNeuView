@@ -851,3 +851,68 @@ if __name__ == "__main__":
     else:
         print("usage: os_sandbox_apply.py --probe <empty folder>", file=sys.stderr)
         sys.exit(2)
+
+
+# ── Resource limits (#179, review packet B3) ───────────────────────────────
+
+
+class RunLimitExceeded(Exception):
+    """Raised in the model's own thread when its processor time runs out."""
+
+
+def _on_cpu_limit(_signum, _frame):
+    raise RunLimitExceeded("cpu: the model used up the processor time a model run may use")
+
+
+def apply_run_limits(lim: dict | None) -> list[str]:
+    """Set the run's limits (``run_limits.payload``) on this process, before
+    the model runs. ``hard``: this process runs one task, so the limits can't
+    be raised again; otherwise (the warm worker) soft limits, reset per
+    task. Processor time: ``RLIMIT_CPU`` (a ``RunLimitExceeded`` at the soft
+    limit, the kernel ends the process five seconds later). Processes:
+    ``RLIMIT_NPROC``, counted over all the user's processes, so the
+    allowance is added to what the user already has. Memory: ``RLIMIT_DATA``
+    on Linux; macOS refuses any memory limit, so the server's watch holds it
+    there. Returns what was set. Never raises: the server's watch holds
+    every limit too."""
+    if not lim:
+        return []
+    try:
+        import resource
+    except ImportError:  # Windows
+        return []
+    hard = bool(lim.get("hard"))
+    done = []
+
+    def _set(res, soft, hard_value):
+        _cur_soft, cur_hard = resource.getrlimit(res)
+        if cur_hard != resource.RLIM_INFINITY:
+            soft = min(soft, cur_hard)
+            hard_value = min(hard_value, cur_hard)
+        resource.setrlimit(res, (soft, hard_value if hard else cur_hard))
+
+    try:
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        soft = int(usage.ru_utime + usage.ru_stime) + 1 + int(lim["cpu_seconds"])
+        if hasattr(signal, "SIGXCPU"):
+            signal.signal(signal.SIGXCPU, _on_cpu_limit)
+        _set(resource.RLIMIT_CPU, soft, soft + 5)
+        done.append("cpu")
+    except (KeyError, ValueError, OSError, TypeError):
+        pass
+    base = lim.get("base_processes")
+    if isinstance(base, int) and hasattr(resource, "RLIMIT_NPROC"):
+        try:
+            n = base + int(lim["processes"])
+            _set(resource.RLIMIT_NPROC, n, n)
+            done.append("processes")
+        except (KeyError, ValueError, OSError, TypeError):
+            pass
+    if sys.platform.startswith("linux"):
+        try:
+            n = int(lim["memory_mb"]) * 1024 * 1024
+            _set(resource.RLIMIT_DATA, n, n)
+            done.append("memory")
+        except (KeyError, ValueError, OSError, TypeError):
+            pass
+    return done

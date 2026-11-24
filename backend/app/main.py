@@ -271,6 +271,7 @@ async def _pnl_file_is_protected(request, exc: pnl_source_guard.PsyNeuLinkFileIs
     })
 
 from app.services import os_sandbox as _os_sandbox  # noqa: E402
+from app.services import run_limits as _run_limits  # noqa: E402
 
 
 @app.exception_handler(_os_sandbox.SandboxRefused)
@@ -278,6 +279,13 @@ async def _sandbox_refused(request, exc: _os_sandbox.SandboxRefused):
     """A run that must be sandboxed and can't be (#311): refused, never run
     unsandboxed, with the reason."""
     return JSONResponse(status_code=409, content={"detail": str(exc), "reason": "sandbox_required"})
+
+
+@app.exception_handler(_run_limits.RunStopped)
+async def _run_stopped(request, exc: _run_limits.RunStopped):
+    """A model run stopped by its memory, processor-time or process limit
+    (#179, B3): 422 with the plain-English reason, not a crash."""
+    return JSONResponse(status_code=422, content={"detail": str(exc), "reason": "run_limit", "limit": exc.reason})
 
 
 @app.exception_handler(edit_lock.ModelIsViewOnly)

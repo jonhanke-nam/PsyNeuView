@@ -4646,6 +4646,10 @@ def _handle_one_task(payload_str: str) -> str:
         return json.dumps({"error": "This task must run under the model sandbox, and this process isn't under "
                                     "its policy; nothing was run.", "os_sandbox_refused": True})
 
+    # The run's memory, processor-time and process limits, before any model
+    # code runs (#179, B3). Never fails the task: the server watches too.
+    _os_sandbox.apply_run_limits(payload.get("run_limits"))
+
     handler = TASKS.get(task)
     if task == "__refused__":
         return json.dumps({"error": "The model sandbox couldn't be applied, so nothing was run: "

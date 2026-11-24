@@ -20,7 +20,7 @@ import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from app.services import os_sandbox
+from app.services import os_sandbox, run_limits
 from app.services.assistant import review as assistant_review
 from app.services.assistant.review import require_runnable
 from typing import Callable, Optional
@@ -98,6 +98,8 @@ class WarmWorker:
     #: after task in one process.
     MODE = "--persistent"
     NAME = "Warm worker"
+    #: Whether its process runs one task only (its limits are then hard, #179 B3).
+    ONE_TASK = False
     #: A line that says the task's process ended (the fork server's child).
     DONE_MARKER: str | None = None
     NEW_SESSION = False
@@ -264,10 +266,32 @@ class WarmWorker:
             self._raw_for = self._proc
         return self._raw
 
+    def _task_pid(self) -> int | None:
+        """The process running the task now, for the limits' watch."""
+        return self._proc.pid if self._proc is not None else None
+
+    def _end_task(self, pid: int) -> None:
+        """End the task's process, from the limits' watch (#179, B3)."""
+        import signal
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except OSError:
+            pass
+
     def _send(self, task: str, params: dict, timeout: int) -> dict:
+        """Send one task, watched against the run's limits (#179, B3): a run
+        stopped by one answers with a plain-English reason."""
+        watch = run_limits.Watch(self._task_pid, self._end_task)
+        try:
+            result = self._send_unwatched(task, params, timeout)
+        finally:
+            reason = watch.stop()
+        return run_limits.explain(result, reason)
+
+    def _send_unwatched(self, task: str, params: dict, timeout: int) -> dict:
         """Send one task to the current process. Caller holds `self._lock`."""
         payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras(),
-                              **self._sandbox_extras()})
+                              **self._sandbox_extras(), **run_limits.payload(self.ONE_TASK)})
         t0 = time.time()
 
         try:
@@ -397,6 +421,7 @@ class ForkServer(WarmWorker):
 
     MODE = "--fork-server"
     NAME = "Fork server"
+    ONE_TASK = True
     CHILD_MARKER = "###PSYNEUVIEW_CHILD###"
     DONE_MARKER = "###PSYNEUVIEW_CHILD_DONE###"
     #: After this many tasks in a row the parent couldn't run, the pool is used instead.
@@ -494,10 +519,16 @@ class ForkServer(WarmWorker):
         self._proc.stdin.write(text.encode())
         self._proc.stdin.flush()
 
-    def _send(self, task: str, params: dict, timeout: int) -> dict:
+    def _task_pid(self) -> int | None:
+        return self._child_pid
+
+    def _end_task(self, pid: int) -> None:
+        _end_group(pid)
+
+    def _send_unwatched(self, task: str, params: dict, timeout: int) -> dict:
         import secrets
         payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras(),
-                              **self._sandbox_extras()})
+                              **self._sandbox_extras(), **run_limits.payload(self.ONE_TASK)})
         self._token = secrets.token_hex(16)
         self._child_pid = None
         deadline = time.time() + timeout
@@ -599,6 +630,16 @@ class ForkServer(WarmWorker):
                     pass
 
 
+def _end_group(pid: int) -> None:
+    """End a task's process and its process group (the limits' watch, #179 B3)."""
+    import signal
+    for kill in (lambda: os.killpg(pid, signal.SIGKILL), lambda: os.kill(pid, signal.SIGKILL)):
+        try:
+            kill()
+        except OSError:
+            pass
+
+
 # Global warm worker instance — started on first use
 _warm_worker: WarmWorker | None = None
 _warm_worker_lock = threading.Lock()
@@ -608,6 +649,10 @@ class _PoolMember(WarmWorker):
 
     NAME = "Pool worker"
     NEW_SESSION = True
+    ONE_TASK = True
+
+    def _end_task(self, pid: int) -> None:
+        _end_group(pid)
 
     @staticmethod
     def _kill(proc: subprocess.Popen | None) -> None:
@@ -1023,11 +1068,14 @@ def run_in_sandbox(task: str, params: dict, timeout: int | None = None) -> dict:
             result = worker.send_task(task, params, timeout)
 
     # If the warm worker failed, try a cold-start fallback
-    if "error" in result and "Worker" in result["error"]:
+    # Not when a limit stopped it (#179, B3): the same model would only be run again.
+    if "error" in result and "Worker" in result["error"] and not result.get("run_limit"):
         logger.info("Falling back to cold-start subprocess...")
         result = _run_cold(task, params, timeout)
 
     _raise_if_unreviewed_import(result)
+    if isinstance(result, dict) and result.get("run_limit"):
+        raise run_limits.RunStopped(result["run_limit"], result["error"])
     return result
 
 
@@ -1046,16 +1094,27 @@ def _run_cold(task: str, params: dict, timeout: int) -> dict:
     # Under the sandbox (#311) the one-shot worker applies the policy first thing.
     policy = os_sandbox.policy(model_path=params.get("file_path")) if os_sandbox.active() else None
     extras = {"os_sandbox_key": policy["key"]} if policy else {}
-    payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras(), **extras})
+    payload = json.dumps({"task": task, "params": params, **assistant_review.worker_payload_extras(), **extras,
+                          **run_limits.payload(True)})
     t0 = time.time()
+    started: list = []
+    # Watched against the run's limits like every other worker (#179, B3).
+    watch = run_limits.Watch(lambda: started[0].pid if started else None, _end_group)
+    try:
+        return run_limits.explain(_run_cold_unwatched(task, params, timeout, payload, policy, started, t0),
+                                  watch.stop())
+    finally:
+        watch.stop()
 
+
+def _run_cold_unwatched(task, params, timeout, payload, policy, started, t0) -> dict:
     try:
         try:
             # Output read with a cap, and not past the worker's own exit (#311, U4).
             from app.services import bounded_run
             result = bounded_run.run([sys.executable, WORKER_PATH], input=payload, timeout=timeout,
                                      cwd=str(Path(params.get("file_path", ".")).parent),
-                                     env=os_sandbox.launch_env(policy))
+                                     env=os_sandbox.launch_env(policy), on_start=started.append)
             if result.timed_out:
                 raise subprocess.TimeoutExpired([WORKER_PATH], timeout)
         finally:
@@ -1065,6 +1124,8 @@ def _run_cold(task: str, params: dict, timeout: int) -> dict:
         elapsed = time.time() - t0
         logger.info(f"[perf] cold sandbox {task}: {elapsed:.2f}s")
 
+        if run_limits.exit_reason(result.returncode):
+            return {"error": run_limits.message(run_limits.CPU), "run_limit": run_limits.CPU}
         if result.returncode != 0:
             # #1101: this used to drop only FutureWarning and then take the last
             # ten lines. PsyNeuLink emits warnings in volume, so for some models

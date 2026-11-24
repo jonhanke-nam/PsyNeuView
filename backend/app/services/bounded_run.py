@@ -34,9 +34,11 @@ class Result:
 
 
 def run(cmd: list[str], *, input: str = "", env=None, cwd=None, timeout: float = 300,
-        cap: int = OUTPUT_CAP) -> Result:
+        cap: int = OUTPUT_CAP, on_start=None) -> Result:
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                             env=env, cwd=cwd, start_new_session=True)
+    if on_start is not None:
+        on_start(proc)
     try:
         if input:
             proc.stdin.write(input.encode("utf-8"))
