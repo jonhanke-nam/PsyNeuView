@@ -9,6 +9,7 @@ import { useCallback, useState, useEffect, useRef } from "react";
 import { useModelStore } from "@/stores/modelStore";
 import type { MechanismData, ParamMeta } from "@/stores/modelStore";
 import { useRunResults, type RunResults } from "@/stores/runResultsStore";
+import { STALE_STYLE } from "@/stores/runStaleness";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useStatusStore } from "@/stores/statusStore";
 import { useLoadTimingStore } from "@/stores/loadTimingStore";
@@ -1693,6 +1694,8 @@ function TrajectoryCard({
   sFn: (n: number) => number;
 }) {
   const results = useRunResults((s) => s.results);
+  // #337: the run is from an earlier version of the model: dim, with a note.
+  const stale = useRunResults((s) => s.stale);
   const modelLabels = useModelStore((s) => s.modelLabels);
   if (!results) return null;
 
@@ -1740,12 +1743,16 @@ function TrajectoryCard({
 
   return (
     <div
+      data-testid="trajectory-card"
+      data-stale={stale ? "true" : "false"}
+      title={stale ? "From an earlier version of the model. Run again to update it." : undefined}
       style={{
         marginBottom: 12,
         padding: "8px 10px",
         background: "var(--pnv-surface-muted)",
         border: "1px solid var(--pnv-border-faint)",
         borderRadius: 4,
+        ...(stale ? STALE_STYLE : {}),
       }}
     >
       <div style={{ fontSize: sFn(10), color: "var(--pnv-text-muted)", marginBottom: 6, letterSpacing: 0.3 }}>

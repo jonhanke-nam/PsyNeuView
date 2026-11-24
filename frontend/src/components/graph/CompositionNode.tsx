@@ -103,7 +103,7 @@ export const CompositionNode = memo(function CompositionNode({
 
   // INSET frames use a solid border + brighter fill to read as a
   // self-contained framed sub-graph; NESTED stays dashed/translucent (#427).
-  const borderColor = selected ? "var(--pnv-primary)" : d.inset ? "var(--pnv-composition-inset)" : "var(--pnv-composition-border)";
+  const borderColor = selected ? "var(--pnv-selection-border)" : d.inset ? "var(--pnv-composition-inset)" : "var(--pnv-composition-border)";
   return (
     <div
       style={{

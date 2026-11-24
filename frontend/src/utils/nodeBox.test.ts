@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { NODE_MIN_HEIGHT, NODE_MIN_WIDTH, nameLineWidth, outlineThickness, ovalBoxFor } from "./nodeBox";
+import { EXPANDED_CLEARANCE, NODE_MIN_HEIGHT, NODE_MIN_WIDTH, expandedBoxFor, nameLineWidth, outlineThickness, ovalBoxFor } from "./nodeBox";
 
 /** Whether the corners of a name's box lie inside an oval this size, inset by the outline. */
 const fits = (name: string, outline: number) => {
@@ -27,5 +27,36 @@ describe("a node's oval (#210)", () => {
         }
       }
     }
+  });
+});
+
+describe("an expanded node's box (#333)", () => {
+  const K = Math.tan(Math.PI / 8);
+  // How far round the shape a point is: 1 on the outline's inside edge.
+  const reach = (shape: string, x: number, y: number) =>
+    shape === "rectangle" ? Math.max(x, y)
+    : shape === "octagon" || shape === "doubleoctagon" ? Math.max(x, y, (x + y) / (1 + K))
+    : Math.hypot(x, y);
+
+  it("holds the text's corners inside the outline, clear of it, for every shape", () => {
+    for (const shape of ["oval", "doublecircle", "octagon", "doubleoctagon", "rectangle"]) {
+      for (const content of [{ width: 60, height: 120 }, { width: 240, height: 140 }, { width: 330, height: 260 }]) {
+        for (const outline of [1, 4, outlineThickness(true, 4)]) {
+          const box = expandedBoxFor(content, shape, outline);
+          const a = box.width / 2 - outline, b = box.height / 2 - outline;
+          const corner = reach(shape, content.width / 2 / a, content.height / 2 / b);
+          expect(corner, `${shape} ${content.width}×${content.height}, outline ${outline}`).toBeLessThan(1);
+          // ...and with the clear space to spare along each axis.
+          expect(a - content.width / 2).toBeGreaterThanOrEqual(EXPANDED_CLEARANCE);
+          expect(b - content.height / 2).toBeGreaterThanOrEqual(EXPANDED_CLEARANCE);
+        }
+      }
+    }
+  });
+
+  it("is no bigger than the shape needs: √2 for a round or cut shape, nothing for a rectangle", () => {
+    const content = { width: 200, height: 100 };
+    expect(expandedBoxFor(content, "oval", 0).width).toBe(Math.ceil(208 * Math.SQRT2));
+    expect(expandedBoxFor(content, "rectangle", 2)).toEqual({ width: 212, height: 112 });
   });
 });

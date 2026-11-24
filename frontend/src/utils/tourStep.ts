@@ -73,9 +73,10 @@ export interface TourState {
   nodeParams: Record<string, Record<string, string>>;
   /**
    * The inputs the most recent run actually submitted, by node name: one
-   * vector per trial. Null until the model has run.
+   * value per trial, a vector or one array per port (#330). Null until the
+   * model has run.
    */
-  lastRunInputs: Record<string, number[][]> | null;
+  lastRunInputs: Record<string, unknown[]> | null;
   /** Each node's function class ("Linear", "Logistic"), by node name. */
   nodeFunctions: Record<string, string>;
   /** The most recent completed training, or null if nothing has trained. */
@@ -503,7 +504,12 @@ export function watchesDom(condition: TourCondition): boolean {
  * Whether per-trial values match what was actually submitted, node by node.
  * An empty spec never matches: a typo must not auto-advance.
  */
-function sameTrials(wanted: TrialInputs, actual: Record<string, number[][]>): boolean {
+/** Every number in a trial's value, in order: `[[0, 1], [1]]` gives [0, 1, 1]. */
+function flatTrial(value: unknown): unknown[] {
+  return Array.isArray(value) ? value.flatMap(flatTrial) : [value];
+}
+
+function sameTrials(wanted: TrialInputs, actual: Record<string, unknown[]>): boolean {
   const entries = Object.entries(wanted);
   if (entries.length === 0) return false;
   return entries.every(([node, trials]) => {
@@ -513,7 +519,7 @@ function sameTrials(wanted: TrialInputs, actual: Record<string, number[][]>): bo
     if (got.length !== trials.length) return false;
     return trials.every((trial, t) => {
       const want = asVector(trial);
-      const row = got[t] ?? [];
+      const row = got[t] === undefined ? [] : flatTrial(got[t]);
       return want.length === row.length && want.every((v, i) => v === row[i]);
     });
   });

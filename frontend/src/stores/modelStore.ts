@@ -560,6 +560,10 @@ interface ModelState {
   // #659: the positions map from the last loaded layout sidecar, kept so saves
   // can merge over it and preserve positions for not-currently-rendered nodes.
   lastLayoutPositions: Record<string, { x: number; y: number }>;
+  // #346: bumped when a load should fit the graph in view: a model opened, or
+  // a switch between the nested and the other view. A reload after an edit
+  // (add, move, delete, a code change) leaves it alone, so the view stays put.
+  graphFitSeq: number;
 
   // WebSocket
   ws: WebSocket | null;
@@ -682,6 +686,8 @@ let pendingFreshOpenLayout = false;
 // like a fresh open: a view with nothing saved has no custom layout to keep,
 // and staying in Custom there would hide the automatic layout (#33).
 let lastPositionsView: "nested" | "flat" | null = null;
+// #346: the file the last load fitted, so a model opened by any route fits.
+let lastFittedFile: string | null | undefined = undefined;
 // #323: set while a fold in the flattened or PyTorch view rebuilds the graph.
 // That fold shows the model nested, so the build reads the nested view's
 // positions, but it is a fold, not a switch of view: an automatic layout stays
@@ -781,6 +787,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
   activeParamLine: null,
   autoLayout: true,
   lastLayoutPositions: {},
+  graphFitSeq: 0,
   ws: null,
 
   // Clears bundleOrigin: every fresh load routes through setFilePath, and
@@ -1127,6 +1134,9 @@ export const useModelStore = create<ModelState>((set, get) => ({
     const screenNodes = get().nodes;
     const screenEdges = get().edges;
     const isReload = !pendingFreshOpenLayout && !viewChanged && screenNodes.length > 0;
+    // #346: fit the graph in view only for a model opened or a view switch.
+    const fitAfterLoad = pendingFreshOpenLayout || viewChanged || lastFittedFile !== get().filePath;
+    lastFittedFile = get().filePath;
     const keepAuto = keepAutoLayoutForFold && viewChanged && !pendingFreshOpenLayout && get().autoLayout;
     keepAutoLayoutForFold = false;
     if ((pendingFreshOpenLayout || viewChanged) && !keepAuto) {
@@ -2227,6 +2237,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
       // nested), so flat↔nested round-trips don't clobber each other.
       // A load that brings no layout leaves what is saved as it was (#164).
       lastLayoutPositions: layout === undefined && isReload ? get().lastLayoutPositions : savedPositions,
+      ...(fitAfterLoad ? { graphFitSeq: get().graphFitSeq + 1 } : {}),
     });
     // #282: hydrate dragged-port overrides from the sidecar. Persisted keyed by
     // varName (like positions); remap to the runtime node ids the graph uses.

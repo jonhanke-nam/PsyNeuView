@@ -31,7 +31,7 @@ Trial**. The defaults run as-is, so you can skip this step the first time.
 
 A model can bring its own inputs. Any module-level dict in the shape
 `Composition.run` takes, `{input_node: [trial, …]}`, is offered in a **From**
-menu next to **Group by**, named by its variable, and the Run tab opens with the
+menu next to **Arrange inputs**, named by its variable, and the Run tab opens with the
 first one. The Bistable Attractor demo, for example, declares the course's
 `kick` and `steady_difference`:
 

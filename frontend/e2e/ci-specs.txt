@@ -1,4 +1,5 @@
 about-release-dates.spec.ts
+add-keeps-view.spec.ts
 app-shell.spec.ts
 app-update-notice.spec.ts
 apply-only-when-needed.spec.ts
@@ -32,6 +33,7 @@ edge-line-width.spec.ts
 edge-routing-no-crossings.spec.ts
 edge-shaping-auto-layout.spec.ts
 execution-mode-label.spec.ts
+expanded-node-fits-shape.spec.ts
 external-edit-sync.spec.ts
 fit-button-and-keys.spec.ts
 fit-fills-canvas.spec.ts
@@ -114,12 +116,16 @@ reference-model-editing.spec.ts
 reference-models-runnable.spec.ts
 restore-saved-layout.spec.ts
 round-trips.spec.ts
+run-array-inputs.spec.ts
+run-multiport-inputs.spec.ts
 run-panel-grouping.spec.ts
 run-record-yaml.spec.ts
 run-set-survives-edit.spec.ts
+run-trial-seconds.spec.ts
 save-copy-sidecars.spec.ts
 saves-in-history.spec.ts
 scheduling-arrows-setting.spec.ts
+selection-colour.spec.ts
 settings-panel.spec.ts
 settings-search.spec.ts
 shape-mismatch-explained.spec.ts
@@ -130,7 +136,9 @@ show-graph-tab-fetch.spec.ts
 show-ports.spec.ts
 sidecar-placement.spec.ts
 spline-straightness.spec.ts
+stale-run-results.spec.ts
 stroop-lc-reference.spec.ts
+style-conventions.spec.ts
 style-sizes.spec.ts
 text-size.spec.ts
 toolbar-menus-over-dividers.spec.ts
@@ -140,6 +148,7 @@ tour-menu-reopens.spec.ts
 tour-ring-behind-dialogs.spec.ts
 tour-ring-clear-of-text.spec.ts
 tour-ring-on-node.spec.ts
+trace-autoplay-label.spec.ts
 tutorial-known-state.spec.ts
 tutorial-resume.spec.ts
 tutorials-hide-course.spec.ts

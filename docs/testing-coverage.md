@@ -9,10 +9,10 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 162 | 434 | 422 tests in 156 files |
+| Browser (Playwright) | 170 | 448 | 438 tests in 165 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 135 | 1210 | 1210 tests in 135 files |
-| Backend (pytest) | 189 | 1752 | 1752 tests in 189 files |
+| Frontend unit (vitest) | 140 | 1253 | 1253 tests in 140 files |
+| Backend (pytest) | 191 | 1759 | 1759 tests in 191 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
 
@@ -27,14 +27,14 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Building models in the UI](#building) | 4 files, 7 tests | – | 1 files, 9 tests | 13 files, 145 tests | 161 of 161 |
 | [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 359 of 362 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
-| [Running, learning and debugging](#running) | 10 files, 27 tests | – | 8 files, 84 tests | 51 files, 254 tests | 365 of 365 |
+| [Running, learning and debugging](#running) | 14 files, 33 tests | – | 9 files, 92 tests | 51 files, 254 tests | 379 of 379 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
-| [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 54 tests | – | 28 files, 262 tests | 19 files, 322 tests | 638 of 638 |
-| [Look and style conventions](#style) | 13 files, 31 tests | – | 8 files, 47 tests | – | 76 of 78 |
-| [Layout, views and compositions](#layout) | 21 files, 47 tests | – | 21 files, 151 tests | 5 files, 56 tests | 253 of 254 |
+| [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 28 files, 263 tests | 19 files, 322 tests | 640 of 640 |
+| [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
+| [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 10 files, 20 tests | – | 14 files, 85 tests | 19 files, 197 tests | 299 of 302 |
+| [App shell, diagnostics and everything else](#shell) | 11 files, 21 tests | – | 17 files, 114 tests | 21 files, 204 tests | 336 of 339 |
 
 <a id="tutorials"></a>
 
@@ -595,15 +595,20 @@ No tests yet.
 | `learning-nodes-run-inspector.spec.ts` | Browser | 2 | yes | #1383, #1385 | Learning models in the Run tab and the Inspector (#1383, #1385). |
 | `pytorch-view.spec.ts` | Browser | 3 | yes | #230 | PyTorch (autodiff) view (#230). |
 | `reference-models-runnable.spec.ts` | Browser | 2 | yes | #818, #577, #652 | Reference-model runnability gate (#818, #577, #652). |
+| `run-array-inputs.spec.ts` | Browser | 1 | yes | #330, #331 | Trial inputs as arrays (#330), arranged by trial by default (#331). |
+| `run-multiport-inputs.spec.ts` | Browser | 1 | yes | #332 | Input nodes with several input ports (#332). |
 | `run-panel-grouping.spec.ts` | Browser | 1 | yes | #570 | Run-panel input-grouping toggle (#570). |
 | `run-record-yaml.spec.ts` | Browser | 1 | yes | #525 | Run-record YAML export/import round-trip (#525). |
 | `run-set-survives-edit.spec.ts` | Browser | 1 | yes | #57 | A chosen run set survives a parameter edit (#57). |
+| `run-trial-seconds.spec.ts` | Browser | 1 | yes | #334 | Per-trial run times beside each trial number (#334). |
+| `stale-run-results.spec.ts` | Browser | 3 | yes | #337 | Run results go stale after an edit (#337). |
 | `stroop-lc-reference.spec.ts` | Browser | 2 | yes |  | Stroop + LC reference model — LC feedback edges render after the swap. |
 | `value-grid.spec.ts` | Browser | 1 | yes | #1387 | A layer's values as a grid (#1387). |
 | `BusyIndicator.test.ts` | Frontend unit | 3 | yes | #169 | The busy indicator's styles (#169): every one takes the same space, and everything that moves stands still under reduced motion. |
 | `busyStore.test.ts` | Frontend unit | 18 | yes |  | Node has no localStorage; a small stand-in. |
+| `runStaleness.test.ts` | Frontend unit | 6 | yes |  |  |
 | `valueViewStore.test.ts` | Frontend unit | 6 | yes | #1387 | #1387: a node's "list \| grid" choice, and its width, are kept in the model's layout file and come back when the model is opened again. |
-| `inputSets.test.ts` | Frontend unit | 10 | yes |  |  |
+| `inputSets.test.ts` | Frontend unit | 12 | yes |  |  |
 | `learnPlan.test.ts` | Frontend unit | 19 | yes |  |  |
 | `runEcho.test.ts` | Frontend unit | 4 | yes | #49 | An input node's OUT row is dropped only when it would repeat its IN row (#49). |
 | `timeline.test.ts` | Frontend unit | 6 | yes | #177 | The timeline (#177): the merge order, what each kind is marked as, a wait as its start and stop lines, errors linked to their cause, and the text file's one time format. |
@@ -685,9 +690,15 @@ No tests yet.
 | pytorch view › autodiff model: selecting PyTorch applies the gradient graph, leaving no node unconnected | `pytorch-view.spec.ts` | Browser | yes | #230 |
 | reference models: load + run without crashing › coverage: spec lists every bundled reference model | `reference-models-runnable.spec.ts` | Browser | yes | #818 |
 | reference models: load + run without crashing › loads + runs without white-screen: ${label} | `reference-models-runnable.spec.ts` | Browser | yes | #818 |
-| run panel input grouping › toggles between by-node and by-trial layouts | `run-panel-grouping.spec.ts` | Browser | yes | #570 |
+| trial inputs are typed as arrays and sent as typed | `run-array-inputs.spec.ts` | Browser | yes | #330 |
+| a two-port input node takes one array per port | `run-multiport-inputs.spec.ts` | Browser | yes | #332 |
+| run panel input grouping › toggles between by-trial and by-node layouts | `run-panel-grouping.spec.ts` | Browser | yes | #570 |
 | run record YAML round-trip › exports YAML and re-imports it | `run-record-yaml.spec.ts` | Browser | yes | #525 |
 | a parameter edit keeps the run set the learner chose | `run-set-survives-edit.spec.ts` | Browser | yes | #57 |
+| per-trial run times (#334) › each trial row shows how many seconds it took | `run-trial-seconds.spec.ts` | Browser | yes | #334 |
+| Run results go stale after an edit (#337) › an edit warns and clears the highlights | `stale-run-results.spec.ts` | Browser | yes | #337 |
+| Run results go stale after an edit (#337) › Undo back to the source that ran makes the results current (#366) | `stale-run-results.spec.ts` | Browser | yes | #337 |
+| Run results go stale after an edit (#337) › a fold toggle doesn't make results stale | `stale-run-results.spec.ts` | Browser | yes | #337 |
 | stroop_with_lc reference model › loads and renders all four LC modulatory edges | `stroop-lc-reference.spec.ts` | Browser | yes |  |
 | stroop_with_lc reference model › runs a trial without the scalar-conflict shape error | `stroop-lc-reference.spec.ts` | Browser | yes |  |
 | a layer's values as a grid (#1387) › the Hopfield letter as a grid: in the results, while stepping, and after reopening | `value-grid.spec.ts` | Browser | yes | #1387 |
@@ -825,7 +836,7 @@ No tests yet.
 | File | Layer | Tests | In CI | Issues | What it checks |
 |---|---|---|---|---|---|
 | `blank-screen-setting.spec.ts` | Browser | 10 | yes | #215 | A blank screen by choice (#215): Settings ▸ Appearance ▸ Panels. |
-| `components-panel-start-setting.spec.ts` | Browser | 2 | yes | #113 | How the Components panel opens is a setting: Settings ▸ Appearance (#113). |
+| `components-panel-start-setting.spec.ts` | Browser | 3 | yes | #113 | How the Components panel opens is a setting: Settings ▸ Appearance (#113). |
 | `help-keyboard-shortcuts.spec.ts` | Browser | 4 | yes | #292 | Help ▸ Keyboard Shortcuts (#292). |
 | `keep-pnl-current.spec.ts` | Browser | 4 | yes | #1304 | Keep PsyNeuLink current and show it (#1304). |
 | `local-checkout-empty-folder.spec.ts` | Browser | 3 | yes | #1342 | Another local checkout…: the folder is checked as soon as it is typed, and an empty one can have PsyNeuLink downloaded into it (#1342). |
@@ -854,7 +865,7 @@ No tests yet.
 | `reference.test.ts` | Frontend unit | 10 | yes |  |  |
 | `registry.test.ts` | Frontend unit | 14 | yes |  |  |
 | `storage.test.ts` | Frontend unit | 11 | yes |  | Overrides live in localStorage. |
-| `componentsPanelStart.test.ts` | Frontend unit | 5 | yes |  | The suite runs on node, not jsdom (vitest.config.ts): stub localStorage, as graphLegendStore.test.ts does. |
+| `componentsPanelStart.test.ts` | Frontend unit | 6 | yes |  | The suite runs on node, not jsdom (vitest.config.ts): stub localStorage, as graphLegendStore.test.ts does. |
 | `edgeLineStore.test.ts` | Frontend unit | 6 | yes | #107 | #107: the width of the lines between nodes, remembered per browser. |
 | `fitButtonStyleStore.test.ts` | Frontend unit | 3 | yes | #289 | #289: the Fit button shows its icon by default (no translation needed), and the choice of the word "Fit" is remembered per browser. |
 | `graphLayoutDefaultStore.test.ts` | Frontend unit | 4 | yes |  |  |
@@ -902,6 +913,7 @@ No tests yet.
 | a blank screen by choice (#215) › a stored blank layout with the setting off, or corrupt stored values, fall back safely | `blank-screen-setting.spec.ts` | Browser | yes | #215 |
 | a blank screen by choice (#215) › a walkthrough started from blank shows its panels and ends on blank, or the graph if the setting went off | `blank-screen-setting.spec.ts` | Browser | yes | #215 |
 | a blank screen by choice (#215) › a walkthrough opened by its link from blank ends on blank | `blank-screen-setting.spec.ts` | Browser | yes | #215 |
+| Components panel opening setting (#113) › a fresh app opens the panel as the icon strip (#345) | `components-panel-start-setting.spec.ts` | Browser | yes | #113 |
 | Components panel opening setting (#113) › Starts as the icon strip opens the strip after a reload | `components-panel-start-setting.spec.ts` | Browser | yes | #113 |
 | Components panel opening setting (#113) › ◀ collapses it for the session only; a reload comes back open | `components-panel-start-setting.spec.ts` | Browser | yes | #113 |
 | Help ▸ Keyboard Shortcuts › the Help menu has its four items, and the reference lists every shortcut | `help-keyboard-shortcuts.spec.ts` | Browser | yes | #292 |
@@ -958,13 +970,15 @@ No tests yet.
 | `arrowheads-at-end.spec.ts` | Browser | 1 | yes |  | Arrowheads sit at the end of each line by default, where it meets the receiving node, as show_graph draws them (they used to sit mid-line). |
 | `dialog-sweep.spec.ts` | Browser | 8 | yes | #1289 | Every dialog and pop-up closes the same ways (#1289): the sweep. |
 | `edge-line-width.spec.ts` | Browser | 1 | yes | #107 | The lines between nodes have a width in Settings ▸ Appearance ▸ Lines between nodes (#107). |
+| `expanded-node-fits-shape.spec.ts` | Browser | 4 | yes | #333 | An expanded node holds its text inside its own shape (#333). |
 | `graph-legend.spec.ts` | Browser | 2 | yes | #7 | The graph legend opens collapsed, and Settings ▸ Appearance chooses (#7). |
 | `node-outlines.spec.ts` | Browser | 1 | yes | #190, #42 | Node outlines are heavier by default and adjustable in Settings ▸ Appearance ▸ Node outlines. |
 | `node-shapes.spec.ts` | Browser | 2 | yes | #192, #193 | Node shapes follow show_graph (#192, #193). |
 | `node-text-proportion.spec.ts` | Browser | 3 | yes | #210 | Node text in proportion to show_graph (#210). |
 | `reactflow-credit.spec.ts` | Browser | 2 | yes | #290 | No "React Flow" credit in the canvas corner; About credits it instead (#290). |
+| `selection-colour.spec.ts` | Browser | 1 | yes | #335 | One pale-blue selection colour (#335). |
 | `shape-mismatch-explained.spec.ts` | Browser | 1 | yes | #1235 | A shape mismatch says where and why, on the graph and on Run (#1235). |
-| `style-conventions.spec.ts` | Browser | 2 | no | #1302 | The palette and the button kinds, as the browser draws them (#1302). |
+| `style-conventions.spec.ts` | Browser | 2 | yes | #1302 | The palette and the button kinds, as the browser draws them (#1302). |
 | `style-sizes.spec.ts` | Browser | 4 | yes | #1302 | A restyle keeps the old size: colour moves, size stays (#1302). |
 | `toolbar-menus-over-dividers.spec.ts` | Browser | 3 | yes | #1391 | Toolbar menus draw above the panel dividers, and the Tutorials menu fits the window (#1391). |
 | `toolbar-no-split-buttons.spec.ts` | Browser | 1 | yes | #6 | Toolbar buttons never break onto two lines (#6). |
@@ -972,9 +986,10 @@ No tests yet.
 | `dialogInventory.test.ts` | Frontend unit | 7 | yes | #1289 | Every dialog and pop-up closes the same ways (#1289). |
 | `useNodeBoxes.test.ts` | Frontend unit | 3 | yes |  |  |
 | `styleConventions.test.ts` | Frontend unit | 11 | yes | #1302 | The palette and the button kinds, held across the whole frontend. |
+| `selectionColours.test.ts` | Frontend unit | 3 | yes | #335 | The selection blue never looks like a role colour. |
 | `typeColourContrast.test.ts` | Frontend unit | 2 | yes | #283, #109 | Every component type's colour can be seen. |
 | `arrowShapes.test.ts` | Frontend unit | 8 | yes | #164 | Shaping an arrow by hand, as a step of its own (#164). |
-| `nodeBox.test.ts` | Frontend unit | 3 | yes |  | Whether the corners of a name's box lie inside an oval this size, inset by the outline. |
+| `nodeBox.test.ts` | Frontend unit | 5 | yes |  | Whether the corners of a name's box lie inside an oval this size, inset by the outline. |
 | `nodeShape.test.ts` | Frontend unit | 8 | yes | #192, #193 | Node shapes follow show_graph (#192, #193): which node gets which shape, what the shape says, and where its outline is for ports and edge ends. |
 
 <details><summary>Every browser and tutorial test in this area</summary>
@@ -991,6 +1006,10 @@ No tests yet.
 | dialog sweep (#1289) › the palette's compact flyout | `dialog-sweep.spec.ts` | Browser | yes | #1289 |
 | dialog sweep (#1289) › the first-launch offer | `dialog-sweep.spec.ts` | Browser | yes | #1289 |
 | lines between nodes: a width in Settings, arrowheads follow, remembered | `edge-line-width.spec.ts` | Browser | yes | #107 |
+| an expanded node holds its text inside its shape (#333) › Stroop: an oval | `expanded-node-fits-shape.spec.ts` | Browser | yes | #333 |
+| an expanded node holds its text inside its shape (#333) › EGO: an oval and an octagon, in an automatic layout | `expanded-node-fits-shape.spec.ts` | Browser | yes | #333 |
+| an expanded node holds its text inside its shape (#333) › Botvinick: a double circle | `expanded-node-fits-shape.spec.ts` | Browser | yes | #333 |
+| an expanded node holds its text inside its shape (#333) › a controller: a double octagon | `expanded-node-fits-shape.spec.ts` | Browser | yes | #333 |
 | Graph legend opening state (#7) › opens collapsed by default, and Show/Hide still folds it | `graph-legend.spec.ts` | Browser | yes | #7 |
 | Graph legend opening state (#7) › Starts expanded opens it unfolded, now and for the next model opened | `graph-legend.spec.ts` | Browser | yes | #7 |
 | node outlines: show_graph's colours and heavier defaults, one width in Settings, emphasis and selection follow | `node-outlines.spec.ts` | Browser | yes | #190 |
@@ -1001,9 +1020,10 @@ No tests yet.
 | node text in proportion to show_graph (#210) › a double outline holds its name at the heaviest width; selecting and Text size don't resize a node | `node-text-proportion.spec.ts` | Browser | yes | #210 |
 | React Flow credit (#290) › the canvas shows no React Flow credit after a model loads | `reactflow-credit.spec.ts` | Browser | yes | #290 |
 | React Flow credit (#290) › Settings ▸ About credits React Flow, with a link | `reactflow-credit.spec.ts` | Browser | yes | #290 |
+| one selection colour (#335), ${scheme} › current trial, selected node, node bands and labels | `selection-colour.spec.ts` | Browser | yes | #335 |
 | A shape mismatch is explained › the broken connection is drawn, named, and Run gives the reason | `shape-mismatch-explained.spec.ts` | Browser | yes | #1235 |
-| Settings: Close is primary and the default button; small and danger row actions | `style-conventions.spec.ts` | Browser | no | #1302 |
-| the Open menu's dialogs: the action primary, Cancel secondary | `style-conventions.spec.ts` | Browser | no | #1302 |
+| Settings: Close is primary and the default button; small and danger row actions | `style-conventions.spec.ts` | Browser | yes | #1302 |
+| the Open menu's dialogs: the action primary, Cancel secondary | `style-conventions.spec.ts` | Browser | yes | #1302 |
 | Settings and the dialogs keep their button heights | `style-sizes.spec.ts` | Browser | yes | #1302 |
 | the first-launch offer keeps its button heights | `style-sizes.spec.ts` | Browser | yes | #1302 |
 | the Inspector and the toolbars keep their row heights | `style-sizes.spec.ts` | Browser | yes | #1302 |
@@ -1021,6 +1041,7 @@ No tests yet.
 
 | File | Layer | Tests | In CI | Issues | What it checks |
 |---|---|---|---|---|---|
+| `add-keeps-view.spec.ts` | Browser | 1 | yes | #346 | Adding a component keeps the view still (#346). |
 | `composition-cim-edges.spec.ts` | Browser | 1 | yes | #644 | Edges to/from a nested composition's CIM ports render (#644). |
 | `composition-expand-geometry.spec.ts` | Browser | 3 | yes | #208, #209 | Expanding a nested composition that was folded and moved (#208, #209). |
 | `composition-frame-buttons.spec.ts` | Browser | 5 | yes | #194 | The three buttons on a composition frame (#194): Enter, Inset, Collapse. |
@@ -1073,6 +1094,7 @@ No tests yet.
 
 | Test | File | Layer | In CI | Issue |
 |---|---|---|---|---|
+| adding a component keeps the view still (#346) › the zoom and pan don't change, and the node's centre is at the click | `add-keeps-view.spec.ts` | Browser | yes | #346 |
 | nested-composition CIM edges (#644) › edges to/from the EM composition render | `composition-cim-edges.spec.ts` | Browser | yes | #644 |
 | expanding a folded, moved composition (#208, #209) › Like show_graph: the open frame clears the outer nodes and its projections reach its members | `composition-expand-geometry.spec.ts` | Browser | yes | #208 |
 | expanding a folded, moved composition (#208, #209) › dragging: an open frame dropped on outer nodes moves them aside, and a node dropped on it lands beside it | `composition-expand-geometry.spec.ts` | Browser | yes | #208 |
@@ -1212,19 +1234,23 @@ No tests yet.
 | `pycharm-live.local.spec.ts` | Browser | 1 | no |  | LOCAL ONLY — the full two-headed loop with a real PyCharm. |
 | `read-only-badge-note.spec.ts` | Browser | 1 | yes | #50 | Clicking the "PsyNeuLink from … · read only" tag explains it (#50). |
 | `round-trips.spec.ts` | Browser | 5 | yes | #319 | Round trips: an edit in the graph reaches the code and survives a reload; an edit in the code reaches the graph (#319). |
+| `trace-autoplay-label.spec.ts` | Browser | 1 | yes | #338 | The trace bar's auto-play button says what it does (#338). |
 | `ciSpecs.test.ts` | Frontend unit | 3 | yes |  | The CI e2e set is the specs tagged `@ci`; e2e/ci-specs.txt names their files. |
 | `DiagnosticPanel.test.ts` | Frontend unit | 4 | yes | #109 | The diagnostics bar (#109): amber only when there is something to act on, the toolbar's neutral grey otherwise, and no "click to expand" line — the bar's tooltip says it expands. |
 | `StatusBar.test.ts` | Frontend unit | 1 | yes | #222 | The status bar has no spinner of its own (#222 follow-up): the busy wheel is the one spinner on screen. |
 | `exportFormats.test.ts` | Frontend unit | 8 | yes |  |  |
 | `useMenuInWindow.test.ts` | Frontend unit | 5 | yes | #109 | A 160×120 menu in a 1000×700 window (#109). |
+| `traceAutoPlay.test.ts` | Frontend unit | 2 | yes |  |  |
 | `e2eDistFreshness.test.ts` | Frontend unit | 3 | yes |  |  |
 | `errorReveal.test.ts` | Frontend unit | 4 | yes | #1103 | Clicking a model error to jump to its line (#1103). |
+| `uiStoreInputs.test.ts` | Frontend unit | 6 | yes | #331, #330 | The Run panel's input arrangement (#331) and the per-element grid setting (#330): their defaults, and a choice made before being kept. |
 | `activityLog.test.ts` | Frontend unit | 17 | yes | #1287 | The activity log's rules (#1287): the cap, the order, `~` for the home folder, and no secrets — the value of a key that looks like a token or a password is never recorded, however it gets in. |
 | `diagnostics.test.ts` | Frontend unit | 16 | yes | #1287 | The diagnostics snapshot (#1287): its shape, what it reads from the stores, and that a server that can't be reached leaves `{error}` in its place rather than failing the whole call. |
 | `errorDetail.test.ts` | Frontend unit | 4 | yes |  |  |
 | `graphEditBlame.test.ts` | Frontend unit | 7 | yes | #353 | #353: a failing load is blamed on the last graph edit only when the line that failed is one the edit wrote. |
 | `joinNames.test.ts` | Frontend unit | 1 | yes |  | Mirrors the formatter in PresenceIndicator — kept as a pure function test so the phrasing is pinned without rendering the component. |
 | `nodeSelector.test.ts` | Frontend unit | 2 | yes | #1236 | #1236: a node name is any Python string, and must never make an invalid selector. |
+| `tensorInput.test.ts` | Frontend unit | 21 | yes |  |  |
 | `waitLog.test.ts` | Frontend unit | 10 | yes | #177 | The action-logging setting is remembered in localStorage (#177); the suite runs on node, so stub it. |
 | `test_activity_log.py` | Backend | 7 | yes | #177 | The page's activity log on disk (#177): batches appended as sent, the file rotated at start so the previous launch is kept, a size cap, and the actions removed when action logging is turned off. |
 | `test_add_function_refused.py` | Backend | 3 | yes | #349, #348 | A Function is never written as a standalone node (#349, #348). |
@@ -1238,10 +1264,12 @@ No tests yet.
 | `test_e2e_reset.py` | Backend | 4 | yes | #147 | Unit tests for the test-only /api/test/reset endpoint (#147). |
 | `test_frontend_cache_headers.py` | Backend | 6 | yes | #2 | The built page is served so an update can't be hidden by a cached copy (#2). |
 | `test_model_warnings.py` | Backend | 11 | yes | #1101 | Showing what PsyNeuLink said about a model that ran fine (#1101). |
+| `test_multiport_inputs.py` | Backend | 4 | yes | #332 | An input node with several input ports gets one array per port (#332). |
 | `test_no_event_loop_blocking.py` | Backend | 4 | yes | #860 | Regression guards against backend freezes (#860). |
 | `test_request_guard.py` | Backend | 10 | yes |  | The server refuses requests from another site or under another name. |
 | `test_test_extractor.py` | Backend | 15 | yes |  | Tests for app.services.test_extractor. |
 | `test_test_map.py` | Backend | 6 | yes | #319 | The What's tested page reads the test files correctly (#319). |
+| `test_trial_seconds.py` | Backend | 3 | yes | #334 | Per-trial run times (#334). |
 | `test_validation.py` | Backend | 20 | yes |  | Tests for file validation, error handling, and diagnostics. |
 | `test_version_only_diff.py` | Backend | 9 | yes | #299 | A version-bump-only diff lets CI skip its heavy jobs; nothing else may (#299). |
 | `test_ws_broadcast.py` | Backend | 3 | yes | #305 | Broadcasts while windows come and go (#305). |
@@ -1270,6 +1298,7 @@ No tests yet.
 | round trips between the graph and the code (#319) › rename a node: in the Inspector, to the code and back; and in the code, to the graph | `round-trips.spec.ts` | Browser | yes | #319 |
 | round trips between the graph and the code (#319) › connect: dragged in the graph, to the code and back; and typed in the code, to the graph | `round-trips.spec.ts` | Browser | yes | #319 |
 | round trips between the graph and the code (#319) › a parameter: changed in the Inspector, to the code and back; and in the code, to the Inspector | `round-trips.spec.ts` | Browser | yes | #319 |
+| the trace bar's auto-play button (#338) › reads Auto-play, then Pause while playing, then Auto-play again | `trace-autoplay-label.spec.ts` | Browser | yes | #338 |
 
 </details>
 
@@ -1570,7 +1599,7 @@ Nodes: show_graph's nodes the canvas draws. Rows: pairs of nodes whose above, le
 
 ## Browser tests CI doesn't run
 
-6 browser spec files aren't in CI at all. Each says why in a `Not in CI:` line in its header; this table is read from those lines. (Every tutorial runs, in the tutorials job.)
+5 browser spec files aren't in CI at all. Each says why in a `Not in CI:` line in its header; this table is read from those lines. (Every tutorial runs, in the tutorials job.)
 
 | Spec | Why | Detail |
 |---|---|---|
@@ -1579,7 +1608,6 @@ Nodes: show_graph's nodes the canvas draws. Rows: pairs of nodes whose above, le
 | `docs-shots-saving.spec.ts` | pictures only | it retakes the docs' pictures; the behaviour is tested by saves-in-history and changes-since-save |
 | `editor-drag-select.spec.ts` | broken | on the Linux runners the forwards-and-backwards test finds |
 | `pycharm-live.local.spec.ts` | local only | it drives a real PyCharm on macOS, which the runners don't have; external-edit-sync.spec.ts is the CI version |
-| `style-conventions.spec.ts` | broken | two tests fail on devel, expecting 13px buttons that the default Text size (1.1, since #111) draws at 14.3px; tracked in #322. Fix, then add |
 
 Spec files in CI that hold tests CI skips (untagged, or a measurement run only on request):
 
@@ -1618,7 +1646,7 @@ Found while building this page (#319). Each is a gap in what the tests check, no
 
 - **A model built in the UI against the same model typed as code: now covered** for Mapping, Control, Gating and Learning projections and one into a nested composition (`ui-text-equivalence.spec.ts`, with `backend/tests/model_equivalence.py`). Not yet covered: projections between nested compositions, control of a nested node's parameter, and models whose nodes the UI builds with non-default parameters.
 - **Round trips: now covered** for adding, deleting, renaming and connecting nodes and changing a parameter (`round-trips.spec.ts`); shaping an arrow was already covered by `edge-curve-handles.spec.ts`. Renaming or deleting an arrow is covered one way only (`graph-arrow-menus.spec.ts`).
-- **`style-conventions.spec.ts` is broken on devel** (#322). Its two tests expect 13px buttons; the default Text size (1.1, since #111) draws them at 14.3px. It isn't in CI, so nothing failed. Fifteen other specs CI used to skip now run in it; `editor-drag-select.spec.ts` stays out until its selection check works on the Linux runners.
+- **`style-conventions.spec.ts` was broken on devel** (#322): its two tests expected 13px buttons, which the default Text size (1.1, since #111) draws at 14.3px, and it wasn't in CI, so nothing failed. It now checks each size against the Text size and runs in CI. Fifteen other specs CI used to skip now run in it; `editor-drag-select.spec.ts` stays out until its selection check works on the Linux runners.
 - **The React components have no unit tests.** Frontend line coverage is about a quarter, because `components/` is tested only in the browser, which coverage can't see. The feature map is the measure for those.
 - **Frontend logic modules with little unit coverage:** `utils/labels.ts`, `utils/nodeActions.ts`, `hooks/useFileWatcher.ts` and `stores/edgeAttachStore.ts` are each a quarter covered or less, and `stores/modelStore.ts`, the biggest store, about half.
 - **The AI assistant's tests are not on devel.** Its runner-guard and OS-sandbox suites live on the assistant branch, so this page shows that area empty.

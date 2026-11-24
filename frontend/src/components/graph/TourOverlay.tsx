@@ -30,6 +30,7 @@ import { useStore } from "@xyflow/react";
 import { useTourProgress } from "@/hooks/useTourProgress";
 import { useCatalogOpener } from "@/stores/catalogOpenerStore";
 import { useModelStore } from "@/stores/modelStore";
+import { usePaletteStore } from "@/stores/paletteStore";
 import { ringColor, ringWidth, useTourHighlightStore } from "@/stores/tourHighlightStore";
 import { tourIdFromUrl, useTourStore } from "@/stores/tourStore";
 import { isOnScreen, toScreenRect, type NodeBox } from "@/utils/offscreenNodes";
@@ -168,6 +169,14 @@ export function TourOverlay() {
       window.removeEventListener("resize", bump);
     };
   }, [step]);
+
+  // A step that points at the Components panel asks the learner to search it,
+  // so open it as the word list when it starts as the icon strip (#345). For
+  // this session only: the setting stays as chosen.
+  const anchorTestId = step?.anchor.testid;
+  useEffect(() => {
+    if (anchorTestId === "palette-sidebar") usePaletteStore.getState().setCompact(false);
+  }, [anchorTestId, stepIndex]);
 
   // A step inside a menu opens the menu again if it has closed (#170). Not
   // at once: a click on one of the menu's items closes it on the way to the

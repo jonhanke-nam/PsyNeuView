@@ -13,7 +13,10 @@
  * default button and Return closes it — but not from a text field, and not
  * while a dialog is open on top.
  *
- * Not in CI: broken: two tests fail on devel, expecting 13px buttons that the default Text size (1.1, since #111) draws at 14.3px; tracked in #322. Fix, then add.
+ * Font sizes are read against Settings ▸ Appearance ▸ Text size: every UI
+ * font is its base size times --pnv-text-scale (#111), so a button's 13px is
+ * 14.3px at the default scale of 1.1. Checked as base × scale, these hold at
+ * any Text size (#322).
  */
 import { mutatingTest, readOnlyTest, expect } from "./test-base";
 import { readFileSync, mkdtempSync, mkdirSync, realpathSync } from "fs";
@@ -50,21 +53,28 @@ async function computed(el: Locator) {
   return el.evaluate((e) => {
     const s = getComputedStyle(e);
     return {
+      scale: parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--pnv-text-scale")),
       background: s.backgroundColor,
       color: s.color,
       border: s.borderTopColor,
-      fontSize: s.fontSize,
+      fontSize: parseFloat(s.fontSize),
       width: s.width,
       height: s.height,
     };
   });
 }
 
+/** A font size of `base` px at the page's Text size (base × --pnv-text-scale). */
+function expectFontSize(s: { fontSize: number; scale: number }, base: number) {
+  expect(s.scale, "--pnv-text-scale on <html>").toBeGreaterThan(0);
+  expect(s.fontSize, `font size: ${base}px × text scale ${s.scale}`).toBeCloseTo(base * s.scale, 2);
+}
+
 async function expectPrimary(el: Locator) {
   const s = await computed(el);
   expect(s.background).toBe(token("--pnv-primary"));
   expect(s.color).toBe(token("--pnv-on-primary"));
-  expect(s.fontSize).toBe("13px");
+  expectFontSize(s, 13);
 }
 
 async function expectPrimaryDisabled(el: Locator) {
@@ -78,7 +88,7 @@ async function expectSecondary(el: Locator) {
   expect(s.background).toBe(token("--pnv-surface"));
   expect(s.border).toBe(token("--pnv-border"));
   expect(s.color).toBe(token("--pnv-text-secondary"));
-  expect(s.fontSize).toBe("13px");
+  expectFontSize(s, 13);
 }
 
 async function expectSmall(el: Locator) {
@@ -86,14 +96,14 @@ async function expectSmall(el: Locator) {
   expect(s.background).toBe(token("--pnv-surface-muted"));
   expect(s.border).toBe(token("--pnv-border-light"));
   expect(s.color).toBe(token("--pnv-text-secondary"));
-  expect(s.fontSize).toBe("11px");
+  expectFontSize(s, 11);
 }
 
 async function expectDanger(el: Locator) {
   const s = await computed(el);
   expect(s.color).toBe(token("--pnv-danger"));
   expect(s.border).toBe(token("--pnv-danger"));
-  expect(s.fontSize).toBe("11px");
+  expectFontSize(s, 11);
 }
 
 /** The full-size × of a dialog: the muted text colour, 28px square. */
@@ -104,7 +114,7 @@ async function expectDialogClose(el: Locator) {
   expect(s.height).toBe("28px");
 }
 
-mutatingTest("Settings: Close is primary and the default button; small and danger row actions", async ({ page }) => {
+mutatingTest("Settings: Close is primary and the default button; small and danger row actions", { tag: "@ci" }, async ({ page }) => {
   // A project folder that is not fixed, so Folders offers Move…; and two
   // managed copies, one removable, as where-things-live.spec.ts stubs them.
   const root = mkdtempSync(path.join(realpathSync(tmpdir()), "style1302-"));
@@ -186,7 +196,7 @@ mutatingTest("Settings: Close is primary and the default button; small and dange
   }
 });
 
-readOnlyTest("the Open menu's dialogs: the action primary, Cancel secondary", async ({ page }) => {
+readOnlyTest("the Open menu's dialogs: the action primary, Cancel secondary", { tag: "@ci" }, async ({ page }) => {
   await page.goto("/");
 
   await page.getByTestId("open-menu").click();

@@ -270,6 +270,19 @@ settings:
     storage: backend
     control: setting-sidecar-placement
 
+  - id: run-input-cell-grid
+    label: General ▸ Run inputs ▸ Edit each element in its own box
+    keywords: ["run", "inputs", "array", "brackets", "tensor", "grid", "cells", "trial"]
+    home: settings
+    section: general
+    storage: browser localStorage (psyneuview.run.inputCellGrid); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-run-input-cell-grid
+    notes: >-
+      Off by default (#330): each trial's input in the Run tab is one field
+      in bracket notation, [0, 1], nested for 2-D inputs, as passed to
+      Composition.run. On: the per-element boxes the Run tab had before,
+      for 1-D inputs. Both edit the same text; what runs is the same.
+
   - id: busy-threshold
     label: General ▸ Busy indicator ▸ Show the busy wheel
     keywords: ["spinner", "loading", "wait"]
@@ -636,7 +649,8 @@ settings:
     storage: browser localStorage (psyneuview.components.start); inside the Mac app, the app keeps it (PagePreferences, #218)
     control: setting-components-start
     notes: >-
-      Starts open (the word list, default) or Starts as the icon strip (#113).
+      Starts as the icon strip (default since #345, listed first) or Starts
+      open, as the word list (#113). A stored choice is kept.
       Decides how the Components panel opens. The panel's own ◀/▶ button
       collapses or opens it for the current session without changing this
       setting; it is no longer remembered, and the old remembered value

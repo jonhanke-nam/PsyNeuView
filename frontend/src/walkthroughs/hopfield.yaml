@@ -137,7 +137,7 @@ steps:
     anchor:
       testid: run-trial-deltas
     instruct: >-
-      In the results, turn on Δ diff. Each trial now lists, under its grid,
+      In the results, turn on Show Δ. Each trial now lists, under its grid,
       the units that changed since the trial before. Trial 2: [6] -2, [11]
       -2, [14] -2, [18] -2, the four pixels you saw flip, in one update.
       Trials 3 to 6 list nothing, and their grids are the same Z: it doesn't

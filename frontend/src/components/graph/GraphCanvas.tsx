@@ -73,6 +73,9 @@ import { modelLoadOptions, modelViewOptions } from "@/utils/showGraphLoadRequest
 import { clampIoDrag, tidyIoRows } from "@/utils/ioRows";
 import { ioRowsNotApplying, registerCanvasTidy, useIoRowsStore } from "@/stores/ioRowsStore";
 
+/** How long after a model opens (or the view switches) the graph may still settle and be re-fitted (#346). */
+const FIT_SETTLE_MS = 1500;
+
 /** A Mac, judged as the graph library judges it (by the user agent). */
 const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
@@ -467,8 +470,33 @@ export function GraphCanvas() {
       };
     });
     setEdges(displayEdges);
+  }, [storeNodes, storeEdges, setNodes, setEdges, showProjectionLabels, showDimensions, schedulingArrows]);
+
+  // #346: fit the graph in view only when what is shown changes: a model
+  // opened, a switch of view (nested or not, the composition shown or
+  // focused), or a new layout. Adding, moving or deleting a node never moves
+  // the view; Fit (the button, ⌘9 / ⌘0) stays a separate action. This used to
+  // fit after every change to the nodes, so an added node seemed to land in
+  // the wrong place as the whole graph zoomed and shifted under it.
+  const graphFitSeq = useModelStore((s) => s.graphFitSeq);
+  const activeComposition = useModelStore((s) => s.activeComposition);
+  const focusedComposition = useModelStore((s) => s.focusedComposition);
+  const fitKey = `${graphFitSeq}|${activeComposition}|${focusedComposition}|${layoutStyle}|${direction}`;
+  // A newly shown graph can settle over the next moments (the Layered layout
+  // runs again once boxes are measured, #72), so changes just after keep
+  // fitting; later ones are edits and leave the view alone.
+  const fittedRef = useRef<{ key: string; at: number } | null>(null);
+  useEffect(() => {
+    if (storeNodes.length === 0) return;
+    const now = Date.now();
+    const last = fittedRef.current;
+    if (last && last.key === fitKey) {
+      if (now - last.at > FIT_SETTLE_MS) return;
+    } else {
+      fittedRef.current = { key: fitKey, at: now };
+    }
     setTimeout(fitGraph, 50);
-  }, [storeNodes, storeEdges, setNodes, setEdges, fitGraph, showProjectionLabels, showDimensions, schedulingArrows]);
+  }, [fitKey, storeNodes, fitGraph]);
 
   // When user draws a connection between nodes → create a projection
   // #253: a connection dragged from a node's connector to anywhere on

@@ -32,7 +32,7 @@ async function cellValues(grid: Locator): Promise<number[]> {
 async function runModel(page: Page) {
   await page.getByTestId("tab-run").click();
   await page.getByRole("button", { name: /Run Model/ }).click();
-  await expect(page.getByTestId("run-panel").getByText(/^Trial 6$/)).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByTestId("run-panel").getByText(/^Trial 6( · \d+\.\d\d s)?$/)).toBeVisible({ timeout: 60_000 });
 }
 
 test.describe("a layer's values as a grid (#1387)", { tag: "@ci" }, () => {

@@ -1826,9 +1826,17 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - reference models: load + run without crashing › coverage: spec lists every bundled reference model · CI · #818
 - reference models: load + run without crashing › loads + runs without white-screen: ${label} · CI · #818
 
+**`frontend/e2e/run-array-inputs.spec.ts`** (Browser (Playwright))
+
+- trial inputs are typed as arrays and sent as typed · CI · #330
+
+**`frontend/e2e/run-multiport-inputs.spec.ts`** (Browser (Playwright))
+
+- a two-port input node takes one array per port · CI · #332
+
 **`frontend/e2e/run-panel-grouping.spec.ts`** (Browser (Playwright))
 
-- run panel input grouping › toggles between by-node and by-trial layouts · CI · #570
+- run panel input grouping › toggles between by-trial and by-node layouts · CI · #570
 
 **`frontend/e2e/run-record-yaml.spec.ts`** (Browser (Playwright))
 
@@ -1837,6 +1845,16 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 **`frontend/e2e/run-set-survives-edit.spec.ts`** (Browser (Playwright))
 
 - a parameter edit keeps the run set the learner chose · CI · #57
+
+**`frontend/e2e/run-trial-seconds.spec.ts`** (Browser (Playwright))
+
+- per-trial run times (#334) › each trial row shows how many seconds it took · CI · #334
+
+**`frontend/e2e/stale-run-results.spec.ts`** (Browser (Playwright))
+
+- Run results go stale after an edit (#337) › an edit warns and clears the highlights · CI · #337
+- Run results go stale after an edit (#337) › Undo back to the source that ran makes the results current (#366) · CI · #337
+- Run results go stale after an edit (#337) › a fold toggle doesn't make results stale · CI · #337
 
 **`frontend/e2e/stroop-lc-reference.spec.ts`** (Browser (Playwright))
 
@@ -1874,6 +1892,15 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - busyStore timings (#176) › reads a value stored before one wheel (#220): %j is %s · CI · #176
 - busyStore timings (#176) › remembers the indicator's style, defaulting to the classic wheel (#169) · CI · #176
 
+**`frontend/src/stores/runStaleness.test.ts`** (Frontend unit (vitest))
+
+- run results staleness (#337) › hashes the same text the same, different text differently · CI · #337
+- run results staleness (#337) › no results, never stale · CI · #337
+- run results staleness (#337) › an edit makes results stale and clears the trace; undo makes them current · CI · #337
+- run results staleness (#337) › the same text set again (a fold toggle's reload) is not stale · CI · #337
+- run results staleness (#337) › new results and clearing both reset staleness · CI · #337
+- run results staleness (#337) › choosing another composition makes results stale; choosing back makes them current · CI · #337
+
 **`frontend/src/stores/valueViewStore.test.ts`** (Frontend unit (vitest))
 
 - value views › saves a choice to the layout file, every node's at once · CI · #1387
@@ -1895,6 +1922,8 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - preloadable › opens with the first small set · CI
 - preloadable › skips a whole experiment, like the Nieuwenhuis model's 1,100 trials · CI
 - preloadable › keeps a set right at the limit · CI
+- textsFromSet (#330) › writes each trial in bracket notation, one text per port · CI · #330
+- textsFromSet (#330) › refuses a set missing a node or with uneven trials · CI · #330
 
 **`frontend/src/utils/learnPlan.test.ts`** (Frontend unit (vitest))
 
@@ -3002,6 +3031,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/components-panel-start-setting.spec.ts`** (Browser (Playwright))
 
+- Components panel opening setting (#113) › a fresh app opens the panel as the icon strip (#345) · CI · #113
 - Components panel opening setting (#113) › Starts as the icon strip opens the strip after a reload · CI · #113
 - Components panel opening setting (#113) › ◀ collapses it for the session only; a reload comes back open · CI · #113
 
@@ -3280,8 +3310,9 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/src/stores/componentsPanelStart.test.ts`** (Frontend unit (vitest))
 
-- Components panel opening state (#113) › opens as the word list by default, sections folded · CI · #113
-- Components panel opening state (#113) › starts as the icon strip when the setting says so · CI · #113
+- Components panel opening state (#113) › opens as the icon strip by default (#345) · CI · #113
+- Components panel opening state (#113) › keeps a stored word-list choice, sections folded (#345) · CI · #113
+- Components panel opening state (#113) › lists the icon strip first in Settings (#345) · CI · #113
 - Components panel opening state (#113) › ignores anything else stored, and the old remembered strip · CI · #113
 - Components panel opening state (#113) › the ◀/▶ button switches the panel for the session without remembering it · CI · #113
 - Components panel opening state (#113) › setStart remembers the choice · CI · #113
@@ -3835,6 +3866,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - lines between nodes: a width in Settings, arrowheads follow, remembered · CI · #107
 
+**`frontend/e2e/expanded-node-fits-shape.spec.ts`** (Browser (Playwright))
+
+- an expanded node holds its text inside its shape (#333) › Stroop: an oval · CI · #333
+- an expanded node holds its text inside its shape (#333) › EGO: an oval and an octagon, in an automatic layout · CI · #333
+- an expanded node holds its text inside its shape (#333) › Botvinick: a double circle · CI · #333
+- an expanded node holds its text inside its shape (#333) › a controller: a double octagon · CI · #333
+
 **`frontend/e2e/graph-legend.spec.ts`** (Browser (Playwright))
 
 - Graph legend opening state (#7) › opens collapsed by default, and Show/Hide still folds it · CI · #7
@@ -3860,14 +3898,18 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - React Flow credit (#290) › the canvas shows no React Flow credit after a model loads · CI · #290
 - React Flow credit (#290) › Settings ▸ About credits React Flow, with a link · CI · #290
 
+**`frontend/e2e/selection-colour.spec.ts`** (Browser (Playwright))
+
+- one selection colour (#335), ${scheme} › current trial, selected node, node bands and labels · CI · #335
+
 **`frontend/e2e/shape-mismatch-explained.spec.ts`** (Browser (Playwright))
 
 - A shape mismatch is explained › the broken connection is drawn, named, and Run gives the reason · CI · #1235
 
 **`frontend/e2e/style-conventions.spec.ts`** (Browser (Playwright))
 
-- Settings: Close is primary and the default button; small and danger row actions · not in CI · #1302
-- the Open menu's dialogs: the action primary, Cancel secondary · not in CI · #1302
+- Settings: Close is primary and the default button; small and danger row actions · CI · #1302
+- the Open menu's dialogs: the action primary, Cancel secondary · CI · #1302
 
 **`frontend/e2e/style-sizes.spec.ts`** (Browser (Playwright))
 
@@ -3924,6 +3966,12 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - e2e specs select the "…" labels, never three dots (#109) · CI · #109
 - defines nothing twice in palette.css · CI · #1302
 
+**`frontend/src/styles/selectionColours.test.ts`** (Frontend unit (vitest))
+
+- selection colours › palette.css defines the selection set and the role colours · CI · #335
+- selection colours › the dark set defines all three · CI · #335
+- selection colours › each is at least ${MIN_DISTANCE} from every role colour (${name}) · CI · #335
+
 **`frontend/src/styles/typeColourContrast.test.ts`** (Frontend unit (vitest))
 
 - component type colours › palette.css defines the type colours as hex · CI · #283
@@ -3945,6 +3993,8 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - a node's oval (#210) › is never smaller than Graphviz's least oval · CI · #210
 - a node's oval (#210) › grows with the name · CI · #210
 - a node's oval (#210) › holds the name inside the outline at every width, single or double · CI · #210
+- an expanded node's box (#333) › holds the text's corners inside the outline, clear of it, for every shape · CI · #333
+- an expanded node's box (#333) › is no bigger than the shape needs: √2 for a round or cut shape, nothing for a rectangle · CI · #333
 
 **`frontend/src/utils/nodeShape.test.ts`** (Frontend unit (vitest))
 
@@ -3958,6 +4008,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - outline geometry › writes SVG points inside the box by the inset · CI · #192
 
 ## Layout, views and compositions
+
+**`frontend/e2e/add-keeps-view.spec.ts`** (Browser (Playwright))
+
+- adding a component keeps the view still (#346) › the zoom and pan don't change, and the node's centre is at the click · CI · #346
 
 **`frontend/e2e/composition-cim-edges.spec.ts`** (Browser (Playwright))
 
@@ -4690,6 +4744,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - round trips between the graph and the code (#319) › connect: dragged in the graph, to the code and back; and typed in the code, to the graph · CI · #319
 - round trips between the graph and the code (#319) › a parameter: changed in the Inspector, to the code and back; and in the code, to the Inspector · CI · #319
 
+**`frontend/e2e/trace-autoplay-label.spec.ts`** (Browser (Playwright))
+
+- the trace bar's auto-play button (#338) › reads Auto-play, then Pause while playing, then Auto-play again · CI · #338
+
 **`frontend/src/ciSpecs.test.ts`** (Frontend unit (vitest))
 
 - the list is sorted, one file per line, with no repeats · CI
@@ -4726,6 +4784,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - placeInWindow › stays inside a window too short for it to open upward · CI · #109
 - placeInWindow › never leaves the bottom edge even when the space above is short · CI · #109
 
+**`frontend/src/components/graph/traceAutoPlay.test.ts`** (Frontend unit (vitest))
+
+- the trace bar's auto-play button (#338) › reads Auto-play, then Pause while playing, then Auto-play again · CI · #338
+- the trace bar's auto-play button (#338) › says in words, not only a symbol, and explains itself · CI · #338
+
 **`frontend/src/e2eDistFreshness.test.ts`** (Frontend unit (vitest))
 
 - e2e refuses a stale frontend/dist › refuses when there is no build · CI
@@ -4738,6 +4801,15 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - revealModelError › bumps on each request · CI · #1103
 - revealModelError › keeps bumping, so repeated clicks each re-trigger the jump · CI · #1103
 - revealModelError › is independent of the error line itself · CI · #1103
+
+**`frontend/src/stores/uiStoreInputs.test.ts`** (Frontend unit (vitest))
+
+- input arrangement (#331) › is by trial when nothing is stored · CI · #331
+- input arrangement (#331) › keeps a stored by-node choice · CI · #331
+- input arrangement (#331) › treats anything else as the default · CI · #331
+- input arrangement (#331) › stores a choice made in the Run row · CI · #331
+- per-element grid setting (#330) › is off by default · CI · #330
+- per-element grid setting (#330) › is kept once turned on · CI · #330
 
 **`frontend/src/utils/activityLog.test.ts`** (Frontend unit (vitest))
 
@@ -4803,6 +4875,30 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - nodeSelector › leaves no raw newline, quote or backslash in the value for %j · CI · #1236
 - nodeSelector › leaves an ordinary name alone · CI · #1236
+
+**`frontend/src/utils/tensorInput.test.ts`** (Frontend unit (vitest))
+
+- parseTensor (#330) › reads bracket notation, flat and nested · CI · #330
+- parseTensor (#330) › reads numpy's printed form, spaces between elements · CI · #330
+- parseTensor (#330) › says what is wrong · CI · #330
+- formatTensor › writes the standard notation, nested · CI
+- formatTensor › round-trips through the parser · CI
+- shapes › measures regular arrays and refuses ragged ones · CI
+- shapes › describes shapes in words · CI
+- parsePortInput › accepts the port's shape · CI
+- parsePortInput › flags a wrong length or shape · CI
+- parsePortInput › accepts PsyNeuLink's extra brackets and a bare number for one element · CI
+- one array per port › sends one port's array, or one array per port · CI
+- one array per port › splits a trial's value back into its ports · CI
+- grid cells and pasted rows › splits and joins elements, keeping cells mid-edit · CI
+- grid cells and pasted rows › defaults to a one-hot vector stepping through the elements · CI
+- grid cells and pasted rows › reads pasted CSV and bracket lines · CI
+- multi-port input nodes (#332) › writes a two-port trial as Composition.run takes it · CI · #332
+- multi-port input nodes (#332) › shows a port that doesn't parse as typed · CI · #332
+- multi-port input nodes (#332) › splits a trial back into one value per port · CI · #332
+- multi-port input nodes (#332) › pastes a bracketed trial into its ports · CI · #332
+- multi-port input nodes (#332) › deals a comma-separated line out across the ports · CI · #332
+- multi-port input nodes (#332) › keeps one-port pasting as it was · CI · #332
 
 **`frontend/src/utils/waitLog.test.ts`** (Frontend unit (vitest))
 
@@ -4983,6 +5079,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - TestSplit.test_only_library_noise_shows_nothing_but_still_counts · CI · #1101
 - TestThroughTheRunEndpoint.test_a_run_that_succeeds_still_reports_its_warnings · CI · #1101
 
+**`backend/tests/test_multiport_inputs.py`** (Backend (pytest))
+
+- test_trial_array_single_port_stays_one_array · CI · #332
+- test_trial_array_ragged_ports_become_one_array_each · CI · #332
+- test_two_port_inputs_reach_composition_run_in_process · CI · #332
+- test_two_port_inputs_run_in_the_sandbox · CI · #332
+
 **`backend/tests/test_no_event_loop_blocking.py`** (Backend (pytest))
 
 - test_no_blocking_call_in_async_endpoint: No async handler may call blocking work directly (freezes the loop, #860). · CI · #860
@@ -5029,6 +5132,12 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - test_issue_numbers_skip_colours_and_urls · CI · #319
 - test_area_overrides_win_over_name_patterns · CI · #319
 - test_the_published_page_is_current: The same check CI's Frontend workflow runs, so a backend-only change sees it too. · CI · #319
+
+**`backend/tests/test_trial_seconds.py`** (Backend (pytest))
+
+- test_three_trial_run_returns_three_trial_times: The served run path (sandbox worker) returns one time per trial. · CI · #334
+- test_in_process_run_returns_trial_times_too · CI · #334
+- test_existing_trial_callbacks_are_chained_not_replaced: A callback already passed to run() still fires, with its context. · CI · #334
 
 **`backend/tests/test_validation.py`** (Backend (pytest))
 

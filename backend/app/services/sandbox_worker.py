@@ -51,6 +51,24 @@ except ImportError:
         pass
 
 
+def trial_array(value):
+    """One trial's input for one node, as numbers for ``Composition.run``.
+
+    A node with one input port takes one array (``[1, 0]``). A node with
+    several takes one array per port (``[[1, 0], [0]]``), and when the ports
+    differ in size those arrays can't form one numpy array: numpy refuses a
+    ragged list. Each port's array is converted on its own instead, the list
+    of arrays PsyNeuLink takes for a multi-port node (#332).
+    """
+    try:
+        return np.array(value, dtype=float)
+    except ValueError:
+        if isinstance(value, (list, tuple)):
+            return [trial_array(v) for v in value]
+        raise
+
+
+
 RESULT_MARKER = "###PSYNEUVIEW_RESULT###"
 
 # Emitted on stdout *before* RESULT_MARKER by streaming-capable tasks
@@ -1408,7 +1426,7 @@ def task_run(params):
         mech = _resolve_input_node(comp, module, var_name)
         if mech is None:
             return {"error": f"Input mechanism '{var_name}' not found"}
-        pnl_inputs[mech] = [np.array(v, dtype=float) for v in values]
+        pnl_inputs[mech] = [trial_array(v) for v in values]
 
     # AutodiffComposition (e.g. the Giallanza EGO model) only behaves correctly
     # under .learn() in PyTorch mode; plain .run() fails inside the nested EM
@@ -1497,9 +1515,12 @@ def task_run(params):
     # displayed source and the executed call cannot disagree.
     run_kwargs = {"inputs": pnl_inputs, "execution_mode": exec_mode}
     pnl_call = format_pnl_call("run", comp.name, run_kwargs)
+    # #334: time each trial inside the run (added after pnl_call so the shown
+    # call stays the user's own).
+    trial_seconds = add_trial_timing(run_kwargs)
 
     debugger_snapshots, execution_trial_boundaries, snapshots_dropped = _run_capturing_debugger_snapshots(
-        comp, pnl_inputs, execution_mode=exec_mode
+        comp, pnl_inputs, run_kwargs=run_kwargs
     )
 
     # Collect results
@@ -1540,6 +1561,12 @@ def task_run(params):
 
     return {
         "results": trial_results,
+        # #334: seconds per trial, aligned with `results`. Empty when the mode
+        # runs trials in compiled code (no per-trial hooks) or counts disagree.
+        "trial_seconds": (
+            [round(t, 6) for t in trial_seconds]
+            if len(trial_seconds) == len(trial_results) else []
+        ),
         "executionMode": effective_mode,
         "executionModeReason": mode_reason,
         "pnlCall": pnl_call,
@@ -1626,7 +1653,7 @@ def task_learn(params):
         mech = _resolve_input_node(comp, module, var_name)
         if mech is None:
             return {"error": f"Input mechanism '{var_name}' not found"}
-        pnl_inputs[mech] = [np.array(v, dtype=float) for v in values]
+        pnl_inputs[mech] = [trial_array(v) for v in values]
 
     pnl_targets = {}
     for var_name, values in targets.items():
@@ -1773,7 +1800,44 @@ def _debugger_hook_available() -> bool:
     return True
 
 
-def _run_capturing_debugger_snapshots(comp, pnl_inputs, execution_mode=None):
+def add_trial_timing(run_kwargs):
+    """Time each trial of a ``Composition.run`` call (#334).
+
+    Wraps ``call_before_trial`` / ``call_after_trial`` in ``run_kwargs`` (in
+    place), chaining any callbacks already there, and returns the list that
+    fills with one duration in seconds per trial as the run proceeds. The
+    timing sits where the work happens, so it excludes worker start-up, model
+    load and response building.
+
+    Compiled execution modes run the trial loop outside Python and never call
+    the hooks; the list then stays empty and the UI shows no per-trial time.
+    """
+    import time
+    from psyneulink.core.globals.utilities import call_with_pruned_args
+
+    seconds = []
+    started = [None]
+    before = run_kwargs.get("call_before_trial")
+    after = run_kwargs.get("call_after_trial")
+
+    def _before(context=None):
+        if before is not None:
+            call_with_pruned_args(before, context=context)
+        started[0] = time.perf_counter()
+
+    def _after(context=None):
+        if started[0] is not None:
+            seconds.append(time.perf_counter() - started[0])
+            started[0] = None
+        if after is not None:
+            call_with_pruned_args(after, context=context)
+
+    run_kwargs["call_before_trial"] = _before
+    run_kwargs["call_after_trial"] = _after
+    return seconds
+
+
+def _run_capturing_debugger_snapshots(comp, pnl_inputs, execution_mode=None, run_kwargs=None):
     """Run ``comp`` with a ``_debugger`` listener attached.
 
     Returns ``(snapshots, trial_boundaries)`` where ``trial_boundaries`` is a
@@ -1788,9 +1852,10 @@ def _run_capturing_debugger_snapshots(comp, pnl_inputs, execution_mode=None):
     closure variable because ``EXECUTION_SET`` / ``NODE_EXECUTION`` don't carry
     it in their locals (only ``BEGINNING_OF_TRIAL`` / ``END_OF_TRIAL`` do).
     """
-    run_kwargs = {"inputs": pnl_inputs}
-    if execution_mode is not None:
-        run_kwargs["execution_mode"] = execution_mode
+    if run_kwargs is None:
+        run_kwargs = {"inputs": pnl_inputs}
+        if execution_mode is not None:
+            run_kwargs["execution_mode"] = execution_mode
 
     # #768: both caps below drop snapshots silently. Count what they discard so
     # the response can say the trace is truncated rather than letting a partial

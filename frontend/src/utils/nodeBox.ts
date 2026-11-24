@@ -99,3 +99,30 @@ export function ovalBoxFor(name: string, outline = 0): { width: number; height: 
     height: Math.max(NODE_MIN_HEIGHT, Math.ceil((textH + 2 * MARGIN_Y) * Math.SQRT2), inside(textH)),
   };
 }
+
+/** Clear space kept round an expanded node's text, inside its outline (#333). */
+export const EXPANDED_CLEARANCE = 4;
+
+/**
+ * The least box that holds an expanded node's text inside its shape (#333).
+ *
+ * An expanded node shows its ports, function and roles under its name: a
+ * rectangle of text, `content` wide and high. A box that merely wraps that
+ * rectangle puts its corners on, or past, an oval's or an octagon's outline,
+ * since the shape is inscribed in the box. Graphviz's rule (ovalBoxFor)
+ * answers: enlarge the text's box by √2 each way. The rectangle's corners then
+ * lie on the ellipse, (1/√2)² + (1/√2)² = 1, and on an octagon's cut corner
+ * too, 1/√2 + 1/√2 = √2 = 1 + tan 22.5°. A rectangle needs no enlarging. The
+ * outline, at its heaviest (`outline` is outlineThickness), lies inside the
+ * box, so it is added outside the enlarged box, and EXPANDED_CLEARANCE keeps
+ * the text off it.
+ */
+export function expandedBoxFor(
+  content: { width: number; height: number },
+  shape: string,
+  outline: number,
+): { width: number; height: number } {
+  const grow = shape === "rectangle" ? 1 : Math.SQRT2;
+  const side = (text: number) => Math.ceil((text + 2 * EXPANDED_CLEARANCE) * grow + 2 * outline);
+  return { width: side(content.width), height: side(content.height) };
+}

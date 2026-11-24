@@ -197,12 +197,14 @@ def _run_model_inprocess(
             return {"error": f"Composition '{composition_name}' not found in {file_path}"}
 
         # Resolve input mechanism names to actual mechanism objects
+        from app.services.sandbox_worker import trial_array
+
         pnl_inputs = {}
         for var_name, values in inputs.items():
             mech = _resolve_input_node(comp, module, var_name)
             if mech is None:
                 return {"error": f"Input mechanism '{var_name}' not found"}
-            pnl_inputs[mech] = [np.array(v, dtype=float) for v in values]
+            pnl_inputs[mech] = [trial_array(v) for v in values]
 
         # AutodiffComposition (e.g. the Giallanza EGO model) runs as a compiled
         # PyTorch module via .learn() — plain .run() fails inside the nested EM
@@ -219,7 +221,11 @@ def _run_model_inprocess(
             if hasattr(node, "log"):
                 node.log.set_log_conditions("value")
         mode, effective_mode, mode_reason = _resolve_run_execution_mode(pnl, execution_mode)
-        comp.run(inputs=pnl_inputs, execution_mode=mode)
+        from app.services.sandbox_worker import add_trial_timing
+
+        run_kwargs = {"inputs": pnl_inputs, "execution_mode": mode}
+        trial_seconds = add_trial_timing(run_kwargs)  # #334
+        comp.run(**run_kwargs)
         raw_results = list(comp.results)
 
         # Collect per-trial results
@@ -252,6 +258,10 @@ def _run_model_inprocess(
 
         return {
             "results": trial_results,
+            "trial_seconds": (
+                [round(t, 6) for t in trial_seconds]
+                if len(trial_seconds) == len(trial_results) else []
+            ),
             "executionMode": effective_mode,
             "executionModeReason": mode_reason,
             "outputLabels": _output_labels(comp),
@@ -476,12 +486,14 @@ def _learn_model_inprocess(
         if epochs < 1:
             return {"error": "epochs must be >= 1"}
 
+        from app.services.sandbox_worker import trial_array
+
         pnl_inputs = {}
         for var_name, values in inputs.items():
             mech = _resolve_input_node(comp, module, var_name)
             if mech is None:
                 return {"error": f"Input mechanism '{var_name}' not found"}
-            pnl_inputs[mech] = [np.array(v, dtype=float) for v in values]
+            pnl_inputs[mech] = [trial_array(v) for v in values]
 
         pnl_targets = {}
         for var_name, values in targets.items():

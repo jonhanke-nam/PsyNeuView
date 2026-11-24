@@ -409,3 +409,19 @@ export const ROLE_PRIORITY: string[] = [
   "PROBE", "OUTPUT", "INPUT", "FEEDBACK_SENDER", "CYCLE", "INTERNAL",
 ];
 
+/** A node's role colour, as the graph draws its outline: INPUT+OUTPUT is the
+ *  singleton brown, otherwise the highest-priority role's colour. `custom` is
+ *  the user's Graph ▸ Style colours, when set. Shared by the graph's nodes and
+ *  Per-trial values' node bands (#335). */
+export function roleColorFor(roles: string[] | undefined, custom?: Record<string, string> | null): string {
+  const colors = custom || ROLE_COLORS;
+  if (!roles || roles.length === 0) return colors.INTERNAL || "var(--pnv-role-internal)";
+  if (roles.includes("INPUT") && roles.includes("OUTPUT")) {
+    return colors.SINGLETON || ROLE_COLORS.SINGLETON;
+  }
+  for (const role of ROLE_PRIORITY) {
+    if (roles.includes(role)) return colors[role] || ROLE_COLORS[role] || "var(--pnv-role-internal)";
+  }
+  return colors.INTERNAL || "var(--pnv-role-internal)";
+}
+

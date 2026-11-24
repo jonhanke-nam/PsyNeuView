@@ -27,8 +27,10 @@ test.describe("learning models: Run inputs and the Inspector", { tag: "@ci" }, (
     await openDemo(page, "TD Learning");
     await page.getByTestId("tab-run").click();
     const panel = page.getByTestId("run-panel");
-    await expect(panel.getByTestId("run-input-cue")).toBeVisible({ timeout: 10_000 });
-    await expect(panel.locator('[data-testid^="run-input-"]')).toHaveCount(1);
+    // Inputs are arranged by trial by default (#331): trial 1 has one field,
+    // the cue's, in bracket notation (#330).
+    await expect(panel.getByTestId("run-trial-input-cue-1")).toBeVisible({ timeout: 10_000 });
+    await expect(panel.getByTestId("run-trial-group-1").locator('[data-testid^="run-trial-input-"]')).toHaveCount(1);
     await expect(panel.getByText(/TARGET for value_estimate/)).toHaveCount(0);
 
     const sent = page.waitForRequest((r: any) => r.url().includes("/api/model/run") && r.method() === "POST");

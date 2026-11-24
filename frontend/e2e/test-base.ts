@@ -52,6 +52,13 @@ const IO_ROWS_KEY = "psyneuview.graph.ioRows";
  * Learn…) on screen, so it keeps them on unless a spec asks otherwise. A spec
  * about the default sets the keys in its own `addInitScript`.
  */
+/**
+ * How the Components panel opens (#113). It now opens as the icon strip by
+ * default (#345); the suite was written with the word list showing (search
+ * box, sections), so it keeps the word list unless a spec asks otherwise. A
+ * spec about the default removes the key in its own `addInitScript`.
+ */
+const COMPONENTS_START_KEY = "psyneuview.components.start";
 const LAYOUT_CODE_VISIBLE_KEY = "psyneuview_layout_code_visible";
 const LAYOUT_BOTTOM_VISIBLE_KEY = "psyneuview_layout_bottom_visible";
 
@@ -108,6 +115,10 @@ async function expandOpenMenuSections(page: import("@playwright/test").Page) {
   await page.addInitScript((key) => {
     if (localStorage.getItem(key) === null) localStorage.setItem(key, "off");
   }, IO_ROWS_KEY);
+  // #345: the Components panel as the word list, as the suite expects.
+  await page.addInitScript((key) => {
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, "open");
+  }, COMPONENTS_START_KEY);
   // #189: the code editor and the bottom panel on, as the suite expects.
   await page.addInitScript(
     (keys) => {

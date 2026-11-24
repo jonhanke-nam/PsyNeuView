@@ -11,6 +11,14 @@ export interface RunResults {
   outputLabels?: string[];
   logs: Record<string, { trials: number[]; values: number[][][] }>;
   numTrials: number;
+  // #337: which version of the model this run ran — a hash of the source text
+  // at run time, and the composition. Set by the Run panel, not the backend.
+  sourceHash?: string;
+  compositionName?: string;
+  // The composition chosen in the app when the run started (activeComposition),
+  // compared like with like to tell when another one is chosen. Null when none
+  // was chosen, which never counts as a switch.
+  chosenComposition?: string | null;
 }
 
 interface RunResultsState {
@@ -23,13 +31,23 @@ interface RunResultsState {
    * "change a parameter and re-run" needs to tell the two runs apart (#1181).
    */
   runCount: number;
+  /**
+   * #337: the open model's source no longer matches the one the results ran.
+   * Kept current by `stores/runStaleness.ts`; Undo back to the run's exact
+   * source makes it false again.
+   */
+  stale: boolean;
   setResults: (r: RunResults | null) => void;
   clearResults: () => void;
+  setStale: (stale: boolean) => void;
 }
 
 export const useRunResults = create<RunResultsState>((set) => ({
   results: null,
   runCount: 0,
-  setResults: (r) => set((s) => ({ results: r, runCount: r ? s.runCount + 1 : s.runCount })),
-  clearResults: () => set({ results: null }),
+  stale: false,
+  setResults: (r) =>
+    set((s) => ({ results: r, stale: false, runCount: r ? s.runCount + 1 : s.runCount })),
+  clearResults: () => set({ results: null, stale: false }),
+  setStale: (stale) => set({ stale }),
 }));

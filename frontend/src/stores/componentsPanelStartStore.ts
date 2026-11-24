@@ -1,8 +1,8 @@
 /**
  * How the Components panel first opens: Settings ▸ Appearance. (#113)
  *
- * Open as the word list by default (the search box and the sections, folded
- * closed), or as the narrow icon strip. This setting decides how the panel
+ * Open as the narrow icon strip by default (#345), or as the word list (the
+ * search box and the sections, folded closed). A stored choice is kept. This setting decides how the panel
  * opens; the panel's own ◀/▶ button collapses or opens it for the current
  * session without changing the setting (one control per setting), the same
  * way the graph legend's Show/Hide works (graphLegendStore). Remembered per
@@ -17,11 +17,11 @@ import { recordSettingChanged } from "@/utils/activityLog";
 export type ComponentsStart = "open" | "strip";
 
 export const COMPONENTS_START_KEY = "psyneuview.components.start";
-export const DEFAULT_COMPONENTS_START: ComponentsStart = "open";
+export const DEFAULT_COMPONENTS_START: ComponentsStart = "strip";
 
 export const COMPONENTS_STARTS: { id: ComponentsStart; label: string }[] = [
-  { id: "open", label: "Starts open, as the word list" },
   { id: "strip", label: "Starts as the icon strip" },
+  { id: "open", label: "Starts open, as the word list" },
 ];
 
 export function isComponentsStart(v: unknown): v is ComponentsStart {

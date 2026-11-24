@@ -1,9 +1,10 @@
 /**
  * How the Components panel opens is a setting: Settings ▸ Appearance (#113).
  *
- * "Starts open, as the word list" is the default; "Starts as the icon strip"
- * opens it as the narrow strip. The panel's own ◀/▶ button switches it for
- * the session only, so a reload comes back as the setting says.
+ * "Starts as the icon strip" is the default (#345); "Starts open, as the word
+ * list" opens the search box and sections. The panel's own ◀/▶ button
+ * switches it for the session only, so a reload comes back as the setting
+ * says. The harness seeds the word list for the rest of the suite.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 
@@ -19,6 +20,16 @@ async function chooseComponentsStart(page: Page, value: "open" | "strip") {
 }
 
 test.describe("Components panel opening setting (#113)", { tag: "@ci" }, () => {
+  test("a fresh app opens the panel as the icon strip (#345)", async ({ page }) => {
+    // The harness seeds the word list; a fresh app has no stored choice.
+    await page.addInitScript(() => localStorage.removeItem("psyneuview.components.start"));
+    await page.goto("/");
+    const palette = page.getByTestId("palette-sidebar");
+    await expect(palette).toBeVisible();
+    await expect(palette.getByTitle("Expand palette")).toBeVisible();
+    await expect(palette.getByPlaceholder("Search components…")).toHaveCount(0);
+  });
+
   test("Starts as the icon strip opens the strip after a reload", async ({ page }) => {
     await page.goto("/");
     const palette = page.getByTestId("palette-sidebar");
