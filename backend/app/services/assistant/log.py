@@ -1,7 +1,10 @@
 """The local record of what the assistant did (#179).
 
 One JSON line per tool call: the tool, its arguments, the result summary,
-whether it was allowed or refused, and who approved it. Local only; read
+whether it was allowed or refused, and who approved it. The user's
+decisions are recorded the same way (``decision``): a proposal accepted,
+rejected or refused at accept, assistant-written code approved or refused
+at review, and a run refused because its code isn't approved. Local only; read
 back by ``GET /api/assistant/log``. With ``keep_log`` off nothing is written.
 Prompts, replies and file contents are never written here, so the log can be
 attached to a problem report without carrying a model's source.
@@ -59,6 +62,23 @@ def record(
             with path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(entry) + "\n")
     return entry
+
+
+def decision(*, action: str, args: dict, allowed: bool, summary: str = "", approved_by: str = "user",
+             session_id: str = "") -> dict | None:
+    """Record one of the user's (or the app's) decisions, with the
+    ``keep_log`` setting as it is now. Never raises: a decision is never
+    undone because the log couldn't be written."""
+    try:
+        from app.services.assistant import settings as assistant_settings
+        keep = bool(assistant_settings.get_settings().get("keep_log", True))
+    except Exception:  # noqa: BLE001
+        keep = True
+    try:
+        return record(session_id=session_id, tool=action, args=args, allowed=allowed, ok=allowed,
+                      summary=summary, approved_by=approved_by, keep_log=keep)
+    except OSError:
+        return None
 
 
 def read_entries(limit: int = 1000) -> list[dict]:

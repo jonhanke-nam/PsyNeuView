@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from app.services.assistant import log as assistant_log
 from app.services.assistant import review
 from app.services.assistant.same_site import same_site
 
@@ -70,10 +71,16 @@ def approve(request: ApproveRequest):
     text = _read(request.path)
     on_disk = review.content_hash(text)
     if on_disk != (request.content_hash or "").strip().lower():
+        assistant_log.decision(action="review_approve", allowed=False,
+                               args={"path": request.path, "reason": CHANGED, "content_hash": on_disk[:16]},
+                               summary="Not approved: the file changed since it was shown")
         return JSONResponse(status_code=409, content={
             "detail": f"{Path(request.path).name} changed since it was shown; look at it again before approving.",
             "reason": CHANGED, "path": request.path, "content_hash": on_disk,
         })
     # The same text that was hashed is what gets approved: no second read.
     review.mark_reviewed(request.path, text)
+    assistant_log.decision(action="review_approve", allowed=True,
+                           args={"path": request.path, "content_hash": on_disk[:16]},
+                           summary="Approved assistant-written code to run")
     return {"path": request.path, "tracked": True, "runnable": True, "content_hash": on_disk}

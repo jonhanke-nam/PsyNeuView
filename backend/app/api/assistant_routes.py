@@ -203,7 +203,12 @@ async def reject_proposal(proposal_id: str, settings: dict = Depends(enabled)):
     session, proposal = _proposal(proposal_id)
     if proposal["state"] != "pending":
         raise HTTPException(status_code=409, detail=f"proposal is {proposal['state']}")
-    return session.set_proposal_state(proposal_id, "rejected")
+    out = session.set_proposal_state(proposal_id, "rejected")
+    assistant_log.record(
+        session_id=session.id, tool=f"reject_{proposal['kind']}", args={"path": proposal.get("path")},
+        allowed=False, ok=True, summary=proposal.get("summary", ""), approved_by="user", keep_log=settings["keep_log"],
+    )
+    return out
 
 
 @router.post("/proposals/{proposal_id}/accept")
@@ -216,6 +221,7 @@ async def accept_proposal(proposal_id: str, body: dict = Body(default={}), setti
     current_hash = body.get("current_hash")
     if proposal["base_hash"] is not None and current_hash != proposal["base_hash"]:
         session.set_proposal_state(proposal_id, "stale")
+        _log_refused_accept(session, proposal, "stale", settings)
         raise HTTPException(status_code=409, detail={"reason": "stale", "message": "the source changed since the assistant looked; it has to look again"})
     if proposal["kind"] == "file_write":
         try:
@@ -225,6 +231,7 @@ async def accept_proposal(proposal_id: str, body: dict = Body(default={}), setti
         except files.PathRefused as e:
             stale = e.reason in ("stale", "swapped")
             session.set_proposal_state(proposal_id, "stale" if stale else "rejected")
+            _log_refused_accept(session, proposal, "stale" if stale else e.reason, settings)
             raise HTTPException(status_code=409, detail={"reason": "stale" if stale else e.reason, "message": str(e)})
         except OSError as e:
             raise HTTPException(status_code=500, detail=f"couldn't write the file: {e.strerror or e}")
@@ -238,6 +245,14 @@ async def accept_proposal(proposal_id: str, body: dict = Body(default={}), setti
             summary=proposal["summary"], approved_by="user", keep_log=settings["keep_log"],
         )
     return session.set_proposal_state(proposal_id, "accepted")
+
+
+def _log_refused_accept(session, proposal: dict, reason: str, settings: dict) -> None:
+    """The user accepted, and the app refused to apply it (#179, B5)."""
+    assistant_log.record(
+        session_id=session.id, tool=f"accept_{proposal['kind']}", args={"path": proposal.get("path"), "reason": reason},
+        allowed=False, ok=False, summary=proposal.get("summary", ""), approved_by="user", keep_log=settings["keep_log"],
+    )
 
 
 # ── log ──────────────────────────────────────────────────────────────────

@@ -191,6 +191,11 @@ app = FastAPI(title="PsyNeuView", version=__version__, lifespan=lifespan)
 
 
 def _review_409(path: str, message: str, reason: str) -> JSONResponse:
+    # A refusal to run code nobody approved is one of the decisions the
+    # assistant's log keeps (#179, B5).
+    from app.services.assistant import log as _assistant_log
+    _assistant_log.decision(action="run_refused_unreviewed", allowed=False, args={"path": path, "reason": reason},
+                            summary="Refused to run assistant-written code that isn't approved", approved_by="")
     return JSONResponse(status_code=409, content={
         "detail": message, "reason": reason, "path": path,
         # The page asks /status for the content and its hash, shows it, and
