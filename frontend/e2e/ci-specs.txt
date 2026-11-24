@@ -76,6 +76,7 @@ local-checkout-empty-folder.spec.ts
 lock-in-checkout.spec.ts
 mac-app-settings-section.spec.ts
 mac-auto-install-updates.spec.ts
+mac-check-for-updates.spec.ts
 mdf-gap-warnings.spec.ts
 menus-above-walkthrough-ring.spec.ts
 model-lock.spec.ts
