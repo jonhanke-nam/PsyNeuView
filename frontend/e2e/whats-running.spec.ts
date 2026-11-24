@@ -6,8 +6,6 @@
  * from the same commit before the run) agrees with the server: no warning.
  * The two other states — the Mac app's included copy, and a page older than
  * the server — are staged by answering `/api/settings/running` for the page.
- *
- * Not in CI: should be added: passes locally in about 2 s (2026-11-23); never tagged.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 
@@ -19,7 +17,7 @@ async function openAbout(page: Page) {
   await expect(page.getByTestId("settings-content-about")).toBeVisible();
 }
 
-test.describe("Settings ▸ About: what's running", () => {
+test.describe("Settings ▸ About: what's running", { tag: "@ci" }, () => {
   test("names the version, the checkout it runs from, its branch and commit, and the page's build", async ({ page, request }) => {
     const running = await (await request.get("/api/settings/running")).json();
     expect(running.kind).toBe("checkout");

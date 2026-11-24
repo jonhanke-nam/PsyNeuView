@@ -7,9 +7,7 @@ import { readOnlyTest as test, expect } from "./test-base";
 //
 // The Stroop reference model declares `# PsyNeuLink: 0.18.0.0`, so against the
 // current build it produces a version-mismatch warning.
-//
-// Not in CI: should be added: passes locally in under 2 s (2026-11-23); never tagged.
-test("surfaces a reference model's version-mismatch warning in the Diagnostics bar", async ({ page }) => {
+test("surfaces a reference model's version-mismatch warning in the Diagnostics bar", { tag: "@ci" }, async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("app-toolbar")).toBeVisible({ timeout: 30000 });
 

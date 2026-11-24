@@ -13,8 +13,6 @@
  *
  * The assertion that matters is the viewport transform: if it changes during an
  * edge-shaping drag, the canvas stole the gesture and the feature is broken.
- *
- * Not in CI: should be added: passes locally in about 15 s (2026-11-23); never tagged. edge-shaping-auto-layout.spec.ts covers part of it in CI.
  */
 import { mutatingTest as test, expect } from "./test-base";
 import path from "path";
@@ -96,7 +94,7 @@ const hitPath = (page: Page) =>
  */
 const drawnPath = (page: Page) => page.locator(".react-flow__edge path").first();
 
-test.describe("edge shaping does not pan the canvas (#975)", () => {
+test.describe("edge shaping does not pan the canvas (#975)", { tag: "@ci" }, () => {
   test("dragging an unselected edge bends it and leaves the viewport put", async ({ page }) => {
     await openStroop(page);
     const edge = hitPath(page);

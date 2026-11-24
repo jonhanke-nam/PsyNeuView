@@ -788,8 +788,8 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/edge-bend-drag.spec.ts`** (Browser (Playwright))
 
-- edge shaping does not pan the canvas (#975) › dragging an unselected edge bends it and leaves the viewport put · not in CI · #975
-- edge shaping does not pan the canvas (#975) › dragging a bend handle on a selected edge does not pan · not in CI · #975
+- edge shaping does not pan the canvas (#975) › dragging an unselected edge bends it and leaves the viewport put · CI · #975
+- edge shaping does not pan the canvas (#975) › dragging a bend handle on a selected edge does not pan · CI · #975
 
 **`frontend/e2e/edge-curve-handles.spec.ts`** (Browser (Playwright))
 
@@ -1131,8 +1131,8 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/apply-only-when-needed.spec.ts`** (Browser (Playwright))
 
-- Developer: no button until a valid choice differs from what's installed; gone again after applying · not in CI · #1303
-- Developer: picking the installed release is nothing to apply; another release is · not in CI · #1303
+- Developer: no button until a valid choice differs from what's installed; gone again after applying · CI · #1303
+- Developer: picking the installed release is nothing to apply; another release is · CI · #1303
 
 **`frontend/e2e/editor-drag-select.spec.ts`** (Browser (Playwright))
 
@@ -2356,21 +2356,21 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/autosave-delay-commit.spec.ts`** (Browser (Playwright))
 
-- autosave delay typed in Settings is kept when Settings closes with Escape · not in CI · #37
+- autosave delay typed in Settings is kept when Settings closes with Escape · CI · #37
 
 **`frontend/e2e/autosave.spec.ts`** (Browser (Playwright))
 
-- autosave (#1347) › off by default: an edit is not written, however long you wait · not in CI · #1347
-- autosave (#1347) › on, after N idle seconds the file is saved, and the status says so · not in CI · #1347
-- autosave (#1347) › on, code with an error waits instead of being written · not in CI · #1347
-- autosave (#1347) › a locked model is not autosaved · not in CI · #1347
-- autosave (#1347) › a change on disk is never overwritten: paused while asked, and after Keep my changes · not in CI · #1347
+- autosave (#1347) › off by default: an edit is not written, however long you wait · CI · #1347
+- autosave (#1347) › on, after N idle seconds the file is saved, and the status says so · CI · #1347
+- autosave (#1347) › on, code with an error waits instead of being written · CI · #1347
+- autosave (#1347) › a locked model is not autosaved · CI · #1347
+- autosave (#1347) › a change on disk is never overwritten: paused while asked, and after Keep my changes · CI · #1347
 
 **`frontend/e2e/changes-since-save.spec.ts`** (Browser (Playwright))
 
-- Changes since save (#1348) › edit, then the orange dot shows the change and its counts · not in CI · #1348
-- Changes since save (#1348) › save, then History's Changes since save says No changes · not in CI · #1348
-- Changes since save (#1348) › a change made outside PsyNeuView is called out at the top · not in CI · #1348
+- Changes since save (#1348) › edit, then the orange dot shows the change and its counts · CI · #1348
+- Changes since save (#1348) › save, then History's Changes since save says No changes · CI · #1348
+- Changes since save (#1348) › a change made outside PsyNeuView is called out at the top · CI · #1348
 
 **`frontend/e2e/composition-frame-undo.spec.ts`** (Browser (Playwright))
 
@@ -2380,9 +2380,9 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/protection-line.spec.ts`** (Browser (Playwright))
 
-- a protected file opens read only, unlocks from the tag, and stays unlocked after reopening (#1346) · not in CI · #1346
-- a permanently protected file offers no unlock, refuses a save, and becomes editable when the line is removed on disk (#1346) · not in CI · #1346
-- Save a copy as… from a permanently protected file: the copy starts unprotected (#1346) · not in CI · #1346
+- a protected file opens read only, unlocks from the tag, and stays unlocked after reopening (#1346) · CI · #1346
+- a permanently protected file offers no unlock, refuses a save, and becomes editable when the line is removed on disk (#1346) · CI · #1346
+- Save a copy as… from a permanently protected file: the copy starts unprotected (#1346) · CI · #1346
 
 **`frontend/e2e/restore-saved-layout.spec.ts`** (Browser (Playwright))
 
@@ -2391,14 +2391,14 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/save-copy-sidecars.spec.ts`** (Browser (Playwright))
 
-- the copy gets the layout and labels, named to match, and starts unlocked (#1244) · not in CI · #1244
-- a layout file already at the destination gets the same overwrite question as the .py (#1244) · not in CI · #1244
+- the copy gets the layout and labels, named to match, and starts unlocked (#1244) · CI · #1244
+- a layout file already at the destination gets the same overwrite question as the .py (#1244) · CI · #1244
 
 **`frontend/e2e/saves-in-history.spec.ts`** (Browser (Playwright))
 
-- Saves in History (#1349) › two saves, undo past the latest, revert to the earlier one · not in CI · #1349
-- Saves in History (#1349) › pick an earlier save in History and revert to it · not in CI · #1349
-- Saves in History (#1349) › with autosave on, its saves are marked automatic · not in CI · #1349
+- Saves in History (#1349) › two saves, undo past the latest, revert to the earlier one · CI · #1349
+- Saves in History (#1349) › pick an earlier save in History and revert to it · CI · #1349
+- Saves in History (#1349) › with autosave on, its saves are marked automatic · CI · #1349
 
 **`frontend/e2e/sidecar-placement.spec.ts`** (Browser (Playwright))
 
@@ -2782,8 +2782,8 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/whats-running.spec.ts`** (Browser (Playwright))
 
-- Settings ▸ About: what's running › names the version, the checkout it runs from, its branch and commit, and the page's build · not in CI · #1356
-- Settings ▸ About: what's running › the Mac app's included copy, and a page older than the server · not in CI · #1356
+- Settings ▸ About: what's running › names the version, the checkout it runs from, its branch and commit, and the page's build · CI · #1356
+- Settings ▸ About: what's running › the Mac app's included copy, and a page older than the server · CI · #1356
 
 **`frontend/src/components/common/PresenceIndicator.test.ts`** (Frontend unit (vitest))
 
@@ -3000,16 +3000,16 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/keep-pnl-current.spec.ts`** (Browser (Playwright))
 
-- General: behind shows the count and when it was checked; Check now asks the backend; off removes the ready note · not in CI · #1304
-- General: up to date, and a failed automatic update is shown with the version kept · not in CI · #1304
-- General: an official release is told about a newer release, with no automatic-update switch · not in CI · #1304
-- Developer: each checkout has its two switches, off by default, naming the remote branch; a refused pull is said · not in CI · #1304
+- General: behind shows the count and when it was checked; Check now asks the backend; off removes the ready note · CI · #1304
+- General: up to date, and a failed automatic update is shown with the version kept · CI · #1304
+- General: an official release is told about a newer release, with no automatic-update switch · CI · #1304
+- Developer: each checkout has its two switches, off by default, naming the remote branch; a refused pull is said · CI · #1304
 
 **`frontend/e2e/local-checkout-empty-folder.spec.ts`** (Browser (Playwright))
 
-- an empty folder: the offer to download PsyNeuLink appears, and Apply downloads it · not in CI · #1342
-- a folder that doesn't exist yet is offered the download too · not in CI · #1342
-- a folder of other files: the reason under the field, and no Apply · not in CI · #1342
+- an empty folder: the offer to download PsyNeuLink appears, and Apply downloads it · CI · #1342
+- a folder that doesn't exist yet is offered the download too · CI · #1342
+- a folder of other files: the reason under the field, and no Apply · CI · #1342
 
 **`frontend/e2e/open-menu-follows-source-switch.spec.ts`** (Browser (Playwright))
 
@@ -3039,11 +3039,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/pnl-switch-list-folded.spec.ts`** (Browser (Playwright))
 
-- the list opens short: Another… first, only the group in use open, a folded group saying it holds the one in use · not in CI · #1334
-- unfolding a repo shows its branches alone; picking one shows the full source and Apply · not in CI · #1334
-- the releases: the newest five, then Show older reveals the rest, the incompatible ones disabled with the reason · not in CI · #1334
-- keyboard: Up and Down over headings and rows, Right and Left unfold and fold, Enter picks, Escape closes · not in CI · #1334
-- nothing matches what is in use: every group starts folded · not in CI · #1334
+- the list opens short: Another… first, only the group in use open, a folded group saying it holds the one in use · CI · #1334
+- unfolding a repo shows its branches alone; picking one shows the full source and Apply · CI · #1334
+- the releases: the newest five, then Show older reveals the rest, the incompatible ones disabled with the reason · CI · #1334
+- keyboard: Up and Down over headings and rows, Right and Left unfold and fold, Enter picks, Escape closes · CI · #1334
+- nothing matches what is in use: every group starts folded · CI · #1334
 
 **`frontend/e2e/pnl-version-choice.spec.ts`** (Browser (Playwright))
 
@@ -4354,7 +4354,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/diagnostics-load-messages.spec.ts`** (Browser (Playwright))
 
-- surfaces a reference model's version-mismatch warning in the Diagnostics bar · not in CI · #879
+- surfaces a reference model's version-mismatch warning in the Diagnostics bar · CI · #879
 
 **`frontend/e2e/drop-new-model-file.spec.ts`** (Browser (Playwright))
 
@@ -4367,7 +4367,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/load-time-display.spec.ts`** (Browser (Playwright))
 
-- surfaces model load time in the Model Diagnostics bar · not in CI · #874
+- surfaces model load time in the Model Diagnostics bar · CI · #874
 
 **`frontend/e2e/open-menu-custom-catalogs.spec.ts`** (Browser (Playwright))
 
@@ -4654,7 +4654,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/notification-dwell.spec.ts`** (Browser (Playwright))
 
-- success toast dwells past the old 2s window · not in CI · #879
+- success toast dwells past the old 2s window · CI · #879
 
 **`frontend/e2e/pycharm-live.local.spec.ts`** (Browser (Playwright))
 

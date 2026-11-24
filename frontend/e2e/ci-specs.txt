@@ -1,10 +1,14 @@
 about-release-dates.spec.ts
 app-shell.spec.ts
 app-update-notice.spec.ts
+apply-only-when-needed.spec.ts
 arrow-drag-keeps-layout.spec.ts
 arrowheads-at-end.spec.ts
+autosave-delay-commit.spec.ts
+autosave.spec.ts
 blank-screen-setting.spec.ts
 busy-indicator.spec.ts
+changes-since-save.spec.ts
 click-never-connects.spec.ts
 component-icons.spec.ts
 components-panel-start-setting.spec.ts
@@ -14,12 +18,14 @@ composition-frame-buttons.spec.ts
 composition-frame-undo.spec.ts
 developer-mode-marking.spec.ts
 developer-tests-loader.spec.ts
+diagnostics-load-messages.spec.ts
 diagnostics.spec.ts
 dialog-sweep.spec.ts
 drag-to-connect-stage2.spec.ts
 drag-to-connect-stage3.spec.ts
 drag-to-connect.spec.ts
 drop-new-model-file.spec.ts
+edge-bend-drag.spec.ts
 edge-curve-handles.spec.ts
 edge-line-width.spec.ts
 edge-routing-no-crossings.spec.ts
@@ -49,6 +55,7 @@ help-keyboard-shortcuts.spec.ts
 inspector-condition-undo.spec.ts
 inspector-legend.spec.ts
 io-role-rows.spec.ts
+keep-pnl-current.spec.ts
 layered-wide-boxes.spec.ts
 layout-default-fresh-profile.spec.ts
 layout-default-show-graph.spec.ts
@@ -58,6 +65,8 @@ layout-spacing.spec.ts
 learn-pathway.spec.ts
 learning-nodes-run-inspector.spec.ts
 live-preview-background.spec.ts
+load-time-display.spec.ts
+local-checkout-empty-folder.spec.ts
 lock-in-checkout.spec.ts
 mac-app-settings-section.spec.ts
 mdf-gap-warnings.spec.ts
@@ -72,6 +81,7 @@ node-names-simple.spec.ts
 node-outlines.spec.ts
 node-shapes.spec.ts
 node-text-proportion.spec.ts
+notification-dwell.spec.ts
 occlusion-audit.spec.ts
 open-menu-custom-catalogs.spec.ts
 open-menu-dev-catalogs.spec.ts
@@ -84,11 +94,13 @@ place-component.spec.ts
 pnl-record-mismatch.spec.ts
 pnl-source-list-switch.spec.ts
 pnl-source-switch-refreshes-library.spec.ts
+pnl-switch-list-folded.spec.ts
 pnl-version-choice.spec.ts
 preview-error-banner.spec.ts
 preview-not-save.spec.ts
 preview-survives-save.spec.ts
 project-folder-move.spec.ts
+protection-line.spec.ts
 pytorch-view.spec.ts
 reactflow-credit.spec.ts
 read-only-badge-note.spec.ts
@@ -101,6 +113,8 @@ round-trips.spec.ts
 run-panel-grouping.spec.ts
 run-record-yaml.spec.ts
 run-set-survives-edit.spec.ts
+save-copy-sidecars.spec.ts
+saves-in-history.spec.ts
 scheduling-arrows-setting.spec.ts
 settings-panel.spec.ts
 settings-search.spec.ts
@@ -134,4 +148,5 @@ view-only-tags-setting.spec.ts
 walkthrough-layout-restore.spec.ts
 watch-status-in-bar.spec.ts
 watch-two-windows.spec.ts
+whats-running.spec.ts
 where-things-live.spec.ts
