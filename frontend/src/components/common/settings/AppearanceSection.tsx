@@ -94,6 +94,8 @@ import { TEXT_SIZES, TEXT_SIZE_LABELS, DEFAULT_TEXT_SIZE, isTextSize, useTextSiz
 import { BUSY_STYLES, BUSY_TIMER_PLACES, DEFAULT_BUSY_STYLE, DEFAULT_BUSY_TIMER_PLACE, useBusyStore } from "@/stores/busyStore";
 import { BusyGraphic } from "@/components/common/BusyIndicator";
 import { Group, SettingLabel, mutedStyle } from "./shared";
+import { useShortcutKeys } from "@/shortcuts/useAppShortcuts";
+import { windowZoomKeys } from "@/shortcuts/keyLabels";
 
 export function AppearanceSection() {
   return (
@@ -495,12 +497,14 @@ function ViewOnlyTagsRow() {
 
 function FitButtonStyleRow() {
   const style = useFitButtonStyleStore((s) => s.style);
+  // #409: this platform's keys, as rebound (⌘9 or ⇧1 on a Mac).
+  const fitKeys = useShortcutKeys("view.fitGraph", "view.fitGraphShift");
   const setStyle = useFitButtonStyleStore((s) => s.setStyle);
   return (
     <div style={{ fontSize: "var(--pnv-fs-13)" }}>
       <SettingLabel title="Fit button" htmlFor="setting-graph-fit-button-style">
         The button under + and − that fits the whole graph into the window
-        (also ⌘9 or ⇧1). The icon needs no translation; the word is easier to
+        (also {fitKeys}). The icon needs no translation; the word is easier to
         spot. Same size either way.
       </SettingLabel>
       <select
@@ -569,7 +573,7 @@ function PointerSizeRow() {
       <SettingLabel title="Pointer size" htmlFor="setting-graph-pointer-size">
         The size of the pointer in the graph view — the arrow, the hand, the
         crosshair or the circle, and the grabbing hand while you drag. Window
-        zoom (⌘+ / ⌘−) doesn't change it; this does.
+        zoom ({windowZoomKeys()}) doesn't change it; this does.
       </SettingLabel>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
         <select
