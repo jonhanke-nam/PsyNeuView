@@ -16,12 +16,13 @@ import json
 
 import anyio
 import pytest
+from fastapi.testclient import TestClient
+
 from app.main import app
 from app.mcp_server import build_server, check_url
 from app.services.assistant import keys, mcp_link
 from app.services.assistant import session as sessions
 from app.services.assistant import tools as assistant_tools
-from fastapi.testclient import TestClient
 
 LOCAL = ("127.0.0.1", 50000)
 SOURCE = "import psyneulink as pnl\nA = pnl.TransferMechanism(name='A')\n"
@@ -336,3 +337,312 @@ def test_a_refused_tool_list_reaches_claude_with_its_reason():
                 await client.list_tools()
 
     anyio.run(scenario)
+
+
+# ── finding the running backend: the discovery file ──────────────────────
+
+
+def _dead_pid() -> int:
+    import subprocess
+    import sys
+
+    proc = subprocess.Popen([sys.executable, "-c", "pass"])
+    proc.wait()
+    return proc.pid
+
+
+@pytest.fixture
+def discovery(tmp_path, monkeypatch):
+    from app.services.assistant import mcp_discovery
+
+    target = tmp_path / "state" / "mcp-backend.json"
+    monkeypatch.setenv(mcp_discovery.DISCOVERY_ENV, str(target))
+    return target
+
+
+def test_discovery_file_is_for_the_user_only_and_names_this_backend(discovery):
+    import os
+    import stat
+
+    from app.services.assistant import mcp_discovery
+
+    old = os.umask(0)  # even with a permissive umask
+    try:
+        assert mcp_discovery.write(8393, "1.2.3") is True
+    finally:
+        os.umask(old)
+    assert stat.S_IMODE(discovery.stat().st_mode) == 0o600
+    data = json.loads(discovery.read_text())
+    assert data["pid"] == os.getpid() and data["port"] == 8393 and data["host"] == "127.0.0.1"
+    assert "token" not in json.dumps(data).lower()
+    assert mcp_discovery.find_url() == "http://127.0.0.1:8393"
+    assert not list(discovery.parent.glob(".*.tmp"))  # written whole, then moved into place
+
+
+def test_discovery_refuses_a_file_others_can_read_or_write(discovery):
+    import os
+
+    from app.services.assistant import mcp_discovery
+
+    mcp_discovery.write(8393)
+    os.chmod(discovery, 0o644)
+    with pytest.raises(mcp_discovery.NotFound, match="readable by you only"):
+        mcp_discovery.find_url()
+    os.chmod(discovery, 0o600)
+    real = discovery.with_name("real.json")
+    discovery.rename(real)
+    discovery.symlink_to(real)
+    with pytest.raises(mcp_discovery.NotFound, match="isn't a plain file"):
+        mcp_discovery.find_url()
+
+
+def test_discovery_says_plainly_when_psyneuview_has_stopped(discovery):
+    import os
+
+    from app.mcp_server import BackendError, discovered_url
+    from app.services.assistant import mcp_discovery
+
+    with pytest.raises(BackendError, match="doesn't seem to be running"):
+        discovered_url()
+    dead = _dead_pid()
+    mcp_discovery.write(8393, pid=dead, force=True)
+    with pytest.raises(BackendError, match=f"process {dead}, has stopped"):
+        discovered_url()
+    # A file that names another machine is refused, whatever the pid.
+    discovery.write_text(json.dumps({"pid": os.getpid(), "port": 8393, "host": "10.0.0.5"}))
+    os.chmod(discovery, 0o600)
+    with pytest.raises(BackendError, match="not this machine"):
+        discovered_url()
+
+
+def test_one_live_holder_and_a_stale_one_is_replaced(discovery):
+    import os
+
+    from app.services.assistant import mcp_discovery
+
+    me = os.getpid()
+    parent = os.getppid()  # alive, and not this process
+    assert mcp_discovery.write(8001, pid=parent) is True
+    assert mcp_discovery.write(8002, pid=me) is False  # the live holder keeps it
+    assert json.loads(discovery.read_text())["port"] == 8001
+    mcp_discovery.remove(pid=me)  # not ours: left alone
+    assert discovery.exists()
+    mcp_discovery.write(8001, pid=_dead_pid(), force=True)
+    assert mcp_discovery.write(8002, pid=me) is True  # the holder stopped: taken over
+    assert mcp_discovery.find_url() == "http://127.0.0.1:8002"
+    mcp_discovery.remove(pid=me)
+    assert not discovery.exists()
+
+
+def test_the_backend_claims_the_file_at_start_and_releases_it(page, tmp_path, monkeypatch, discovery):
+    """With Claude over MCP chosen, starting the app writes the file and stopping it removes it."""
+    turn_on_mcp(page, tmp_path)
+    monkeypatch.setattr("sys.argv", ["uvicorn", "app.main:app", "--port", "8393"])
+    with TestClient(app, base_url="http://127.0.0.1", client=LOCAL):
+        assert json.loads(discovery.read_text())["port"] == 8393
+    assert not discovery.exists()
+
+
+def test_the_status_route_corrects_the_port_from_the_real_request(page, tmp_path, discovery):
+    from app.services.assistant import mcp_discovery
+
+    turn_on_mcp(page, tmp_path)
+    mcp_link.claim(1234)  # a wrong guess at start
+    TestClient(app, base_url="http://127.0.0.1:8393", client=LOCAL).get("/api/assistant/mcp/status")
+    assert mcp_discovery.find_url() == "http://127.0.0.1:8393"
+    mcp_link.release()
+
+
+def test_startup_port_reads_uvicorns_arguments():
+    assert mcp_link.startup_port(["uvicorn", "app.main:app", "--port", "8130"], {}) == 8130
+    assert mcp_link.startup_port(["uvicorn", "app.main:app", "--port=9000"], {}) == 9000
+    assert mcp_link.startup_port(["uvicorn"], {"UVICORN_PORT": "8500"}) == 8500
+    assert mcp_link.startup_port(["uvicorn"], {}) == 8000
+
+
+def test_setup_names_no_address(monkeypatch, tmp_path):
+    from app.services.assistant import mcp_discovery
+
+    monkeypatch.delenv(mcp_discovery.DISCOVERY_ENV, raising=False)
+    monkeypatch.delenv(mcp_discovery.CONFIG_ENV, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    out = mcp_link.setup("tok", 8393)
+    assert "PSYNEUVIEW_URL" not in out["claude_code"] and "PSYNEUVIEW_URL" not in out["claude_desktop"]
+    assert "8393" not in out["claude_code"] and "8393" not in out["claude_desktop"]
+    assert out["env_names"][0] == "PSYNEUVIEW_MCP_TOKEN" and mcp_discovery.DISCOVERY_ENV not in out["env_names"]
+    # A redirected preferences file (a test or trial backend): the setup names where to look.
+    monkeypatch.setenv(mcp_discovery.CONFIG_ENV, str(tmp_path / "trial" / "config.json"))
+    out = mcp_link.setup("tok", 8393)
+    assert json.loads(out["claude_desktop"])["mcpServers"]["psyneuview"]["env"][mcp_discovery.DISCOVERY_ENV] == str(tmp_path / "trial" / "mcp-backend.json")
+
+
+def test_the_mcp_command_finds_the_backend_through_the_file(page, tmp_path, discovery, monkeypatch):
+    """No PSYNEUVIEW_URL: the transport looks the backend up for each request."""
+    from app import mcp_server
+    from app.services.assistant import mcp_discovery
+
+    seen = []
+
+    class Reply:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b'{"ok": true}'
+
+    class Opener:
+        def open(self, req, timeout):
+            seen.append(req.full_url)
+            return Reply()
+
+    monkeypatch.setattr(mcp_server.urllib.request, "build_opener", lambda *a: Opener())
+    call = mcp_server.http_transport(mcp_server.discovered_url, "tok")
+    mcp_discovery.write(8393)
+    assert anyio.run(call, "POST", "/api/assistant/mcp-client/hello", None) == (200, {"ok": True})
+    mcp_discovery.write(8394, force=True)  # PsyNeuView restarted on another port
+    anyio.run(call, "POST", "/api/assistant/mcp-client/hello", None)
+    assert seen == ["http://127.0.0.1:8393/api/assistant/mcp-client/hello", "http://127.0.0.1:8394/api/assistant/mcp-client/hello"]
+
+
+# ── check_proposal: read-only ────────────────────────────────────────────
+
+
+def _propose(client: TestClient) -> str:
+    ops = [{"op": "update_param", "args": {"var_name": "A", "param_name": "noise", "new_value": "0.5"}}]
+    r = call(client, "propose_app_edit", {"summary": "More noise", "ops": ops}).json()
+    assert r["ok"] is True, r
+    return json.loads(r["content"].split("\n", 1)[1])["proposal_id"]
+
+
+def _state(client: TestClient, proposal_id: str) -> dict:
+    r = call(client, "check_proposal", {"id": proposal_id}).json()
+    assert r["ok"] is True, r
+    return json.loads(r["content"].split("\n", 1)[1])
+
+
+def test_check_proposal_follows_the_users_decision_and_changes_nothing(page, tmp_path):
+    token = token_of(page)
+    turn_on_mcp(page, tmp_path)
+    share(page, {"file_path": "/m/model.py", "source": SOURCE})
+    client = mcp_client(token)
+    first, second = _propose(client), _propose(client)
+    s = mcp_link.session()
+    before = {pid: dict(s.proposal(pid)) for pid in (first, second)}
+    for _ in range(3):
+        assert _state(client, first) == {"id": first, "state": "pending"}
+    assert {pid: dict(s.proposal(pid)) for pid in (first, second)} == before  # nothing changed
+    events = page.get(f"/api/assistant/sessions/{s.id}/events?after=0").json()["events"]
+    assert sum(e["type"] == "proposal" for e in events) == 2  # no proposal event from checking
+    page.post(f"/api/assistant/proposals/{first}/accept", json={"current_hash": sha(SOURCE)})
+    page.post(f"/api/assistant/proposals/{second}/reject")
+    assert _state(client, first)["state"] == "accepted"
+    assert _state(client, second)["state"] == "rejected"
+
+
+def test_check_proposal_sees_only_its_own_sessions_proposals(page, tmp_path):
+    token = token_of(page)
+    turn_on_mcp(page, tmp_path)
+    other = sessions.create_session()
+    theirs = other.add_proposal(kind="app_edit", summary="Someone else's", ops=[])
+    client = mcp_client(token)
+    for bad in ({"id": theirs["id"]}, {"id": "nope"}, {}, {"id": ""}):
+        r = call(client, "check_proposal", bad).json()
+        assert r["ok"] is False and r["content"].startswith("Refused"), bad
+    assert other.proposal(theirs["id"])["state"] == "pending"
+
+
+def test_check_proposal_is_in_both_tool_sets():
+    assert "check_proposal" in assistant_tools.TOOL_ALLOWLIST
+    defs = {t["name"]: t for t in assistant_tools.TOOL_DEFINITIONS}
+    assert defs["check_proposal"]["input_schema"]["required"] == ["id"]
+    assert "Read-only" in defs["check_proposal"]["description"]
+
+
+def test_mcp_server_check_proposal_in_process(page, tmp_path):
+    """Through the SDK's own client: propose, check pending, the user accepts, check accepted."""
+    from mcp import Client
+
+    token = token_of(page)
+    turn_on_mcp(page, tmp_path)
+    share(page, {"file_path": "/m/model.py", "source": SOURCE, "selection": "A"})
+    backend = mcp_client(token)
+
+    async def transport(method: str, path: str, body):
+        r = await anyio.to_thread.run_sync(lambda: backend.request(method, path, json=body))
+        return r.status_code, r.json()
+
+    def accept(proposal_id: str) -> None:
+        assert page.post(f"/api/assistant/proposals/{proposal_id}/accept", json={"current_hash": sha(SOURCE)}).status_code == 200
+
+    async def scenario():
+        async with Client(build_server(transport)) as client:
+            assert "check_proposal" in [t.name for t in (await client.list_tools()).tools]
+            ops = [{"op": "rename_node", "args": {"var_name": "A", "new_name": "Input layer"}}]
+            proposed = await client.call_tool("propose_app_edit", {"summary": "Rename A", "ops": ops})
+            proposal_id = json.loads(proposed.content[0].text.split("\n", 1)[1])["proposal_id"]
+            checked = await client.call_tool("check_proposal", {"id": proposal_id})
+            assert not checked.is_error and json.loads(checked.content[0].text.split("\n", 1)[1])["state"] == "pending"
+            await anyio.to_thread.run_sync(accept, proposal_id)
+            checked = await client.call_tool("check_proposal", {"id": proposal_id})
+            assert json.loads(checked.content[0].text.split("\n", 1)[1]) == {"id": proposal_id, "state": "accepted"}
+
+    anyio.run(scenario)
+
+
+# ── status details ───────────────────────────────────────────────────────
+
+
+def test_status_counts_tool_calls_in_the_limit_window(page, tmp_path):
+    token = token_of(page)
+    turn_on_mcp(page, tmp_path, limits={"tool_calls": 5, "minutes": 10, "max_tokens": 1000})
+    client = mcp_client(token)
+    client.post("/api/assistant/mcp-client/hello", headers={"X-PsyNeuView-MCP-Client": "claude-code 2.1"})
+    assert page.get("/api/assistant/mcp/status").json()["tool_calls"] == {"used": 0, "limit": 5, "minutes": 10}
+    for _ in range(3):
+        call(client, "read_docs", {"query": "assistant"})
+    status = page.get("/api/assistant/mcp/status").json()
+    assert status["client"] == "claude-code 2.1" and status["tool_calls"]["used"] == 3
+
+
+# ── the console entry point ──────────────────────────────────────────────
+
+
+def test_psyneuview_mcp_entry_point_is_declared_and_resolves():
+    import importlib
+    import tomllib
+    from pathlib import Path
+
+    project = tomllib.loads((Path(mcp_link.backend_dir()) / "pyproject.toml").read_text())
+    target = project["project"]["scripts"]["psyneuview-mcp"]
+    module, func = target.split(":")
+    assert callable(getattr(importlib.import_module(module), func))
+
+
+def test_the_command_refuses_to_start_without_a_token(tmp_path):
+    """The fallback form, `python -m app.mcp_server`, run for real."""
+    import os
+    import subprocess
+    import sys
+
+    env = {k: v for k, v in os.environ.items() if k not in ("PSYNEUVIEW_MCP_TOKEN", "PSYNEUVIEW_URL")}
+    env["PYTHONPATH"] = str(mcp_link.backend_dir())
+    r = subprocess.run([sys.executable, "-m", "app.mcp_server"], check=False, env=env, capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
+    assert r.returncode != 0 and "PSYNEUVIEW_MCP_TOKEN is not set" in r.stderr
+
+
+def test_setup_prefers_the_mac_apps_launcher(monkeypatch, tmp_path):
+    launcher = tmp_path / "bin" / "psyneuview-mcp"
+    launcher.parent.mkdir()
+    launcher.write_text("#!/bin/sh\n")
+    monkeypatch.setenv(mcp_link.LAUNCHER_ENV, str(launcher))
+    assert mcp_link.command()[0] != str(launcher)  # not executable: falls back
+    launcher.chmod(0o755)
+    cmd, args, extra = mcp_link.command()
+    assert (cmd, args, extra) == (str(launcher), [], {})
+    out = mcp_link.setup("tok", 8393)
+    assert out["claude_code"].endswith(f"-- {launcher}") and "PYTHONPATH" not in out["claude_code"]
