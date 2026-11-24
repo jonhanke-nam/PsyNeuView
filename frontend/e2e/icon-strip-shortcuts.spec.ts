@@ -61,6 +61,9 @@ test.describe("Components icon strip (#372)", { tag: "@ci" }, () => {
     await page.getByTestId("settings-section-appearance").click();
     const box = page.getByTestId("setting-components-strip-shortcuts");
     await expect(box).not.toBeChecked();
+    // The setting names the heading the strip really shows.
+    const description = page.locator("label").filter({ has: box });
+    await expect(description).toContainText('a small "Recent" heading');
     await box.check();
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("settings-panel")).toBeHidden();
@@ -68,6 +71,7 @@ test.describe("Components icon strip (#372)", { tag: "@ci" }, () => {
     const palette = page.getByTestId("palette-sidebar");
     const heading = palette.getByTestId("palette-strip-heading-shortcuts");
     await expect(heading).toHaveAccessibleName("Recent and favourite components");
+    await expect(heading).toHaveText("Recent");
     const items = palette.getByTestId("palette-item");
     // Favourites first, then recents, each once.
     await expect(items).toHaveCount(3);

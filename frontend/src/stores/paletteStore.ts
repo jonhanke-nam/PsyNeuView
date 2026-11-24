@@ -16,7 +16,7 @@ import { recordSettingChanged } from "@/utils/activityLog";
 
 /**
  * #372: whether the icon strip shows your favourite and recently used
- * components, at the bottom under a small "Favourites & recent" heading.
+ * components, at the bottom under a small "Recent" heading.
  * Settings ▸ Appearance ▸ Components panel. Off by default: unlabelled
  * shortcuts above the category menus read as more categories. A stored
  * choice is kept; the `psyneuview.` key lets the Mac app keep it.
