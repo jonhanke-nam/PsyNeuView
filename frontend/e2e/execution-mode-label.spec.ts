@@ -3,14 +3,18 @@
  *
  * PsyNeuLink calls it `ExecutionMode`, so PsyNeuView does too: the label reads
  * "Execution mode", the options are PsyNeuLink's mode names (Python, PyTorch,
- * LLVM (compiled)) and none of them says "graph". The longer label must not
- * wrap or widen the Run row: it stays one line, level with Run Model.
+ * LLVM (compiled)) and none of them says "graph". At the Mac app's default
+ * 1200px window the longer label must not wrap anything: the Run label stays
+ * one line, level with Run Model, without the panel scrolling sideways, and
+ * Start Learning stays on the Learn config row.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 
 test.describe("Execution mode label", { tag: "@ci" }, () => {
   test("the Run and Learn panels say Execution mode, and no option says graph", async ({ page }) => {
     test.setTimeout(120_000);
+    // The Mac app's default window.
+    await page.setViewportSize({ width: 1200, height: 800 });
     await page.goto("/");
     await page.getByTestId("open-menu").click();
     await page.getByText("Autodiff Feedforward", { exact: true }).click();
@@ -44,5 +48,9 @@ test.describe("Execution mode label", { tag: "@ci" }, () => {
     const learnOptions = await learnMode.locator("option").allTextContents();
     expect(learnOptions.map((o) => o.split(" — ")[0])).toEqual(["PyTorch", "Python", "LLVM (compiled)"]);
     for (const option of learnOptions) expect(option.toLowerCase()).not.toContain("graph");
+    // Start Learning stays on the config row beside it.
+    const start = (await page.getByRole("button", { name: /Start Learning/i }).boundingBox())!;
+    const learnLabel = (await learnMode.boundingBox())!;
+    expect(Math.abs(start.y + start.height / 2 - (learnLabel.y + learnLabel.height / 2)), "Start Learning on the same row").toBeLessThanOrEqual(4);
   });
 });
