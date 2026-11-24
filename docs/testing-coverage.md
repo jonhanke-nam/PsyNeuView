@@ -9,7 +9,7 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 176 | 468 | 458 tests in 171 files |
+| Browser (Playwright) | 177 | 473 | 463 tests in 172 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 147 | 1295 | 1295 tests in 147 files |
 | Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
@@ -29,7 +29,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
 | [Running, learning and debugging](#running) | 16 files, 38 tests | – | 11 files, 99 tests | 52 files, 262 tests | 399 of 399 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
-| [Mac app bridges and what's running](#macapp) | 6 files, 26 tests | – | 5 files, 59 tests | 7 files, 99 tests | 184 of 184 |
+| [Mac app bridges and what's running](#macapp) | 7 files, 31 tests | – | 5 files, 59 tests | 7 files, 99 tests | 189 of 189 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
@@ -804,6 +804,7 @@ No tests yet.
 | `app-update-notice.spec.ts` | Browser | 6 | yes |  | An app update is waiting (PsyNeuView-MacApp#6). |
 | `mac-app-settings-section.spec.ts` | Browser | 6 | yes | #1279, #1290 | One Settings: the Mac app's parts (PsyNeuView-MacApp#200, #1279, #1290). |
 | `mac-auto-install-updates.spec.ts` | Browser | 8 | yes |  | Install updates automatically, by consent (PsyNeuView-MacApp#79). |
+| `mac-check-for-updates.spec.ts` | Browser | 5 | yes |  | Check for updates automatically (PsyNeuView-MacApp#83). |
 | `project-folder-move.spec.ts` | Browser | 1 | yes | #1295 | Move… moves My Project Folder, and the Open menu follows (#1295). |
 | `whats-running.spec.ts` | Browser | 2 | yes | #1356 | Settings ▸ About says what PsyNeuView is running and from where (#1356). |
 | `PresenceIndicator.test.ts` | Frontend unit | 4 | yes |  |  |
@@ -846,6 +847,11 @@ No tests yet.
 | Install updates automatically (PsyNeuView-MacApp#79) › on: a downloaded update says it installs when you quit, with Restart now | `mac-auto-install-updates.spec.ts` | Browser | yes |  |
 | Install updates automatically (PsyNeuView-MacApp#79) › after an update, says what it updated to until OK | `mac-auto-install-updates.spec.ts` | Browser | yes |  |
 | Install updates automatically (PsyNeuView-MacApp#79) › in a browser, none of it shows | `mac-auto-install-updates.spec.ts` | Browser | yes |  |
+| Check for updates automatically (PsyNeuView-MacApp#83) › is the first switch in Updates, on by default | `mac-check-for-updates.spec.ts` | Browser | yes |  |
+| Check for updates automatically (PsyNeuView-MacApp#83) › off: tells the app, and disables Install updates automatically with a note | `mac-check-for-updates.spec.ts` | Browser | yes |  |
+| Check for updates automatically (PsyNeuView-MacApp#83) › opens off when the app says checking is off | `mac-check-for-updates.spec.ts` | Browser | yes |  |
+| Check for updates automatically (PsyNeuView-MacApp#83) › an app that sends no value shows no switch | `mac-check-for-updates.spec.ts` | Browser | yes |  |
+| Check for updates automatically (PsyNeuView-MacApp#83) › in a browser, it doesn't show | `mac-check-for-updates.spec.ts` | Browser | yes |  |
 | Move… carries the models and sidecars, and lists them from the new place | `project-folder-move.spec.ts` | Browser | yes | #1295 |
 | Settings ▸ About: what's running › names the version, the checkout it runs from, its branch and commit, and the page's build | `whats-running.spec.ts` | Browser | yes | #1356 |
 | Settings ▸ About: what's running › the Mac app's included copy, and a page older than the server | `whats-running.spec.ts` | Browser | yes | #1356 |

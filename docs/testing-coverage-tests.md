@@ -2877,6 +2877,14 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - Install updates automatically (PsyNeuView-MacApp#79) › after an update, says what it updated to until OK · CI
 - Install updates automatically (PsyNeuView-MacApp#79) › in a browser, none of it shows · CI
 
+**`frontend/e2e/mac-check-for-updates.spec.ts`** (Browser (Playwright))
+
+- Check for updates automatically (PsyNeuView-MacApp#83) › is the first switch in Updates, on by default · CI
+- Check for updates automatically (PsyNeuView-MacApp#83) › off: tells the app, and disables Install updates automatically with a note · CI
+- Check for updates automatically (PsyNeuView-MacApp#83) › opens off when the app says checking is off · CI
+- Check for updates automatically (PsyNeuView-MacApp#83) › an app that sends no value shows no switch · CI
+- Check for updates automatically (PsyNeuView-MacApp#83) › in a browser, it doesn't show · CI
+
 **`frontend/e2e/project-folder-move.spec.ts`** (Browser (Playwright))
 
 - Move… carries the models and sidecars, and lists them from the new place · CI · #1295
