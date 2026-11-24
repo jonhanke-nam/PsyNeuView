@@ -477,11 +477,16 @@ export async function runWalkthrough(
     } else {
       // The last step's "✓ Done." shows for 0.9 s, then the walkthrough ends
       // and its bar goes away. That is completion too.
+      //
+      // Read the text with allInnerTexts(), which never waits. innerText()
+      // waits for the element, so when the bar went away between the count
+      // and the read (a slow CI runner), the check hung until the poll timed
+      // out on a walkthrough that had finished.
       await expect
         .poll(
           async () =>
             (await page.getByTestId("tour-bar").count()) === 0 ||
-            ((await instruction.count()) > 0 && (await instruction.innerText()).trim() === "✓ Done."),
+            (await instruction.allInnerTexts()).some((t) => t.trim() === "✓ Done."),
           { message: `step "${step.id}" should complete after its action`, timeout: 10_000 },
         )
         .toBe(true);
