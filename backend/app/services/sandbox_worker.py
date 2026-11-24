@@ -1515,9 +1515,12 @@ def task_run(params):
     # displayed source and the executed call cannot disagree.
     run_kwargs = {"inputs": pnl_inputs, "execution_mode": exec_mode}
     pnl_call = format_pnl_call("run", comp.name, run_kwargs)
+    # #334: time each trial inside the run (added after pnl_call so the shown
+    # call stays the user's own).
+    trial_seconds = add_trial_timing(run_kwargs)
 
     debugger_snapshots, execution_trial_boundaries, snapshots_dropped = _run_capturing_debugger_snapshots(
-        comp, pnl_inputs, execution_mode=exec_mode
+        comp, pnl_inputs, run_kwargs=run_kwargs
     )
 
     # Collect results
@@ -1558,6 +1561,12 @@ def task_run(params):
 
     return {
         "results": trial_results,
+        # #334: seconds per trial, aligned with `results`. Empty when the mode
+        # runs trials in compiled code (no per-trial hooks) or counts disagree.
+        "trial_seconds": (
+            [round(t, 6) for t in trial_seconds]
+            if len(trial_seconds) == len(trial_results) else []
+        ),
         "executionMode": effective_mode,
         "executionModeReason": mode_reason,
         "pnlCall": pnl_call,
@@ -1791,7 +1800,44 @@ def _debugger_hook_available() -> bool:
     return True
 
 
-def _run_capturing_debugger_snapshots(comp, pnl_inputs, execution_mode=None):
+def add_trial_timing(run_kwargs):
+    """Time each trial of a ``Composition.run`` call (#334).
+
+    Wraps ``call_before_trial`` / ``call_after_trial`` in ``run_kwargs`` (in
+    place), chaining any callbacks already there, and returns the list that
+    fills with one duration in seconds per trial as the run proceeds. The
+    timing sits where the work happens, so it excludes worker start-up, model
+    load and response building.
+
+    Compiled execution modes run the trial loop outside Python and never call
+    the hooks; the list then stays empty and the UI shows no per-trial time.
+    """
+    import time
+    from psyneulink.core.globals.utilities import call_with_pruned_args
+
+    seconds = []
+    started = [None]
+    before = run_kwargs.get("call_before_trial")
+    after = run_kwargs.get("call_after_trial")
+
+    def _before(context=None):
+        if before is not None:
+            call_with_pruned_args(before, context=context)
+        started[0] = time.perf_counter()
+
+    def _after(context=None):
+        if started[0] is not None:
+            seconds.append(time.perf_counter() - started[0])
+            started[0] = None
+        if after is not None:
+            call_with_pruned_args(after, context=context)
+
+    run_kwargs["call_before_trial"] = _before
+    run_kwargs["call_after_trial"] = _after
+    return seconds
+
+
+def _run_capturing_debugger_snapshots(comp, pnl_inputs, execution_mode=None, run_kwargs=None):
     """Run ``comp`` with a ``_debugger`` listener attached.
 
     Returns ``(snapshots, trial_boundaries)`` where ``trial_boundaries`` is a
@@ -1806,9 +1852,10 @@ def _run_capturing_debugger_snapshots(comp, pnl_inputs, execution_mode=None):
     closure variable because ``EXECUTION_SET`` / ``NODE_EXECUTION`` don't carry
     it in their locals (only ``BEGINNING_OF_TRIAL`` / ``END_OF_TRIAL`` do).
     """
-    run_kwargs = {"inputs": pnl_inputs}
-    if execution_mode is not None:
-        run_kwargs["execution_mode"] = execution_mode
+    if run_kwargs is None:
+        run_kwargs = {"inputs": pnl_inputs}
+        if execution_mode is not None:
+            run_kwargs["execution_mode"] = execution_mode
 
     # #768: both caps below drop snapshots silently. Count what they discard so
     # the response can say the trace is truncated rather than letting a partial

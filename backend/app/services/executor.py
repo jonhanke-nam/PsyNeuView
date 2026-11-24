@@ -221,7 +221,11 @@ def _run_model_inprocess(
             if hasattr(node, "log"):
                 node.log.set_log_conditions("value")
         mode, effective_mode, mode_reason = _resolve_run_execution_mode(pnl, execution_mode)
-        comp.run(inputs=pnl_inputs, execution_mode=mode)
+        from app.services.sandbox_worker import add_trial_timing
+
+        run_kwargs = {"inputs": pnl_inputs, "execution_mode": mode}
+        trial_seconds = add_trial_timing(run_kwargs)  # #334
+        comp.run(**run_kwargs)
         raw_results = list(comp.results)
 
         # Collect per-trial results
@@ -254,6 +258,10 @@ def _run_model_inprocess(
 
         return {
             "results": trial_results,
+            "trial_seconds": (
+                [round(t, 6) for t in trial_seconds]
+                if len(trial_seconds) == len(trial_results) else []
+            ),
             "executionMode": effective_mode,
             "executionModeReason": mode_reason,
             "outputLabels": _output_labels(comp),

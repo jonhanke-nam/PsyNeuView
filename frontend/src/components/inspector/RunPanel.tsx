@@ -135,6 +135,9 @@ interface RunResults {
   // #337: the version of the model this run ran (see runResultsStore).
   sourceHash?: string;
   compositionName?: string;
+  // #334: seconds each trial took, aligned with `results`; absent on older
+  // saved runs and empty when a compiled mode skips the per-trial hooks.
+  trial_seconds?: number[];
 }
 
 // Snapshot of the inputs that actually produced a run's results, taken at
@@ -2333,7 +2336,11 @@ function TrialOutputs({
                   justifyContent: "space-between",
                 }}
               >
-                <span>Trial {r.trial + 1}</span>
+                <span data-testid="run-trial-header">
+                  Trial {r.trial + 1}
+                  {results.trial_seconds?.[trialPos] !== undefined &&
+                    ` · ${results.trial_seconds[trialPos].toFixed(2)} s`}
+                </span>
                 {active && (
                   <span style={{ color: "var(--pnv-selection-text)", fontSize: "var(--pnv-fs-10)" }}>● stepping</span>
                 )}
