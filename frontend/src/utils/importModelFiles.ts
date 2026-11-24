@@ -16,6 +16,7 @@ import { useLayoutStore } from "@/stores/layoutStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
 import { guardOpen } from "@/utils/tutorialGuard";
+import { beginModelOpen, isNewestModelOpen } from "@/utils/modelOpenSequence";
 
 /** Extensions the importer understands — also the file picker's `accept`. */
 export const IMPORTABLE_EXTENSIONS = [".py", ".pnlproject"] as const;
@@ -35,6 +36,7 @@ export function isImporting(): boolean {
 async function importProject(file: File): Promise<void> {
   const store = useModelStore.getState();
   const notify = useNotificationStore.getState();
+  const ticket = beginModelOpen(); // #386: the newest open wins
   try {
     const formData = new FormData();
     formData.append("file", file);
@@ -48,6 +50,7 @@ async function importProject(file: File): Promise<void> {
       return;
     }
     const data = await resp.json();
+    if (!isNewestModelOpen(ticket)) return;
     store.setFilePath(data.file_path);
     store.setSource(data.source);
     store.markFreshOpen(); // #906: re-pick layout mode from the sidecar
@@ -69,6 +72,7 @@ async function importPython(file: File): Promise<void> {
   // the server may be a different machine entirely.
   const source = await file.text();
   const fileName = file.name;
+  const ticket = beginModelOpen(); // #386: the newest open wins
 
   try {
     const dirsResp = await fetch("/api/models/dirs");
@@ -116,6 +120,7 @@ async function importPython(file: File): Promise<void> {
       return;
     }
     const data = await loadResp.json();
+    if (!isNewestModelOpen(ticket)) return;
     store.setFilePath(fullPath);
     store.setSource(data.source);
     store.markFreshOpen(); // #906: re-pick layout mode from the sidecar

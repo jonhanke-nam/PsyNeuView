@@ -692,6 +692,9 @@ let pendingFreshOpenLayout = false;
 let lastPositionsView: "nested" | "flat" | null = null;
 // #346: the file the last load fitted, so a model opened by any route fits.
 let lastFittedFile: string | null | undefined = undefined;
+// #386: the file the graph on screen was built from. A model that fails to
+// build holds the last good graph only when that graph is the same file's.
+let graphBuiltFor: string | null | undefined = undefined;
 // #323: set while a fold in the flattened or PyTorch view rebuilds the graph.
 // That fold shows the model nested, so the build reads the nested view's
 // positions, but it is a fold, not a switch of view: an automatic layout stays
@@ -874,6 +877,9 @@ export const useModelStore = create<ModelState>((set, get) => ({
       }
       const data = await resp.json();
       record("model", `Saved ${filePath}`, { path: filePath, ...(bundleOrigin ? { bundle: bundleOrigin } : {}) });
+      // Another model opened while this save was out (#386): the save landed,
+      // but its graph is the old model's and must not replace the new one.
+      if (get().filePath !== filePath) return true;
       // Authoritative: reconciles savedSource and drops the preview.
       get().loadModelFromServer(data.model, data.layout);
       return true;
@@ -1080,7 +1086,13 @@ export const useModelStore = create<ModelState>((set, get) => ({
     }
     const builtNothing = !modelData?.compositions?.length;
     const haveAGraph = get().nodes.length > 0;
-    if (brokenModel && builtNothing && haveAGraph) {
+    // #386: hold only for the same file being edited or reloaded. A different
+    // model that fails to build must not leave the previous model's graph, title
+    // and Inspector up looking current: that model is no longer the one open.
+    // The build below then shows an empty canvas with the error, as for a broken
+    // file opened cold.
+    const switchedModel = pendingFreshOpenLayout || graphBuiltFor !== get().filePath;
+    if (brokenModel && builtNothing && haveAGraph && !switchedModel) {
       set({
         modelError: modelData.error,
         modelErrorLine: modelData.errorLine || null,
@@ -2189,6 +2201,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     // ProjectionEdge can fan curves apart at shared endpoints (#278).
     annotateEdgeBundles(edges);
 
+    graphBuiltFor = get().filePath;
     set({
       ...(markSaved ? { savedSource: get().source, previewPath: null } : {}),
       nodes: layoutNodes, edges, lineMap,
@@ -2209,7 +2222,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
       // with no previous graph to hold, and recording that as "the last
       // version that built" would be exactly backwards.
       ...(modelData.error
-        ? {}
+        ? // A different model's last good version is not this one's (#386).
+          switchedModel ? { lastGoodSource: null, lastGoodAt: null } : {}
         : { lastGoodSource: get().source, lastGoodAt: Date.now() }),
       shownSkippedErrors: ((modelData.skippedStatements || []) as SkippedStatement[]).map((st) => st.error),
       partialExecution: modelData.partialExecution || false,
