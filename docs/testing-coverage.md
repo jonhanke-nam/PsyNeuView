@@ -9,9 +9,9 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 171 | 452 | 442 tests in 166 files |
+| Browser (Playwright) | 173 | 454 | 444 tests in 168 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 142 | 1264 | 1264 tests in 142 files |
+| Frontend unit (vitest) | 143 | 1271 | 1271 tests in 143 files |
 | Backend (pytest) | 192 | 1767 | 1767 tests in 192 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -23,7 +23,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Tutorials and guided walkthroughs](#tutorials) | 13 files, 57 tests | 35 files, 80 tests | 13 files, 219 tests | 2 files, 18 tests | 374 of 374 |
 | AI assistant | – | – | – | – | **no tests** |
 | [Matching show_graph](#showgraph) | 8 files, 19 tests | – | 8 files, 66 tests | 5 files, 34 tests | 118 of 119 |
-| [Dragging and pointer interaction](#pointer) | 17 files, 53 tests | – | 6 files, 37 tests | – | 90 of 90 |
+| [Dragging and pointer interaction](#pointer) | 18 files, 54 tests | – | 6 files, 37 tests | – | 91 of 91 |
 | [Building models in the UI](#building) | 4 files, 7 tests | – | 1 files, 9 tests | 13 files, 145 tests | 161 of 161 |
 | [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 359 of 362 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
@@ -34,7 +34,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 11 files, 22 tests | – | 17 files, 119 tests | 21 files, 204 tests | 342 of 345 |
+| [App shell, diagnostics and everything else](#shell) | 12 files, 23 tests | – | 18 files, 126 tests | 21 files, 204 tests | 350 of 353 |
 
 <a id="tutorials"></a>
 
@@ -318,6 +318,7 @@ No tests yet.
 |---|---|---|---|---|---|
 | `arrow-drag-keeps-layout.spec.ts` | Browser | 1 | yes | #164 | Moving an arrow changes that arrow only (#164). |
 | `click-never-connects.spec.ts` | Browser | 2 | yes | #317 | A click never adds a connection (#317). |
+| `drag-function-onto-mechanism.spec.ts` | Browser | 1 | yes | #354, #348 | Dragging a function from the Components panel onto a mechanism sets its function=, as picking it up and clicking the mechanism does (#354, #348): the same glow on the mechanisms that can take it, the same reasons on t… |
 | `drag-to-connect-stage2.spec.ts` | Browser | 5 | yes | #253 | Drag to connect, second part (#253). |
 | `drag-to-connect-stage3.spec.ts` | Browser | 4 | yes | #253 | Drag to connect, third part (#253): the type follows the sender. |
 | `drag-to-connect.spec.ts` | Browser | 4 | yes | #253 | Draw a projection by dragging from one node to another (#253, stage 1). |
@@ -347,6 +348,7 @@ No tests yet.
 | moving an arrow, in Auto or Custom, moves no node, nor does a reload after (#164) | `arrow-drag-keeps-layout.spec.ts` | Browser | yes | #164 |
 | a click never connects (#317) › clicks on connectors and port dots, with and without a wobble, add nothing | `click-never-connects.spec.ts` | Browser | yes | #317 |
 | a click never connects (#317) › clicks on handles while the graph rebuilds add nothing | `click-never-connects.spec.ts` | Browser | yes | #317 |
+| drag a function onto a mechanism (#354) › empty canvas writes nothing; the DDM refuses Logistic; DriftDiffusionIntegrator goes onto decision; one Undo | `drag-function-onto-mechanism.spec.ts` | Browser | yes | #354 |
 | drag to connect, second part (#253) › onto a collapsed composition: into its input node | `drag-to-connect-stage2.spec.ts` | Browser | yes | #253 |
 | drag to connect, second part (#253) › onto a collapsed composition whose input node has two inputs: it asks which | `drag-to-connect-stage2.spec.ts` | Browser | yes | #253 |
 | drag to connect, second part (#253) › while dragging, valid targets light up and an invalid one says why | `drag-to-connect-stage2.spec.ts` | Browser | yes | #253 |
@@ -1235,6 +1237,7 @@ No tests yet.
 | `developer-mode-marking.spec.ts` | Browser | 5 | yes | #1291 | Everything developer mode adds says so (#1291). |
 | `diagnostics.spec.ts` | Browser | 2 | yes | #1287 | Diagnostics (#1287): `window.__pnvDiagnostics` answers with the page's state and the activity since launch, and Settings ▸ About downloads the same object as a JSON file in a browser. |
 | `docs-shots-saving.spec.ts` | Browser | 2 | no | #662 | Docs pictures for saving and changes since save (#662). |
+| `graph-edit-broke-model.spec.ts` | Browser | 1 | yes | #353, #349 | When an edit made on the graph writes a line that doesn't run, the warning names that edit ("Adding X broke the model at line N.") and offers Undo, which puts the file back as it was (#353). |
 | `harness.spec.ts` | Browser | 1 | yes | #147 | Proves the test harness wiring end-to-end (#147): playwright.config env vars → backend in test mode → /api/test/reset open → mutatingTest fixture fires it. |
 | `notification-dwell.spec.ts` | Browser | 1 | yes | #879 | #879: info/success toasts dwell long enough to read. |
 | `pycharm-live.local.spec.ts` | Browser | 1 | no |  | LOCAL ONLY — the full two-headed loop with a real PyCharm. |
@@ -1254,6 +1257,7 @@ No tests yet.
 | `activityLog.test.ts` | Frontend unit | 17 | yes | #1287 | The activity log's rules (#1287): the cap, the order, `~` for the home folder, and no secrets — the value of a key that looks like a token or a password is never recorded, however it gets in. |
 | `diagnostics.test.ts` | Frontend unit | 16 | yes | #1287 | The diagnostics snapshot (#1287): its shape, what it reads from the stores, and that a server that can't be reached leaves `{error}` in its place rather than failing the whole call. |
 | `errorDetail.test.ts` | Frontend unit | 4 | yes |  |  |
+| `graphEditBlame.test.ts` | Frontend unit | 7 | yes | #353 | #353: a failing load is blamed on the last graph edit only when the line that failed is one the edit wrote. |
 | `joinNames.test.ts` | Frontend unit | 1 | yes |  | Mirrors the formatter in PresenceIndicator — kept as a pure function test so the phrasing is pinned without rendering the component. |
 | `nodeSelector.test.ts` | Frontend unit | 2 | yes | #1236 | #1236: a node name is any Python string, and must never make an invalid selector. |
 | `stepHighlight.test.ts` | Frontend unit | 12 | yes |  | Two trials of a small Stroop-like run: inputs, then hidden, then output. |
@@ -1295,6 +1299,7 @@ No tests yet.
 | Diagnostics › actions are logged and saved, the timeline is in order, and the setting turns actions off | `diagnostics.spec.ts` | Browser | yes | #1287 |
 | Docs pictures: saving › History with two saves, and the revert confirm | `docs-shots-saving.spec.ts` | Browser | no | #662 |
 | Docs pictures: saving › Changes since save, after a change outside PsyNeuView | `docs-shots-saving.spec.ts` | Browser | no | #662 |
+| an edit that breaks the model is named, with Undo (#353) › adding a node that writes a failing line: the warning names the add; Undo restores the file | `graph-edit-broke-model.spec.ts` | Browser | yes | #353 |
 | @smoke harness › mutatingTest fixture reaches /api/test/reset | `harness.spec.ts` | Browser | yes | #147 |
 | success toast dwells past the old 2s window | `notification-dwell.spec.ts` | Browser | yes | #879 |
 | a real PyCharm save updates the PsyNeuView canvas | `pycharm-live.local.spec.ts` | Browser | no |  |

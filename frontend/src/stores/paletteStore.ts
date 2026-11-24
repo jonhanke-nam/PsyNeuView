@@ -62,6 +62,12 @@ interface PaletteState {
    */
   armed: { type: string; defaults: Record<string, string>; label: string } | null;
   setArmed: (armed: PaletteState["armed"]) => void;
+  /**
+   * #354: the function being dragged from the panel, while it is dragged, so
+   * the mechanisms that can take it glow as they do when it is picked up.
+   */
+  draggingFunction: string | null;
+  setDraggingFunction: (type: string | null) => void;
 
   setOpen: (open: boolean) => void;
   toggleOpen: () => void;
@@ -88,6 +94,8 @@ export const usePaletteStore = create<PaletteState>((set, get) => ({
   compactFlyoutNodeId: null,
   armed: null,
   setArmed: (armed) => set({ armed }),
+  draggingFunction: null,
+  setDraggingFunction: (draggingFunction) => set({ draggingFunction }),
 
   setOpen: (open) => {
     localStorage.setItem(LS_OPEN, String(open));

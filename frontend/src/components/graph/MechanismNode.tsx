@@ -196,8 +196,11 @@ export const MechanismNode = memo(function MechanismNode({
   const connectStatus = useConnectTargets((s) => targetStatus(s.targets, d.varName));
   // #348: a function picked up in the Components panel goes onto a
   // mechanism. Those that can take it glow like a connection's drop targets
-  // (#253); one that can't shows a not-allowed pointer and says why.
-  const armedFunction = usePaletteStore((s) => (s.armed && isFunctionType(s.armed.type) ? s.armed.type : null));
+  // (#253); one that can't shows a not-allowed pointer and says why. The
+  // same while one is dragged from the panel (#354).
+  const armedFunction = usePaletteStore((s) =>
+    s.armed && isFunctionType(s.armed.type) ? s.armed.type : s.draggingFunction,
+  );
   const functionReason = armedFunction ? functionRefusal(d, armedFunction) : null;
   const dropStatus = connecting && !dragFromHere
     ? connectStatus

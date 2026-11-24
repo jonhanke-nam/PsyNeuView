@@ -202,6 +202,8 @@ async function createProjectionOnServer(
     });
     if (!resp.ok) return;
     const data = await resp.json();
+    // #353: if what this wrote doesn't run, the warning names this connection.
+    useModelStore.getState().noteGraphEdit("connect", `${changes.sender} to ${changes.receiver}`);
     setSource(data.source);
     loadModel(data.model, data.layout);
   } catch {
@@ -637,28 +639,36 @@ export function GraphCanvas() {
 
   // #252: a component picked up in the panel goes where the graph is clicked.
   const armed = usePaletteStore((s) => s.armed);
+  // #348/#349: a function isn't a node. It goes onto a mechanism, as its
+  // function=, and is never written into the code by itself. Picked up and
+  // clicked, or dragged and dropped (#354): the same checks, the same change.
+  // True when the function was put on the mechanism.
+  const putFunctionOn = useCallback((fnType: string, onNode?: { id: string; type?: string; data?: any }): boolean => {
+    if (!filePath) return false;
+    if (onNode?.type !== "mechanismNode") {
+      addNotification("warning", FUNCTION_NEEDS_MECHANISM);
+      return false;
+    }
+    const d = onNode.data;
+    const refusal = functionRefusal(d, fnType);
+    if (refusal) {
+      addNotification("warning", refusal);
+      return false;
+    }
+    void setMechanismFunction(
+      filePath, d?.varName || onNode.id, d?.label || d?.varName || onNode.id, fnType,
+      setSource, loadModelFromServer, addNotification,
+    );
+    usePaletteStore.getState().addRecentlyUsed(fnType);
+    return true;
+  }, [filePath, setSource, loadModelFromServer, addNotification]);
+
   const placeArmed = useCallback((e: React.MouseEvent | MouseEvent, onNode?: { id: string; type?: string; parentId?: string; data?: any }): boolean => {
     const pick = usePaletteStore.getState().armed;
     if (!pick || !filePath) return false;
-    // #348/#349: a function isn't a node. It goes onto a mechanism, as its
-    // function=, and is never written into the code by itself.
     if (isFunctionType(pick.type)) {
-      if (onNode?.type !== "mechanismNode") {
-        addNotification("warning", FUNCTION_NEEDS_MECHANISM);
-        return true; // the pick stays
-      }
-      const d = onNode.data;
-      const refusal = functionRefusal(d, pick.type);
-      if (refusal) {
-        addNotification("warning", refusal);
-        return true;
-      }
-      void setMechanismFunction(
-        filePath, d?.varName || onNode.id, d?.label || d?.varName || onNode.id, pick.type,
-        setSource, loadModelFromServer, addNotification,
-      );
-      usePaletteStore.getState().addRecentlyUsed(pick.type);
-      if (!e.altKey) usePaletteStore.getState().setArmed(null);
+      // Refused, the pick stays; put on, it is put down unless Option is held.
+      if (putFunctionOn(pick.type, onNode) && !e.altKey) usePaletteStore.getState().setArmed(null);
       return true;
     }
     const at = screenToFlowPosition({ x: e.clientX, y: e.clientY });
@@ -696,7 +706,7 @@ export function GraphCanvas() {
     // Option (Alt) keeps it picked up, for putting down several.
     if (!e.altKey) usePaletteStore.getState().setArmed(null);
     return true;
-  }, [filePath, setSource, loadModelFromServer, addNotification, screenToFlowPosition, getInternalNode]);
+  }, [filePath, setSource, loadModelFromServer, addNotification, screenToFlowPosition, getInternalNode, putFunctionOn]);
   useEffect(() => {
     if (!armed) return;
     const onKey = (e: KeyboardEvent) => {
@@ -1047,6 +1057,17 @@ export function GraphCanvas() {
       const data = e.dataTransfer.getData("application/psyneuview-node");
       if (!data || !filePath) return;
       const { type: mechType, defaults } = JSON.parse(data);
+      usePaletteStore.getState().setDraggingFunction(null);
+
+      // #354: a function dropped goes onto the mechanism it is dropped on,
+      // as when it is picked up and the mechanism clicked (#348).
+      if (isFunctionType(mechType)) {
+        const id = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)
+          ?.closest(".react-flow__node")
+          ?.getAttribute("data-id");
+        putFunctionOn(mechType, id ? nodesRef.current.find((n) => n.id === id) : undefined);
+        return;
+      }
 
       // #311: a projection isn't a node — it connects two. Drop it onto the
       // intended receiver and arm a one-click gesture to pick the sender,
@@ -1090,7 +1111,7 @@ export function GraphCanvas() {
       );
       usePaletteStore.getState().addRecentlyUsed(mechType);
     },
-    [filePath, setSource, loadModelFromServer, addNotification, setPendingProjectionGesture, screenToFlowPosition]
+    [filePath, setSource, loadModelFromServer, addNotification, setPendingProjectionGesture, screenToFlowPosition, putFunctionOn]
   );
 
   // Defer rendering ReactFlow until the container has non-zero dimensions.

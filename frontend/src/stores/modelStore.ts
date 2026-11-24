@@ -38,6 +38,8 @@ import { useEdgeAttach } from "./edgeAttachStore";
 import { hydrateRoutes, serializeRoutes, type EdgeRouteMap, type RoutableEdge } from "@/utils/edgeRoutes";
 import { positionsOnScreen } from "@/utils/positionsOnScreen";
 import { record } from "@/utils/activityLog";
+import { useNotificationStore } from "./notificationStore";
+import { blameGraphEdit, GRAPH_EDIT_BROKE_KEY, type GraphEdit, type GraphEditKind } from "@/utils/graphEditBlame";
 import { paletteColor } from "@/utils/paletteColor";
 
 // #407: shape of an entry in the model's sidecar bundle list. Kind is a
@@ -496,6 +498,12 @@ interface ModelState {
    * skipped, such as a library model's driver line (#1367).
    */
   shownSkippedErrors: string[];
+  /**
+   * The last edit made on the graph (#353): its kind, what it was done to,
+   * and the code before it. When the next load fails on a line it wrote, the
+   * warning names the edit and offers to undo it. Cleared when a load builds.
+   */
+  lastGraphEdit: GraphEdit | null;
   /// Bumped each time the user asks to be taken to the model error. (#1103)
   /// A counter rather than a boolean so repeated clicks each re-trigger the
   /// jump — the editor scrolls on the value changing, and a flag would only
@@ -626,6 +634,13 @@ interface ModelState {
   setYamlScrollIntent: (intent: ModelState["yamlScrollIntent"]) => void;
   /// Ask the editor to scroll to, select, and focus the model error line.
   revealModelError: () => void;
+  /**
+   * #353: an edit made on the graph is about to replace the code. Call it
+   * just before the new code is set, so the code now is the code before.
+   */
+  noteGraphEdit: (kind: GraphEditKind, label: string) => void;
+  /** #353: put back the code from before the last graph edit, in the file too. */
+  undoLastGraphEdit: () => Promise<boolean>;
   loadModelFromServer: (
     modelData: any,
     layout?: any,
@@ -758,6 +773,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
   lastGoodSource: null,
   lastGoodAt: null,
   shownSkippedErrors: [],
+  lastGraphEdit: null,
   errorRevealNonce: 0,
   partialExecution: false,
   diagnostics: null,
@@ -993,6 +1009,19 @@ export const useModelStore = create<ModelState>((set, get) => ({
   setYamlScrollIntent: (intent) => set({ yamlScrollIntent: intent }),
   revealModelError: () =>
     set((state) => ({ errorRevealNonce: state.errorRevealNonce + 1 })),
+  noteGraphEdit: (kind, label) => set({ lastGraphEdit: { kind, label, before: get().source } }),
+  undoLastGraphEdit: async () => {
+    const edit = get().lastGraphEdit;
+    if (!edit) return false;
+    useNotificationStore.getState().dismissKey(GRAPH_EDIT_BROKE_KEY);
+    set({ source: edit.before, lastGraphEdit: null });
+    // The edit was written to the file, so putting it back writes the file
+    // too, and the model is rebuilt from it.
+    const ok = await get().flushBuffer();
+    if (ok) recordAction(`Undid: ${edit.label}`);
+    else useNotificationStore.getState().addNotification("error", "The code from before the edit couldn't be written back.");
+    return ok;
+  },
   clearTrace: () => set({ executionTrace: [], executionCounts: {}, traceStep: null, executionTrialBoundaries: [], debuggerSnapshots: [], traceStepValues: new Map(), debuggerHookAvailable: null, steppingSupport: null }),
   setWebSocket: (ws) => set({ ws }),
 
@@ -1020,6 +1049,29 @@ export const useModelStore = create<ModelState>((set, get) => ({
     // Only when there *is* something to hold: a broken file opened cold has no
     // previous graph, and showing an empty canvas is then the honest answer.
     const brokenModel = Boolean(modelData?.error);
+    // #353: a load that fails on a line the last graph edit wrote names that
+    // edit, with Undo; one that builds means the edit is no longer in doubt.
+    const lastEdit = get().lastGraphEdit;
+    if (lastEdit) {
+      const notices = useNotificationStore.getState();
+      if (!brokenModel) {
+        set({ lastGraphEdit: null });
+        notices.dismissKey(GRAPH_EDIT_BROKE_KEY);
+      } else {
+        const blame = blameGraphEdit(lastEdit, get().source, modelData.errorLine);
+        if (blame) {
+          notices.addNotification("warning", blame, {
+            key: GRAPH_EDIT_BROKE_KEY,
+            action: {
+              label: "Undo",
+              title: "Put the code back as it was before this edit",
+              testId: "graph-edit-undo",
+              onClick: () => void get().undoLastGraphEdit(),
+            },
+          });
+        }
+      }
+    }
     // Shown to the user in the diagnostics bar, so it goes in the activity
     // log (#1287) — the message only, never the source; once per distinct error.
     if (brokenModel && modelData.error !== lastRecordedModelError) {
