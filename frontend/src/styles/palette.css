@@ -59,6 +59,12 @@
      fill on the surface, so hover is always lighter than the active item and
      the two never look the same. */
   --pnv-selection-hover: color-mix(in srgb, var(--pnv-selection-fill) 50%, var(--pnv-surface));
+  /* One shade deeper than the selection fill (#387): the active item in a
+     list or strip that also shows a hover, such as the Components panel's open
+     strip icon and a picked-up component, so the levels are plain, hover
+     (pale) and active (deeper). Defined from the selection tokens, so it
+     follows them in the dark set too. */
+  --pnv-selection-fill-strong: color-mix(in srgb, var(--pnv-selection-border) 14%, var(--pnv-selection-fill));
 
   /* Status. Each has a text colour and a tint for a box behind it. */
   --pnv-success: #2e7d32;
@@ -111,7 +117,7 @@
   --pnv-step-active-glow: 0 0 10px color-mix(in srgb, var(--pnv-selection-border) 45%, transparent);
   /* An active node's rows in the current trial card, a shade deeper than the
      card's own selection fill so they read on it. */
-  --pnv-step-active-row: color-mix(in srgb, var(--pnv-selection-border) 14%, var(--pnv-selection-fill));
+  --pnv-step-active-row: var(--pnv-selection-fill-strong);
   /* A row in the current trial card for a node not reached yet this trial. */
   --pnv-step-pending-opacity: 0.5;
 
