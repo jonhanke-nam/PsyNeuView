@@ -768,6 +768,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - drag a function onto a mechanism (#354) › empty canvas writes nothing; the DDM refuses Logistic; DriftDiffusionIntegrator goes onto decision; one Undo · CI · #354
 
+**`frontend/e2e/drag-to-connect-pathway.spec.ts`** (Browser (Playwright))
+
+- drag-to-connect in a pathway-built model (#404) › the new line follows the pathway call; the model builds and the arrow appears · CI · #404
+
 **`frontend/e2e/drag-to-connect-stage2.spec.ts`** (Browser (Playwright))
 
 - drag to connect, second part (#253) › onto a collapsed composition: into its input node · CI · #253
@@ -5206,6 +5210,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - test_allowlist_does_not_rot: Every allowlisted name is still a real async-blocking endpoint — so the allowlist can't silently mask a fixed one (or a typo) and weaken the guard. · CI · #860
 - test_detection_is_nonempty_and_source_based: The detector must actually find endpoints from the source tree — a guard against it silently collapsing to empty, which would make both tests above vacuous. · CI · #868
 - test_reference_model_load_latency: Each bundled reference model introspects within a latency budget, so a load that silently balloons is caught before it degrades the app (#860). · CI · #860
+
+**`backend/tests/test_projection_insert_order.py`** (Backend (pytest))
+
+- test_the_new_line_comes_after_the_adding_statement · CI · #404
+- test_the_model_builds · CI · #404
+- test_it_stays_before_the_run: 'After the adding statement' isn't 'at the end of the file': a run below the construction block still sees the projection. · CI · #404
+- test_when_it_cannot_tell_it_goes_at_the_end_of_the_construction_block: The pathway comes from a function call it can't see into: the line goes after the composition's last node-adding statement. · CI · #404
 
 **`backend/tests/test_request_guard.py`** (Backend (pytest))
 

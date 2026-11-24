@@ -9,10 +9,10 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 176 | 468 | 458 tests in 171 files |
+| Browser (Playwright) | 177 | 469 | 459 tests in 172 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 147 | 1295 | 1295 tests in 147 files |
-| Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
+| Backend (pytest) | 193 | 1773 | 1773 tests in 193 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
 
@@ -23,7 +23,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Tutorials and guided walkthroughs](#tutorials) | 13 files, 57 tests | 35 files, 80 tests | 13 files, 219 tests | 2 files, 18 tests | 374 of 374 |
 | AI assistant | – | – | – | – | **no tests** |
 | [Matching show_graph](#showgraph) | 8 files, 19 tests | – | 8 files, 66 tests | 5 files, 34 tests | 118 of 119 |
-| [Dragging and pointer interaction](#pointer) | 18 files, 54 tests | – | 6 files, 37 tests | – | 91 of 91 |
+| [Dragging and pointer interaction](#pointer) | 19 files, 55 tests | – | 6 files, 37 tests | – | 92 of 92 |
 | [Building models in the UI](#building) | 4 files, 7 tests | – | 1 files, 9 tests | 13 files, 145 tests | 161 of 161 |
 | [Editing: code and graph in step](#sync) | 17 files, 40 tests | – | 10 files, 81 tests | 26 files, 247 tests | 365 of 368 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
@@ -34,7 +34,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 13 files, 26 tests | – | 20 files, 133 tests | 21 files, 206 tests | 362 of 365 |
+| [App shell, diagnostics and everything else](#shell) | 13 files, 26 tests | – | 20 files, 133 tests | 22 files, 210 tests | 366 of 369 |
 
 <a id="tutorials"></a>
 
@@ -319,6 +319,7 @@ No tests yet.
 | `arrow-drag-keeps-layout.spec.ts` | Browser | 1 | yes | #164 | Moving an arrow changes that arrow only (#164). |
 | `click-never-connects.spec.ts` | Browser | 2 | yes | #317 | A click never adds a connection (#317). |
 | `drag-function-onto-mechanism.spec.ts` | Browser | 1 | yes | #354, #348 | Dragging a function from the Components panel onto a mechanism sets its function=, as picking it up and clicking the mechanism does (#354, #348): the same glow on the mechanisms that can take it, the same reasons on t… |
+| `drag-to-connect-pathway.spec.ts` | Browser | 1 | yes | #404 | Drag-to-connect in a model whose nodes are added by a pathway call (#404). |
 | `drag-to-connect-stage2.spec.ts` | Browser | 5 | yes | #253 | Drag to connect, second part (#253). |
 | `drag-to-connect-stage3.spec.ts` | Browser | 4 | yes | #253 | Drag to connect, third part (#253): the type follows the sender. |
 | `drag-to-connect.spec.ts` | Browser | 4 | yes | #253 | Draw a projection by dragging from one node to another (#253, stage 1). |
@@ -349,6 +350,7 @@ No tests yet.
 | a click never connects (#317) › clicks on connectors and port dots, with and without a wobble, add nothing | `click-never-connects.spec.ts` | Browser | yes | #317 |
 | a click never connects (#317) › clicks on handles while the graph rebuilds add nothing | `click-never-connects.spec.ts` | Browser | yes | #317 |
 | drag a function onto a mechanism (#354) › empty canvas writes nothing; the DDM refuses Logistic; DriftDiffusionIntegrator goes onto decision; one Undo | `drag-function-onto-mechanism.spec.ts` | Browser | yes | #354 |
+| drag-to-connect in a pathway-built model (#404) › the new line follows the pathway call; the model builds and the arrow appears | `drag-to-connect-pathway.spec.ts` | Browser | yes | #404 |
 | drag to connect, second part (#253) › onto a collapsed composition: into its input node | `drag-to-connect-stage2.spec.ts` | Browser | yes | #253 |
 | drag to connect, second part (#253) › onto a collapsed composition whose input node has two inputs: it asks which | `drag-to-connect-stage2.spec.ts` | Browser | yes | #253 |
 | drag to connect, second part (#253) › while dragging, valid targets light up and an invalid one says why | `drag-to-connect-stage2.spec.ts` | Browser | yes | #253 |
@@ -1295,6 +1297,7 @@ No tests yet.
 | `test_model_warnings.py` | Backend | 11 | yes | #1101 | Showing what PsyNeuLink said about a model that ran fine (#1101). |
 | `test_multiport_inputs.py` | Backend | 6 | yes | #332 | An input node with several input ports gets one array per port (#332). |
 | `test_no_event_loop_blocking.py` | Backend | 4 | yes | #860 | Regression guards against backend freezes (#860). |
+| `test_projection_insert_order.py` | Backend | 4 | yes | #404 | A dragged connection's `comp.add_projection(...)` goes after the statement that adds its ends to the composition (#404). |
 | `test_request_guard.py` | Backend | 10 | yes |  | The server refuses requests from another site or under another name. |
 | `test_test_extractor.py` | Backend | 15 | yes |  | Tests for app.services.test_extractor. |
 | `test_test_map.py` | Backend | 6 | yes | #319 | The What's tested page reads the test files correctly (#319). |
