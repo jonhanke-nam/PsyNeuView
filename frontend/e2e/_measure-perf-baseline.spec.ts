@@ -133,7 +133,9 @@ async function measureOnce(page: Page, label: string): Promise<Sample> {
     const trials: number[] = (data.trial_seconds ?? []).map((x: number) => x * 1000);
     s.runTrials = data.numTrials ?? trials.length ?? null;
     s.runServerMs = data.timings?.run_ms ?? null;
-    s.runPerTrial = median(trials);
+    // Builds without PsyNeuLink's per-trial hooks return no per-trial times
+    // (EGO's run); the server's run time over the trials stands in.
+    s.runPerTrial = trials.length ? median(trials) : s.runServerMs != null && s.runTrials ? s.runServerMs / s.runTrials : null;
   }
 
   // Step through the trace.
@@ -174,18 +176,23 @@ async function measureOnce(page: Page, label: string): Promise<Sample> {
     await waitGraph(page, { needChange: false, quietMs: 300 }).catch(() => null);
   }
 
-  // Fold and unfold a composition, where the model has one.
-  const collapse = page.getByTestId("graph-canvas").getByRole("button", { name: /^Collapse composition / }).first();
-  if (await collapse.isVisible().catch(() => false)) {
-    const name = ((await collapse.getAttribute("aria-label")) ?? "").replace(/^Collapse composition /, "");
-    let prev = await graphIds(page);
-    await clickTimed(collapse);
-    s.foldSettled = (await waitGraph(page, { prevIds: prev })).settled;
-    const expand = page.getByTestId("graph-canvas").getByRole("button", { name: `Expand composition ${name}` }).first();
-    await expect(expand).toBeVisible({ timeout: 30_000 });
-    prev = await graphIds(page);
-    await clickTimed(expand);
-    s.unfoldSettled = (await waitGraph(page, { prevIds: prev })).settled;
+  // Fold and unfold a composition, where the model has one. A model can open
+  // with it folded (EGO's saved layout folds EM), so unfold first then.
+  const canvas = page.getByTestId("graph-canvas");
+  const frameButton = canvas.getByRole("button", { name: /^(Collapse|Expand) composition / }).first();
+  if (await frameButton.isVisible().catch(() => false)) {
+    const aria = (await frameButton.getAttribute("aria-label")) ?? "";
+    const name = aria.replace(/^(Collapse|Expand) composition /, "");
+    const order = aria.startsWith("Collapse") ? (["Collapse", "Expand"] as const) : (["Expand", "Collapse"] as const);
+    for (const verb of order) {
+      const button = canvas.getByRole("button", { name: `${verb} composition ${name}`, exact: true }).first();
+      await expect(button).toBeVisible({ timeout: 30_000 });
+      const prev = await graphIds(page);
+      await clickTimed(button);
+      const t = (await waitGraph(page, { prevIds: prev })).settled;
+      if (verb === "Collapse") s.foldSettled = t;
+      else s.unfoldSettled = t;
+    }
   }
 
   // Type in the code editor, live preview on (the default).
@@ -234,6 +241,15 @@ function machine() {
     // Other work on the machine slows everything; a load near the core count is busy.
     loadAverage1m: Math.round(os.loadavg()[0] * 10) / 10,
   };
+}
+
+function psyneulinkVersion(): string | null {
+  try {
+    const py = path.join(REPO, "backend", ".venv", "bin", "python");
+    return execFileSync(py, ["-c", "import importlib.metadata as m; print(m.version('psyneulink'))"], { encoding: "utf8" }).trim();
+  } catch {
+    return null;
+  }
 }
 
 /** The table in docs/performance.md, between its markers. */
@@ -306,7 +322,7 @@ const models = REFERENCE_MODELS.filter((m) => !ONLY.length || ONLY.some((o) => m
 
 test.describe("performance baseline (#406)", () => {
   for (const { label, file } of models) {
-    test(`baseline: ${label}`, async ({ page, browser, request }) => {
+    test(`baseline: ${label}`, async ({ page, browser }) => {
       test.skip(!RUN, "measurement — set PERF_BASELINE=1 to run");
       test.setTimeout(RUNS * 240_000);
       await page.setViewportSize({ width: 1600, height: 1000 });
@@ -315,10 +331,9 @@ test.describe("performance baseline (#406)", () => {
       await installProbes(page);
       const samples: Sample[] = [];
       for (let r = 0; r < RUNS; r++) samples.push(await measureOnce(page, label));
-      const info = await (await request.get("/api/settings/info")).json().catch(() => ({}));
       writeResults(label, file.replace(/\.py$/, ""), samples, {
         browser: `Chromium ${browser.version()}`,
-        psyneulink: info?.pnl?.version ?? info?.pnlVersion ?? null,
+        psyneulink: psyneulinkVersion(),
       });
     });
   }
