@@ -41,6 +41,30 @@ learning gap (#363) closes. EGO's `.learn()` tests are
 currently `xfail`, blocked on the upstream **PsyNeuLink#30** bug (standalone
 repro in `upstream_repros/psyneulink-30-em-pytorch-learn/`; watcher #793).
 
+### show_graph is the gold standard (colours and shapes)
+
+PsyNeuLink's `show_graph()` decides how a node looks; PsyNeuView matches it,
+and CI holds it to that:
+
+- **Colours:** `backend/tests/test_show_graph_palette.py` (pytest). The role
+  colours in `palette.css` are show_graph's, read from PsyNeuLink and resolved
+  as Graphviz draws them (#190).
+- **Shapes:** `frontend/e2e/show-graph-shapes.spec.ts` (`@ci`, about 3 minutes).
+  Opens every reference model in every view it has (each composition,
+  flattened, PyTorch) and with CIMs shown, asks show_graph for its own picture,
+  and checks every node: its shape kind is show_graph's (oval, circle, double
+  circle, octagon, double octagon, box; double outlines included), and its
+  width-to-height ratio is within 5% of show_graph's. Sizes may differ
+  (PsyNeuView's text is bigger); proportions may not (#385). On a mismatch it
+  attaches to the run's results a side-by-side sheet (`shape-mismatches.png`:
+  PsyNeuView's node next to show_graph's drawing of it) and a table
+  (`shape-mismatches.md`: model, view, node, expected shape and ratio, actual).
+  The backend side, that show_graph's shapes reach the page, is
+  `backend/tests/test_show_graph_shapes.py`.
+- **Layout:** `frontend/e2e/show-graph-agreement.spec.ts` compares the Like
+  show_graph layout with show_graph's picture (rows, order, edge courses, and a
+  shape score per view); its `@ci` test holds representative models.
+
 ### Executable tutorials
 
 Each tutorial is **both a doc and a test**: the Playwright spec drives the live
