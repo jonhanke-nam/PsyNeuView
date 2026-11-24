@@ -4807,6 +4807,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - success toast dwells past the old 2s window · CI · #879
 
+**`frontend/e2e/palette-active-shade.spec.ts`** (Browser (Playwright))
+
+- Components panel shades the active item (#387) › the open category's strip icon and a picked-up flyout row are shaded; others are not · CI · #387
+- Components panel shades the active item (#387) › a picked-up row in the word list is shaded, and hover is lighter · CI · #387
+
 **`frontend/e2e/pycharm-live.local.spec.ts`** (Browser (Playwright))
 
 - a real PyCharm save updates the PsyNeuView canvas · not in CI

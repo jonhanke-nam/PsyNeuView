@@ -9,7 +9,7 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 176 | 468 | 458 tests in 171 files |
+| Browser (Playwright) | 177 | 470 | 460 tests in 172 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 147 | 1295 | 1295 tests in 147 files |
 | Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
@@ -34,7 +34,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 13 files, 26 tests | – | 20 files, 133 tests | 21 files, 206 tests | 362 of 365 |
+| [App shell, diagnostics and everything else](#shell) | 14 files, 28 tests | – | 20 files, 133 tests | 21 files, 206 tests | 364 of 367 |
 
 <a id="tutorials"></a>
 
@@ -1256,6 +1256,7 @@ No tests yet.
 | `harness.spec.ts` | Browser | 1 | yes | #147 | Proves the test harness wiring end-to-end (#147): playwright.config env vars → backend in test mode → /api/test/reset open → mutatingTest fixture fires it. |
 | `icon-strip-shortcuts.spec.ts` | Browser | 3 | yes | #372 | The Components icon strip (#372). |
 | `notification-dwell.spec.ts` | Browser | 1 | yes | #879 | #879: info/success toasts dwell long enough to read. |
+| `palette-active-shade.spec.ts` | Browser | 2 | yes | #387 | Components panel: the active item is shaded as well as outlined (#387). |
 | `pycharm-live.local.spec.ts` | Browser | 1 | no |  | LOCAL ONLY — the full two-headed loop with a real PyCharm. |
 | `read-only-badge-note.spec.ts` | Browser | 1 | yes | #50 | Clicking the "PsyNeuLink from … · read only" tag explains it (#50). |
 | `round-trips.spec.ts` | Browser | 5 | yes | #319 | Round trips: an edit in the graph reaches the code and survives a reload; an edit in the code reaches the graph (#319). |
@@ -1323,6 +1324,8 @@ No tests yet.
 | Components icon strip (#372) › with the setting on, favourites and recents sit below the categories under their heading | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
 | Components icon strip (#372) › a row's empty star shows on hover or focus; a starred row keeps its star | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
 | success toast dwells past the old 2s window | `notification-dwell.spec.ts` | Browser | yes | #879 |
+| Components panel shades the active item (#387) › the open category's strip icon and a picked-up flyout row are shaded; others are not | `palette-active-shade.spec.ts` | Browser | yes | #387 |
+| Components panel shades the active item (#387) › a picked-up row in the word list is shaded, and hover is lighter | `palette-active-shade.spec.ts` | Browser | yes | #387 |
 | a real PyCharm save updates the PsyNeuView canvas | `pycharm-live.local.spec.ts` | Browser | no |  |
 | the read-only tag explains itself and offers Save a copy as… (#50) | `read-only-badge-note.spec.ts` | Browser | yes | #50 |
 | round trips between the graph and the code (#319) › add a node: placed in the graph, written to the code, there after reopening | `round-trips.spec.ts` | Browser | yes | #319 |
