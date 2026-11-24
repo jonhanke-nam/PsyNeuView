@@ -167,6 +167,44 @@ test.describe("Run results go stale after an edit (#337)", { tag: "@ci" }, () =>
     await expect(warning).toBeVisible({ timeout: 10_000 });
   });
 
+  // #391: Redo pressed before an edit's preview has made it a History step
+  // put the next step over the typed text, and the edit was lost. Redo now
+  // records it first, before the redo steps, so Undo brings it back.
+  test("Redo right after an edit keeps it: Undo brings it back (#391)", async ({ page }) => {
+    test.setTimeout(120_000);
+    const models = (await (await page.request.get("/api/reference-models")).json()).models;
+    const rm = models.find((m: { label: string }) => m.label === STROOP);
+    const loaded = await (await page.request.post("/api/reference-models/load", { data: { name: rm.name } })).json();
+    const original = loaded.source as string;
+    const source = () => page.evaluate(() => (window as any).__pnvUndoTest.source() as string);
+
+    await page.goto("/");
+    await closePalette(page);
+    await page.getByTestId("open-menu").click();
+    await page.getByRole("button", { name: STROOP, exact: true }).click();
+    await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 60_000 });
+
+    // An edit, undone at once: Redo now has it to put back.
+    const editor = page.locator(".cm-content");
+    await editor.click();
+    await page.keyboard.press("ControlOrMeta+a");
+    await page.keyboard.insertText(original.replace("gain=1.1", "gain=1.7"));
+    await page.keyboard.press("Control+z");
+    await expect.poll(source).toContain("gain=1.1");
+
+    // Type, then Redo at once, before the preview has run.
+    await page.keyboard.press("ControlOrMeta+a");
+    await page.keyboard.insertText(original.replace("gain=1.1", "gain=2.5"));
+    await page.keyboard.press("Control+Shift+z");
+    await expect.poll(source).toContain("gain=1.7");
+
+    // Undo brings back what was typed.
+    await page.keyboard.press("Control+z");
+    // (The model store, not the editor's DOM: the editor draws only the lines
+    // in view, and the gain line is below them.)
+    await expect.poll(source).toContain("gain=2.5");
+  });
+
   test("a fold toggle doesn't make results stale", async ({ page }) => {
     test.setTimeout(180_000);
     const dir = mkdtempSync(path.join(tmpdir(), "stale337-"));
