@@ -87,3 +87,22 @@ def test_a_spec_is_in_ci_by_its_tag_alone(tmp_path, monkeypatch):
     ci = {f.path.split("/")[-1]: f.ci for f in test_map.collect_e2e()}
     assert ci == {"tagged.spec.ts": True, "untagged.spec.ts": False, "mine.local.spec.ts": False}
     assert test_map.unaccounted(test_map.collect_e2e()) == []
+
+
+def test_only_a_not_in_ci_line_in_the_header_counts(tmp_path, monkeypatch):
+    """A "Not in CI:" further down, in a test's comment or a string, doesn't excuse the spec (#392)."""
+    e2e = tmp_path / "e2e"
+    e2e.mkdir()
+    why = "Not in CI: slow: takes an hour."
+    (e2e / "header.spec.ts").write_text(f'/**\n * A spec.\n *\n * {why}\n */\ntest("a", async () => {{}});\n')
+    (e2e / "after-imports.spec.ts").write_text(f'import {{ test }} from "./test-base";\n\n// {why}\ntest("a", async () => {{}});\n')
+    (e2e / "in-a-test.spec.ts").write_text(f'/** A spec. */\ntest("a", async () => {{\n  // {why}\n}});\n')
+    (e2e / "in-a-string.spec.ts").write_text(f'// A spec.\n\nconst note = "{why}";\ntest("a", async () => {{}});\n')
+    monkeypatch.setattr(test_map, "E2E", e2e)
+    files = test_map.collect_e2e()
+    reasons = {f.path.split("/")[-1]: f.not_in_ci for f in files}
+    assert reasons["header.spec.ts"] == ("slow", "takes an hour")
+    assert reasons["after-imports.spec.ts"] == ("slow", "takes an hour")
+    assert reasons["in-a-test.spec.ts"] is None
+    assert reasons["in-a-string.spec.ts"] is None
+    assert sorted(p.split(":")[0].split("/")[-1] for p in test_map.unaccounted(files)) == ["in-a-string.spec.ts", "in-a-test.spec.ts"]
