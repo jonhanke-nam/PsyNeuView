@@ -78,7 +78,10 @@ is. The rules behind it are in issue #179; the threat model is in
   Claude Code connects over MCP (below, and `mcp.md`); `model` and
   `base_url` are stored empty, and choosing it while on asks first, like
   any new destination.
-- `autonomy`: `answer`, `suggest`, `app_edits`.
+- `autonomy`: `answer`, `suggest`, `app_edits`. `answer` means no proposals of
+  any kind: `propose_app_edit`, `propose_file_write` and `propose_open_file`
+  are all refused at the tool layer, for the built-in agent and Claude over
+  MCP alike; the read tools still work.
 - `saving`: `always_ask`, `structured_without_asking`.
 - `folders[].access`: `read`, `read_write`. Every folder goes through
   `files.validate_folder` on PUT: home itself, system, app and install
@@ -256,8 +259,8 @@ plain data is a `refused` event and no proposal.
 | `propose_app_edit` | Creates an `app_edit` proposal of checked ops | `autonomy` isn't `answer` |
 | `list_files` | Lists model files in allowed folders | `visibility.files` |
 | `read_file` | Reads a model file's text, **without running it** | `visibility.files` |
-| `propose_file_write` | Creates a `file_write` proposal | `visibility.files`, and a `read_write` folder holding the path. A new `.py` must be a PsyNeuLink model by content; a name that would shadow a module (`numpy.py`, `os.py`, `__init__.py`, `sitecustomize.py`, any `_`-prefixed stem) is refused |
-| `propose_open_file` | Asks the user to open a file; only the user can accept | `visibility.files` |
+| `propose_file_write` | Creates a `file_write` proposal | `autonomy` isn't `answer`, `visibility.files`, and a `read_write` folder holding the path. A new `.py` must be a PsyNeuLink model by content; a name that would shadow a module (`numpy.py`, `os.py`, `__init__.py`, `sitecustomize.py`, any `_`-prefixed stem) is refused |
+| `propose_open_file` | Asks the user to open a file; only the user can accept | `autonomy` isn't `answer`, and `visibility.files` |
 | `check_proposal` | `{id}` in, `{id, state}` out: whether one of this session's own proposals is `pending`, `accepted`, `rejected` or `stale` (couldn't apply: the model changed). Reads only; never changes a proposal; another session's id is refused as unknown | Always |
 
 Permissions are read again on every call, so a setting lowered mid-turn

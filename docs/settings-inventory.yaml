@@ -816,7 +816,8 @@ settings:
     storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
     control: setting-assistant-autonomy
     notes: >-
-      answer, suggest or app_edits. Saves directly (#369).
+      answer, suggest or app_edits. Saves directly (#369). answer refuses every
+      proposal (edits, file writes, files to open) at the backend's tool layer.
 
   - id: assistant-saving
     label: AI assistant ▸ What it may do ▸ Saving

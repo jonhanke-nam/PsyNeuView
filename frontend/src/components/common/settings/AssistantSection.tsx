@@ -36,7 +36,7 @@ const AGENT_LABELS: Record<AgentType, string> = {
 };
 
 const AUTONOMY_LABELS: Record<Autonomy, string> = {
-  answer: "Answer questions only",
+  answer: "Answer questions only, with no proposals of any kind",
   suggest: "Suggest edits as proposals you accept or reject",
   app_edits: "Propose edits to the open model, applied when you accept",
 };
