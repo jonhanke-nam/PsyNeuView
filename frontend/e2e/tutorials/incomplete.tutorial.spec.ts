@@ -5,7 +5,8 @@
  * Edits a model into an incomplete state — a projection to an undefined node —
  * and verifies PsyNeuView degrades gracefully: it renders what it can (the
  * defined node), draws a phantom endpoint + dangling projection for the missing
- * piece, and surfaces the problem, instead of failing.
+ * piece, and surfaces the problem, instead of failing. Before the save, the
+ * live preview holds the last graph that built and says so.
  *
  * Read-only w.r.t. backend reset.
  */
@@ -42,18 +43,30 @@ test.describe("Tutorial: Incomplete / broken state handling", () => {
     await page.getByText("Stroop — Basic").click();
     await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 30000 });
 
-    // Edit into an incomplete state and save.
+    // Edit into an incomplete state.
     const editor = page.locator(".cm-content");
     await editor.click();
     await page.keyboard.press("ControlOrMeta+a");
     await page.keyboard.insertText(INCOMPLETE_SOURCE);
-    await page.keyboard.press("ControlOrMeta+s");
+
+    // While the edit is unsaved, the live preview finds the undefined name
+    // and holds the last graph that built, saying so (#256), rather than
+    // quietly showing a graph that no longer matches the code.
+    const stale = page.getByText("Showing the last version that built.");
+    await expect(stale).toBeVisible({ timeout: 15000 });
+
+    // Save builds what it can. Saved with the toolbar button, not the
+    // keyboard: Playwright's "ControlOrMeta+s" sends ⌘S on a Mac, but the
+    // emulated Desktop Chrome reports Windows, where the app saves on Ctrl+S,
+    // so on a Mac the keypress never saved and only the preview ran (#394).
+    await page.getByRole("button", { name: "Save", exact: true }).click();
 
     // Graceful degradation: the defined node renders, the missing endpoint is a
     // phantom dangling node, and the problem is surfaced — app stays usable.
     await expect(page.locator('.react-flow__node[data-id="a"]')).toBeVisible({ timeout: 30000 });
     await expect(page.locator('.react-flow__node[data-id^="__dangling__"]')).toBeVisible();
     await expect(page.getByText(/dangling projection/i).first()).toBeVisible();
+    await expect(stale).toBeHidden();
 
     await page.waitForTimeout(500);
     await page.screenshot({ path: shot("01-incomplete.png") });
