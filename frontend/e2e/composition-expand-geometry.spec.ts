@@ -107,6 +107,8 @@ async function chooseLayout(page: Page, layout: Layout) {
  */
 async function ensureCustomLayout(page: Page) {
   const button = page.getByRole("button", { name: /^Layout: (Auto|Custom)$/ });
+  // Switching reloads the graph: wait for it, so the steps that follow don't
+  // race the reload. A fold in the flattened view keeps Auto (#323).
   if ((await button.textContent())?.includes("Auto")) await Promise.all([loaded(page), button.click()]);
   await expect(button).toHaveText("Layout: Custom");
 }

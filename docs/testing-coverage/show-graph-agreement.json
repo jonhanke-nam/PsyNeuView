@@ -2,7 +2,7 @@
  "measured": "2026-11-23",
  "commit": "44ce5d77d4",
  "thresholds": {
-  "ci": "The `@ci` test opens four representative models: the basic Stroop reference, EGO in each of its views (nested, flattened, PyTorch) and with CIMs shown, MontagueDayanSejnowski96 (learning), and `demos/nested_compositions.py` (a composition open inside another). In every view it requires all of show_graph's nodes on the canvas, rows and order at 100%, no overlapping boxes, nothing cut off after Fit, no frame button covered, and every edge show_graph draws between two canvas nodes drawn along its course (no exceptions are listed). Measured with the full batch: all of those pass at 100%. The full batch below has no thresholds; it is run before a release and its review sheets looked at."
+  "ci": "The `@ci` test opens four representative models: the basic Stroop reference, EGO in each of its views (nested, flattened, PyTorch), folded in each, and with CIMs shown, MontagueDayanSejnowski96 (learning), and `demos/nested_compositions.py` (a composition open inside another). In every view it requires all of show_graph's nodes on the canvas, rows and order at 100%, no overlapping boxes, nothing cut off after Fit, no frame button covered, and every edge show_graph draws between two canvas nodes drawn along its course (no exceptions are listed). Measured with the full batch: all of those pass at 100%. The full batch below has no thresholds; it is run before a release and its review sheets looked at."
  },
  "results": [
   {
@@ -325,29 +325,18 @@
     8
    ],
    "rows": [
-    17,
+    28,
     28
    ],
    "order": [
-    2,
+    6,
     6
    ],
    "courses": [
-    0,
+    10,
     10
    ],
-   "missing": [
-    "STATE → PREVIOUS STATE",
-    "STATE → CONTEXT",
-    "CONTEXT [NORMALIZED] → EM",
-    "PREVIOUS STATE → EM",
-    "STATE → EM",
-    "CONTEXT → CONTEXT [NORMALIZED]",
-    "CONTEXT [BIAS] → CONTEXT [NORMALIZED]",
-    "EM → PREDICTION",
-    "PREDICTION → LOSS for PREDICTION",
-    "STATE → LOSS for PREDICTION"
-   ],
+   "missing": [],
    "overlaps": 0,
    "cut_off": 0,
    "error": null
@@ -360,50 +349,18 @@
     21
    ],
    "rows": [
-    124,
+    210,
     210
    ],
    "order": [
-    9,
+    21,
     21
    ],
    "courses": [
-    0,
+    31,
     31
    ],
-   "missing": [
-    "STATE → PREVIOUS STATE",
-    "STATE → CONTEXT",
-    "STATE → STATE [VALUE]",
-    "PREVIOUS STATE → PREVIOUS STATE [QUERY]",
-    "CONTEXT [NORMALIZED] → CONTEXT [QUERY]",
-    "CONTEXT → CONTEXT [NORMALIZED]",
-    "CONTEXT [BIAS] → CONTEXT [NORMALIZED]",
-    "STATE [RETRIEVED] → PREDICTION",
-    "PREDICTION → LOSS for PREDICTION",
-    "STATE → LOSS for PREDICTION",
-    "COMBINED SCORES → STATE [FIELD_MEMORY]",
-    "COMBINED SCORES → STATE [FIELD_MEMORY]",
-    "STATE [VALUE] → STATE [FIELD_MEMORY]",
-    "COMBINED SCORES → PREVIOUS STATE [FIELD_MEMORY]",
-    "COMBINED SCORES → PREVIOUS STATE [FIELD_MEMORY]",
-    "PREVIOUS STATE [QUERY] → PREVIOUS STATE [FIELD_MEMORY]",
-    "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
-    "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
-    "CONTEXT [QUERY] → CONTEXT [FIELD_MEMORY]",
-    "PREVIOUS STATE [FIELD_MEMORY] → PREVIOUS STATE [WEIGHTED SCORES]",
-    "PREVIOUS STATE [WEIGHT] → PREVIOUS STATE [WEIGHTED SCORES]",
-    "CONTEXT [FIELD_MEMORY] → CONTEXT [WEIGHTED SCORES]",
-    "CONTEXT [WEIGHT] → CONTEXT [WEIGHTED SCORES]",
-    "CONTEXT [FIELD_MEMORY] → COMBINED SCORES",
-    "CONTEXT [WEIGHTED SCORES] → COMBINED SCORES",
-    "PREVIOUS STATE [FIELD_MEMORY] → COMBINED SCORES",
-    "PREVIOUS STATE [WEIGHTED SCORES] → COMBINED SCORES",
-    "STATE [FIELD_MEMORY] → COMBINED SCORES",
-    "STATE [FIELD_MEMORY] → STATE [RETRIEVED]",
-    "PREVIOUS STATE [FIELD_MEMORY] → PREVIOUS STATE [RETRIEVED]",
-    "CONTEXT [FIELD_MEMORY] → CONTEXT [RETRIEVED]"
-   ],
+   "missing": [],
    "overlaps": 0,
    "cut_off": 0,
    "error": null
@@ -416,50 +373,18 @@
     21
    ],
    "rows": [
-    124,
+    210,
     210
    ],
    "order": [
-    9,
+    21,
     21
    ],
    "courses": [
-    0,
+    31,
     31
    ],
-   "missing": [
-    "STATE → PREVIOUS STATE",
-    "STATE → CONTEXT",
-    "STATE → STATE [VALUE]",
-    "PREVIOUS STATE → PREVIOUS STATE [QUERY]",
-    "CONTEXT [NORMALIZED] → CONTEXT [QUERY]",
-    "CONTEXT → CONTEXT [NORMALIZED]",
-    "CONTEXT [BIAS] → CONTEXT [NORMALIZED]",
-    "STATE [RETRIEVED] → PREDICTION",
-    "PREDICTION → LOSS for PREDICTION",
-    "STATE → LOSS for PREDICTION",
-    "COMBINED SCORES → STATE [FIELD_MEMORY]",
-    "COMBINED SCORES → STATE [FIELD_MEMORY]",
-    "STATE [VALUE] → STATE [FIELD_MEMORY]",
-    "COMBINED SCORES → PREVIOUS STATE [FIELD_MEMORY]",
-    "COMBINED SCORES → PREVIOUS STATE [FIELD_MEMORY]",
-    "PREVIOUS STATE [QUERY] → PREVIOUS STATE [FIELD_MEMORY]",
-    "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
-    "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
-    "CONTEXT [QUERY] → CONTEXT [FIELD_MEMORY]",
-    "PREVIOUS STATE [FIELD_MEMORY] → PREVIOUS STATE [WEIGHTED SCORES]",
-    "PREVIOUS STATE [WEIGHT] → PREVIOUS STATE [WEIGHTED SCORES]",
-    "CONTEXT [FIELD_MEMORY] → CONTEXT [WEIGHTED SCORES]",
-    "CONTEXT [WEIGHT] → CONTEXT [WEIGHTED SCORES]",
-    "CONTEXT [FIELD_MEMORY] → COMBINED SCORES",
-    "CONTEXT [WEIGHTED SCORES] → COMBINED SCORES",
-    "PREVIOUS STATE [FIELD_MEMORY] → COMBINED SCORES",
-    "PREVIOUS STATE [WEIGHTED SCORES] → COMBINED SCORES",
-    "STATE [FIELD_MEMORY] → COMBINED SCORES",
-    "STATE [FIELD_MEMORY] → STATE [RETRIEVED]",
-    "PREVIOUS STATE [FIELD_MEMORY] → PREVIOUS STATE [RETRIEVED]",
-    "CONTEXT [FIELD_MEMORY] → CONTEXT [RETRIEVED]"
-   ],
+   "missing": [],
    "overlaps": 0,
    "cut_off": 0,
    "error": null
@@ -472,50 +397,18 @@
     21
    ],
    "rows": [
-    124,
+    210,
     210
    ],
    "order": [
-    9,
+    21,
     21
    ],
    "courses": [
-    0,
+    31,
     31
    ],
-   "missing": [
-    "STATE → PREVIOUS STATE",
-    "STATE → CONTEXT",
-    "STATE → STATE [VALUE]",
-    "PREVIOUS STATE → PREVIOUS STATE [QUERY]",
-    "CONTEXT [NORMALIZED] → CONTEXT [QUERY]",
-    "CONTEXT → CONTEXT [NORMALIZED]",
-    "CONTEXT [BIAS] → CONTEXT [NORMALIZED]",
-    "STATE [RETRIEVED] → PREDICTION",
-    "PREDICTION → LOSS for PREDICTION",
-    "STATE → LOSS for PREDICTION",
-    "COMBINED SCORES → STATE [FIELD_MEMORY]",
-    "COMBINED SCORES → STATE [FIELD_MEMORY]",
-    "STATE [VALUE] → STATE [FIELD_MEMORY]",
-    "COMBINED SCORES → PREVIOUS STATE [FIELD_MEMORY]",
-    "COMBINED SCORES → PREVIOUS STATE [FIELD_MEMORY]",
-    "PREVIOUS STATE [QUERY] → PREVIOUS STATE [FIELD_MEMORY]",
-    "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
-    "COMBINED SCORES → CONTEXT [FIELD_MEMORY]",
-    "CONTEXT [QUERY] → CONTEXT [FIELD_MEMORY]",
-    "PREVIOUS STATE [FIELD_MEMORY] → PREVIOUS STATE [WEIGHTED SCORES]",
-    "PREVIOUS STATE [WEIGHT] → PREVIOUS STATE [WEIGHTED SCORES]",
-    "CONTEXT [FIELD_MEMORY] → CONTEXT [WEIGHTED SCORES]",
-    "CONTEXT [WEIGHT] → CONTEXT [WEIGHTED SCORES]",
-    "CONTEXT [FIELD_MEMORY] → COMBINED SCORES",
-    "CONTEXT [WEIGHTED SCORES] → COMBINED SCORES",
-    "PREVIOUS STATE [FIELD_MEMORY] → COMBINED SCORES",
-    "PREVIOUS STATE [WEIGHTED SCORES] → COMBINED SCORES",
-    "STATE [FIELD_MEMORY] → COMBINED SCORES",
-    "STATE [FIELD_MEMORY] → STATE [RETRIEVED]",
-    "PREVIOUS STATE [FIELD_MEMORY] → PREVIOUS STATE [RETRIEVED]",
-    "CONTEXT [FIELD_MEMORY] → CONTEXT [RETRIEVED]"
-   ],
+   "missing": [],
    "overlaps": 0,
    "cut_off": 0,
    "error": null
@@ -552,29 +445,18 @@
     8
    ],
    "rows": [
-    17,
+    28,
     28
    ],
    "order": [
-    2,
+    6,
     6
    ],
    "courses": [
-    0,
+    10,
     10
    ],
-   "missing": [
-    "STATE → PREVIOUS STATE",
-    "STATE → CONTEXT",
-    "CONTEXT [NORMALIZED] → EM",
-    "PREVIOUS STATE → EM",
-    "STATE → EM",
-    "CONTEXT → CONTEXT [NORMALIZED]",
-    "CONTEXT [BIAS] → CONTEXT [NORMALIZED]",
-    "EM → PREDICTION",
-    "PREDICTION → LOSS for PREDICTION",
-    "STATE → LOSS for PREDICTION"
-   ],
+   "missing": [],
    "overlaps": 0,
    "cut_off": 0,
    "error": null
@@ -4339,11 +4221,6 @@
   }
  ],
  "why": {
-  "Giallanza2024_ego_study2.py — Flatten (all compositions) · compositions folded": "Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed.",
-  "Giallanza2024_ego_study2.py — PyTorch view · compositions folded": "Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed.",
-  "Giallanza2024_ego_study2.py — Flatten (all compositions) · Controller hidden": "Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed.",
-  "Giallanza2024_ego_study2.py — Flatten (all compositions) · Learning shown": "Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed.",
-  "Giallanza2024_ego_study2.py — Flatten (all compositions) · CIMs shown": "Not a layout difference: after the batch folds EGO's compositions in the flattened (or PyTorch) view, the canvas stops being laid out Like show_graph. None of show_graph's edge courses is drawn (0 of 31) and the boxes sit in the Layered stand-in's arrangement, while the same views measured before folding agree 100%. The later variants of the flattened view inherit that state. Likely the show_graph placement no longer fits the graph after a fold in the flattened view; not yet confirmed.",
   "stroop_with_control.py — the model · Controller hidden": "Probably a measurement taken too early: the review sheet shows the canvas still busy (its spinner at 8 s) with the controller already hidden, while the show_graph picture the batch compared it with still draws CONTROL. With the controller shown, the same model agrees 100%. Not yet confirmed."
  }
 }

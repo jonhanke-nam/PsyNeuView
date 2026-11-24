@@ -4,7 +4,7 @@
  */
 
 import { visibleCentre } from "@/utils/graphViewport";
-import { useModelStore, usesFlatPositions } from "@/stores/modelStore";
+import { keepAutoLayoutAcrossFold, useModelStore, usesFlatPositions } from "@/stores/modelStore";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useStatusStore } from "@/stores/statusStore";
 import { recordAction } from "@/utils/history";
@@ -53,8 +53,10 @@ async function changeCompositionView(what: string, done: string, apply: () => vo
 // The flattened and PyTorch views draw every composition as a frame of its
 // own, so there is nothing there to fold; folding one shows the model nested,
 // with that composition as a single node. The view menu says so.
+// An automatic layout stays automatic across that switch (#323).
 function leaveFlattenedViews() {
   const gs = useGraphSettings.getState();
+  if (gs.flat || gs.pytorch) keepAutoLayoutAcrossFold(true);
   if (gs.flat) gs.setFlat(false);
   if (gs.pytorch) gs.setPytorch(false);
 }
@@ -69,16 +71,21 @@ function leaveFlattenedViews() {
 export async function toggleCompositionCollapse(label: string) {
   const gs = useGraphSettings.getState();
   const folding = gs.flat || gs.pytorch || !gs.collapsedCompositions.has(label);
-  await changeCompositionView(
-    folding ? `Collapsing ${label}` : `Expanding ${label}`,
-    folding ? `Collapsed ${label}` : `Expanded ${label}`,
-    () => {
-      if (folding) leaveFlattenedViews();
-      if (folding === !useGraphSettings.getState().collapsedCompositions.has(label)) {
-        useGraphSettings.getState().toggleCollapsedComposition(label);
-      }
-    },
-  );
+  try {
+    await changeCompositionView(
+      folding ? `Collapsing ${label}` : `Expanding ${label}`,
+      folding ? `Collapsed ${label}` : `Expanded ${label}`,
+      () => {
+        if (folding) leaveFlattenedViews();
+        if (folding === !useGraphSettings.getState().collapsedCompositions.has(label)) {
+          useGraphSettings.getState().toggleCollapsedComposition(label);
+        }
+      },
+    );
+  } finally {
+    // Only for this fold's own build, even when it failed before building.
+    keepAutoLayoutAcrossFold(false);
+  }
 }
 
 // #427 INSET mode: render a nested composition as a framed inset (internals
