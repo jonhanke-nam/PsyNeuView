@@ -311,3 +311,28 @@ def test_mcp_server_reports_a_bad_token(page, tmp_path):
             assert result.is_error and "token" in result.content[0].text
 
     anyio.run(scenario)
+
+
+def test_claude_code_setup_line_puts_the_name_before_the_env_flags():
+    """-e takes several values: a name after it is read as a variable (#201)."""
+    from app.services.assistant import mcp_link
+    line = mcp_link.setup("tok", 8353)["claude_code"]
+    assert line.startswith("claude mcp add psyneuview ")
+    assert line.index(" -- ") > line.rindex("-e ")
+    assert " --env " not in line
+
+
+
+def test_a_refused_tool_list_reaches_claude_with_its_reason():
+    """Claude sees why, not "Internal server error" (#201): e.g. the wrong agent chosen."""
+    from mcp import Client, MCPError
+
+    async def refused(method: str, path: str, body):
+        return 403, {"detail": {"reason": "not_chosen", "message": "Which agent isn't set to Claude over MCP"}}
+
+    async def scenario():
+        async with Client(build_server(refused)) as client:
+            with pytest.raises(MCPError, match="Which agent isn't set to Claude over MCP"):
+                await client.list_tools()
+
+    anyio.run(scenario)

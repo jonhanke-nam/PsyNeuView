@@ -18,7 +18,7 @@ const SETUP = {
   env_names: ["PSYNEUVIEW_URL", "PSYNEUVIEW_MCP_TOKEN", "PYTHONPATH"],
   token: "tok-123",
   claude_code:
-    "claude mcp add --transport stdio --scope user --env PSYNEUVIEW_URL=http://127.0.0.1:8353 --env PSYNEUVIEW_MCP_TOKEN=tok-123 --env PYTHONPATH=/Users/me/PsyNeuView/backend psyneuview -- /Users/me/PsyNeuView/backend/.venv/bin/python -m app.mcp_server",
+    "claude mcp add psyneuview --transport stdio --scope user -e PSYNEUVIEW_URL=http://127.0.0.1:8353 -e PSYNEUVIEW_MCP_TOKEN=tok-123 -e PYTHONPATH=/Users/me/PsyNeuView/backend -- /Users/me/PsyNeuView/backend/.venv/bin/python -m app.mcp_server",
   claude_desktop: JSON.stringify(
     { mcpServers: { psyneuview: { command: "/Users/me/PsyNeuView/backend/.venv/bin/python", args: ["-m", "app.mcp_server"], env: { PSYNEUVIEW_URL: "http://127.0.0.1:8353", PSYNEUVIEW_MCP_TOKEN: "tok-123", PYTHONPATH: "/Users/me/PsyNeuView/backend" } } } },
     null,

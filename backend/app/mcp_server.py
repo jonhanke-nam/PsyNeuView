@@ -32,6 +32,7 @@ from urllib.parse import quote, urlsplit
 import anyio
 import mcp_types as types
 from mcp.server import Server
+from mcp import MCPError
 from mcp.server.stdio import stdio_server
 
 URL_ENV = "PSYNEUVIEW_URL"
@@ -45,6 +46,9 @@ FALLBACK_INSTRUCTIONS = (
     "These tools work with PsyNeuView, a graphical editor for PsyNeuLink models. Changes are proposals the user "
     "accepts or rejects in PsyNeuView's Assistant tab."
 )
+
+
+INTERNAL_ERROR = -32603  # JSON-RPC internal error; the message carries the reason
 
 
 class BackendError(Exception):
@@ -123,9 +127,14 @@ def build_server(transport: Transport, on_client: Callable[[str], None] = lambda
 
     async def list_tools(ctx: Any, params: types.PaginatedRequestParams | None) -> types.ListToolsResult:
         on_client(_client_name(ctx))
-        status, body = await transport("GET", "/api/assistant/mcp-client/tools", None)
+        # An MCPError's message reaches Claude as-is; any other exception
+        # shows only as "Internal server error", hiding the reason.
+        try:
+            status, body = await transport("GET", "/api/assistant/mcp-client/tools", None)
+        except BackendError as e:
+            raise MCPError(INTERNAL_ERROR, str(e)) from None
         if status != 200 or not isinstance(body, dict):
-            raise BackendError(_refusal(status, body))
+            raise MCPError(INTERNAL_ERROR, _refusal(status, body))
         return types.ListToolsResult(
             tools=[types.Tool(name=t["name"], description=t["description"], input_schema=t["input_schema"]) for t in body.get("tools", [])],
         )

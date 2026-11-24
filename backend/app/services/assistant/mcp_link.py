@@ -221,8 +221,10 @@ def setup(token: str, port: int) -> dict:
     python = sys.executable
     env = {URL_ENV: url, TOKEN_ENV: token, "PYTHONPATH": str(backend_dir())}
     args = ["-m", "app.mcp_server"]
-    env_flags = " ".join(f"--env {shlex.quote(f'{k}={v}')}" for k, v in env.items())
-    claude_code = f"claude mcp add --transport stdio --scope user {env_flags} {SERVER_NAME} -- {shlex.quote(python)} {' '.join(args)}"
+    env_flags = " ".join(f"-e {shlex.quote(f'{k}={v}')}" for k, v in env.items())
+    # The name comes first: -e/--env takes several values, so a name after
+    # them is read as one more variable ("Invalid environment variable format").
+    claude_code = f"claude mcp add {SERVER_NAME} --transport stdio --scope user {env_flags} -- {shlex.quote(python)} {' '.join(args)}"
     import json
 
     desktop = json.dumps({"mcpServers": {SERVER_NAME: {"command": python, "args": args, "env": env}}}, indent=2)

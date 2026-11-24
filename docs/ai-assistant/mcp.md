@@ -30,14 +30,14 @@ Settings shows a line like this, with your values filled in. Run it once in
 Terminal:
 
 ```sh
-claude mcp add --transport stdio --scope user \
-  --env PSYNEUVIEW_URL=http://127.0.0.1:8000 \
-  --env PSYNEUVIEW_MCP_TOKEN=<the token> \
-  --env PYTHONPATH=/path/to/PsyNeuView/backend \
-  psyneuview -- /path/to/PsyNeuView/backend/.venv/bin/python -m app.mcp_server
+claude mcp add psyneuview --transport stdio --scope user \
+  -e PSYNEUVIEW_URL=http://127.0.0.1:8000 \
+  -e PSYNEUVIEW_MCP_TOKEN=<the token> \
+  -e PYTHONPATH=/path/to/PsyNeuView/backend \
+  -- /path/to/PsyNeuView/backend/.venv/bin/python -m app.mcp_server
 ```
 
-`--scope user` makes PsyNeuView available in every project. Check it with
+The name `psyneuview` comes first: `-e` takes several values, so a name after it is read as another variable. `--scope user` makes PsyNeuView available in every project. Check it with
 `claude mcp list` (it should say `psyneuview ... ✓ Connected`), or `/mcp`
 inside Claude Code. Remove it with `claude mcp remove psyneuview --scope user`.
 
