@@ -145,6 +145,9 @@ export function AppearanceSection() {
         <div style={{ marginTop: 14 }}>
           <StripShortcutsRow />
         </div>
+        <div style={{ marginTop: 14 }}>
+          <StripHeadingsRow />
+        </div>
       </Group>
       <Group id="panels" title="Panels">
         <AllowBlankScreenRow />
@@ -369,9 +372,36 @@ function StripShortcutsRow() {
       <span>
         Show favourite and recently used components in the icon strip
         <span style={{ ...mutedStyle, display: "block" }}>
-          They sit at the bottom of the strip, under the category menus, with
-          a small "Favourites &amp; recent" heading. Off, the strip shows just
-          the four category menus.
+          They sit at the bottom of the strip, under the category menus, set
+          apart by a thin line (or a small "Recent" heading, when the strip's
+          headings are shown). Off, the strip shows just the four category
+          menus.
+        </span>
+      </span>
+    </label>
+  );
+}
+
+// #395: the icon strip's tiny headings, off by default.
+function StripHeadingsRow() {
+  const show = usePaletteStore((s) => s.showStripHeadings);
+  const setShow = usePaletteStore((s) => s.setShowStripHeadings);
+  return (
+    <label style={{ fontSize: "var(--pnv-fs-13)", display: "flex", gap: 8, alignItems: "flex-start" }}>
+      <input
+        type="checkbox"
+        data-testid="setting-components-strip-headings"
+        checked={show}
+        onChange={(e) => setShow(e.target.checked)}
+        style={{ marginTop: 3 }}
+      />
+      <span>
+        Show headings in the icon strip
+        <span style={{ ...mutedStyle, display: "block" }}>
+          A tiny "Components" over the category menus and "Recent" over the
+          favourite and recent shortcuts, each sized to fit the strip on one
+          line. Off, there are no words; a thin line separates the shortcuts
+          when they are shown.
         </span>
       </span>
     </label>
