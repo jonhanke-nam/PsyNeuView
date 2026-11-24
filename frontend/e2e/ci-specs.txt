@@ -126,6 +126,7 @@ show-graph-tab-fetch.spec.ts
 show-ports.spec.ts
 sidecar-placement.spec.ts
 spline-straightness.spec.ts
+stale-run-results.spec.ts
 stroop-lc-reference.spec.ts
 style-sizes.spec.ts
 text-size.spec.ts

@@ -1826,6 +1826,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - a parameter edit keeps the run set the learner chose · CI · #57
 
+**`frontend/e2e/stale-run-results.spec.ts`** (Browser (Playwright))
+
+- Run results go stale after an edit (#337) › an edit warns and clears the highlights; Undo makes the results current · CI · #337
+- Run results go stale after an edit (#337) › a fold toggle doesn't make results stale · CI · #337
+
 **`frontend/e2e/stroop-lc-reference.spec.ts`** (Browser (Playwright))
 
 - stroop_with_lc reference model › loads and renders all four LC modulatory edges · CI
@@ -1861,6 +1866,14 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - busyStore timings (#176) › remembers where the timer shows, below the wheel by default · CI · #176
 - busyStore timings (#176) › reads a value stored before one wheel (#220): %j is %s · CI · #176
 - busyStore timings (#176) › remembers the indicator's style, defaulting to the classic wheel (#169) · CI · #176
+
+**`frontend/src/stores/runStaleness.test.ts`** (Frontend unit (vitest))
+
+- run results staleness (#337) › hashes the same text the same, different text differently · CI · #337
+- run results staleness (#337) › no results, never stale · CI · #337
+- run results staleness (#337) › an edit makes results stale and clears the trace; undo makes them current · CI · #337
+- run results staleness (#337) › the same text set again (a fold toggle's reload) is not stale · CI · #337
+- run results staleness (#337) › new results and clearing both reset staleness · CI · #337
 
 **`frontend/src/stores/valueViewStore.test.ts`** (Frontend unit (vitest))
 
