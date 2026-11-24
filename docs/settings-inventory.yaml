@@ -754,13 +754,31 @@ settings:
       none, anthropic or openai_compatible. The section says where messages go for the chosen agent.
 
   - id: assistant-agent-model
-    label: AI assistant ▸ Agent ▸ Model
+    label: Developer ▸ AI assistant model ▸ Model id
+    keywords: ["model", "claude", "llm", "alias"]
+    home: settings
+    section: developer
+    developer_only: true
+    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-agent-model-id
+    simple_control: setting-assistant-agent-model
+    simple_section: assistant
+    notes: >-
+      #370: everyone chooses from the drop-down in AI assistant ▸ Agent ▸ Model, filled from the list the
+      service offers (GET /api/assistant/models, with the saved key) with a Refresh button; Anthropic's default
+      (claude-opus-5-5) is preselected, and a saved model the service no longer lists is flagged, not changed.
+      Typing an id is the developer's escape in Developer, saved when the field loses focus.
+
+  - id: assistant-model-alias
+    label: AI assistant ▸ Agent ▸ Short name for this model
+    keywords: ["alias", "nickname", "model name"]
     home: settings
     section: assistant
-    storage: backend (GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
-    control: setting-assistant-agent-model
+    storage: backend (model_aliases in GET/PUT /api/assistant/settings; docs/ai-assistant/contract.md); never this browser
+    control: setting-assistant-model-alias
     notes: >-
-      Saved when the field loses focus.
+      #370: an optional name per model id, shown in the model drop-down and the Assistant tab; the real id is what is sent.
+      Saved when the field loses focus; an empty name removes it.
 
   - id: assistant-agent-base-url
     label: AI assistant ▸ Agent ▸ Server address

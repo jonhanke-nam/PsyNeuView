@@ -43,7 +43,8 @@ is. The rules behind it are in issue #179; the threat model is in
   "visibility": {"model": true, "selection": true, "errors": true, "results": false, "files": false},
   "limits": {"tool_calls": 25, "minutes": 10, "max_tokens": 100000},
   "keep_log": true,
-  "sandbox": {"all_runs": true, "require": true}
+  "sandbox": {"all_runs": true, "require": true},
+  "model_aliases": {"claude-haiku-5": "fast"}
 }
 ```
 
@@ -121,6 +122,27 @@ off, since you test before turning it on, but sends nothing until an agent is
 chosen: saving the agent type is where sending to that address is confirmed.
 Like every assistant route it is same-site only, and 403 `unavailable` where
 the deployment has no assistant.
+
+`GET /api/assistant/models` (#370) asks the saved agent's service which
+models it offers, with the saved key: `GET <base>/v1/models` on Anthropic's
+API (`?limit=1000`) or the OpenAI-compatible server (Ollama answers the same
+path; its own `{"models": [{"name"}]}` shape is read too). It goes only to
+the chosen service, through the same request handling as the agent calls
+(redirects refused, a 15-second wait, the key never logged or echoed), and
+answers 200 with `{"ok": bool, "agent", "models": [{"id", "display_name"}],
+"default", "message"}`. `default` is what Settings preselects when no model
+is saved: `claude-opus-5-5` for Anthropic when it is listed, else the
+newest; `""` (the server's own) for an OpenAI-compatible server. Errors are
+plain English, as for Test connection: no agent, no key, the key refused,
+rate limited, couldn't reach the host, no model list (404). Settings keeps
+the saved choice and the last list on an error, and flags a saved model the
+service no longer lists as "no longer offered by the service" without
+changing it. Typing an id is the developer's escape, in Developer.
+
+`model_aliases` in the settings is `{model id: short name}` (#370), at
+most 200 entries of up to 40 characters; an empty name removes one. The
+name is shown in the model drop-down and the Assistant tab; the real id is
+what is sent. Changing it saves directly.
 
 ## Sessions
 

@@ -159,6 +159,7 @@ summary, rather than a confirmed one.
 |---|---|---|---|
 | Custom `base_url` | Rogue agent; misled user | Only the user sets it, in Settings; the panel shows where data goes; the agent has no tool for it | `test_non_allowlisted_tools_are_refused` |
 | The service itself | The service | One consent before anything is sent (#369): turning it on shows what is shared, with whom (the service's host, and that PsyNeuView can't limit what it does with the data), what it can do and the folders; a new destination while on asks again. Settings always shows a summary of what is shared and with whom. A per-folder consent at a cloud agent's first use of it is not built (open item below); model contents are what's sent, nothing more | `ai-assistant.spec.ts` ("turning it on is the one consent", "once on, widening a permission saves without asking") |
+| The model list and Test connection (#368, #370) | Misled user; the service | Both use the saved agent, address and key only, through the adapter's request handling: redirects refused, a 15-second wait, the key never in a response or the log; they go only to the chosen service, and only once an agent is chosen. Model names from the service are shown as text | `test_assistant_model_list.py`, `test_assistant_test_connection.py` |
 | New dependencies for the connection | Supply chain | Reviewed in the phase review | checklist item |
 
 ## 5. The tools, one by one, and in combination
