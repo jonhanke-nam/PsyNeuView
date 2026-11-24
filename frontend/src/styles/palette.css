@@ -55,6 +55,10 @@
   --pnv-selection-fill: #e8f0fe;
   --pnv-selection-border: #1a73e8;
   --pnv-selection-text: #1c4f8a;
+  /* Pointing at something that could be selected (#387): half the selection
+     fill on the surface, so hover is always lighter than the active item and
+     the two never look the same. */
+  --pnv-selection-hover: color-mix(in srgb, var(--pnv-selection-fill) 50%, var(--pnv-surface));
 
   /* Status. Each has a text colour and a tint for a box behind it. */
   --pnv-success: #2e7d32;
