@@ -3866,6 +3866,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - React Flow credit (#290) › the canvas shows no React Flow credit after a model loads · CI · #290
 - React Flow credit (#290) › Settings ▸ About credits React Flow, with a link · CI · #290
 
+**`frontend/e2e/selection-colour.spec.ts`** (Browser (Playwright))
+
+- one selection colour (#335), ${scheme} › current trial, selected node, node bands and labels · CI · #335
+
 **`frontend/e2e/shape-mismatch-explained.spec.ts`** (Browser (Playwright))
 
 - A shape mismatch is explained › the broken connection is drawn, named, and Run gives the reason · CI · #1235
@@ -3929,6 +3933,12 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - writes an ellipsis as "…", never three dots (#109) · CI · #109
 - e2e specs select the "…" labels, never three dots (#109) · CI · #109
 - defines nothing twice in palette.css · CI · #1302
+
+**`frontend/src/styles/selectionColours.test.ts`** (Frontend unit (vitest))
+
+- selection colours › palette.css defines the selection set and the role colours · CI · #335
+- selection colours › the dark set defines all three · CI · #335
+- selection colours › each is at least ${MIN_DISTANCE} from every role colour (${name}) · CI · #335
 
 **`frontend/src/styles/typeColourContrast.test.ts`** (Frontend unit (vitest))
 

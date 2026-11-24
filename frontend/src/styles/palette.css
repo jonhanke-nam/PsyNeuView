@@ -45,6 +45,17 @@
   --pnv-primary-text-on-tint: #1c4f8a; /* a note in a blue box */
   --pnv-primary-ring: rgba(26, 115, 232, 0.2); /* the glow round a focused field */
 
+  /* Selection (#335): one pale blue for whatever is selected or current: a
+     selected node's ring and a selected edge on the graph, the current
+     trial's card and its inputs in Per-trial values, the "Show Δ" toggle
+     when on. Built on the primary tint; the border is the primary blue a
+     selected edge has always been drawn in. Kept a set distance from every
+     role colour (selectionColours.test.ts), so the current trial never reads
+     as an input's green or a learning orange. */
+  --pnv-selection-fill: #e8f0fe;
+  --pnv-selection-border: #1a73e8;
+  --pnv-selection-text: #1c4f8a;
+
   /* Status. Each has a text colour and a tint for a box behind it. */
   --pnv-success: #2e7d32;
   --pnv-success-tint: #e8f5e9;
@@ -438,4 +449,16 @@
    `var(--pnv-font-mono)`, never "monospace" (styleConventions.test.ts). */
 :root {
   --pnv-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Selection in a dark theme (#335). The app has no dark theme yet (see the
+   header), so this block only takes effect on a page that opts in with
+   data-pnv-theme="dark"; it is here so the selection set is defined for both
+   and its distance from the role colours is tested in both. */
+@media (prefers-color-scheme: dark) {
+  :root[data-pnv-theme="dark"] {
+    --pnv-selection-fill: #1c2b45;
+    --pnv-selection-border: #6ea8fe;
+    --pnv-selection-text: #c6dafc;
+  }
 }

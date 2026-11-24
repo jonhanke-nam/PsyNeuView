@@ -714,7 +714,8 @@ export function ProjectionEdge({
   );
 
   const effectiveStroke = isSelected
-    ? "var(--pnv-primary)"
+    ? "var(--pnv-selection-border)" // #335: the one selection blue
+
     : isCursorHighlighted
     ? "var(--pnv-cursor-highlight)"
     : hovered
@@ -1010,14 +1011,14 @@ export function ProjectionEdge({
               // line, so it needs the pointer only while it's showing.
               pointerEvents: showLabel ? "all" : "none",
               fontSize: 10,
-              color: isSelected ? "var(--pnv-primary)" : isCursorHighlighted ? "var(--pnv-cursor-highlight)" : "var(--pnv-text-secondary)",
+              color: isSelected ? "var(--pnv-selection-border)" : isCursorHighlighted ? "var(--pnv-cursor-highlight)" : "var(--pnv-text-secondary)",
               fontFamily: "monospace",
               fontWeight: isSelected || isCursorHighlighted ? 600 : 400,
               background: "var(--pnv-edge-label-bg)",
               padding: "2px 6px",
               borderRadius: 4,
               border: isSelected
-                ? "1px solid var(--pnv-primary)"
+                ? "1px solid var(--pnv-selection-border)"
                 : isCursorHighlighted
                 ? "1px solid var(--pnv-cursor-highlight)"
                 : "1px solid var(--pnv-border-light)",

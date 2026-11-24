@@ -163,7 +163,7 @@ other answer to Start Learning.)
 these — a sidebar item, a fold heading, a listbox row, a chip, a key
 recorder, a toolbar toggle, the segments of a segmented control (the Run
 panel's Node / Trial grouping, Export JSON / YAML, a layer's list / grid), an
-on/off toggle (Δ diff) — keeps its own style, written with tokens. The
+on/off toggle (Show Δ) — keeps its own style, written with tokens. The
 report counts them (below), and the swept files list theirs by name.
 
 **Toolbar toggles and menu rows.** The toolbars' own controls are not kinds

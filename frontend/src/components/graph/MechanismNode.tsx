@@ -13,7 +13,7 @@ import type { MechanismData } from "@/stores/modelStore";
 import { useGraphSettings, type GraphDirection } from "@/stores/graphSettingsStore";
 import { useModelStore, NODE_HEIGHT, NODE_WIDTH } from "@/stores/modelStore";
 import { outlineThickness, ovalBoxFor } from "@/utils/nodeBox";
-import { TYPE_COLORS, ROLE_COLORS, ROLE_TEXT_COLORS, ROLE_PRIORITY } from "@/constants/pnlTypes";
+import { TYPE_COLORS, ROLE_COLORS, ROLE_TEXT_COLORS, ROLE_PRIORITY, roleColorFor } from "@/constants/pnlTypes";
 import { toggleCompositionCollapse } from "@/utils/nodeActions";
 import { formatTraceValue } from "@/utils/traceValues";
 import { ValueGrid, poolValues, useNodeGrid } from "@/components/common/ValueGrid";
@@ -110,19 +110,7 @@ function arcsForDirection(dir: GraphDirection): { input: EllipseArc; output: Ell
 }
 
 function getRoleColor(roles: string[], custom: Record<string, string> | null): string {
-  const colors = custom || ROLE_COLORS;
-  if (!roles || roles.length === 0) return colors.INTERNAL || "var(--pnv-role-internal)";
-
-  // Check for INPUT+OUTPUT singleton
-  if (roles.includes("INPUT") && roles.includes("OUTPUT")) {
-    return colors.SINGLETON || ROLE_COLORS.SINGLETON;
-  }
-
-  // Find highest priority role
-  for (const role of ROLE_PRIORITY) {
-    if (roles.includes(role)) return colors[role] || ROLE_COLORS[role] || "var(--pnv-role-internal)";
-  }
-  return colors.INTERNAL || "var(--pnv-role-internal)";
+  return roleColorFor(roles, custom);
 }
 
 // The role's colour as text or behind white text: darker than the outline
@@ -418,7 +406,9 @@ export const MechanismNode = memo(function MechanismNode({
   const ring = isActiveStep
     ? undefined
     : selected
-    ? `color-mix(in srgb, ${accentColor} 20%, transparent)`
+    // #335: the ring is the one selection blue, the same as a selected edge
+    // and the current trial; the outline itself keeps the node's role colour.
+    ? "color-mix(in srgb, var(--pnv-selection-border) 40%, transparent)"
     : isCursorHighlighted
     ? "var(--pnv-cursor-highlight)"
     : undefined;
@@ -500,7 +490,7 @@ export const MechanismNode = memo(function MechanismNode({
           : isActiveStep
           ? "var(--pnv-trace-glow), var(--pnv-shadow-node-raised)"
           : selected
-          ? `0 0 0 2px color-mix(in srgb, ${accentColor} 20%, transparent), var(--pnv-shadow-node-raised)`
+          ? "0 0 0 2px color-mix(in srgb, var(--pnv-selection-border) 40%, transparent), var(--pnv-shadow-node-raised)"
           : isCursorHighlighted
           ? "0 0 0 2px var(--pnv-cursor-highlight), var(--pnv-cursor-glow)"
           : "var(--pnv-shadow-node)",
