@@ -475,3 +475,17 @@ body:has([data-pnv-customized="true"]) .pnv-inspector-legend {
 .pnv-run-inputs * {
   scroll-margin-top: var(--run-sticky-row-h, 0px);
 }
+
+/* Read by screen readers, not drawn: a live region or a label that takes no
+   room (the usual visually-hidden pattern). */
+.pnv-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
