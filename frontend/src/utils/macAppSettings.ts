@@ -18,12 +18,22 @@
 //   postMessage({ op: "switchInstall", choice, path? }) -> InstallVerdict
 //   postMessage({ op: "installUpdate" })               -> MacAppSettings
 //     (opens the app's own update window; PsyNeuView-MacApp#6)
+//   postMessage({ op: "set", key: "autoInstallUpdates", value }) -> MacAppSettings
+//     (install updates automatically when you quit; PsyNeuView-MacApp#79)
+//   postMessage({ op: "answerAutoInstallOffer", value }) -> MacAppSettings
+//     (the one-time "Install updates automatically?" question; #79)
+//   postMessage({ op: "installAndRelaunch" })          -> MacAppSettings
+//     (Restart now: install the downloaded update and relaunch; #79)
+//   postMessage({ op: "dismissJustUpdated" })          -> MacAppSettings
+//     (hide "Updated to X" in every window; #79)
 //   postMessage({ op: "syncPnlSource" })               -> MacAppSettings
 //     (the app re-reads the installed PsyNeuLink and makes its record match;
 //      PsyNeuView-MacApp#9)
 // A refused or malformed message rejects the Promise with the reason.
 // The app sends window events: "pnv:mac-settings-changed" (detail:
-// MacAppSettings) after any change, and "pnv:open-settings" for ⌘,.
+// MacAppSettings) after any change, "pnv:open-settings" for ⌘,, and
+// "pnv:app-update-ready" (detail: { version }) when an update has downloaded
+// and installs when the app quits (#79).
 
 import { record, recordSettingChanged } from "./activityLog";
 
@@ -82,6 +92,18 @@ export interface MacAppSettings {
    * that can't, which hide the switch.
    */
   receiveReleaseCandidates?: boolean;
+  /**
+   * Install updates automatically when you quit (PsyNeuView-MacApp#79):
+   * Sparkle's own setting, off until the user says yes. Absent from apps that
+   * can't update themselves or are from before it; the switch is then hidden.
+   */
+  autoInstallUpdates?: boolean;
+  /** Ask, once, whether to install updates automatically (#79). */
+  autoInstallOffer?: boolean;
+  /** When the app last checked for an update, an ISO time, or null (#79). */
+  lastUpdateCheck?: string | null;
+  /** This launch updated the app to this version (#79), until dismissed. */
+  justUpdated?: { version: string; releaseNotesURL?: string | null } | null;
 }
 
 export interface MacAppUpdate {
@@ -93,11 +115,13 @@ export interface MacAppUpdate {
   releasedAt?: string | null;
   /** True when the waiting version is a release candidate, a test version. */
   candidate?: boolean;
+  /** Downloaded, and installs when the app quits (PsyNeuView-MacApp#79). */
+  readyToInstall?: boolean;
 }
 
 export type ReportSendWith = "ask" | "mail" | "outlook" | "gmail";
 
-export type MacAppSwitchKey = "autoRestart" | "launchAtLogin" | "receiveReleaseCandidates";
+export type MacAppSwitchKey = "autoRestart" | "launchAtLogin" | "receiveReleaseCandidates" | "autoInstallUpdates";
 
 export interface InstallChoice {
   choice: "bundled" | "checkout";
@@ -112,6 +136,7 @@ export interface InstallVerdict {
 
 export const MAC_SETTINGS_CHANGED = "pnv:mac-settings-changed";
 export const OPEN_SETTINGS = "pnv:open-settings";
+export const APP_UPDATE_READY = "pnv:app-update-ready";
 
 const bridge = () => (window as any).webkit?.messageHandlers?.pnvSettings;
 
@@ -130,6 +155,7 @@ const MAC_SETTING_IDS: Record<MacAppSwitchKey, string> = {
   autoRestart: "mac-auto-restart",
   launchAtLogin: "mac-launch-at-login",
   receiveReleaseCandidates: "mac-release-candidates",
+  autoInstallUpdates: "mac-auto-install-updates",
 };
 
 export const setMacAppSetting = (key: MacAppSwitchKey | "developerMode", value: boolean) => {
@@ -168,6 +194,31 @@ export const installMacAppUpdate = () => {
   record("menu", "Mac app: install the waiting update");
   return post<MacAppSettings>({ op: "installUpdate" });
 };
+
+/** The one-time "Install updates automatically?" answer (PsyNeuView-MacApp#79). */
+export const answerAutoInstallOffer = (yes: boolean) => {
+  recordSettingChanged("mac-auto-install-updates", yes);
+  return post<MacAppSettings>({ op: "answerAutoInstallOffer", value: yes });
+};
+
+/** Restart now: install the downloaded update and relaunch (#79). */
+export const installAndRelaunch = () => {
+  record("menu", "Mac app: install the ready update and restart");
+  return post<MacAppSettings>({ op: "installAndRelaunch" });
+};
+
+/** Hide "Updated to X" in every window (#79). Harmless with an older app. */
+export const dismissJustUpdated = () => post<MacAppSettings>({ op: "dismissJustUpdated" }).catch(() => null);
+
+/** Call `listener` with the version when an update is ready to install on quit (#79). */
+export function onAppUpdateReady(listener: (version: string) => void): () => void {
+  const handler = (e: Event) => {
+    const version = (e as CustomEvent).detail?.version;
+    if (typeof version === "string" && version) listener(version);
+  };
+  window.addEventListener(APP_UPDATE_READY, handler);
+  return () => window.removeEventListener(APP_UPDATE_READY, handler);
+}
 
 export const checkInstall = (c: InstallChoice) => post<InstallVerdict>({ op: "checkInstall", ...c });
 
