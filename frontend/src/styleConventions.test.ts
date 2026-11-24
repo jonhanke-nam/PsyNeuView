@@ -50,7 +50,7 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
   "components/inspector/RunPanel.tsx": {
     count: 7,
     what:
-      "the Node / Trial grouping segments; the Export JSON and YAML segments; the Δ diff on/off toggle; " +
+      "the Node / Trial grouping segments; the Export JSON and YAML segments; the Show Δ toggle; " +
       "the Show N warnings fold on a failed run; a trial card's ×N steps fold; a debugger-snapshot category chip",
   },
   "components/layout/Toolbar.tsx": {

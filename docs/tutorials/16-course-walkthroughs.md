@@ -161,7 +161,7 @@ more let the network update itself. Switch the layer from **list** to **grid**
 above the results, and each trial is drawn as the 5 × 5 letter, dark for +1:
 trial 1 is a Z with four extra dark pixels. Step the trace from trial 1 to 2 and
 watch the letter clean up, in the trial card and on the canvas; turn on
-**Δ diff** and see that all four flipped in that one update, then nothing: Z is
+**Show Δ** and see that all four flipped in that one update, then nothing: Z is
 an attractor. A cue with A's top over Z's bottom goes
 to Z, the nearer letter. Then change the code to `training_set = [A, Z, X, O]`
 and run the noisy Z again: it settles on **X**, a row at a time. Too many

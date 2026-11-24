@@ -29,6 +29,8 @@ import { PnlCallLine } from "./PnlCallLine";
 import { Button } from "@/components/common/Button";
 import { GridLegend, ValueGrid, ValueViewToggle, poolValues, useNodeGrid } from "@/components/common/ValueGrid";
 import { MIN_GRID_SIZE, numericVector } from "@/utils/valueGrid";
+import { roleColorFor } from "@/constants/pnlTypes";
+import { useGraphSettings } from "@/stores/graphSettingsStore";
 
 interface InputPortInfo {
   name: string;
@@ -1066,12 +1068,13 @@ export function RunPanel() {
                 PsyNeuLink builds that don't ship the `_debugger` hook. */}
             <DebuggerSnapshotTable />
 
-            {/* Collapsible raw data table */}
+            {/* Collapsible table of the results (#335: was "Raw data") */}
             <details style={{ marginTop: 12 }}>
               <summary
+                data-testid="run-results-table-toggle"
                 style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}
               >
-                Raw data
+                Results
               </summary>
               <table
                 style={{
@@ -1809,6 +1812,10 @@ function TrialOutputs({
   // #786: trial-to-trial Δ diff is opt-in (off by default).
   const showTrialDeltas = useUIStore((s) => s.showTrialDeltas);
   const toggleTrialDeltas = useUIStore((s) => s.toggleTrialDeltas);
+  // #335: each node's rows carry its role colour, as the graph draws it.
+  const customRoleColors = useGraphSettings((s) => s.customRoleColors);
+  // (Called while rendering the cards, after nodeMeta below is set.)
+  const bandFor = (name: string) => roleColorFor(nodeMeta.get(name)?.roles, customRoleColors);
 
   // #524: group the debugger-captured per-step values by trial and node so a
   // card can show how a node's value evolved *within* its trial. Empty on
@@ -1971,12 +1978,13 @@ function TrialOutputs({
             fontWeight: 500,
             cursor: "pointer",
             borderRadius: 4,
-            border: showTrialDeltas ? "1px solid var(--pnv-warning-border)" : "1px solid var(--pnv-border-light)",
-            background: showTrialDeltas ? "var(--pnv-warning-tint)" : "var(--pnv-surface)",
-            color: showTrialDeltas ? "var(--pnv-warning)" : "var(--pnv-text-hint)",
+            border: showTrialDeltas ? "1px solid var(--pnv-selection-border)" : "1px solid var(--pnv-border-light)",
+            background: showTrialDeltas ? "var(--pnv-selection-fill)" : "var(--pnv-surface)",
+            color: showTrialDeltas ? "var(--pnv-selection-text)" : "var(--pnv-text-hint)",
           }}
+          aria-pressed={showTrialDeltas}
         >
-          Δ diff {showTrialDeltas ? "on" : "off"}
+          Show Δ
         </button>
       </div>
       {gridNodes.length > 0 && (
@@ -2009,6 +2017,8 @@ function TrialOutputs({
             <div
               key={r.trial}
               ref={active ? activeCardRef : undefined}
+              data-testid={`run-trial-card-${trialPos + 1}`}
+              data-active={active ? "true" : "false"}
               onClick={clickable ? () => setTraceStep(stepTarget) : undefined}
               title={
                 clickable
@@ -2016,9 +2026,11 @@ function TrialOutputs({
                   : `trial_num=${r.trial}`
               }
               style={{
-                border: `1px solid ${active ? "var(--pnv-trace-border)" : "var(--pnv-border-faint)"}`,
+                // #335: the current trial is the one selection blue, not the
+                // trace green (which read as an input node's green).
+                border: `1px solid ${active ? "var(--pnv-selection-border)" : "var(--pnv-border-faint)"}`,
                 borderRadius: 6,
-                background: active ? "var(--pnv-trace-tint)" : "var(--pnv-surface-muted)",
+                background: active ? "var(--pnv-selection-fill)" : "var(--pnv-surface-muted)",
                 padding: "8px 10px",
                 cursor: clickable ? "pointer" : "default",
                 fontSize: "var(--pnv-fs-11)",
@@ -2036,7 +2048,7 @@ function TrialOutputs({
               >
                 <span>Trial {r.trial + 1}</span>
                 {active && (
-                  <span style={{ color: "var(--pnv-trace-value)", fontSize: "var(--pnv-fs-10)" }}>● stepping</span>
+                  <span style={{ color: "var(--pnv-selection-text)", fontSize: "var(--pnv-fs-10)" }}>● stepping</span>
                 )}
               </div>
 
@@ -2052,8 +2064,8 @@ function TrialOutputs({
                       ? resolveInputLabels(modelLabels, s.name, portName, meta?.inputPorts)
                       : null;
                     return (
+                      <NodeBand key={`in-${s.varName}`} color={bandFor(s.name)} node={s.name}>
                       <ValueRow
-                        key={`in-${s.varName}`}
                         kind="in"
                         node={s.name}
                         text={formatLabeledValue(value, labels, { maxLen: 1000 })}
@@ -2068,6 +2080,7 @@ function TrialOutputs({
                           />
                         }
                       />
+                      </NodeBand>
                     );
                   })}
                 </div>
@@ -2101,7 +2114,7 @@ function TrialOutputs({
                     ? expandMultiPort(prevValue, meta?.outputPorts, nodeName, modelLabels)
                     : null;
                   return (
-                    <div key={`out-${nodeName}`} style={{ marginBottom: 2 }}>
+                    <NodeBand key={`out-${nodeName}`} color={bandFor(nodeName)} node={nodeName} style={{ marginBottom: 2 }}>
                       <div style={{ color: "var(--pnv-text-hint)", fontFamily: "var(--pnv-font-mono)" }}>
                         {nodeName.replace(/-\d+$/, "")}
                       </div>
@@ -2116,12 +2129,12 @@ function TrialOutputs({
                         />
                       ))}
                       {detail}
-                    </div>
+                    </NodeBand>
                   );
                 }
                 const labels = resolveOutputLabels(modelLabels, nodeName, undefined, meta?.outputPorts);
                 return (
-                  <div key={`out-${nodeName}`}>
+                  <NodeBand key={`out-${nodeName}`} color={bandFor(nodeName)} node={nodeName}>
                     <ValueRow
                       kind="out"
                       node={nodeName.replace(/-\d+$/, "")}
@@ -2139,7 +2152,7 @@ function TrialOutputs({
                       }
                     />
                     {detail}
-                  </div>
+                  </NodeBand>
                 );
               })}
             </div>
@@ -2318,6 +2331,31 @@ function ValueText({ text }: { text: string }) {
 // inputs and outputs read apart at a glance. `delta` (#466), when present,
 // renders a small amber "Δ …" line naming the elements that moved since the
 // previous trial; converged values pass null and show nothing.
+// #335: a node's rows in a Per-trial values card, with a left band in the
+// node's role colour so it can be followed from trial to trial. The band sits
+// in the card's padding (negative margin), so the rows don't move.
+function NodeBand({
+  color,
+  node,
+  style,
+  children,
+}: {
+  color: string;
+  node: string;
+  style?: CSSProperties;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      data-testid="run-trial-node-band"
+      data-node={node.replace(/-\d+$/, "")}
+      style={{ ...style, borderLeft: `3px solid ${color}`, marginLeft: -7, paddingLeft: 4 }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function ValueRow({
   kind,
   node,
