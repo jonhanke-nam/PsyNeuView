@@ -4724,6 +4724,12 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - @smoke harness › mutatingTest fixture reaches /api/test/reset · CI · #147
 
+**`frontend/e2e/icon-strip-shortcuts.spec.ts`** (Browser (Playwright))
+
+- Components icon strip (#372) › a fresh strip shows the Components heading, four categories and no shortcuts · CI · #372
+- Components icon strip (#372) › with the setting on, favourites and recents sit below the categories under their heading · CI · #372
+- Components icon strip (#372) › a row's empty star shows on hover or focus; a starred row keeps its star · CI · #372
+
 **`frontend/e2e/notification-dwell.spec.ts`** (Browser (Playwright))
 
 - success toast dwells past the old 2s window · CI · #879
@@ -4801,6 +4807,12 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - revealModelError › bumps on each request · CI · #1103
 - revealModelError › keeps bumping, so repeated clicks each re-trigger the jump · CI · #1103
 - revealModelError › is independent of the error line itself · CI · #1103
+
+**`frontend/src/stores/stripShortcuts.test.ts`** (Frontend unit (vitest))
+
+- Favourites and recents in the icon strip (#372) › are hidden by default · CI · #372
+- Favourites and recents in the icon strip (#372) › keeps a stored choice across a reload · CI · #372
+- Favourites and recents in the icon strip (#372) › ignores anything else stored · CI · #372
 
 **`frontend/src/stores/uiStoreInputs.test.ts`** (Frontend unit (vitest))
 
