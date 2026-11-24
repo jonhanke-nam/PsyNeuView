@@ -480,12 +480,15 @@ def test_base_url_does_not_carry_over_to_another_agent_type(tmp_path):
     new = asettings.update_settings({"agent": {"type": "anthropic"}}, config_file=cfg, confirm_raise=True)
     assert new["agent"]["base_url"] == ""
     assert agents.make_agent(new["agent"], key="sk")._base_url == agents.ANTHROPIC_URL
-    # Changing where messages go is a raise, named with the real destination.
-    raised = asettings.permission_raises(cur, new)
+    # Turning on, and changing where messages go while on, ask first (#369),
+    # named with the real destination.
+    on = {**cur, "enabled": True}
+    assert any("proxy.example.com" in r for r in asettings.needs_consent(asettings.defaults(), on))
+    raised = asettings.needs_consent(on, {**new, "enabled": True})
     assert any("api.anthropic.com" in r for r in raised), raised
-    assert any("proxy.example.com" in r for r in asettings.permission_raises(asettings.defaults(), cur))
+    asettings.update_settings({"enabled": True}, config_file=cfg, confirm_raise=True)
     with pytest.raises(asettings.RaiseNeedsConfirmation):
-        asettings.update_settings({"agent": {"base_url": "https://other.example.com"}}, config_file=cfg)
+        asettings.update_settings({"agent": {"type": "openai_compatible", "base_url": "https://other.example.com"}}, config_file=cfg)
 
 
 # ── 10. a corrupt state file ─────────────────────────────────────────────

@@ -123,16 +123,48 @@ def test_capability_off_in_container_and_hosted(client, monkeypatch):
 # ── settings ─────────────────────────────────────────────────────────────
 
 
-def test_raising_needs_confirmation_lowering_does_not(client, tmp_path):
+def test_only_turning_on_and_a_new_destination_while_on_need_consent(client, tmp_path):
+    """One clear consent (#369): turning on asks, and so does a new
+    destination while on; every other change, widening or not, saves."""
+    # While off, choosing an agent and widening anything saves directly.
+    for body in [{"agent": {"type": "anthropic"}}, {"autonomy": "app_edits"}, {"visibility": {"files": True}},
+                 {"folders": [{"path": str(tmp_path), "access": "read_write"}]}, {"limits": {"tool_calls": 100}}]:
+        r = client.put("/api/assistant/settings", json=body)
+        assert r.status_code == 200 and "needs_confirmation" not in r.json(), (body, r.text)
+    # Turning on asks, names where messages go, and saves nothing.
     r = client.put("/api/assistant/settings", json={"enabled": True})
     assert r.status_code == 200 and r.json()["needs_confirmation"] is True
-    assert "turning the assistant on" in r.json()["raised"]
+    assert r.json()["raised"] == ["turning the assistant on", "sending messages to https://api.anthropic.com"]
     assert client.get("/api/assistant/settings").json()["enabled"] is False
-    turn_on(client, tmp_path, autonomy="app_edits", visibility={"files": True})
+    turn_on(client, tmp_path)
+    # While on, widening saves directly...
+    for body in [{"autonomy": "app_edits"}, {"saving": "structured_without_asking"}, {"visibility": {"results": True}},
+                 {"limits": {"minutes": 60}}, {"sandbox": {"all_runs": False}}, {"agent": {"model": "claude-x"}}]:
+        r = client.put("/api/assistant/settings", json=body)
+        assert r.status_code == 200 and "needs_confirmation" not in r.json(), (body, r.text)
+    # ...and lowering too.
     r = client.put("/api/assistant/settings", json={"autonomy": "answer", "visibility": {"files": False}})
     assert r.status_code == 200 and r.json()["autonomy"] == "answer"
-    r = client.put("/api/assistant/settings", json={"folders": [{"path": str(tmp_path), "access": "read_write"}]})
-    assert r.status_code == 200 and r.json()["needs_confirmation"] is True
+    # An OpenAI-compatible agent with no address yet sends nothing, so it doesn't ask...
+    r = client.put("/api/assistant/settings", json={"agent": {"type": "openai_compatible"}})
+    assert "needs_confirmation" not in r.json() and r.json()["agent"]["type"] == "openai_compatible"
+    r = client.put("/api/assistant/settings", json={"agent": {"type": "anthropic"}, "confirm_raise": True})
+    # ...but a new destination while on asks, naming the old and new.
+    r = client.put("/api/assistant/settings", json={"agent": {"type": "openai_compatible", "base_url": "http://localhost:11434"}})
+    assert r.json()["needs_confirmation"] is True
+    assert r.json()["raised"] == ["sending messages to http://localhost:11434 instead of https://api.anthropic.com"]
+    assert client.get("/api/assistant/settings").json()["agent"]["type"] == "anthropic"
+    r = client.put("/api/assistant/settings", json={"agent": {"type": "openai_compatible", "base_url": "http://localhost:11434"}, "confirm_raise": True})
+    assert r.status_code == 200 and r.json()["agent"]["base_url"] == "http://localhost:11434"
+    # Choosing no agent sends nothing anywhere, so it never asks; turning off never asks.
+    assert "needs_confirmation" not in client.put("/api/assistant/settings", json={"agent": {"type": "none"}}).json()
+    assert client.put("/api/assistant/settings", json={"enabled": False}).json()["enabled"] is False
+
+
+def test_settings_from_another_site_are_refused(client):
+    r = client.put("/api/assistant/settings", json={"autonomy": "app_edits"}, headers={"Origin": "https://evil.example"})
+    assert r.status_code == 403
+    assert client.get("/api/assistant/settings").json()["autonomy"] == "suggest"
 
 
 def test_settings_reject_bad_values_and_folders(client):

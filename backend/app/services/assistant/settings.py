@@ -6,9 +6,13 @@ contract's: off, no agent, no folders, suggest-only. Anything unset or
 malformed in the file falls back to the default, so a hand-edited file can't
 turn the assistant on or widen a permission by accident.
 
-Raising a permission needs ``confirm_raise`` from the page, which asks the user
-first. Lowering one applies at once. The agent has no route to any of this:
-settings are only changed through the settings route, which is a page route.
+One clear consent (#369): ``confirm_raise`` from the page, which asks the user
+first, is needed only to turn the assistant on, and to change where messages
+go (the agent's type or server address) while it is on, since that changes
+who receives the data. Every other change, widening or not, saves directly:
+the page shows a current summary of what is shared and with whom instead of
+asking each time. The agent has no route to any of this: settings are only
+changed through the settings route, which is a page route on the same site.
 """
 
 from __future__ import annotations
@@ -63,8 +67,9 @@ class SettingsError(ValueError):
 
 
 class RaiseNeedsConfirmation(Exception):
-    """A change that widens what the assistant may do, sent without
-    ``confirm_raise``; routes answer 409 naming what would be raised."""
+    """Turning the assistant on, or a new destination while it is on (#369),
+    sent without ``confirm_raise``; the route answers 200 with
+    ``needs_confirmation`` naming what needs consent, and saves nothing."""
 
     def __init__(self, raised: list[str]):
         super().__init__("raising a permission needs confirmation: " + ", ".join(raised))
@@ -109,7 +114,7 @@ def update_settings(changes: dict, *, confirm_raise: bool = False, config_file: 
         current = _normalize(config.get(_KEY) if isinstance(config.get(_KEY), dict) else {})
         merged = _merge(current, changes)
         new = _validate(merged)
-        raised = permission_raises(current, new)
+        raised = needs_consent(current, new)
         if raised and not confirm_raise:
             raise RaiseNeedsConfirmation(raised)
         _check_sandbox_for(current, new)
@@ -122,35 +127,19 @@ def is_enabled(*, config_file: Path | None = None) -> bool:
     return bool(get_settings(config_file=config_file)["enabled"])
 
 
-def permission_raises(old: dict, new: dict) -> list[str]:
-    """Plain-English names of every permission ``new`` widens over ``old``."""
-    raised: list[str] = []
+def needs_consent(old: dict, new: dict) -> list[str]:
+    """What in ``new`` needs the user's consent first (#369): turning the
+    assistant on, or, while it stays on, sending messages somewhere new.
+    Everything else saves directly. Plain English, for the page to show."""
     if new["enabled"] and not old["enabled"]:
-        raised.append("turning the assistant on")
-    if (new["agent"]["type"], new["agent"]["base_url"]) != (old["agent"]["type"], old["agent"]["base_url"]) and new["agent"]["type"] != "none":
-        raised.append(f"sending messages to {destination(new['agent'])}")
-    if AUTONOMY_LEVELS.index(new["autonomy"]) > AUTONOMY_LEVELS.index(old["autonomy"]):
-        raised.append(f"autonomy from {old['autonomy']} to {new['autonomy']}")
-    if new["saving"] != old["saving"] and new["saving"] == "structured_without_asking":
-        raised.append("saving structured edits without asking")
-    for key in VISIBILITY_KEYS:
-        if new["visibility"][key] and not old["visibility"][key]:
-            raised.append(f"sharing {key}")
-    old_folders = {f["path"]: f["access"] for f in old["folders"]}
-    for folder in new["folders"]:
-        before = old_folders.get(folder["path"])
-        if before is None:
-            raised.append(f"allowing folder {folder['path']} ({folder['access']})")
-        elif before == "read" and folder["access"] == "read_write":
-            raised.append(f"writing in folder {folder['path']}")
-    for key in LIMIT_KEYS:
-        if new["limits"][key] > old["limits"][key]:
-            raised.append(f"limit {key} from {old['limits'][key]} to {new['limits'][key]}")
-    if old["sandbox"]["all_runs"] and not new["sandbox"]["all_runs"]:
-        raised.append("running models without the sandbox while nothing the assistant wrote is tracked")
-    if old["sandbox"]["require"] and not new["sandbox"]["require"]:
-        raised.append("using the assistant where model runs can't be sandboxed")
-    return raised
+        return ["turning the assistant on", f"sending messages to {destination(new['agent'])}"]
+    destination_changed = (new["agent"]["type"], new["agent"]["base_url"]) != (old["agent"]["type"], old["agent"]["base_url"])
+    # No agent, or an OpenAI-compatible one with no address yet, sends
+    # nothing anywhere; the address, when it is given, is what asks.
+    sends = new["agent"]["type"] == "anthropic" or bool(new["agent"]["base_url"])
+    if old["enabled"] and new["enabled"] and destination_changed and sends:
+        return [f"sending messages to {destination(new['agent'])} instead of {destination(old['agent'])}"]
+    return []
 
 
 class SandboxRequired(SettingsError):

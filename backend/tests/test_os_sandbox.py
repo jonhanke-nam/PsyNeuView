@@ -431,10 +431,10 @@ def test_the_assistant_wont_turn_on_without_a_sandbox_unless_allowed(tmp_path, m
     with pytest.raises(s.SandboxRequired, match="Landlock"):
         s.update_settings({"enabled": True}, confirm_raise=True, config_file=cfg)
     assert not s.get_settings(config_file=cfg)["enabled"]
-    # Allowing it is a widening, so it asks first.
+    # Allowing it saves directly (#369); turning on is the one consent.
+    s.update_settings({"sandbox": {"require": False}}, config_file=cfg)
     with pytest.raises(s.RaiseNeedsConfirmation):
-        s.update_settings({"sandbox": {"require": False}}, config_file=cfg)
-    s.update_settings({"sandbox": {"require": False}}, confirm_raise=True, config_file=cfg)
+        s.update_settings({"enabled": True}, config_file=cfg)
     assert s.update_settings({"enabled": True}, confirm_raise=True, config_file=cfg)["enabled"]
 
 
@@ -446,12 +446,12 @@ def test_the_assistant_turns_on_where_a_sandbox_holds(tmp_path, monkeypatch):
     assert s.update_settings({"enabled": True}, confirm_raise=True, config_file=cfg)["enabled"]
 
 
-def test_sandboxing_only_while_tracked_asks_first(tmp_path):
+def test_sandboxing_only_while_tracked_saves_directly(tmp_path):
+    """#369: only turning on asks; the page's summary shows the choice."""
     from app.services.assistant import settings as s
 
     cfg = tmp_path / "cfg.json"
-    with pytest.raises(s.RaiseNeedsConfirmation, match="without the sandbox"):
-        s.update_settings({"sandbox": {"all_runs": False}}, config_file=cfg)
+    assert s.update_settings({"sandbox": {"all_runs": False}}, config_file=cfg)["sandbox"]["all_runs"] is False
 
 
 def test_a_sweep_never_ends_a_task_that_started_during_it(monkeypatch):
