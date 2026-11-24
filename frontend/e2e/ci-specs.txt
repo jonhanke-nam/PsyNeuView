@@ -35,6 +35,7 @@ edge-shaping-auto-layout.spec.ts
 execution-mode-label.spec.ts
 expanded-node-fits-shape.spec.ts
 external-edit-sync.spec.ts
+failed-open-banner.spec.ts
 fit-button-and-keys.spec.ts
 fit-fills-canvas.spec.ts
 fit-frames-edges.spec.ts

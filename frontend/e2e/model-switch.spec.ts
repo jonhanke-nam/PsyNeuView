@@ -149,14 +149,14 @@ test.describe("switching models (#386)", () => {
     await expect(page.getByText("this model does not build").first()).toBeVisible();
     await expect(page.getByText("Showing the last version that built")).toHaveCount(0);
 
-    // A file that can't be opened at all: nothing new is open, and the error
-    // says which model still is.
+    // A file that can't be opened at all: nothing new is open, and the banner
+    // over the graph says which model still is (#401).
     await openFromPath(page, model("GilzenratModel.py"));
     await expectShowing(page, GILZENRAT);
     await openFromPath(page, model("no_such_model.py"));
-    await expect(
-      page.getByText(/Failed to load: .*no_such_model\.py.*Nothing new was opened: GilzenratModel\.py is still the open model\./),
-    ).toBeVisible();
+    await expect(page.getByTestId("failed-open-message")).toContainText(
+      /Couldn't open no_such_model\.py: .*Still showing GilzenratModel\.py\./,
+    );
     await expectShowing(page, GILZENRAT);
   });
 });
