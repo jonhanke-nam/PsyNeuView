@@ -9,7 +9,7 @@
  * comparison sheets). The app itself only lays out show_graph's description
  * as JSON, so nothing here ships in its bundle.
  */
-import table from "../../../backend/app/services/graphviz_x11_colours.json";
+import table from "../../../backend/app/services/graphviz_x11_colours.json" with { type: "json" };
 
 /** Colour name (lower case) -> the hex value Graphviz's PDF draws it with. */
 export const GRAPHVIZ_COLOURS: Readonly<Record<string, string>> = table.colours;
