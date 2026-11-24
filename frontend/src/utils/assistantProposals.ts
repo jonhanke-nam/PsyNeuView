@@ -157,3 +157,13 @@ export function mcpConnectionWords(
   const when = status.seconds_ago < 5 ? "just now" : status.seconds_ago < 120 ? `${status.seconds_ago} seconds ago` : `${Math.round(status.seconds_ago / 60)} minutes ago`;
   return status.connected ? `Claude is connected${who}, last heard from ${when}.` : `Not connected. A Claude client${who} was last heard from ${when}.`;
 }
+
+/** How many tool calls Claude has made in the current limit window (#201), or null before any client has connected. */
+export function mcpToolCallWords(
+  status: { seconds_ago: number | null; tool_calls?: { used: number; limit: number; minutes: number } } | null,
+): string | null {
+  if (!status || status.seconds_ago === null || !status.tool_calls) return null;
+  const { used, limit, minutes } = status.tool_calls;
+  const calls = used === 1 ? "1 tool call" : `${used} tool calls`;
+  return `${calls} in the last ${minutes === 1 ? "minute" : `${minutes} minutes`}, of ${limit} allowed.`;
+}

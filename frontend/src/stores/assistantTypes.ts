@@ -86,10 +86,13 @@ export interface SandboxStatus {
 
 /** GET /api/assistant/mcp/setup (#201): what to paste into Claude Code and Claude Desktop. */
 export interface McpSetup {
+  /** This backend's address, for information: the setup itself names none, since the command finds the backend through the discovery file. */
   url: string;
   command: string;
   args: string[];
   env_names: string[];
+  /** Where this backend writes its discovery file. */
+  discovery_file: string;
   /** The `claude mcp add …` line, token included. */
   claude_code: string;
   /** The `mcpServers` JSON for claude_desktop_config.json, token included. */
@@ -108,6 +111,8 @@ export interface McpStatus {
   active: boolean;
   /** The MCP session the page polls for tool calls and proposals; null unless active. */
   session_id: string | null;
+  /** Tool calls the client has made in the current limit window (`limits.minutes`), against `limits.tool_calls`. */
+  tool_calls?: { used: number; limit: number; minutes: number };
 }
 
 /** The keys a PUT may carry: what the backend stores, and nothing it adds to a GET (`available`). */

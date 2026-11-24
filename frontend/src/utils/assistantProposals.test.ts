@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_ASSISTANT_SETTINGS, type Proposal } from "@/stores/assistantTypes";
-import { contextFor, destinationHost, mcpConnectionWords, modelLabel, needsConsent, pendingProposals, setProposalState, sharedWords, whereDataGoes, withProposal } from "./assistantProposals";
+import { contextFor, destinationHost, mcpConnectionWords, mcpToolCallWords, modelLabel, needsConsent, pendingProposals, setProposalState, sharedWords, whereDataGoes, withProposal } from "./assistantProposals";
 
 const base = DEFAULT_ASSISTANT_SETTINGS;
 
@@ -108,5 +108,12 @@ describe("Claude over MCP (#201)", () => {
     expect(mcpConnectionWords(null)).toContain("No Claude client has connected yet");
     expect(mcpConnectionWords({ connected: true, seconds_ago: 2, client: "claude-code 2.1" })).toBe("Claude is connected (claude-code 2.1), last heard from just now.");
     expect(mcpConnectionWords({ connected: false, seconds_ago: 600, client: "" })).toBe("Not connected. A Claude client was last heard from 10 minutes ago.");
+  });
+
+  it("words the tool calls in the current limit window", () => {
+    expect(mcpToolCallWords(null)).toBeNull();
+    expect(mcpToolCallWords({ seconds_ago: null, tool_calls: { used: 0, limit: 60, minutes: 10 } })).toBeNull();
+    expect(mcpToolCallWords({ seconds_ago: 3, tool_calls: { used: 1, limit: 60, minutes: 10 } })).toBe("1 tool call in the last 10 minutes, of 60 allowed.");
+    expect(mcpToolCallWords({ seconds_ago: 3, tool_calls: { used: 12, limit: 60, minutes: 1 } })).toBe("12 tool calls in the last minute, of 60 allowed.");
   });
 });

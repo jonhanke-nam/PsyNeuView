@@ -15,12 +15,14 @@ const SETUP = {
   url: "http://127.0.0.1:8353",
   command: "/Users/me/PsyNeuView/backend/.venv/bin/python",
   args: ["-m", "app.mcp_server"],
-  env_names: ["PSYNEUVIEW_URL", "PSYNEUVIEW_MCP_TOKEN", "PYTHONPATH"],
+  // No address: the command finds the running backend itself (#201).
+  env_names: ["PSYNEUVIEW_MCP_TOKEN", "PYTHONPATH"],
+  discovery_file: "/Users/me/.psyneuview/mcp-backend.json",
   token: "tok-123",
   claude_code:
-    "claude mcp add psyneuview --transport stdio --scope user -e PSYNEUVIEW_URL=http://127.0.0.1:8353 -e PSYNEUVIEW_MCP_TOKEN=tok-123 -e PYTHONPATH=/Users/me/PsyNeuView/backend -- /Users/me/PsyNeuView/backend/.venv/bin/python -m app.mcp_server",
+    "claude mcp add psyneuview --transport stdio --scope user -e PSYNEUVIEW_MCP_TOKEN=tok-123 -e PYTHONPATH=/Users/me/PsyNeuView/backend -- /Users/me/PsyNeuView/backend/.venv/bin/python -m app.mcp_server",
   claude_desktop: JSON.stringify(
-    { mcpServers: { psyneuview: { command: "/Users/me/PsyNeuView/backend/.venv/bin/python", args: ["-m", "app.mcp_server"], env: { PSYNEUVIEW_URL: "http://127.0.0.1:8353", PSYNEUVIEW_MCP_TOKEN: "tok-123", PYTHONPATH: "/Users/me/PsyNeuView/backend" } } } },
+    { mcpServers: { psyneuview: { command: "/Users/me/PsyNeuView/backend/.venv/bin/python", args: ["-m", "app.mcp_server"], env: { PSYNEUVIEW_MCP_TOKEN: "tok-123", PYTHONPATH: "/Users/me/PsyNeuView/backend" } } } },
     null,
     2,
   ),
@@ -54,8 +56,8 @@ async function stub(page: Page, initial: Partial<typeof DEFAULTS>, opts: { conne
     const active = state.settings.enabled && state.settings.agent.type === "claude_mcp";
     return route.fulfill({
       json: opts.connected
-        ? { connected: true, last_seen: Date.now() / 1000, seconds_ago: 3, client: "claude-code 2.1", active, session_id: active ? "mcp1" : null }
-        : { connected: false, last_seen: null, seconds_ago: null, client: "", active, session_id: active ? "mcp1" : null },
+        ? { connected: true, last_seen: Date.now() / 1000, seconds_ago: 3, client: "claude-code 2.1", active, session_id: active ? "mcp1" : null, tool_calls: { used: 4, limit: 25, minutes: 10 } }
+        : { connected: false, last_seen: null, seconds_ago: null, client: "", active, session_id: active ? "mcp1" : null, tool_calls: { used: 0, limit: 25, minutes: 10 } },
     });
   });
   await page.route("**/api/assistant/mcp/context", (route) => {
@@ -99,6 +101,8 @@ test.describe("AI assistant: Claude over MCP (#201)", { tag: "@ci" }, () => {
     await expect(page.getByTestId("assistant-mcp-claude-desktop")).toContainText("PSYNEUVIEW_MCP_TOKEN");
     await expect(page.getByTestId("assistant-mcp-status")).toHaveAttribute("data-connected", "false");
     await expect(page.getByTestId("assistant-mcp-status")).toContainText("No Claude client has connected yet");
+    await expect(page.getByTestId("assistant-mcp-tool-calls")).toHaveCount(0);
+    await expect(page.getByTestId("assistant-mcp-claude-code")).not.toContainText("PSYNEUVIEW_URL");
     await shot(page, "mcp-01-settings-setup");
 
     await page.getByTestId("assistant-mcp-copy-claude-code").click();
@@ -119,6 +123,8 @@ test.describe("AI assistant: Claude over MCP (#201)", { tag: "@ci" }, () => {
     await page.getByTestId("settings-section-assistant").click();
     await expect(page.getByTestId("assistant-mcp-status")).toHaveAttribute("data-connected", "true");
     await expect(page.getByTestId("assistant-mcp-status")).toContainText("Claude is connected (claude-code 2.1)");
+    await expect(page.getByTestId("assistant-mcp-tool-calls")).toHaveText("4 tool calls in the last 10 minutes, of 25 allowed.");
+    await shot(page, "mcp-01b-settings-connected");
   });
 
   test("the Assistant tab points to Claude and shows incoming proposals", async ({ page }) => {

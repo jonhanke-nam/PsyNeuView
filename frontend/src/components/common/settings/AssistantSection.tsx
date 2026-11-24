@@ -23,7 +23,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { agentKey, useAssistantStore, type ConnectionTest } from "@/stores/assistantStore";
 import type { AssistantSettings, Autonomy, AgentType, FolderAccess, SandboxStatus, Saving } from "@/stores/assistantTypes";
-import { ANTHROPIC_DEFAULT_MODEL, destinationHost, mcpConnectionWords, sharedWords, whereDataGoes } from "@/utils/assistantProposals";
+import { ANTHROPIC_DEFAULT_MODEL, destinationHost, mcpConnectionWords, mcpToolCallWords, sharedWords, whereDataGoes } from "@/utils/assistantProposals";
 import { copyToClipboard } from "@/utils/revealPath";
 import { Button } from "../Button";
 import { Group, SettingLabel, errorStyle, inputStyle, mutedStyle, selectStyle } from "./shared";
@@ -628,6 +628,11 @@ function McpSetupPanel() {
         {mcpConnectionWords(status, { inSettings: true })}
         {!assistantOn && " Claude can connect only while the assistant is on."}
       </div>
+      {mcpToolCallWords(status) && (
+        <div data-testid="assistant-mcp-tool-calls" style={{ ...mutedStyle, marginTop: 2 }}>
+          {mcpToolCallWords(status)}
+        </div>
+      )}
       {setupError && <div style={{ ...errorStyle, marginTop: 6 }}>{setupError}</div>}
 
       <div style={{ marginTop: 12 }}>
