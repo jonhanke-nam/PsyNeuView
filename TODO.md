@@ -11,10 +11,10 @@
 > and are written here as **archive#N**. A plain **#N** is an issue in this
 > repo. Every reference is a link, so a number can't land on the wrong issue.
 
-> **Where the work is.** [`BACKLOG.md`](./BACKLOG.md) surveys every open
-> issue against commit history and groups them into areas, so "what's next"
-> can be asked one area at a time. This file holds roadmaps and direction;
-> that one holds the measured state.
+> **Where the work is.** Open issues on GitHub. [`BACKLOG.md`](./BACKLOG.md)
+> is a dated survey (2026-09-17) of the archive tracker, grouped into areas,
+> and its method for measuring a backlog against commit history. This file
+> holds roadmaps and direction.
 
 ---
 
