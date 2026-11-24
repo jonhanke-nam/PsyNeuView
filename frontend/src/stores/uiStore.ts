@@ -46,13 +46,35 @@ function loadDeveloperMode(): boolean {
 
 export type InputGrouping = "byNode" | "byTrial";
 
-function loadInputGrouping(): InputGrouping {
+export const INPUT_GROUPING_KEY = STORAGE_KEY + "_inputGrouping";
+
+/**
+ * How the Run panel arranges its inputs (#570). By trial is the default
+ * (#331): each trial's inputs read together, as one trial's line of
+ * `Composition.run`'s inputs. Only a stored "byNode" is a choice kept from
+ * before; anything else, a missing key included, is the default.
+ */
+export function loadInputGrouping(): InputGrouping {
   try {
-    return localStorage.getItem(STORAGE_KEY + "_inputGrouping") === "byTrial"
-      ? "byTrial"
-      : "byNode";
+    return localStorage.getItem(INPUT_GROUPING_KEY) === "byNode" ? "byNode" : "byTrial";
   } catch {
-    return "byNode";
+    return "byTrial";
+  }
+}
+
+/**
+ * Settings ▸ General ▸ Run inputs (#330): edit each element of a trial's
+ * input in its own box, as before, instead of typing the whole array in
+ * bracket notation. Off by default. A `psyneuview.` key, so the Mac app
+ * keeps it across launches.
+ */
+export const INPUT_CELL_GRID_KEY = "psyneuview.run.inputCellGrid";
+
+export function loadInputCellGrid(): boolean {
+  try {
+    return localStorage.getItem(INPUT_CELL_GRID_KEY) === "true";
+  } catch {
+    return false;
   }
 }
 
@@ -72,6 +94,7 @@ interface UIState {
   edgeLabelsAlwaysVisible: boolean;
   developerMode: boolean;
   inputGrouping: InputGrouping;
+  inputCellGrid: boolean;
   showTrialDeltas: boolean;
   zoomIn: () => void;
   zoomOut: () => void;
@@ -80,6 +103,7 @@ interface UIState {
   toggleEdgeLabels: () => void;
   setDeveloperMode: (on: boolean) => void;
   setInputGrouping: (grouping: InputGrouping) => void;
+  setInputCellGrid: (on: boolean) => void;
   toggleTrialDeltas: () => void;
 }
 
@@ -89,6 +113,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   edgeLabelsAlwaysVisible: loadEdgeLabels(),
   developerMode: loadDeveloperMode(),
   inputGrouping: loadInputGrouping(),
+  inputCellGrid: loadInputCellGrid(),
   showTrialDeltas: loadShowTrialDeltas(),
 
   zoomIn: () => {
@@ -128,9 +153,23 @@ export const useUIStore = create<UIState>((set, get) => ({
   },
 
   setInputGrouping: (grouping: InputGrouping) => {
-    localStorage.setItem(STORAGE_KEY + "_inputGrouping", grouping);
+    try {
+      localStorage.setItem(INPUT_GROUPING_KEY, grouping);
+    } catch {
+      // Storage blocked: the choice lasts this session.
+    }
     recordSettingChanged("input-grouping", grouping);
     set({ inputGrouping: grouping });
+  },
+
+  setInputCellGrid: (on: boolean) => {
+    try {
+      localStorage.setItem(INPUT_CELL_GRID_KEY, String(on));
+    } catch {
+      // Storage blocked: the choice lasts this session.
+    }
+    if (get().inputCellGrid !== on) recordSettingChanged("run-input-cell-grid", on);
+    set({ inputCellGrid: on });
   },
 
   toggleTrialDeltas: () => {
