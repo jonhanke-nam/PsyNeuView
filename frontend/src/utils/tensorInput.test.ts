@@ -6,11 +6,13 @@ import {
   joinElements,
   parsePortInput,
   parseTensor,
+  pastedPortRows,
   pastedRows,
   portValues,
   shapeOf,
   splitElements,
   trialValue,
+  wholeTrialText,
 } from "./tensorInput";
 
 describe("parseTensor (#330)", () => {
@@ -121,5 +123,41 @@ describe("grid cells and pasted rows", () => {
   it("reads pasted CSV and bracket lines", () => {
     expect(pastedRows("1, 0\n0\n\n[0, 1]\n", 2)).toEqual(["[1, 0]", "[0, 0]", "[0, 1]"]);
     expect(pastedRows("1,2,3", 2)).toEqual(["[1, 2]"]);
+  });
+});
+
+describe("multi-port input nodes (#332)", () => {
+  it("writes a two-port trial as Composition.run takes it", () => {
+    const parsed = [parsePortInput("[1, 0]", [2]), parsePortInput("0", [1])];
+    expect(wholeTrialText(["[1, 0]", "0"], parsed)).toBe("[[1, 0], [0]]");
+    expect(trialValue(parsed.map((r) => (r.ok ? r.value : 0)))).toEqual([[1, 0], [0]]);
+  });
+
+  it("shows a port that doesn't parse as typed", () => {
+    const parsed = [parsePortInput("[1, 0, 1]", [2]), parsePortInput("[1]", [1])];
+    expect(parsed[0].ok).toBe(false);
+    expect(wholeTrialText(["[1, 0, 1]", "[1]"], parsed)).toBe("[[1, 0, 1], [1]]");
+  });
+
+  it("splits a trial back into one value per port", () => {
+    expect(portValues([[1, 0], [0]], 2)).toEqual([[1, 0], [0]]);
+  });
+
+  it("pastes a bracketed trial into its ports", () => {
+    expect(pastedPortRows("[[1, 0], [1]]\n[[0, 1], [0]]", [2, 1])).toEqual([
+      ["[1, 0]", "[1]"],
+      ["[0, 1]", "[0]"],
+    ]);
+  });
+
+  it("deals a comma-separated line out across the ports", () => {
+    expect(pastedPortRows("1, 0, 1\n0, 1", [2, 1])).toEqual([
+      ["[1, 0]", "[1]"],
+      ["[0, 1]", "[0]"],
+    ]);
+  });
+
+  it("keeps one-port pasting as it was", () => {
+    expect(pastedPortRows("1, 0\n[0, 1]", [2])).toEqual([["[1, 0]"], ["[0, 1]"]]);
   });
 });

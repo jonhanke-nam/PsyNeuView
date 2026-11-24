@@ -51,6 +51,24 @@ except ImportError:
         pass
 
 
+def trial_array(value):
+    """One trial's input for one node, as numbers for ``Composition.run``.
+
+    A node with one input port takes one array (``[1, 0]``). A node with
+    several takes one array per port (``[[1, 0], [0]]``), and when the ports
+    differ in size those arrays can't form one numpy array: numpy refuses a
+    ragged list. Each port's array is converted on its own instead, the list
+    of arrays PsyNeuLink takes for a multi-port node (#332).
+    """
+    try:
+        return np.array(value, dtype=float)
+    except ValueError:
+        if isinstance(value, (list, tuple)):
+            return [trial_array(v) for v in value]
+        raise
+
+
+
 RESULT_MARKER = "###PSYNEUVIEW_RESULT###"
 
 # Emitted on stdout *before* RESULT_MARKER by streaming-capable tasks
@@ -1408,7 +1426,7 @@ def task_run(params):
         mech = _resolve_input_node(comp, module, var_name)
         if mech is None:
             return {"error": f"Input mechanism '{var_name}' not found"}
-        pnl_inputs[mech] = [np.array(v, dtype=float) for v in values]
+        pnl_inputs[mech] = [trial_array(v) for v in values]
 
     # AutodiffComposition (e.g. the Giallanza EGO model) only behaves correctly
     # under .learn() in PyTorch mode; plain .run() fails inside the nested EM
@@ -1626,7 +1644,7 @@ def task_learn(params):
         mech = _resolve_input_node(comp, module, var_name)
         if mech is None:
             return {"error": f"Input mechanism '{var_name}' not found"}
-        pnl_inputs[mech] = [np.array(v, dtype=float) for v in values]
+        pnl_inputs[mech] = [trial_array(v) for v in values]
 
     pnl_targets = {}
     for var_name, values in targets.items():

@@ -1822,6 +1822,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - trial inputs are typed as arrays and sent as typed · CI · #330
 
+**`frontend/e2e/run-multiport-inputs.spec.ts`** (Browser (Playwright))
+
+- a two-port input node takes one array per port · CI · #332
+
 **`frontend/e2e/run-panel-grouping.spec.ts`** (Browser (Playwright))
 
 - run panel input grouping › toggles between by-trial and by-node layouts · CI · #570
@@ -4838,6 +4842,12 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - grid cells and pasted rows › splits and joins elements, keeping cells mid-edit · CI
 - grid cells and pasted rows › defaults to a one-hot vector stepping through the elements · CI
 - grid cells and pasted rows › reads pasted CSV and bracket lines · CI
+- multi-port input nodes (#332) › writes a two-port trial as Composition.run takes it · CI · #332
+- multi-port input nodes (#332) › shows a port that doesn't parse as typed · CI · #332
+- multi-port input nodes (#332) › splits a trial back into one value per port · CI · #332
+- multi-port input nodes (#332) › pastes a bracketed trial into its ports · CI · #332
+- multi-port input nodes (#332) › deals a comma-separated line out across the ports · CI · #332
+- multi-port input nodes (#332) › keeps one-port pasting as it was · CI · #332
 
 **`frontend/src/utils/waitLog.test.ts`** (Frontend unit (vitest))
 
@@ -5011,6 +5021,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - TestSplit.test_nothing_to_say_is_represented_as_nothing · CI · #1101
 - TestSplit.test_only_library_noise_shows_nothing_but_still_counts · CI · #1101
 - TestThroughTheRunEndpoint.test_a_run_that_succeeds_still_reports_its_warnings · CI · #1101
+
+**`backend/tests/test_multiport_inputs.py`** (Backend (pytest))
+
+- test_trial_array_single_port_stays_one_array · CI · #332
+- test_trial_array_ragged_ports_become_one_array_each · CI · #332
+- test_two_port_inputs_reach_composition_run_in_process · CI · #332
+- test_two_port_inputs_run_in_the_sandbox · CI · #332
 
 **`backend/tests/test_no_event_loop_blocking.py`** (Backend (pytest))
 

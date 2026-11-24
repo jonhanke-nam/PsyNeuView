@@ -238,3 +238,46 @@ export function pastedRows(text: string, width: number): string[] {
       return joinElements(Array.from({ length: width }, (_, i) => cells[i] ?? "0"));
     });
 }
+
+/**
+ * A multi-port node's whole trial input, as `Composition.run` takes it
+ * (#332): `[[1, 0], [0]]` from the ports' texts. Valid ports are written from
+ * their parsed values, so `[[0, 1]]` typed for a port shows as `[0, 1]`; a
+ * port that doesn't parse shows its text as typed.
+ */
+export function wholeTrialText(texts: string[], parsed: ParseResult[]): string {
+  const parts = texts.map((text, p) => {
+    const r = parsed[p];
+    return r && r.ok ? formatTensor(r.value) : text.trim() || "?";
+  });
+  return parts.length === 1 ? parts[0] : `[${parts.join(", ")}]`;
+}
+
+/**
+ * Pasted rows for a node (Paste CSV), one text per port per trial. A node
+ * with one port is `pastedRows`. With several ports (#332), a line in
+ * bracket notation is the trial's whole input, `[[1, 0], [0]]`, split into
+ * its ports; a comma-separated line is dealt out across the ports in order,
+ * `widths[p]` numbers each, padded with zeros.
+ */
+export function pastedPortRows(text: string, widths: number[]): string[][] {
+  if (widths.length <= 1) return pastedRows(text, widths[0] ?? 1).map((row) => [row]);
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      if (line.startsWith("[")) {
+        const parsed = parseTensor(line);
+        if (parsed.ok && Array.isArray(parsed.value) && parsed.value.length === widths.length) {
+          return parsed.value.map((v) => formatTensor(v));
+        }
+        // Not one array per port: keep the line in the first port, where it
+        // is flagged, rather than dropping it.
+        return widths.map((w, p) => (p === 0 ? line : formatTensor(zeros([w]))));
+      }
+      const cells = line.split(",").map((v) => v.trim());
+      let k = 0;
+      return widths.map((w) => joinElements(Array.from({ length: w }, () => cells[k++] ?? "0")));
+    });
+}

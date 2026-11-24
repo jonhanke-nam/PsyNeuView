@@ -11,12 +11,13 @@ import {
   isNumberCell,
   joinElements,
   parsePortInput,
-  pastedRows,
+  pastedPortRows,
   portShape,
   portValues,
   splitElements,
   trialValue,
   zeros,
+  wholeTrialText,
   type ParseResult,
   type Tensor,
 } from "@/utils/tensorInput";
@@ -95,12 +96,11 @@ function toOutputVectors(output: unknown): number[][] {
 
 /**
  * The shapes of the input ports a node's trial input is written for: one
- * array per port (#330). Today the panel fills the first port only, as it
- * always has; input nodes with several ports (#332) list them all here and
- * get one field per port, with no change to the text, parsing or what a
- * run sends.
+ * array per port (#330). A node with several input ports (#332) gets one
+ * field per port, and a trial sends one array per port.
  */
 function inputPortShapes(node: InputNodeInfo): number[][] {
+  if (node.inputPorts.length > 1) return node.inputPorts.map((p) => p.shape || []);
   return [node.shape];
 }
 
@@ -715,7 +715,10 @@ export function RunPanel() {
   // lengths and PsyNeuLink rejects the run.
   const applyCsv = useCallback(
     (varName: string, text: string, width: number) => {
-      const rows = pastedRows(text, width).map((row) => [row]);
+      const node = inputNodes.find((n) => n.varName === varName);
+      const shapes = node ? inputPortShapes(node) : [[width]];
+      const widths = shapes.length > 1 ? shapes.map((sh) => portShape(sh)[0]) : [width];
+      const rows = pastedPortRows(text, widths);
       if (rows.length === 0) return;
       const trials = rows.length;
       setInputCells((prev) => {
@@ -1646,7 +1649,11 @@ function InputNodeEditor({
       >
         {node.name}{" "}
         <span style={{ color: "var(--pnv-text-faint)" }}>
-          [{width} element{width === 1 ? "" : "s"}{elementNames(labels, cellGrid)}]
+          {node.inputPorts.length > 1
+            ? `[${node.inputPorts.length} ports: ${node.inputPorts
+                .map((p) => `${p.name} ${portShape(p.shape).join("×")}`)
+                .join(", ")}]`
+            : `[${width} element${width === 1 ? "" : "s"}${elementNames(labels, cellGrid)}]`}
         </span>
       </label>
       {cells.map((row, t) => (
@@ -1685,8 +1692,12 @@ function InputNodeEditor({
           value={csvText}
           onChange={(e) => setCsvText(e.target.value)}
           rows={3}
-          placeholder={"1, 0\n[0, 1]"}
-          title="One trial per line: comma-separated numbers, or an array in bracket notation"
+          placeholder={node.inputPorts.length > 1 ? "1, 0, 1\n[[0, 1], [0]]" : "1, 0\n[0, 1]"}
+          title={
+            node.inputPorts.length > 1
+              ? "One trial per line: the trial's whole input in bracket notation, one array per port, or comma-separated numbers dealt out across the ports in order"
+              : "One trial per line: comma-separated numbers, or an array in bracket notation"
+          }
           style={{
             width: "100%",
             fontFamily: "var(--pnv-font-mono)",
@@ -1755,12 +1766,16 @@ function TrialPorts({
   onCell: (varName: string, trial: number, port: number, value: string) => void;
 }) {
   const shapes = inputPortShapes(node);
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
-      {shapes.map((shape, p) => {
+  // Several input ports (#332): one labelled field per port, stacked, and
+  // under them the node's whole input as Composition.run takes it.
+  const multi = shapes.length > 1;
+  const portName = (p: number) => node.inputPorts[p]?.name ?? `port ${p}`;
+  const fields = shapes.map((shape, p) => {
         const text = texts[p] ?? "";
         const check = parsed[p];
         const error = check && !check.ok ? check.error : null;
+        const id = multi ? `${node.name}-${trial + 1}-${portName(p)}` : `${node.name}-${trial + 1}`;
+        const what = multi ? `${node.name} ${portName(p)}` : node.name;
         // The grid edits one element per box, so it serves a 1-D port; a
         // deeper one keeps its bracket field even with the setting on.
         if (cellGrid && portShape(shape).length === 1) {
@@ -1772,7 +1787,7 @@ function TrialPorts({
               {shown.map((val, e) => (
                 <InputCell
                   key={e}
-                  label={labels[e] ?? `[${e}]`}
+                  label={(multi ? undefined : labels[e]) ?? `[${e}]`}
                   value={val}
                   extra={e >= width}
                   onChange={(v) => {
@@ -1790,14 +1805,14 @@ function TrialPorts({
           <span key={p} style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
             <input
               value={text}
-              data-testid={`run-trial-input-${node.name}-${trial + 1}`}
-              aria-label={`${node.name}, trial ${trial + 1}`}
+              data-testid={`run-trial-input-${id}`}
+              aria-label={`${what}, trial ${trial + 1}`}
               aria-invalid={error ? true : undefined}
               placeholder={placeholder}
               spellCheck={false}
               autoComplete="off"
               onChange={(ev) => onCell(node.varName, trial, p, ev.target.value)}
-              title={error ?? `${node.name}, trial ${trial + 1}: ${placeholder.replace(/_/g, "number")}`}
+              title={error ?? `${what}, trial ${trial + 1}: ${placeholder.replace(/_/g, "number")}`}
               style={{
                 // Sized to its text in the monospace font, so a short vector
                 // stays compact and a long one isn't cut off.
@@ -1813,7 +1828,7 @@ function TrialPorts({
             />
             {error && (
               <span
-                data-testid={`run-trial-input-error-${node.name}-${trial + 1}`}
+                data-testid={`run-trial-input-error-${id}`}
                 style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-danger)", whiteSpace: "nowrap" }}
               >
                 {error}
@@ -1821,7 +1836,39 @@ function TrialPorts({
             )}
           </span>
         );
-      })}
+  });
+  if (!multi) {
+    return (
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
+        {fields}
+      </div>
+    );
+  }
+  const nameWidth = `${Math.max(...shapes.map((_, p) => portName(p).length)) + 1}ch`;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 3, flex: 1, minWidth: 0 }}>
+      {fields.map((field, p) => (
+        <div key={p} style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+          <span
+            style={{
+              fontFamily: "var(--pnv-font-mono)",
+              fontSize: "var(--pnv-fs-10)",
+              color: "var(--pnv-text-muted)",
+              minWidth: nameWidth,
+            }}
+          >
+            {portName(p)}
+          </span>
+          {field}
+        </div>
+      ))}
+      <span
+        data-testid={`run-trial-whole-${node.name}-${trial + 1}`}
+        title="The node's whole input for this trial, one array per port, as Composition.run takes it"
+        style={{ fontFamily: "var(--pnv-font-mono)", fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)" }}
+      >
+        = {wholeTrialText(texts, parsed)}
+      </span>
     </div>
   );
 }

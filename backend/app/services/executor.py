@@ -197,12 +197,14 @@ def _run_model_inprocess(
             return {"error": f"Composition '{composition_name}' not found in {file_path}"}
 
         # Resolve input mechanism names to actual mechanism objects
+        from app.services.sandbox_worker import trial_array
+
         pnl_inputs = {}
         for var_name, values in inputs.items():
             mech = _resolve_input_node(comp, module, var_name)
             if mech is None:
                 return {"error": f"Input mechanism '{var_name}' not found"}
-            pnl_inputs[mech] = [np.array(v, dtype=float) for v in values]
+            pnl_inputs[mech] = [trial_array(v) for v in values]
 
         # AutodiffComposition (e.g. the Giallanza EGO model) runs as a compiled
         # PyTorch module via .learn() — plain .run() fails inside the nested EM
@@ -476,12 +478,14 @@ def _learn_model_inprocess(
         if epochs < 1:
             return {"error": "epochs must be >= 1"}
 
+        from app.services.sandbox_worker import trial_array
+
         pnl_inputs = {}
         for var_name, values in inputs.items():
             mech = _resolve_input_node(comp, module, var_name)
             if mech is None:
                 return {"error": f"Input mechanism '{var_name}' not found"}
-            pnl_inputs[mech] = [np.array(v, dtype=float) for v in values]
+            pnl_inputs[mech] = [trial_array(v) for v in values]
 
         pnl_targets = {}
         for var_name, values in targets.items():
