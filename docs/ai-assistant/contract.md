@@ -94,6 +94,22 @@ is. The rules behind it are in issue #179; the threat model is in
 `{"key": "..."}`. `DELETE` removes it. The key lives in the login Keychain on
 the Mac, and only the agent adapter ever reads it.
 
+`POST /api/assistant/test-connection` (#368) sends one minimal request to the
+saved agent with the saved key and answers 200 with `{"ok": bool, "agent",
+"model", "ms", "message"}`. Anthropic gets a Messages call with `max_tokens`
+1, the text "ping" and no tools; an OpenAI-compatible server gets the same as
+a chat completion. It goes through the adapter's `_post_json`, so a redirect
+is refused, and it waits at most 15 seconds (`TEST_TIMEOUT_SECONDS`).
+`message` is plain English and never contains the key: no agent chosen, no
+key saved, "The key was refused (HTTP 401)" (or 403), "The model name isn't
+recognised: X" (404, or a 400 naming the model), "Rate limited or out of
+credit (HTTP 429)", "Couldn't reach <host>" (no network, refused, timed out),
+or "Connected to Anthropic, model X, in N ms". It works with the assistant
+off, since you test before turning it on, but sends nothing until an agent is
+chosen: saving the agent type is where sending to that address is confirmed.
+Like every assistant route it is same-site only, and 403 `unavailable` where
+the deployment has no assistant.
+
 ## Sessions
 
 - `POST /api/assistant/sessions` returns `{"id": "..."}`.

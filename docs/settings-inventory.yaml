@@ -780,6 +780,8 @@ settings:
     control: setting-assistant-api-key
     notes: >-
       Write-only: PUT /api/assistant/key; the page shows only set or not set (GET returns {set}), never the key.
+      Beside it, a Test connection button (assistant-test-connection, #368) is an action, not a setting: it sends
+      one small request to the saved agent with the saved key (POST /api/assistant/test-connection) and shows the result inline.
 
   - id: assistant-autonomy
     label: AI assistant ▸ What it may do ▸ Autonomy
