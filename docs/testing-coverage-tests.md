@@ -1802,6 +1802,12 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 ## Running, learning and debugging
 
+**`frontend/e2e/a11y-run-panel-and-strip.spec.ts`** (Browser (Playwright))
+
+- accessibility: Run panel, trace bar, icon strip, notices (#410) › the icon strip works from the keyboard · CI · #410
+- accessibility: Run panel, trace bar, icon strip, notices (#410) › the Run panel and trace bar name their controls and announce progress · CI · #410
+- accessibility: Run panel, trace bar, icon strip, notices (#410) › the automatic-install question takes focus; the update notice reads at AA · CI · #410
+
 **`frontend/e2e/busy-indicator.spec.ts`** (Browser (Playwright))
 
 - Busy wheel (#38) › a slow save shows the wheel after 0.2 s and clears it; a fast request never does · CI · #38

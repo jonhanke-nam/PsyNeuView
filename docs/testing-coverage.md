@@ -9,7 +9,7 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 177 | 472 | 462 tests in 172 files |
+| Browser (Playwright) | 178 | 475 | 465 tests in 173 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 148 | 1300 | 1300 tests in 148 files |
 | Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
@@ -27,7 +27,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Building models in the UI](#building) | 4 files, 7 tests | – | 1 files, 9 tests | 13 files, 145 tests | 161 of 161 |
 | [Editing: code and graph in step](#sync) | 17 files, 40 tests | – | 10 files, 81 tests | 26 files, 247 tests | 365 of 368 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
-| [Running, learning and debugging](#running) | 16 files, 38 tests | – | 11 files, 99 tests | 52 files, 262 tests | 399 of 399 |
+| [Running, learning and debugging](#running) | 17 files, 41 tests | – | 11 files, 99 tests | 52 files, 262 tests | 402 of 402 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 6 files, 26 tests | – | 5 files, 59 tests | 7 files, 99 tests | 184 of 184 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
@@ -594,6 +594,7 @@ No tests yet.
 
 | File | Layer | Tests | In CI | Issues | What it checks |
 |---|---|---|---|---|---|
+| `a11y-run-panel-and-strip.spec.ts` | Browser | 3 | yes | #410 | Keyboard and screen-reader checks for the Run panel, the trace bar, the Components icon strip and the update notices (#410). |
 | `busy-indicator.spec.ts` | Browser | 13 | yes | #38 | The spinning wheel of patience (#38): anything slower than 0.2 s shows it, with a "progress" pointer; anything quicker shows nothing; covers a save and an undo. |
 | `execution-mode-label.spec.ts` | Browser | 1 | yes | #329 | The Run and Learn panels call their backend choice "Execution mode" (#329). |
 | `learning-nodes-run-inspector.spec.ts` | Browser | 2 | yes | #1383, #1385 | Learning models in the Run tab and the Inspector (#1383, #1385). |
@@ -678,6 +679,9 @@ No tests yet.
 
 | Test | File | Layer | In CI | Issue |
 |---|---|---|---|---|
+| accessibility: Run panel, trace bar, icon strip, notices (#410) › the icon strip works from the keyboard | `a11y-run-panel-and-strip.spec.ts` | Browser | yes | #410 |
+| accessibility: Run panel, trace bar, icon strip, notices (#410) › the Run panel and trace bar name their controls and announce progress | `a11y-run-panel-and-strip.spec.ts` | Browser | yes | #410 |
+| accessibility: Run panel, trace bar, icon strip, notices (#410) › the automatic-install question takes focus; the update notice reads at AA | `a11y-run-panel-and-strip.spec.ts` | Browser | yes | #410 |
 | Busy wheel (#38) › a slow save shows the wheel after 0.2 s and clears it; a fast request never does | `busy-indicator.spec.ts` | Browser | yes | #38 |
 | Busy wheel (#38) › a slow undo shows the wheel and clears it | `busy-indicator.spec.ts` | Browser | yes | #38 |
 | Busy wheel (#38) › the timer: below the wheel, then in its centre, then off; the toolbar and the wheel stay put | `busy-indicator.spec.ts` | Browser | yes | #38 |
