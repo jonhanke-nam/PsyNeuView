@@ -255,6 +255,18 @@ npx playwright show-report /tmp/pw-report
   is no describe. A vitest (`ciSpecs.test.ts`) fails if the tagged files and
   the list differ, so a dropped tag can't take a spec out of CI unnoticed.
   Tutorial specs are never tagged `@ci` — they run in `tutorials.yml`.
+- **Shortcuts: press `ControlOrMeta`, never `Control+` or `Meta+`.** The test
+  browser reports the platform it really runs on (#402): a Mac reports macOS and
+  the app listens for ⌘, Linux CI reports Linux and the app listens for Ctrl.
+  Playwright's `ControlOrMeta` follows the same machine, so `ControlOrMeta+s`
+  saves on both. (Playwright's "Desktop Chrome" profile used to tell the page it
+  was on Windows, so on a Mac the app ignored ⌘ and specs passed or failed
+  differently locally and on CI.) Where a spec checks the key the app shows,
+  use `modLabel("1")` from `frontend/e2e/hostPlatform.ts` ("⌘1" on a Mac,
+  "Ctrl+1" elsewhere). A spec about one platform's behaviour sets that platform
+  itself, with `test.use({ userAgent })` or an init script, as
+  `graph-click-conventions.spec.ts` and `narration-voice-setting.spec.ts` do.
+  `host-platform.spec.ts` fails if the mismatch comes back.
 - **Log what CI catches** — when a CI failure turns out to be a real bug, add a
   row to [ci/catches.md](ci/catches.md) in the fixing PR and apply the
   `ci-caught` label (`gh issue list --label ci-caught`).
