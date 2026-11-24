@@ -123,6 +123,30 @@ on hovering something else. `ProjectionEdge`'s bend handles are the one real
 case in the app: hovering a handle has to keep the handle rendered, so its
 hovered-ness feeds the same predicate that decides whether to render it at all.
 
+## A keyboard way for every mouse gesture (#411)
+
+Whatever the mouse does, the keyboard must be able to do too, without
+changing what the mouse does. Adding a component is the worked example:
+
+- **Picking it up.** A component's name in the Components panel is a
+  keyboard button (`role="button"`, `tabIndex={0}`, Enter or Space) inside the
+  row, which keeps its drag and hover. Not a `<button>`: the row's ☆ is one,
+  and a button can't hold a button.
+- **Menus take focus when the keyboard opens them**, and the arrow keys move
+  between their rows; Esc gives focus back to what opened them. Opened with
+  the mouse, focus stays put.
+- **Where the mouse clicks a point, the keyboard gets a preview.**
+  `KeyboardPlacer` shows the component, dashed, at the nearest free spot
+  (`utils/freeSpot.ts`: nothing may overlap), the arrows move it and Enter
+  puts it down. Where the mouse clicks a node, Tab or the arrows ring one
+  node at a time and Enter acts on it; a node that refuses says why in words,
+  not only in a hover tooltip.
+- **Each step is said** in a status message (the placing hint), and focus
+  goes back to where the gesture started when it ends.
+
+Tell the two apart by how the gesture started (a key press), never by
+changing what a click does.
+
 ## Checklist for a new control
 
 - Is it a `<button>`? Then you are done.
