@@ -4,7 +4,8 @@
  */
 
 import { visibleCentre } from "@/utils/graphViewport";
-import { keepAutoLayoutAcrossFold, useModelStore, usesFlatPositions } from "@/stores/modelStore";
+import { keepAutoLayoutAcrossFold, NODE_HEIGHT, NODE_WIDTH, useModelStore, usesFlatPositions } from "@/stores/modelStore";
+import { ovalBoxFor } from "@/utils/nodeBox";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useStatusStore } from "@/stores/statusStore";
 import { recordAction } from "@/utils/history";
@@ -277,6 +278,12 @@ export async function addNodeToModel(
   // (a menu, a shortcut, the assistant), it goes in the middle of the graph
   // as it is showing, not wherever the layout would put it.
   dropPosition = dropPosition ?? visibleCentre() ?? undefined;
+  // #346: the point chosen is where the node's centre goes. A node's position
+  // is its top-left corner, so step back by half the size it is expected to
+  // be drawn at; once drawn, centreOnceDrawn corrects for its measured size.
+  const centre = dropPosition;
+  const expected = expectedNodeSize(varName);
+  if (dropPosition) dropPosition = { x: dropPosition.x - expected.width / 2, y: dropPosition.y - expected.height / 2 };
 
   // #252: putting a node down where you chose, like dragging one, makes the
   // layout Custom where it stands. In Auto, the reload would lay everything
@@ -336,6 +343,7 @@ export async function addNodeToModel(
 
     setSource(data.source);
     loadModel(data.model, layout);
+    if (centre && dropPosition) centreOnceDrawn(filePath, varName, dropPosition, expected);
     recordAction(`Added ${mechType} "${varName}"`);
     addNotification("success", `Added ${mechType} "${varName}"`);
   } catch (e) {
@@ -356,6 +364,49 @@ export async function addNodeToModel(
  * "where does this go", and discarding it because a view setting happens to be
  * on would lose it silently the moment they switch to custom.
  */
+/**
+ * The size a new node is expected to be drawn at (#346): the roomy slot with
+ * the type and role tags on, otherwise the oval its name needs (#210).
+ */
+export function expectedNodeSize(varName: string): { width: number; height: number } {
+  if (useGraphSettings.getState().showNodeElements) return { width: NODE_WIDTH, height: NODE_HEIGHT };
+  return ovalBoxFor(varName);
+}
+
+/** How many frames to wait for a new node to be drawn. */
+const DRAW_FRAMES = 60;
+
+/**
+ * Once the new node is drawn, put its centre exactly on the point chosen
+ * (#346): its outline can make it a little bigger than expected. Moves it by
+ * half the difference, in the store and in the saved layout.
+ */
+function centreOnceDrawn(
+  filePath: string,
+  varName: string,
+  placed: { x: number; y: number },
+  expected: { width: number; height: number },
+) {
+  if (typeof requestAnimationFrame === "undefined" || typeof document === "undefined") return;
+  let frames = 0;
+  const check = () => {
+    const { nodes, setNodes } = useModelStore.getState();
+    const node = nodes.find((n) => (n.data as { varName?: string } | undefined)?.varName === varName || n.id === varName);
+    const el = node ? document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(node.id)}"]`) : null;
+    if (!node || !el || el.offsetWidth === 0) {
+      if (++frames < DRAW_FRAMES) requestAnimationFrame(check);
+      return;
+    }
+    const dx = (expected.width - el.offsetWidth) / 2;
+    const dy = (expected.height - el.offsetHeight) / 2;
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+    const at = { x: placed.x + dx, y: placed.y + dy };
+    setNodes(nodes.map((n) => (n.id === node.id ? { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } } : n)));
+    void saveDroppedPosition(filePath, varName, at);
+  };
+  requestAnimationFrame(check);
+}
+
 async function saveDroppedPosition(
   filePath: string,
   varName: string,

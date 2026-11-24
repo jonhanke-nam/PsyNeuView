@@ -4,7 +4,8 @@
  * The canvas used to fit the whole graph after every change to its nodes, so
  * a component put down where the user clicked was drawn, then everything
  * zoomed and shifted and it seemed to land in the wrong place. Adding, moving
- * and deleting a node now leave the zoom and pan alone; Fit is separate.
+ * and deleting a node now leave the zoom and pan alone; Fit is separate. And
+ * the node's centre, not its corner, goes where the click was.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 import { readFileSync, writeFileSync, mkdtempSync } from "fs";
@@ -22,7 +23,7 @@ async function viewport(page: Page) {
 }
 
 test.describe("adding a component keeps the view still (#346)", { tag: "@ci" }, () => {
-  test("the zoom and pan don't change, and the node is put down at the click", async ({ page }) => {
+  test("the zoom and pan don't change, and the node's centre is at the click", async ({ page }) => {
     const dir = mkdtempSync(path.join(tmpdir(), "keepview346-"));
     const file = path.join(dir, "stroop_basic.py");
     writeFileSync(file, readFileSync(path.resolve(import.meta.dirname, "../../backend/demos/stroop_basic.py"), "utf8"));
@@ -60,10 +61,9 @@ test.describe("adding a component keeps the view still (#346)", { tag: "@ci" }, 
     expect(Math.abs(after.x - before.x), JSON.stringify({ before, after })).toBeLessThan(1);
     expect(Math.abs(after.y - before.y), JSON.stringify({ before, after })).toBeLessThan(1);
 
-    // A node is put down with its top-left corner at the click (#252), so
-    // that corner is where the click was, not somewhere the view moved it.
+    // The node's centre is where the click was (#346).
     const box = (await fresh.boundingBox())!;
-    const corner = { x: box.x, y: box.y };
-    expect(Math.hypot(corner.x - at.x, corner.y - at.y), JSON.stringify({ corner, at })).toBeLessThan(8);
+    const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    expect(Math.hypot(centre.x - at.x, centre.y - at.y), JSON.stringify({ centre, at })).toBeLessThan(8);
   });
 });
