@@ -47,11 +47,12 @@ test.describe("the trace bar's auto-play button (#338)", { tag: "@ci" }, () => {
     await page.getByTestId("trace-autoplay-speed").selectOption("0.25");
     await play.click();
     await expect(play).toHaveText("⏸ Pause");
-    await expect(play).toHaveAttribute("aria-pressed", "true");
+    // The label carries the state; no aria-pressed to contradict it.
+    await expect(play).not.toHaveAttribute("aria-pressed");
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "02-pause-while-playing.png") });
 
     await play.click();
     await expect(play).toHaveText("▶ Auto-play");
-    await expect(play).toHaveAttribute("aria-pressed", "false");
+    await expect(play).not.toHaveAttribute("aria-pressed");
   });
 });
