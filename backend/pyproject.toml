@@ -16,6 +16,8 @@ dependencies = [
     "watchdog>=4.0.0",
     # The live preview's fast check for undefined names (#256).
     "pyflakes>=3.2",
+    # PsyNeuView's MCP server for Claude Desktop and Claude Code (#201): app/mcp_server.py.
+    "mcp>=2.3,<3",
 ]
 
 [project.optional-dependencies]
@@ -25,6 +27,10 @@ dev = [
     "pytest-xdist>=3.5",  # CI runs the suite in parallel (#1250)
     "ruff>=0.3.0",
 ]
+
+[project.scripts]
+# The MCP server Claude Desktop or Claude Code launches (#201); same as `python -m app.mcp_server`.
+psyneuview-mcp = "app.mcp_server:main"
 
 [tool.setuptools.packages.find]
 include = ["app*"]
