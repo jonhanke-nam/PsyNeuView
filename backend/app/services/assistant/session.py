@@ -55,6 +55,8 @@ class Session:
         self.turn_id: str | None = None
         #: Tokens the agent's service has reported for this session so far.
         self.tokens_used = 0
+        #: Never dropped to make room for another session (the MCP one, #201).
+        self.pinned = False
 
     # ── events ───────────────────────────────────────────────────────
 
@@ -183,38 +185,45 @@ class Session:
                 self._running = False
 
     def _run_tool(self, call: agents.ToolCall, context: dict) -> dict:
+        ok, content = self.call_tool(call.name, call.args, context)
+        return {"id": call.id, "ok": ok, "content": content}
+
+    def call_tool(self, name: str, args: Any, context: dict, *, via: str = "agent") -> tuple[bool, str]:
+        """Run one tool by name: the one dispatcher for the built-in agent
+        and the MCP client (#201). ``(ok, content)``, ``content`` being the
+        text the agent gets back. Emits the events and writes the log line."""
         # Settings are read again for every call, so a permission lowered
         # mid-turn applies at once.
         settings = assistant_settings.get_settings()
-        args = call.args if isinstance(call.args, dict) else {}
-        self.emit("tool_call", tool=call.name, args=args)
-        if call.name not in assistant_tools.TOOL_ALLOWLIST:
+        args = args if isinstance(args, dict) else {}
+        self.emit("tool_call", tool=name, args=args, via=via)
+        if name not in assistant_tools.TOOL_ALLOWLIST:
             reason = "no such tool"
-            self.emit("refused", tool=call.name, reason=reason)
-            assistant_log.record(session_id=self.id, tool=call.name, args=args, allowed=False, summary=reason, approved_by="", keep_log=settings["keep_log"])
-            return {"id": call.id, "ok": False, "content": f"Refused: {reason}"}
-        ctx = assistant_tools.ToolContext(settings=settings, context=context, session=self)
+            self.emit("refused", tool=name, reason=reason)
+            assistant_log.record(session_id=self.id, tool=name, args=args, allowed=False, summary=reason, approved_by="", keep_log=settings["keep_log"])
+            return False, f"Refused: {reason}"
+        ctx = assistant_tools.ToolContext(settings=settings, context=filter_context(context, settings["visibility"]), session=self)
         try:
-            result = assistant_tools.TOOLS[call.name](ctx, args)
+            result = assistant_tools.TOOLS[name](ctx, args)
         except assistant_tools.ToolRefused as e:
-            self.emit("refused", tool=call.name, reason=str(e))
-            assistant_log.record(session_id=self.id, tool=call.name, args=args, allowed=False, summary=str(e), approved_by="", keep_log=settings["keep_log"])
-            return {"id": call.id, "ok": False, "content": f"Refused: {e}"}
+            self.emit("refused", tool=name, reason=str(e))
+            assistant_log.record(session_id=self.id, tool=name, args=args, allowed=False, summary=str(e), approved_by="", keep_log=settings["keep_log"])
+            return False, f"Refused: {e}"
         except Exception as e:
-            logger.exception("assistant tool %s failed", call.name)
+            logger.exception("assistant tool %s failed", name)
             summary = f"failed: {type(e).__name__}"
-            self.emit("tool_result", tool=call.name, ok=False, summary=summary)
-            assistant_log.record(session_id=self.id, tool=call.name, args=args, allowed=True, ok=False, summary=summary, approved_by="", keep_log=settings["keep_log"])
-            return {"id": call.id, "ok": False, "content": f"Error: {summary}"}
-        summary = _summarize(call.name, result)
-        self.emit("tool_result", tool=call.name, ok=True, summary=summary)
-        assistant_log.record(session_id=self.id, tool=call.name, args=args, allowed=True, ok=True, summary=summary, approved_by="settings", keep_log=settings["keep_log"])
+            self.emit("tool_result", tool=name, ok=False, summary=summary)
+            assistant_log.record(session_id=self.id, tool=name, args=args, allowed=True, ok=False, summary=summary, approved_by="", keep_log=settings["keep_log"])
+            return False, f"Error: {summary}"
+        summary = _summarize(name, result)
+        self.emit("tool_result", tool=name, ok=True, summary=summary)
+        assistant_log.record(session_id=self.id, tool=name, args=args, allowed=True, ok=True, summary=summary, approved_by="settings", keep_log=settings["keep_log"])
         import json
 
         content = json.dumps(result)
         if len(content) > MAX_TOOL_RESULT_CHARS:
             content = content[:MAX_TOOL_RESULT_CHARS] + "… (cut)"
-        return {"id": call.id, "ok": True, "content": "[untrusted data from the user's machine]\n" + content}
+        return True, "[untrusted data from the user's machine]\n" + content
 
 
 def _summarize(tool: str, result: dict) -> str:
@@ -252,12 +261,16 @@ _sessions: dict[str, Session] = {}
 _registry_lock = threading.Lock()
 
 
-def create_session() -> Session:
+def create_session(*, pinned: bool = False) -> Session:
+    """A new session. ``pinned`` (the MCP session, #201) is never the one
+    dropped to make room."""
     session = Session(uuid.uuid4().hex)
+    session.pinned = pinned
     with _registry_lock:
         if len(_sessions) >= MAX_SESSIONS:
-            oldest = min(_sessions.values(), key=lambda s: s.created)
-            if oldest.running:
+            candidates = [s for s in _sessions.values() if not s.pinned]
+            oldest = min(candidates, key=lambda s: s.created) if candidates else None
+            if oldest is None or oldest.running:
                 raise RuntimeError("too many sessions")
             del _sessions[oldest.id]
         _sessions[session.id] = session

@@ -117,6 +117,8 @@ def make_agent(agent_settings: dict, *, key: str | None) -> Agent:
             key=key,
             base_url=agent_settings["base_url"],
         )
+    if kind == "claude_mcp":
+        raise AgentError("with Claude over MCP, talk to the assistant in Claude Desktop or Claude Code; proposals appear here")
     raise AgentError("no agent is chosen in Settings")
 
 
@@ -223,6 +225,14 @@ def test_connection(agent_settings: dict, *, key: str | None, timeout: float = T
         url = f"{base}/v1/chat/completions"
         headers = {"Authorization": f"Bearer {key}"} if key else {}
         body = {"model": model, "max_tokens": 1, "messages": [{"role": "user", "content": "ping"}]}
+    elif kind == "claude_mcp":
+        # Nothing to send from here: Claude connects to us (#201).
+        from app.services.assistant import mcp_link
+
+        seen = mcp_link.status()
+        if seen["connected"]:
+            return ConnectionResult(True, kind, "", None, f"Claude is connected (last heard from {seen['seconds_ago']} s ago)")
+        return ConnectionResult(False, kind, "", None, "No Claude client is connected yet. Add PsyNeuView in Claude Code or Claude Desktop with the setup below.")
     else:
         return ConnectionResult(False, "none", "", None, "No agent is chosen. Choose one under Which agent first.")
 
@@ -292,6 +302,8 @@ def list_models(agent_settings: dict, *, key: str | None, timeout: float = TEST_
             return ModelList(False, kind, [], "", "No server address is set, so the list can't be fetched.")
         url = f"{base}/v1/models"
         headers = {"Authorization": f"Bearer {key}"} if key else {}
+    elif kind == "claude_mcp":
+        return ModelList(False, kind, [], "", "The model is chosen in Claude Desktop or Claude Code.")
     else:
         return ModelList(False, "none", [], "", "No agent is chosen.")
 

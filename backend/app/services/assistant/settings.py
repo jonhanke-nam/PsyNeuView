@@ -28,7 +28,10 @@ from app.services.assistant import files as assistant_files
 
 _KEY = "assistant"
 
-AGENT_TYPES = ("none", "anthropic", "openai_compatible")
+#: ``claude_mcp`` (#201): no agent is called from PsyNeuView; Claude Desktop
+#: or Claude Code, signed in with the user's subscription, connects to
+#: PsyNeuView's MCP server and uses the same tools (``mcp_link.py``).
+AGENT_TYPES = ("none", "anthropic", "openai_compatible", "claude_mcp")
 AUTONOMY_LEVELS = ("answer", "suggest", "app_edits")
 SAVING_MODES = ("always_ask", "structured_without_asking")
 FOLDER_ACCESS = ("read", "read_write")
@@ -93,7 +96,13 @@ def destination(agent: dict) -> str:
         return agent.get("base_url") or ANTHROPIC_URL
     if agent.get("type") == "openai_compatible":
         return agent.get("base_url") or "(no server address yet)"
+    if agent.get("type") == "claude_mcp":
+        return MCP_DESTINATION
     return "nowhere (no agent)"
+
+
+#: Where messages go with Claude over MCP (#201), in plain words.
+MCP_DESTINATION = "Claude Desktop or Claude Code on this machine, under your Claude subscription"
 
 
 def get_settings(*, config_file: Path | None = None) -> dict:
@@ -141,7 +150,7 @@ def needs_consent(old: dict, new: dict) -> list[str]:
     destination_changed = (new["agent"]["type"], new["agent"]["base_url"]) != (old["agent"]["type"], old["agent"]["base_url"])
     # No agent, or an OpenAI-compatible one with no address yet, sends
     # nothing anywhere; the address, when it is given, is what asks.
-    sends = new["agent"]["type"] == "anthropic" or bool(new["agent"]["base_url"])
+    sends = new["agent"]["type"] in ("anthropic", "claude_mcp") or bool(new["agent"]["base_url"])
     if old["enabled"] and new["enabled"] and destination_changed and sends:
         return [f"sending messages to {destination(new['agent'])} instead of {destination(old['agent'])}"]
     return []
@@ -220,6 +229,9 @@ def _validate(doc: dict) -> dict:
     # An openai_compatible agent without a base_url is allowed to be stored
     # (the address field appears once the type is chosen); sending a message
     # is what needs the address, and make_agent says so then.
+    if agent_type == "claude_mcp":
+        # The model and the address are Claude's own choice there, not ours.
+        model, base_url = "", ""
     out["agent"] = {"type": agent_type, "model": model.strip(), "base_url": base_url.strip()}
 
     folders = doc.get("folders", [])
