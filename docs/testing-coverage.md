@@ -9,9 +9,9 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 158 | 430 | 418 tests in 152 files |
+| Browser (Playwright) | 159 | 431 | 419 tests in 153 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 134 | 1203 | 1203 tests in 134 files |
+| Frontend unit (vitest) | 135 | 1206 | 1206 tests in 135 files |
 | Backend (pytest) | 188 | 1747 | 1747 tests in 188 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -31,7 +31,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 54 tests | – | 28 files, 262 tests | 19 files, 322 tests | 638 of 638 |
-| [Look and style conventions](#style) | 13 files, 31 tests | – | 8 files, 47 tests | – | 76 of 78 |
+| [Look and style conventions](#style) | 14 files, 32 tests | – | 9 files, 50 tests | – | 80 of 82 |
 | [Layout, views and compositions](#layout) | 21 files, 47 tests | – | 21 files, 151 tests | 5 files, 56 tests | 253 of 254 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
 | [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 13 files, 78 tests | 18 files, 194 tests | 288 of 291 |
@@ -957,6 +957,7 @@ No tests yet.
 | `node-shapes.spec.ts` | Browser | 2 | yes | #192, #193 | Node shapes follow show_graph (#192, #193). |
 | `node-text-proportion.spec.ts` | Browser | 3 | yes | #210 | Node text in proportion to show_graph (#210). |
 | `reactflow-credit.spec.ts` | Browser | 2 | yes | #290 | No "React Flow" credit in the canvas corner; About credits it instead (#290). |
+| `selection-colour.spec.ts` | Browser | 1 | yes | #335 | One pale-blue selection colour (#335). |
 | `shape-mismatch-explained.spec.ts` | Browser | 1 | yes | #1235 | A shape mismatch says where and why, on the graph and on Run (#1235). |
 | `style-conventions.spec.ts` | Browser | 2 | no | #1302 | The palette and the button kinds, as the browser draws them (#1302). |
 | `style-sizes.spec.ts` | Browser | 4 | yes | #1302 | A restyle keeps the old size: colour moves, size stays (#1302). |
@@ -966,6 +967,7 @@ No tests yet.
 | `dialogInventory.test.ts` | Frontend unit | 7 | yes | #1289 | Every dialog and pop-up closes the same ways (#1289). |
 | `useNodeBoxes.test.ts` | Frontend unit | 3 | yes |  |  |
 | `styleConventions.test.ts` | Frontend unit | 11 | yes | #1302 | The palette and the button kinds, held across the whole frontend. |
+| `selectionColours.test.ts` | Frontend unit | 3 | yes | #335 | The selection blue never looks like a role colour. |
 | `typeColourContrast.test.ts` | Frontend unit | 2 | yes | #283, #109 | Every component type's colour can be seen. |
 | `arrowShapes.test.ts` | Frontend unit | 8 | yes | #164 | Shaping an arrow by hand, as a step of its own (#164). |
 | `nodeBox.test.ts` | Frontend unit | 3 | yes |  | Whether the corners of a name's box lie inside an oval this size, inset by the outline. |
@@ -995,6 +997,7 @@ No tests yet.
 | node text in proportion to show_graph (#210) › a double outline holds its name at the heaviest width; selecting and Text size don't resize a node | `node-text-proportion.spec.ts` | Browser | yes | #210 |
 | React Flow credit (#290) › the canvas shows no React Flow credit after a model loads | `reactflow-credit.spec.ts` | Browser | yes | #290 |
 | React Flow credit (#290) › Settings ▸ About credits React Flow, with a link | `reactflow-credit.spec.ts` | Browser | yes | #290 |
+| one selection colour (#335), ${scheme} › current trial, selected node, node bands and labels | `selection-colour.spec.ts` | Browser | yes | #335 |
 | A shape mismatch is explained › the broken connection is drawn, named, and Run gives the reason | `shape-mismatch-explained.spec.ts` | Browser | yes | #1235 |
 | Settings: Close is primary and the default button; small and danger row actions | `style-conventions.spec.ts` | Browser | no | #1302 |
 | the Open menu's dialogs: the action primary, Cancel secondary | `style-conventions.spec.ts` | Browser | no | #1302 |
