@@ -3336,6 +3336,30 @@ def _library_models_dir() -> Path | None:
     return d if d.is_dir() else None
 
 
+@router.get("/psyneulink/name-clashes")
+def psyneulink_name_clashes():
+    """Model files that share a name in the active PsyNeuLink (#422).
+
+    The page asks after a source switch, and at start: when there are any, it
+    shows a one-time notice naming them and records them in the activity log.
+    ``key`` names the source and commit, so the notice is shown once per
+    source rather than on every start. Sync: it reads the file tree.
+    """
+    from app.services import model_names
+
+    pkg = active_psyneulink_package_dir()
+    if pkg is None:
+        return {"clashes": [], "key": None, "message": None}
+    clashes = model_names.find_clashes(pkg.parent, REFERENCE_MODELS)
+    info = get_psyneulink_info() or {}
+    key = f"{info.get('source')}:{info.get('repo') or info.get('path') or ''}:{info.get('commit') or info.get('version') or ''}"
+    return {
+        "clashes": clashes,
+        "key": key,
+        "message": model_names.describe(clashes) if clashes else None,
+    }
+
+
 @router.get("/library-models")
 async def list_library_models():
     """List PsyNeuLink library models that load cleanly (issue #20)."""
