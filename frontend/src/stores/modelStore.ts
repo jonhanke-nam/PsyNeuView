@@ -128,21 +128,27 @@ function compositionInterfacePorts(nodeData: any): {
 }
 
 // Annotate each edge with how many edges share its source port, its target
-// port, and — most importantly — its exact source+target pair. The custom
-// edge component fans only TRUE duplicate projections (same pair) into bowed
-// curves: those overlap along their whole length, so straight lines would
-// collapse onto each other. Edges that merely share one endpoint (fan-in /
-// fan-out from different nodes) stay straight — they already render as
-// distinct tree branches that only meet at the shared port pixel.
+// port, and — most importantly — the two NODES it joins. The custom edge
+// component draws apart every arrow between the same two nodes, whichever
+// ports they use and whichever way they point (#278, #388): those overlap
+// along their whole length otherwise. Edges that merely share one endpoint
+// (fan-in / fan-out from different nodes) stay straight — they already render
+// as distinct tree branches that only meet at the shared port pixel.
+//
+// `pairBundleSign` says which way the edge runs between the pair: +1 from the
+// alphabetically first node, -1 the other way. The edge component offsets
+// each arrow by its slot times this sign, in its own sideways direction, so
+// an arrow and its reverse land on opposite sides rather than on one line.
 function annotateEdgeBundles(edges: Edge[]) {
   const key = (n: string, h: string | null | undefined) => `${n}|${h ?? ""}`;
+  const pairKey = (a: string, b: string) => (a <= b ? `${a}\u0000${b}` : `${b}\u0000${a}`);
   const targetBuckets = new Map<string, string[]>();
   const sourceBuckets = new Map<string, string[]>();
   const pairBuckets = new Map<string, string[]>();
   for (const e of edges) {
     const tk = key(e.target, e.targetHandle);
     const sk = key(e.source, e.sourceHandle);
-    const pk = `${sk}->${tk}`;
+    const pk = pairKey(e.source, e.target);
     if (!targetBuckets.has(tk)) targetBuckets.set(tk, []);
     if (!sourceBuckets.has(sk)) sourceBuckets.set(sk, []);
     if (!pairBuckets.has(pk)) pairBuckets.set(pk, []);
@@ -155,7 +161,7 @@ function annotateEdgeBundles(edges: Edge[]) {
     const sk = key(e.source, e.sourceHandle);
     const tBucket = targetBuckets.get(tk)!;
     const sBucket = sourceBuckets.get(sk)!;
-    const pBucket = pairBuckets.get(`${sk}->${tk}`)!;
+    const pBucket = pairBuckets.get(pairKey(e.source, e.target))!;
     const data = (e.data || {}) as Record<string, unknown>;
     data.targetBundleIndex = tBucket.indexOf(e.id);
     data.targetBundleSize = tBucket.length;
@@ -163,6 +169,7 @@ function annotateEdgeBundles(edges: Edge[]) {
     data.sourceBundleSize = sBucket.length;
     data.pairBundleIndex = pBucket.indexOf(e.id);
     data.pairBundleSize = pBucket.length;
+    data.pairBundleSign = e.source <= e.target ? 1 : -1;
     e.data = data;
   }
 }

@@ -43,7 +43,9 @@ import {
 } from "@/utils/curveHandles";
 import { targetStatus, useConnectTargets } from "@/stores/connectTargetsStore";
 
-const FAN_SPACING_PX = 18;
+// #388: the room each arrow between the same two nodes gets, at its ends
+// and again at its middle, so a pair is ~2x this apart along its length.
+const PAIR_SPACING_PX = 9;
 // Label width estimate: monospace 10px font ≈ 6px per char, plus ~12px
 // of horizontal padding from the label badge background.
 const LABEL_CHAR_PX = 6;
@@ -59,17 +61,14 @@ const ARROW_SHIFT_MAX_FRAC = 0.4;
 // instead of locking onto a 1px corner tangent. See #290.
 const ARROW_TANGENT_SPAN_PX = 10;
 
-// Bow a cubic bezier perpendicular to the source→target line so multiple
-// edges sharing a port endpoint converge to one pixel but follow visibly
-// distinct paths. The bow magnitude is the edge's signed index within its
-// bundle (centered on 0). See #278 — "overlap only at a point."
+// Bow a cubic bezier perpendicular to the source→target line by `o` px
+// (signed, in the edge's own sideways direction, (-dy, dx)), so arrows
+// between the same two nodes follow visibly distinct paths (#278, #388).
 function fannedBezierPath(
   sx: number, sy: number,
   tx: number, ty: number,
-  bundleIndex: number,
-  bundleSize: number,
+  o: number,
 ): string {
-  const o = (bundleIndex - (bundleSize - 1) / 2) * FAN_SPACING_PX;
   const dx = tx - sx;
   const dy = ty - sy;
   const len = Math.hypot(dx, dy) || 1;
@@ -219,22 +218,35 @@ export function ProjectionEdge({
   const showLabel = isSelected || hovered || alwaysVisible || isCursorHighlighted;
 
   const labelOffset = (data as any)?.labelOffset ?? 0.5;
-  // Only TRUE duplicate projections (same source AND same target) get fanned
+  // Arrows joining the same two nodes (any ports, either direction) get drawn
   // apart — those overlap along their whole length, so straight lines would
-  // collapse onto one another (#278). Edges that merely share a single port
+  // collapse onto one another (#278, #388). Edges that merely share a single port
   // (fan-in / fan-out from different nodes) follow the routing preference: as
   // straight lines they already form distinct tree branches that meet only at
   // the shared port pixel (#317).
   const bundleIndex = (data as any)?.pairBundleIndex ?? 0;
   const bundleSize = (data as any)?.pairBundleSize ?? 1;
+  // #388: this arrow's sideways offset within the arrows joining the same two
+  // nodes, either way round. The slot is counted from the alphabetically
+  // first node and flipped for an arrow running the other way, so in this
+  // arrow's own sideways direction an arrow and its reverse land on opposite
+  // sides instead of on one line.
+  const pairSign = (data as any)?.pairBundleSign ?? 1;
+  const pairOffset = bundleSize > 1
+    ? (bundleIndex - (bundleSize - 1) / 2) * pairSign * 2 * PAIR_SPACING_PX
+    : 0;
 
   // #944/#946: lateral lane for near-parallel edges sharing a hub. `offset` !=0
   // ⇒ this edge is in a lane group; the router bows its node-safe path apart
   // (#944) AND its shared-hub attachment is spread so lane-mates don't converge
   // at the node (#946). `hub` says which end is the shared one.
-  const lane = bundleEdges && bundleSize <= 1
-    ? laneOffsetFor(id, source, sourceHandleId, target, targetHandleId, rfEdges as any, nodeLookup as any, edgeLaneGap)
-    : { hubOffset: 0, hub: null as "source" | "target" | null, bowOffset: 0 };
+  // An arrow sharing its two nodes with another takes its pair offset as its
+  // bow (#388), on top of attaching apart from it below.
+  const lane = bundleSize > 1
+    ? { hubOffset: 0, hub: null as "source" | "target" | null, bowOffset: pairOffset }
+    : bundleEdges
+      ? laneOffsetFor(id, source, sourceHandleId, target, targetHandleId, rfEdges as any, nodeLookup as any, edgeLaneGap)
+      : { hubOffset: 0, hub: null as "source" | "target" | null, bowOffset: 0 };
   // #965: the bow (mid-length bend) is driven purely by real proximity — so a
   // divergent fan-out gets a hub spread but no spurious kink, while a genuinely
   // parallel pair still gets bowed apart.
@@ -272,8 +284,13 @@ export function ProjectionEdge({
         ? offsetAttach(sOval, tOval.cx, tOval.cy, lane.hubOffset) : null;
       const tHub = lane.hub === "target" && tOv == null
         ? offsetAttach(tOval, sOval.cx, sOval.cy, lane.hubOffset) : null;
-      const spOval = sOv != null ? ellipsePoint(sOval, sOv) : (sHub ?? sFan ?? ovalBoundaryPoint(sOval, tOval.cx, tOval.cy));
-      const tpOval = tOv != null ? ellipsePoint(tOval, tOv) : (tHub ?? tFan ?? ovalBoundaryPoint(tOval, sOval.cx, sOval.cy));
+      // #388: arrows between the same two nodes attach at different points on
+      // each, shifted to the arrow's own side: rotating the source's facing
+      // direction forward and the target's back both move toward (-dy, dx).
+      const sPair = pairOffset && sOv == null ? offsetAttach(sOval, tOval.cx, tOval.cy, pairOffset) : null;
+      const tPair = pairOffset && tOv == null ? offsetAttach(tOval, sOval.cx, sOval.cy, -pairOffset) : null;
+      const spOval = sOv != null ? ellipsePoint(sOval, sOv) : (sPair ?? sHub ?? sFan ?? ovalBoundaryPoint(sOval, tOval.cx, tOval.cy));
+      const tpOval = tOv != null ? ellipsePoint(tOval, tOv) : (tPair ?? tHub ?? tFan ?? ovalBoundaryPoint(tOval, sOval.cx, sOval.cy));
       // #192/#193: a node drawn as an octagon or a rectangle has its outline
       // outside the oval; the edge ends on the outline, along the same ray.
       const sp = onShapeBoundary(sOval, nodeShapeFor(nodeLookup.get(source)?.data as any), spOval);
@@ -340,10 +357,7 @@ export function ProjectionEdge({
       edgeTension,
     );
   } else if (bundleSize > 1) {
-    edgePath = fannedBezierPath(
-      sx, sy, tx, ty,
-      bundleIndex, bundleSize,
-    );
+    edgePath = fannedBezierPath(sx, sy, tx, ty, pairOffset);
   } else if (edgeRouting === "straight") {
     edgePath = `M ${sx} ${sy} L ${tx} ${ty}`;
   } else if (edgeRouting === "spline") {
@@ -365,7 +379,7 @@ export function ProjectionEdge({
     //
     // Curves that have a reason are unaffected: a lane bow and a node detour
     // both come from routeAroundObstacles below, which overrides this path.
-    edgePath = fannedBezierPath(sx, sy, tx, ty, 0, 1);
+    edgePath = fannedBezierPath(sx, sy, tx, ty, 0);
   } else {
     // #963: node-aware smooth-step. React Flow's getSmoothStepPath draws a
     // port-based orthogonal L that ignores obstacles, so a clear straight line
@@ -378,11 +392,11 @@ export function ProjectionEdge({
   }
 
   // #914: route around EVERY node the edge would otherwise cross (visibility
-  // graph, not just the single worst obstacle). Only true-duplicate bundles keep
-  // their fannedBezierPath; fan-out lanes (1a) route through here so their
-  // de-crowded launch points still avoid every node (1c — never pass behind a
-  // node). Returns null when the straight line is already clear.
-  if (avoidNodes && bundleSize <= 1 && !manual && !curve) {
+  // graph, not just the single worst obstacle). Fan-out lanes (1a) and arrows
+  // sharing their two nodes (#388) route through here too, bowed by their
+  // offset, so their separate courses still avoid every node (1c — never pass
+  // behind a node). Returns null when the straight line is clear and unbowed.
+  if (avoidNodes && !manual && !curve) {
     const obstacles: Rect[] = [];
     nodeLookup.forEach((n, nid) => {
       if (nid === source || nid === target) return;
@@ -413,8 +427,12 @@ export function ProjectionEdge({
   // line (matches existing behavior; not strictly on-curve, but close
   // enough for the bow magnitudes in play).
   const onCurve = curve ? pointAlong(curve.points, labelOffset) : null;
-  const labelX = onCurve ? onCurve.x : sx + (tx - sx) * labelOffset;
-  const labelY = onCurve ? onCurve.y : sy + (ty - sy) * labelOffset;
+  // #388: an arrow bowed sideways (a pair, or a lane) carries its label out
+  // with it, by the same tapered amount, so each of a pair keeps its own.
+  const bowAt = !onCurve && bowOffset ? bowOffset * Math.sin(Math.PI * labelOffset) : 0;
+  const sideLen = Math.hypot(tx - sx, ty - sy) || 1;
+  const labelX = onCurve ? onCurve.x : sx + (tx - sx) * labelOffset - ((ty - sy) / sideLen) * bowAt;
+  const labelY = onCurve ? onCurve.y : sy + (ty - sy) * labelOffset + ((tx - sx) / sideLen) * bowAt;
 
   const tooltip = (data as any)?.tooltip as string | undefined;
 
@@ -564,7 +582,7 @@ export function ProjectionEdge({
         // auto-routed around nodes, materialize those auto corners as editable
         // waypoints first — preserving the shape and making every corner behave
         // the same as a user bend.
-        if (wps.length === 0 && (curve || (avoidNodes && bundleSize <= 1))) {
+        if (wps.length === 0 && (curve || avoidNodes)) {
           const auto = autoBends();
           if (auto.length) {
             useEdgeAttach.getState().setWaypoints(id, auto);
@@ -647,7 +665,7 @@ export function ProjectionEdge({
         [{ x: sx, y: sy }, ...(waypoints ?? []), { x: tx, y: ty }],
         collectObstacles(),
       )
-    : (handlesActive && (curve || (avoidNodes && bundleSize <= 1))
+    : (handlesActive && (curve || avoidNodes)
         ? autoBends().map((p) => ({ x: p.x, y: p.y, forced: true }))
         : []);
 
@@ -792,6 +810,7 @@ export function ProjectionEdge({
         // (#975 explains why stopPropagation alone does not stop d3-zoom).
         className="projection-edge-hit nopan"
         data-layout={autoLayout ? "auto" : "custom"}
+        data-selected={isSelected ? "true" : undefined}
         data-connect-target={dropStatus ?? undefined}
         style={{ pointerEvents: "stroke" }}
       >

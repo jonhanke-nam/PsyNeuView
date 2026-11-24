@@ -38,6 +38,7 @@ reviews:
         - Design principles (docs/design-principles.md):
           - What's displayed must be accurate. Results, traces, highlights, previews and other views computed from the model carry the model version they came from, and are flagged or cleared when the model changes, never shown as current (#337). Flag a new derived view with no version tag or no stale handling.
           - Automatic behaviour only by consent. Anything that changes the person's app or data on its own (installs, file rewrites, folder moves, settings changed for them) is off by default, has a quick opt-in, and says what it changed and why (PsyNeuView-MacApp#79). Flag automatic behaviour that is on by default or acts silently.
+          - Nothing on the graph is hidden or confusing. Arrows never substantively overlap each other (arrows between the same nodes or sharing an end attach at distinct points and stay apart), never pass behind or through nodes they don't connect to, nodes never overlap, and labels stay readable (#388, #389). Flag graph drawing or layout changes that can put an arrow, node or label on top of another, or an arrow behind a node.
 
     - path: "backend/**/*.py"
       instructions: |
