@@ -1068,13 +1068,13 @@ export function RunPanel() {
                 PsyNeuLink builds that don't ship the `_debugger` hook. */}
             <DebuggerSnapshotTable />
 
-            {/* Collapsible table of the results (#335: was "Raw data") */}
+            {/* Collapsible table of the results (#335: was "Raw data", then "Results") */}
             <details style={{ marginTop: 12 }}>
               <summary
                 data-testid="run-results-table-toggle"
                 style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}
               >
-                Results
+                Results table
               </summary>
               <table
                 style={{

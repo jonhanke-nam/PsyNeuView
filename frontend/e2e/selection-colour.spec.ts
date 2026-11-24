@@ -5,7 +5,7 @@
  * the selection blue (it was the trace green, which read as an input node's
  * green), and the same blue rings a selected node on the graph. Each node's
  * rows carry a left band in its role colour, and the labels read "Show Δ"
- * and "Results".
+ * and "Results table".
  *
  * Set SELECTION_SHOTS to a folder to also save screenshots, light and dark.
  */
@@ -51,7 +51,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       // Labels.
       await expect(page.getByTestId("run-trial-deltas")).toHaveText("Show Δ");
-      await expect(page.getByTestId("run-results-table-toggle")).toHaveText("Results");
+      await expect(page.getByTestId("run-results-table-toggle")).toHaveText("Results table");
 
       // Step the trace: the current trial's card is the selection blue.
       await page.getByTestId("trace-next-step").click();
