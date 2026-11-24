@@ -2505,6 +2505,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - Undo and redo notices (#1377) › 20 quick undos leave one notice; its Redo redoes all 20; it clears itself · CI · #1377
 - Undo and redo notices (#1377) › going back in History is one action with one notice · CI · #1377
 
+**`frontend/src/hooks/undoPendingEdit.test.ts`** (Frontend unit (vitest))
+
+- Undo with an edit still waiting for its preview (#366) › takes back the edit · CI · #366
+- Undo with an edit still waiting for its preview (#366) › records nothing when History already has the code · CI · #366
+- Undo with an edit still waiting for its preview (#366) › records nothing while a step is being put back · CI · #366
+- Undo with an edit still waiting for its preview (#366) › records nothing for another model's history · CI · #366
+
 **`frontend/src/stores/flushBuffer.test.ts`** (Frontend unit (vitest))
 
 - flushBuffer (#1) › sends what it believes is on disk, so the server can refuse · CI · #1

@@ -11,7 +11,7 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 |---|---|---|---|
 | Browser (Playwright) | 175 | 460 | 450 tests in 170 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 147 | 1287 | 1287 tests in 147 files |
+| Frontend unit (vitest) | 148 | 1291 | 1291 tests in 148 files |
 | Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -28,7 +28,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Editing: code and graph in step](#sync) | 17 files, 40 tests | – | 10 files, 81 tests | 26 files, 247 tests | 365 of 368 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
 | [Running, learning and debugging](#running) | 16 files, 38 tests | – | 11 files, 99 tests | 52 files, 262 tests | 399 of 399 |
-| [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
+| [Saving, history and undo](#saving) | 12 files, 29 tests | – | 11 files, 90 tests | 10 files, 189 tests | 307 of 308 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
@@ -737,6 +737,7 @@ No tests yet.
 | `sidecar-placement.spec.ts` | Browser | 3 | yes | #933 | Sidecar placement toggle actually moves files (#933). |
 | `undo-depth.spec.ts` | Browser | 1 | yes | #558 | Undo as far back as the session goes (#558). |
 | `undo-notices.spec.ts` | Browser | 2 | yes | #1377 | Undo and redo: one notice for a burst, not one per step (#1377). |
+| `undoPendingEdit.test.ts` | Frontend unit | 4 | yes | #366 | #366: a code edit becomes a History step only once its live preview has rebuilt the model (the 1.5 s pause, then the build). |
 | `flushBuffer.test.ts` | Frontend unit | 3 | yes | #1 | Inspector and canvas edits flush typed code first; the flush must not write over a change made in another editor (#1). |
 | `historyDepth.test.ts` | Frontend unit | 11 | yes | #558 | Unlimited undo depth (#558): every step is kept; older ones compactly (no graph, code as a delta from the next newer step), and only past a memory budget is the oldest dropped. |
 | `historyStore.test.ts` | Frontend unit | 17 | yes | #1091 | Undo crossing model boundaries (#1091). |
