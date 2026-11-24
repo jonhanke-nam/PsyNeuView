@@ -597,8 +597,8 @@ export function LearnPanel() {
           />
         </label>
         {executionModes.length > 0 && (
-          <label title={selectedModeReason ?? "Execution backend used for training"}>
-            Backend{" "}
+          <label title={selectedModeReason ?? "Execution mode used for training"}>
+            Execution mode{" "}
             <select
               value={executionMode}
               onChange={(e) => setExecutionMode(e.target.value)}
