@@ -80,6 +80,13 @@ steps:
   instruction is **what you'd point at**, with the exact control names. Every
   step has a caption (a unit test fails otherwise), with no code names, and
   any label it quotes is named in the instruction too (`narrationCaptions.test.ts`, #87).
+- **Name a keyboard shortcut by its id, never as "⌘Z".** Write
+  `{key:history.undo}` in the instruction (the ids are in
+  `frontend/src/shortcuts/registry.ts`); the bar shows ⌘Z on a Mac, Ctrl+Z
+  elsewhere, and the key as rebound in Settings (#409). Only the instruction
+  may: a step that names one needs its own `say:`, which can't, since
+  narration reads recorded lines as written. Keys the Mac app's own menus keep
+  (⌘, for Settings) are Mac-only and are written out.
 - `pointer: true` is for a step whose point is "look here": the pointer glides
   from where it last was to the anchor (700 ms), and only then does the bar
   show the instruction. The ring is drawn at once either way. Replay sends it

@@ -412,6 +412,20 @@ async function act(page: Page, step: TourStep): Promise<void> {
 }
 
 /**
+ * What the bar shows for an instruction. A `{key:<shortcut id>}` in it reads
+ * as that shortcut's key, this platform's way (#409): ⌘Z on a Mac, Ctrl+Z on
+ * Linux CI. The driver does not import the app's registry (see the top of
+ * this file), so a key there matches any key name; which key it names is
+ * checked by src/shortcuts/keyLabels.test.ts.
+ */
+export function shownInstruction(instruct: string): string | RegExp {
+  if (!/\{key:[\w.]+\}/.test(instruct)) return instruct;
+  const parts = instruct.split(/\s+/).join(" ").split(/\{key:[\w.]+\}/);
+  const literal = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^${parts.map(literal).join("\\S+")}$`);
+}
+
+/**
  * Click a canvas node by name, or a projection's arrow when no node has that
  * name (#45): a lesson about a weight matrix selects the projection. Returns
  * whether it was a projection.
@@ -443,7 +457,7 @@ export async function runWalkthrough(
     const instruction = page.getByTestId("tour-instruction");
 
     await expect(instruction, `step "${step.id}" should be showing its instruction`).toHaveText(
-      step.instruct,
+      shownInstruction(step.instruct),
       { timeout: 15_000 },
     );
     // When the step's node is off-screen the app offers to fit the graph, and

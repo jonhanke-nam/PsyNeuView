@@ -700,6 +700,15 @@ describe("parseWalkthrough — the orientation's fields (#1310)", () => {
     expect(() => parseWalkthrough(doc("", "    say: [a, b]\n"))).toThrow(/say must be text/);
   });
 
+  it("lets an instruction name a {key:…}, but only with a caption of its own (#409)", () => {
+    const keyed = (step: string) =>
+      "id: x\ntitle: X\nsteps:\n  - id: s\n    anchor: {testid: t}\n    instruct: Press Undo (or {key:history.undo})\n" +
+      step + "    done: {next: true}\n";
+    expect(parseWalkthrough(keyed("    say: Undo takes it back.\n")).steps[0].instruct).toBe("Press Undo (or {key:history.undo})");
+    expect(() => parseWalkthrough(keyed(""))).toThrow(/needs its own say/);
+    expect(() => parseWalkthrough(keyed("    say: Press {key:history.undo}\n"))).toThrow(/say can't name/);
+  });
+
   it("takes within only as a testid, on a step with a testid anchor (#170)", () => {
     expect(parseWalkthrough(doc("", "    within: open-menu\n")).steps[0].within).toBe("open-menu");
     expect(() => parseWalkthrough(doc("", "    within: [open-menu]\n"))).toThrow(/within must be/);
