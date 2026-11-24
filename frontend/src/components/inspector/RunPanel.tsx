@@ -25,9 +25,11 @@ import { realInputNodes } from "@/utils/learnPlan";
 import { useModelStore, type DebuggerSnapshot, selectExecPath } from "@/stores/modelStore";
 import { useStatusStore } from "@/stores/statusStore";
 import { useRunRecords, type RunRecord } from "@/stores/runRecordsStore";
+import { formatRunProgress, newRunId, pollRunProgress, type RunProgress } from "@/utils/runProgress";
 import { useRunResults } from "@/stores/runResultsStore";
-import { STALE_STYLE, recheckRunStaleness, watchRunStaleness } from "@/stores/runStaleness";
+import { CHECK_DELAY_MS, STALE_STYLE, recheckRunStaleness, watchRunStaleness } from "@/stores/runStaleness";
 import { cachedSourceHash } from "@/utils/sourceHash";
+import { recordVersion } from "@/utils/recordVersion";
 import { useRunTimingStore } from "@/stores/runTimingStore";
 import yaml from "js-yaml";
 import { useUIStore, type InputGrouping } from "@/stores/uiStore";
@@ -265,6 +267,21 @@ export function RunPanel() {
   }, [running]);
   const runElapsedS =
     running && runStartedAt ? Math.max(0, (runTick - runStartedAt) / 1000) : 0;
+  // #357: the sticky Run row's height, which grows when its controls wrap,
+  // kept as the panel's scroll padding so nothing scrolls in under it.
+  const [stickyRowHeight, setStickyRowHeight] = useState(0);
+  const stickyRowObserver = useRef<ResizeObserver | null>(null);
+  const stickyRowRef = useCallback((el: HTMLDivElement | null) => {
+    stickyRowObserver.current?.disconnect();
+    stickyRowObserver.current = null;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setStickyRowHeight(el.getBoundingClientRect().height));
+    ro.observe(el);
+    stickyRowObserver.current = ro;
+  }, []);
+  // #357: how far the run in flight has got — trials finished of the total and
+  // how long the last one took — polled from the backend while it runs.
+  const [runProgress, setRunProgress] = useState<RunProgress | null>(null);
   // #894: the last completed run's timing, for the "· ran in X.Xs" record.
   const lastRunTiming = useRunTimingStore((s) => s.last);
 
@@ -424,6 +441,11 @@ export function RunPanel() {
       // #337: tag the run with the source it runs, hashed once, here.
       const sourceHash = cachedSourceHash(useModelStore.getState().source);
 
+      // #357: name the run so its progress can be asked for while it goes.
+      const progressId = newRunId();
+      setRunProgress(null);
+      const stopPolling = pollRunProgress(progressId, setRunProgress);
+
       const t0 = performance.now();
       // For the activity log (#1287): started now, finished in `finally` with
       // how it went and how long it took.
@@ -439,6 +461,7 @@ export function RunPanel() {
             composition_name: compositionName,
             inputs,
             execution_mode: executionMode,
+            progress_id: progressId,
           }),
         });
 
@@ -544,6 +567,7 @@ export function RunPanel() {
           runMs, // #894: preserve this run's duration in its record
           serverRunMs,
           pnlVersion: useModelStore.getState().diagnostics?.pnlVersion,
+          sourceHash,
           executionTrace: data.executionTrace || [],
           debuggerSnapshots: data.debuggerSnapshots || [],
         };
@@ -558,6 +582,8 @@ export function RunPanel() {
           durationMs: Math.round(performance.now() - t0),
           ...(reason ? { reason: String(reason).slice(0, 300) } : {}),
         });
+        stopPolling();
+        setRunProgress(null);
         setRunning(false);
         clearStatus();
       }
@@ -773,6 +799,9 @@ export function RunPanel() {
         overflow: "auto",
         height: "100%",
         fontSize: "var(--pnv-fs-13)",
+        // #357: anything scrolled into view — a node's header, a focused
+        // trial input — stops below the sticky Run row, not under it.
+        scrollPaddingTop: stickyRowHeight,
       }}
     >
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", padding: "12px 0" }}>
@@ -782,6 +811,8 @@ export function RunPanel() {
               the Run panel so the button is always reachable without scrolling
               past a tall list of input textareas. */}
           <div
+            ref={stickyRowRef}
+            data-testid="run-sticky-row"
             style={{
               position: "sticky",
               top: 0,
@@ -884,6 +915,18 @@ export function RunPanel() {
                     ? `Running… ${runElapsedS.toFixed(1)}s`
                     : "Run Model"}
                 </Button>
+                {/* #357: live trial progress beside the running counter. */}
+                {running && runProgress && runProgress.trial > 0 && (
+                  <span
+                    data-testid="run-trial-progress"
+                    title={`Trial ${runProgress.trial} of ${runProgress.total} finished${
+                      runProgress.seconds != null ? ` in ${runProgress.seconds.toFixed(2)} s` : ""
+                    }`}
+                    style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-secondary)", whiteSpace: "nowrap" }}
+                  >
+                    {formatRunProgress(runProgress)}
+                  </span>
+                )}
               </div>
             </div>
             {error && (
@@ -1434,6 +1477,57 @@ function parseRunFile(text: string): RunRecord {
 // Recent-runs history (#468). Each completed run is pinned here with its frozen
 // inputs; rows re-run (reproduce from those inputs), export a JSON sidecar, or
 // drop off. An Import affordance loads a shared run file's inputs into the form.
+/**
+ * The open model's source hash, recomputed only after edits pause (#357), and
+ * not at all while there are no saved runs to compare with: typing must not
+ * pay for it (the #337 rule).
+ */
+function useOpenSourceHash(enabled: boolean): string | null {
+  const source = useModelStore((s) => s.source);
+  const [hash, setHash] = useState<string | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    const id = setTimeout(() => setHash(cachedSourceHash(source)), CHECK_DELAY_MS);
+    return () => clearTimeout(id);
+  }, [enabled, source]);
+  return enabled ? hash : null;
+}
+
+/** One saved run's line saying whether it ran the model as it is now (#357). */
+function RecordVersionNote({
+  record,
+  openPath,
+  openSourceHash,
+}: {
+  record: RunRecord;
+  openPath: string | null;
+  openSourceHash: string | null;
+}) {
+  const v = recordVersion(record, openPath, openSourceHash);
+  if (!v) return null;
+  const text =
+    v === "matches" ? "Matches the open file"
+      : v === "earlier" ? "From an earlier version"
+        : "From another file";
+  const title =
+    v === "matches" ? "This run ran the model exactly as it is open now"
+      : v === "earlier" ? "The model has been edited since this run; re-running uses the current version"
+        : `This run ran ${record.modelPath}`;
+  return (
+    <div
+      data-testid="run-record-version"
+      data-version={v}
+      title={title}
+      style={{
+        fontSize: "var(--pnv-fs-10)",
+        color: v === "matches" ? "var(--pnv-text-faint)" : "var(--pnv-warning)",
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+
 function RecentRunsList({
   onRerun,
   onImport,
@@ -1446,6 +1540,8 @@ function RecentRunsList({
   const records = useRunRecords((s) => s.records);
   const removeRecord = useRunRecords((s) => s.removeRecord);
   const clearRecords = useRunRecords((s) => s.clear);
+  const openSourceHash = useOpenSourceHash(records.length > 0);
+  const openPath = useModelStore((s) => s.filePath);
   const fileRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -1545,6 +1641,11 @@ function RecentRunsList({
                   >
                     {when.toLocaleTimeString()} · {inputSummary}
                   </div>
+                  <RecordVersionNote
+                    record={r}
+                    openPath={openPath}
+                    openSourceHash={openSourceHash}
+                  />
                 </div>
                 <Button
                   kind="small" size="tall"

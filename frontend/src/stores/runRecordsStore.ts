@@ -29,6 +29,9 @@ export interface RunRecord {
   runMs?: number;
   serverRunMs?: number;
   pnlVersion?: string;
+  // #357: hash of the source this run ran (#337), so the list can say whether
+  // the saved run still matches the open file. Absent on older records.
+  sourceHash?: string;
   executionTrace?: unknown[];
   debuggerSnapshots?: unknown[];
 }
