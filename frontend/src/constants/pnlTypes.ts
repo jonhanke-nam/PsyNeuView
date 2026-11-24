@@ -350,6 +350,20 @@ export function isProjectionType(type: string): boolean {
   return PROJECTION_TYPES.has(type);
 }
 
+// Type names under the top-level "functions" category. A Function is not a
+// node: it belongs to a mechanism, as its `function=`. Picking one up in the
+// panel puts it onto a mechanism, never on the canvas by itself (#348, #349).
+export const FUNCTION_TYPES: Set<string> = new Set(
+  collectAllDefs(PNL_TAXONOMY_TREE.filter((n) => n.id === "functions")).map(
+    (d) => d.type,
+  ),
+);
+
+/** True if `type` is a function class (Linear, Logistic, …). */
+export function isFunctionType(type: string): boolean {
+  return FUNCTION_TYPES.has(type);
+}
+
 // Type -> accent colour (MechanismNode when nodes are coloured by type, and
 // the palette's dot). Each is a palette token, --pnv-type-*, defined in
 // styles/palette.css beside the rest of the colours (#1302).
