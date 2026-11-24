@@ -184,9 +184,16 @@ def read_docs(ctx: ToolContext, args: dict) -> dict:
     return {"hits": hits}
 
 
-def propose_app_edit(ctx: ToolContext, args: dict) -> dict:
+def _need_proposals_allowed(ctx: ToolContext) -> None:
+    """"Answer only" means no proposals of any kind: no edits, no file
+    writes, no files to open. Checked here, at the tool layer, so neither the
+    built-in agent nor Claude over MCP can make one, whatever the page shows."""
     if ctx.settings["autonomy"] == "answer":
-        raise ToolRefused("autonomy is 'answer only'; the assistant may not propose edits")
+        raise ToolRefused("autonomy is 'answer only'; the assistant may answer but not propose edits, file writes or files to open")
+
+
+def propose_app_edit(ctx: ToolContext, args: dict) -> dict:
+    _need_proposals_allowed(ctx)
     summary = _need_str(args, "summary")[:MAX_NAME_CHARS]
     ops = args.get("ops")
     if not isinstance(ops, list) or not ops:
@@ -381,6 +388,7 @@ def read_file(ctx: ToolContext, args: dict) -> dict:
 
 
 def propose_file_write(ctx: ToolContext, args: dict) -> dict:
+    _need_proposals_allowed(ctx)
     _need_files(ctx)
     if not any(f["access"] == "read_write" for f in ctx.settings["folders"]):
         raise ToolRefused("no folder allows writing (Settings: Allowed folders)")
@@ -413,6 +421,7 @@ def propose_file_write(ctx: ToolContext, args: dict) -> dict:
 
 
 def propose_open_file(ctx: ToolContext, args: dict) -> dict:
+    _need_proposals_allowed(ctx)
     _need_files(ctx)
     path = _need_str(args, "path")
     try:

@@ -270,6 +270,34 @@ def test_app_edit_refused_when_answer_only(client, tmp_path, fake):
     assert [e["type"] for e in events if e["type"] in ("refused", "proposal")] == ["refused"]
 
 
+def test_answer_only_refuses_every_kind_of_proposal(client, tmp_path, fake):
+    """"Answer only" stops file writes and files to open too, at the tool
+    layer, even with files visible and a read-and-write folder."""
+    folder = tmp_path / "models"
+    folder.mkdir()
+    existing = folder / "a.py"
+    existing.write_text("import psyneulink as pnl\n")
+    turn_on(client, tmp_path, autonomy="answer", visibility={"files": True},
+            folders=[{"path": str(folder), "access": "read_write"}])
+    _, events = run_turn(client, fake, [("", [
+        ("propose_app_edit", {"summary": "s", "ops": [{"op": "update_param", "args": {}}]}),
+        ("propose_file_write", {"path": str(folder / "b.py"), "text": "x = 1\n", "summary": "s"}),
+        ("propose_open_file", {"path": str(existing)}),
+        ("list_files", {"path": str(folder)}),
+    ])])
+    refused = [e for e in events if e["type"] == "refused"]
+    assert len(refused) == 3, events
+    assert all("answer only" in json.dumps(e) for e in refused)
+    assert not any(e["type"] == "proposal" for e in events)
+    assert not (folder / "b.py").exists()
+    # Reading still works: answering is what "answer only" allows.
+    assert any(e["type"] == "tool_result" for e in events)
+    # With "suggest" the same file proposals are made.
+    client.put("/api/assistant/settings", json={"autonomy": "suggest"})
+    _, events = run_turn(client, fake, [("", [("propose_open_file", {"path": str(existing)})])])
+    assert any(e["type"] == "proposal" for e in events)
+
+
 def test_tool_call_limit(client, tmp_path, fake):
     turn_on(client, tmp_path, limits={"tool_calls": 2, "minutes": 1})
     _, events = run_turn(client, fake, [("", [("read_open_model", {})] * 3)])
