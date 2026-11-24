@@ -69,6 +69,18 @@ def trial_array(value):
 
 
 
+def input_port_shapes(node):
+    """Each input port of ``node`` as ``{"name", "shape"}``, in order (#358).
+
+    ``/api/model/input-nodes`` reported only the first port's shape; a node
+    with several input ports takes one array per port, so callers need them all.
+    """
+    return [
+        {"name": p.name, "shape": list(np.asarray(p.defaults.value).shape)}
+        for p in node.input_ports
+    ]
+
+
 RESULT_MARKER = "###PSYNEUVIEW_RESULT###"
 
 # Emitted on stdout *before* RESULT_MARKER by streaming-capable tasks
@@ -2692,7 +2704,9 @@ def task_get_input_nodes(params):
         input_nodes.append({
             "name": node.name,
             "varName": var_name or node.name,
-            "shape": shape,
+            "shape": shape,  # the first port's, as before
+            # Every input port's name and shape, in order (#358).
+            "ports": input_port_shapes(node),
         })
 
     return {"inputNodes": input_nodes}
