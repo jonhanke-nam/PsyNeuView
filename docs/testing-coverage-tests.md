@@ -4183,6 +4183,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - occlusion: ${m.slug} · CI · #1006
 
+**`frontend/e2e/parallel-edges-apart.spec.ts`** (Browser (Playwright))
+
+- a second arrow between connected nodes is drawn apart (#388) › same and opposite direction, in Auto, Like show_graph and Custom · CI · #388
+
 **`frontend/e2e/show-cims-at-once.spec.ts`** (Browser (Playwright))
 
 - Interface nodes (CIMs) apply at once (#257) › ticking shows them and unticking hides them, with no save · CI · #257

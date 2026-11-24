@@ -9,7 +9,7 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 176 | 468 | 458 tests in 171 files |
+| Browser (Playwright) | 177 | 469 | 459 tests in 172 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 147 | 1295 | 1295 tests in 147 files |
 | Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
@@ -32,7 +32,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Mac app bridges and what's running](#macapp) | 6 files, 26 tests | – | 5 files, 59 tests | 7 files, 99 tests | 184 of 184 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
-| [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
+| [Layout, views and compositions](#layout) | 23 files, 49 tests | – | 21 files, 151 tests | 5 files, 56 tests | 255 of 256 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
 | [App shell, diagnostics and everything else](#shell) | 13 files, 26 tests | – | 20 files, 133 tests | 21 files, 206 tests | 362 of 365 |
 
@@ -1084,6 +1084,7 @@ No tests yet.
 | `layout-spacing.spec.ts` | Browser | 4 | yes | #278 | Spacing between nodes (#278): Settings ▸ Appearance ▸ Automatic layout. |
 | `nested-cluster-frames.spec.ts` | Browser | 1 | yes | #718 | Nested composition cluster frames — box-in-box (#718). |
 | `occlusion-audit.spec.ts` | Browser | 1 | yes | #1006, #963, #967 | Occlusion audit — measures edges that pass behind nodes (#1006, #963, #967). |
+| `parallel-edges-apart.spec.ts` | Browser | 1 | yes | #388, #389 | Two arrows between the same two nodes are drawn apart (#388, #389). |
 | `show-cims-at-once.spec.ts` | Browser | 2 | yes | #257 | Interface nodes (CIMs) appear as soon as the option is ticked (#257). |
 | `show-ports.spec.ts` | Browser | 1 | yes | #112, #123 | Show ports (#112): ports are hidden by default, and the one Show ports switch, in the graph toolbar's Advanced Graph View Options (#123), shows both the port dots on the graph and the Components panel's Ports section. |
 | `spline-straightness.spec.ts` | Browser | 1 | yes | #1023 | Spline straightness — a clear edge must not wander (#1023). |
@@ -1162,6 +1163,7 @@ No tests yet.
 | Spacing between nodes (#278) › a nested model, compact, has no overlapping nodes | `layout-spacing.spec.ts` | Browser | yes | #278 |
 | nested cluster frames › inner composition frame sits inside its parent frame | `nested-cluster-frames.spec.ts` | Browser | yes | #718 |
 | occlusion: ${m.slug} | `occlusion-audit.spec.ts` | Browser | yes | #1006 |
+| a second arrow between connected nodes is drawn apart (#388) › same and opposite direction, in Auto, Like show_graph and Custom | `parallel-edges-apart.spec.ts` | Browser | yes | #388 |
 | Interface nodes (CIMs) apply at once (#257) › ticking shows them and unticking hides them, with no save | `show-cims-at-once.spec.ts` | Browser | yes | #257 |
 | Interface nodes (CIMs) apply at once (#257) › every load asks for the view on screen, so none switches it | `show-cims-at-once.spec.ts` | Browser | yes | #257 |
 | Show ports (#112) › off by default; one switch shows ports on the graph and in Components; remembered | `show-ports.spec.ts` | Browser | yes | #112 |
