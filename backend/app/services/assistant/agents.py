@@ -80,7 +80,18 @@ def _usage_tokens(usage: Any, *keys: str) -> int:
 
 class AgentError(Exception):
     """The agent couldn't be reached or answered badly. The message is safe
-    to show: it never contains the key or the request body."""
+    to show: it never contains the key or the request body.
+
+    ``status`` is the HTTP status the agent answered with, when it answered
+    with an error; ``unreachable`` is true when no answer came at all (no
+    network, refused, timed out). Test connection (#368) words its message
+    from these."""
+
+    def __init__(self, message: str, *, status: int | None = None, detail: str = "", unreachable: bool = False):
+        super().__init__(message)
+        self.status = status
+        self.detail = detail
+        self.unreachable = unreachable
 
 
 class Agent(Protocol):
@@ -130,14 +141,14 @@ class AgentRedirected(Exception):
 _opener = urllib.request.build_opener(_NoRedirect())
 
 
-def _post_json(url: str, headers: dict, body: dict) -> dict:
+def _post_json(url: str, headers: dict, body: dict, *, timeout: float = REQUEST_TIMEOUT_SECONDS) -> dict:
     data = json.dumps(body).encode("utf-8")
     request = urllib.request.Request(url, data=data, method="POST")
     request.add_header("Content-Type", "application/json")
     for name, value in headers.items():
         request.add_header(name, value)
     try:
-        with _opener.open(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+        with _opener.open(request, timeout=timeout) as response:
             return json.loads(response.read().decode("utf-8"))
     except AgentRedirected as e:
         raise AgentError(str(e)) from None
@@ -148,11 +159,89 @@ def _post_json(url: str, headers: dict, body: dict) -> dict:
             detail = str(payload.get("error", {}).get("message") or payload.get("error") or "")[:300]
         except Exception:
             pass
-        raise AgentError(f"the agent answered HTTP {e.code}" + (f": {detail}" if detail else "")) from None
+        raise AgentError(f"the agent answered HTTP {e.code}" + (f": {detail}" if detail else ""), status=e.code, detail=detail) from None
     except urllib.error.URLError as e:
-        raise AgentError(f"couldn't reach the agent: {e.reason}") from None
-    except (ValueError, TimeoutError) as e:
+        raise AgentError(f"couldn't reach the agent: {e.reason}", unreachable=True) from None
+    except TimeoutError:
+        raise AgentError("couldn't reach the agent: it didn't answer in time", unreachable=True) from None
+    except OSError as e:
+        raise AgentError(f"couldn't reach the agent: {e.strerror or type(e).__name__}", unreachable=True) from None
+    except ValueError as e:
         raise AgentError(f"bad answer from the agent: {type(e).__name__}") from None
+
+
+# ── Test connection (#368) ───────────────────────────────────────────────
+
+#: Test connection waits this long, not the two minutes a real turn may take.
+TEST_TIMEOUT_SECONDS = 15
+
+
+@dataclass
+class ConnectionResult:
+    ok: bool
+    agent: str
+    model: str
+    ms: int | None
+    message: str
+
+    def as_dict(self) -> dict:
+        return {"ok": self.ok, "agent": self.agent, "model": self.model, "ms": self.ms, "message": self.message}
+
+
+def test_connection(agent_settings: dict, *, key: str | None, timeout: float = TEST_TIMEOUT_SECONDS) -> ConnectionResult:
+    """Send one minimal request to the agent the settings name and say, in
+    plain English, whether it worked. No tools, one output token, the text
+    "ping". The message never contains the key."""
+    import time
+
+    kind = agent_settings.get("type", "none")
+    if kind == "anthropic":
+        model = agent_settings.get("model") or DEFAULT_ANTHROPIC_MODEL
+        base = (agent_settings.get("base_url") or ANTHROPIC_URL).rstrip("/")
+        name = "Anthropic"
+        if not key:
+            return ConnectionResult(False, kind, model, None, "No API key is saved. Paste the key and press Save key first.")
+        url = f"{base}/v1/messages"
+        headers = {"x-api-key": key, "anthropic-version": ANTHROPIC_VERSION}
+        body = {"model": model, "max_tokens": 1, "messages": [{"role": "user", "content": "ping"}]}
+    elif kind == "openai_compatible":
+        model = agent_settings.get("model") or ""
+        base = (agent_settings.get("base_url") or "").rstrip("/")
+        if not base:
+            return ConnectionResult(False, kind, model, None, "No server address is set for the OpenAI-compatible agent.")
+        name = f"the server at {base}"
+        url = f"{base}/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {key}"} if key else {}
+        body = {"model": model, "max_tokens": 1, "messages": [{"role": "user", "content": "ping"}]}
+    else:
+        return ConnectionResult(False, "none", "", None, "No agent is chosen. Choose one under Which agent first.")
+
+    host = urlparse(url).hostname or base
+    model_words = model or "(the server's default)"
+    started = time.monotonic()
+    try:
+        _post_json(url, headers, body, timeout=timeout)
+    except AgentError as e:
+        ms = int((time.monotonic() - started) * 1000)
+        return ConnectionResult(False, kind, model, ms, _connection_message(e, host=host, model=model_words))
+    ms = int((time.monotonic() - started) * 1000)
+    return ConnectionResult(True, kind, model, ms, f"Connected to {name}, model {model_words}, in {ms} ms")
+
+
+def _connection_message(e: AgentError, *, host: str, model: str) -> str:
+    detail = (e.detail or "").lower()
+    if e.unreachable:
+        return f"Couldn't reach {host}. Check the network and the server address."
+    if e.status in (401, 403):
+        return f"The key was refused (HTTP {e.status})"
+    if e.status == 404 or (e.status == 400 and "model" in detail):
+        return f"The model name isn't recognised: {model}"
+    if e.status == 429:
+        return "Rate limited or out of credit (HTTP 429)"
+    if e.status is not None:
+        return f"The agent answered HTTP {e.status}" + (f": {e.detail}" if e.detail else "")
+    # A redirect refused, or an answer that wasn't JSON: the message is safe.
+    return str(e)[:1].upper() + str(e)[1:]
 
 
 # ── Anthropic ────────────────────────────────────────────────────────────

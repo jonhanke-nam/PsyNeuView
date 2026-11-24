@@ -102,6 +102,25 @@ async def delete_key():
     return {"set": False}
 
 
+@router.post("/test-connection")
+def test_connection():
+    """Send one minimal request to the saved agent with the saved key (#368)
+    and say whether it worked: ``{ok, agent, model, ms, message}``, always a
+    200, the message plain English and never the key.
+
+    Works with the assistant off, since you test before turning it on, but
+    only once an agent is chosen: saving the agent type is where sending to
+    that address was confirmed. A plain ``def`` so the up-to-15-second wait
+    runs in the thread pool, not on the event loop."""
+    available()
+    agent_settings = assistant_settings.get_settings()["agent"]
+    if agent_settings.get("type", "none") == "none":
+        return agents.test_connection(agent_settings, key=None).as_dict()
+    result = agents.test_connection(agent_settings, key=keys.get_key())
+    logger.info("assistant test connection: agent=%s ok=%s ms=%s", result.agent, result.ok, result.ms)
+    return result.as_dict()
+
+
 # ── sessions ─────────────────────────────────────────────────────────────
 
 
