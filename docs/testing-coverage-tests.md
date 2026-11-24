@@ -1818,9 +1818,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - reference models: load + run without crashing › coverage: spec lists every bundled reference model · CI · #818
 - reference models: load + run without crashing › loads + runs without white-screen: ${label} · CI · #818
 
+**`frontend/e2e/run-array-inputs.spec.ts`** (Browser (Playwright))
+
+- trial inputs are typed as arrays and sent as typed · CI · #330
+
 **`frontend/e2e/run-panel-grouping.spec.ts`** (Browser (Playwright))
 
-- run panel input grouping › toggles between by-node and by-trial layouts · CI · #570
+- run panel input grouping › toggles between by-trial and by-node layouts · CI · #570
 
 **`frontend/e2e/run-record-yaml.spec.ts`** (Browser (Playwright))
 
@@ -1901,6 +1905,8 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - preloadable › opens with the first small set · CI
 - preloadable › skips a whole experiment, like the Nieuwenhuis model's 1,100 trials · CI
 - preloadable › keeps a set right at the limit · CI
+- textsFromSet (#330) › writes each trial in bracket notation, one text per port · CI · #330
+- textsFromSet (#330) › refuses a set missing a node or with uneven trials · CI · #330
 
 **`frontend/src/utils/learnPlan.test.ts`** (Frontend unit (vitest))
 
@@ -4751,6 +4757,15 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - revealModelError › keeps bumping, so repeated clicks each re-trigger the jump · CI · #1103
 - revealModelError › is independent of the error line itself · CI · #1103
 
+**`frontend/src/stores/uiStoreInputs.test.ts`** (Frontend unit (vitest))
+
+- input arrangement (#331) › is by trial when nothing is stored · CI · #331
+- input arrangement (#331) › keeps a stored by-node choice · CI · #331
+- input arrangement (#331) › treats anything else as the default · CI · #331
+- input arrangement (#331) › stores a choice made in the Run row · CI · #331
+- per-element grid setting (#330) › is off by default · CI · #330
+- per-element grid setting (#330) › is kept once turned on · CI · #330
+
 **`frontend/src/utils/activityLog.test.ts`** (Frontend unit (vitest))
 
 - recording › keeps entries in the order they were recorded, each with an ISO time · CI · #1287
@@ -4805,6 +4820,24 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - nodeSelector › leaves no raw newline, quote or backslash in the value for %j · CI · #1236
 - nodeSelector › leaves an ordinary name alone · CI · #1236
+
+**`frontend/src/utils/tensorInput.test.ts`** (Frontend unit (vitest))
+
+- parseTensor (#330) › reads bracket notation, flat and nested · CI · #330
+- parseTensor (#330) › reads numpy's printed form, spaces between elements · CI · #330
+- parseTensor (#330) › says what is wrong · CI · #330
+- formatTensor › writes the standard notation, nested · CI
+- formatTensor › round-trips through the parser · CI
+- shapes › measures regular arrays and refuses ragged ones · CI
+- shapes › describes shapes in words · CI
+- parsePortInput › accepts the port's shape · CI
+- parsePortInput › flags a wrong length or shape · CI
+- parsePortInput › accepts PsyNeuLink's extra brackets and a bare number for one element · CI
+- one array per port › sends one port's array, or one array per port · CI
+- one array per port › splits a trial's value back into its ports · CI
+- grid cells and pasted rows › splits and joins elements, keeping cells mid-edit · CI
+- grid cells and pasted rows › defaults to a one-hot vector stepping through the elements · CI
+- grid cells and pasted rows › reads pasted CSV and bracket lines · CI
 
 **`frontend/src/utils/waitLog.test.ts`** (Frontend unit (vitest))
 

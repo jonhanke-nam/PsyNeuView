@@ -17,6 +17,7 @@ import {
   useBusyStore,
 } from "@/stores/busyStore";
 import { useNotificationStore } from "@/stores/notificationStore";
+import { useUIStore } from "@/stores/uiStore";
 import { actionLoggingOn, onActionLoggingChanged, setActionLogging } from "@/utils/activityLog";
 import { AUTOSAVE_MAX_SECONDS, AUTOSAVE_MIN_SECONDS, clampAutosaveSeconds } from "@/utils/autosave";
 import { hasSettingsBridge } from "@/utils/macAppSettings";
@@ -61,6 +62,9 @@ export function GeneralSection({
         <SidecarPlacementDefaultRow />
         <div style={{ ...mutedStyle, marginTop: 10 }}>Where models are saved, and every other folder: Folders.</div>
       </Group>
+      <Group id="run-inputs" title="Run inputs">
+        <InputCellGridRow />
+      </Group>
       <Group id="busy-indicator" title="Busy indicator">
         <BusyThresholdRow />
       </Group>
@@ -97,6 +101,37 @@ function ActionLoggingRow() {
             or anything you type. Recorded either way, on or off: errors, messages shown, how long each wait took,
             and runs, learning and walkthroughs with how they ended. Turning this off clears the actions recorded
             so far, including the copy kept on this computer; it all stays here until you send a report.
+          </span>
+        </span>
+      </label>
+    </div>
+  );
+}
+
+/**
+ * How the Run tab's trial inputs are edited (#330). Off, the default: each
+ * trial's input is one field in bracket notation, `[0, 1]`, as passed to
+ * `Composition.run`. On: each element has its own box, as before.
+ */
+function InputCellGridRow() {
+  const on = useUIStore((s) => s.inputCellGrid);
+  const setOn = useUIStore((s) => s.setInputCellGrid);
+  return (
+    <div style={{ fontSize: "var(--pnv-fs-13)" }}>
+      <label style={{ display: "flex", alignItems: "flex-start", gap: 6, cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          data-testid="setting-run-input-cell-grid"
+          checked={on}
+          onChange={(e) => setOn(e.target.checked)}
+          style={{ marginTop: 2 }}
+        />
+        <span>
+          <span style={{ fontWeight: 500 }}>Edit each element in its own box</span>
+          <span style={{ display: "block", fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", marginTop: 2, maxWidth: 560 }}>
+            Off, each trial's input in the Run tab is one field written as an array, such as [0, 1], the way
+            PsyNeuLink's Composition.run takes it. On, each element of the array has its own labelled box instead.
+            What runs is the same either way.
           </span>
         </span>
       </label>

@@ -4,7 +4,22 @@
  */
 
 import { useState, useCallback, useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
-import { cellsFromSet, preloadable, setsFor } from "@/utils/inputSets";
+import { preloadable, setsFor, textsFromSet } from "@/utils/inputSets";
+import {
+  defaultPortText,
+  formatTensor,
+  isNumberCell,
+  joinElements,
+  parsePortInput,
+  pastedRows,
+  portShape,
+  portValues,
+  splitElements,
+  trialValue,
+  zeros,
+  type ParseResult,
+  type Tensor,
+} from "@/utils/tensorInput";
 import { realInputNodes } from "@/utils/learnPlan";
 import { useModelStore, type DebuggerSnapshot, selectExecPath } from "@/stores/modelStore";
 import { useStatusStore } from "@/stores/statusStore";
@@ -78,12 +93,32 @@ function toOutputVectors(output: unknown): number[][] {
   return [output as number[]];
 }
 
-// A cell is valid iff it parses to a finite number. Empty / NaN are flagged
-// at edit time rather than silently coerced to 0 (the old parseFloat||0 trap).
-function isValidCell(s: string): boolean {
-  const t = s.trim();
-  if (t === "") return false;
-  return Number.isFinite(Number(t));
+/**
+ * The shapes of the input ports a node's trial input is written for: one
+ * array per port (#330). Today the panel fills the first port only, as it
+ * always has; input nodes with several ports (#332) list them all here and
+ * get one field per port, with no change to the text, parsing or what a
+ * run sends.
+ */
+function inputPortShapes(node: InputNodeInfo): number[][] {
+  return [node.shape];
+}
+
+/** Each trial's one-hot default input, one text per port. */
+function defaultTexts(nodes: InputNodeInfo[], numTrials: number): Record<string, string[][]> {
+  const out: Record<string, string[][]> = {};
+  for (const node of nodes) {
+    out[node.varName] = Array.from({ length: numTrials }, (_, t) =>
+      inputPortShapes(node).map((sh) => defaultPortText(sh, t)),
+    );
+  }
+  return out;
+}
+
+/** A trial of zeros for a node, one text per port. */
+function zeroTexts(node: InputNodeInfo | undefined): string[] {
+  if (!node) return ["[0]"];
+  return inputPortShapes(node).map((sh) => formatTensor(zeros(portShape(sh))));
 }
 
 interface TrialResult {
@@ -104,11 +139,12 @@ interface RunResults {
 
 // Snapshot of the inputs that actually produced a run's results, taken at
 // submit time so later textarea edits don't retroactively change the per-trial
-// cards (#463). `trials[t]` is the 1-D vector submitted for trial t.
+// cards (#463). `trials[t]` is the value submitted for trial t: `[0, 1]`, or
+// one array per port for a node with several (#330).
 interface SubmittedInput {
   name: string;
   varName: string;
-  trials: number[][];
+  trials: Tensor[];
 }
 
 export function RunPanel() {
@@ -137,11 +173,14 @@ export function RunPanel() {
   const setInputGrouping = useUIStore((s) => s.setInputGrouping);
   const [inputNodes, setInputNodes] = useState<InputNodeInfo[]>([]);
   const [numTrials, setNumTrials] = useState(5);
-  // Structured input cells: varName -> trials[] -> elements[] of raw strings.
-  // Strings (not numbers) so partial / invalid edits survive without being
-  // coerced to 0, and per-cell validation can flag them (#461). All nodes
-  // share the trial count (numTrials), matching PsyNeuLink's single input dict.
+  // Trial inputs as text (#330): varName -> trials[] -> one text per input
+  // port, in bracket notation (`[0, 1]`). Text, not numbers, so partial or
+  // invalid edits survive and validation can flag them (#461); the
+  // per-element grid (a setting) edits the same text a cell at a time. All
+  // nodes share the trial count (numTrials), matching PsyNeuLink's single
+  // input dict.
   const [inputCells, setInputCells] = useState<Record<string, string[][]>>({});
+  const inputCellGrid = useUIStore((s) => s.inputCellGrid);
   // Undo stack for trial deletion (#528): each ✕ pushes the removed trial's
   // index + per-node values so a mis-click can be reversed. Cleared whenever
   // the grid is rebuilt wholesale (model change, CSV paste).
@@ -309,13 +348,7 @@ export function RunPanel() {
     }
 
     setInputNodes(inputs);
-    const defaults: Record<string, string[][]> = {};
-    for (const node of inputs) {
-      const size = node.shape[0] || 1;
-      defaults[node.varName] = Array.from({ length: numTrials }, (_, t) =>
-        Array.from({ length: size }, (_, i) => (i === t % size ? "1" : "0")),
-      );
-    }
+    const defaults = defaultTexts(inputs, numTrials);
     // #1216: a model that declares its own run inputs opens with the first of
     // them, rather than the synthesized 1-per-trial defaults, unless that set is
     // a whole experiment (then it's in the picker, not preloaded).
@@ -332,9 +365,11 @@ export function RunPanel() {
       ? sets.find((s) => s.name === inputSetNameRef.current)
       : undefined;
     const declared = kept ?? preloadable(sets);
-    const fromSet = declared ? cellsFromSet(declared.inputs, inputs) : null;
+    const fromSet = declared
+      ? textsFromSet(declared.inputs, inputs, (n) => inputPortShapes(n as InputNodeInfo).length)
+      : null;
     if (declared && fromSet) {
-      setInputCells(fromSet.cells);
+      setInputCells(fromSet.texts);
       setNumTrials(fromSet.trials);
       setInputSetName(declared.name);
     } else {
@@ -353,20 +388,15 @@ export function RunPanel() {
   const applyInputSet = useCallback(
     (name: string) => {
       const chosen = runSets.find((s) => s.name === name);
-      const fromSet = chosen ? cellsFromSet(chosen.inputs, inputNodes) : null;
+      const fromSet = chosen
+        ? textsFromSet(chosen.inputs, inputNodes, (n) => inputPortShapes(n as InputNodeInfo).length)
+        : null;
       if (fromSet) {
-        setInputCells(fromSet.cells);
+        setInputCells(fromSet.texts);
         setNumTrials(fromSet.trials);
         setInputSetName(name);
       } else {
-        const defaults: Record<string, string[][]> = {};
-        for (const node of inputNodes) {
-          const size = node.shape[0] || 1;
-          defaults[node.varName] = Array.from({ length: numTrials }, (_, t) =>
-            Array.from({ length: size }, (_, i) => (i === t % size ? "1" : "0")),
-          );
-        }
-        setInputCells(defaults);
+        setInputCells(defaultTexts(inputNodes, numTrials));
         setInputSetName("");
       }
       setRemovedTrials([]);
@@ -378,7 +408,7 @@ export function RunPanel() {
   // out from handleRun so a saved run record can be re-submitted with its own
   // frozen inputs (one-click re-run, #468) without going through the live form.
   const executeRun = useCallback(
-    async (inputs: Record<string, number[][]>) => {
+    async (inputs: Record<string, Tensor[]>) => {
       if (!filePath || !compositionName) return;
       const { setStatus, clearStatus } = useStatusStore.getState();
       setRunning(true);
@@ -531,37 +561,55 @@ export function RunPanel() {
     [filePath, compositionName, inputNodes, modelLabels, executionMode],
   );
 
-  const handleRun = useCallback(() => {
-    // Read the structured cells into numeric trial vectors. Cells are validated
-    // at edit time and Run is disabled while any is invalid, so every cell
-    // parses to a finite number here.
-    const inputs: Record<string, number[][]> = {};
+  // Every trial's text checked against its port's shape (#330): what Run
+  // sends, and what the editors highlight. varName -> trial -> port.
+  const parsedInputs = useMemo(() => {
+    const out: Record<string, ParseResult[][]> = {};
     for (const node of inputNodes) {
-      const cells = inputCells[node.varName] || [];
-      inputs[node.varName] = cells.map((trial) => trial.map((c) => Number(c.trim())));
+      const shapes = inputPortShapes(node);
+      out[node.varName] = (inputCells[node.varName] || []).map((trial) =>
+        shapes.map((sh, p) => parsePortInput(trial[p] ?? "", sh)),
+      );
+    }
+    return out;
+  }, [inputNodes, inputCells]);
+
+  const handleRun = useCallback(() => {
+    // Run is disabled while any input is invalid, so every trial parses here.
+    const inputs: Record<string, Tensor[]> = {};
+    for (const node of inputNodes) {
+      inputs[node.varName] = (parsedInputs[node.varName] || []).map((ports) =>
+        trialValue(ports.map((r) => (r.ok ? r.value : 0))),
+      );
     }
     void executeRun(inputs);
-  }, [inputNodes, inputCells, executeRun]);
+  }, [inputNodes, parsedInputs, executeRun]);
 
   // Load a record's frozen inputs back into the live form (so the editor
   // reflects them) without running. Shared by re-run and file import (#468).
+  // Each saved trial is written back as bracket text, one per port (#330);
+  // records saved before #330 hold the same 1-D vectors, so they load as is.
   const loadRecordIntoForm = useCallback((record: RunRecord) => {
     const cells: Record<string, string[][]> = {};
     for (const inp of record.inputs) {
-      cells[inp.varName] = inp.trials.map((row) => row.map((v) => String(v)));
+      const node = inputNodes.find((n) => n.varName === inp.varName);
+      const nPorts = node ? inputPortShapes(node).length : 1;
+      cells[inp.varName] = inp.trials.map((value) =>
+        portValues(value, nPorts).map((v) => formatTensor(v)),
+      );
     }
     setInputCells(cells);
     setNumTrials(record.numTrials || record.inputs[0]?.trials.length || 1);
-  }, []);
+  }, [inputNodes]);
 
   // Re-run a saved record: reflect its inputs in the form and submit them
   // as-is, so the result is reproduced from the frozen inputs (#468).
   const rerunRecord = useCallback(
     (record: RunRecord) => {
       loadRecordIntoForm(record);
-      const inputs: Record<string, number[][]> = {};
+      const inputs: Record<string, Tensor[]> = {};
       for (const inp of record.inputs) {
-        inputs[inp.varName] = inp.trials.map((row) => row.slice());
+        inputs[inp.varName] = inp.trials.slice();
       }
       void executeRun(inputs);
     },
@@ -585,13 +633,15 @@ export function RunPanel() {
     [loadRecordIntoForm],
   );
 
+  // One port's text for one trial: the bracket field, or the grid's cells
+  // joined back into it.
   const setCell = useCallback(
-    (varName: string, trial: number, elem: number, value: string) => {
+    (varName: string, trial: number, port: number, value: string) => {
       setInputCells((prev) => {
         const node = prev[varName];
         if (!node) return prev;
         const next = node.map((row) => row.slice());
-        next[trial][elem] = value;
+        next[trial][port] = value;
         return { ...prev, [varName]: next };
       });
     },
@@ -604,13 +654,13 @@ export function RunPanel() {
     setInputCells((prev) => {
       const next: Record<string, string[][]> = {};
       for (const [varName, rows] of Object.entries(prev)) {
-        const width = rows[0]?.length || 1;
-        next[varName] = [...rows.map((r) => r.slice()), Array(width).fill("0")];
+        const node = inputNodes.find((n) => n.varName === varName);
+        next[varName] = [...rows.map((r) => r.slice()), zeroTexts(node)];
       }
       return next;
     });
     setNumTrials((n) => n + 1);
-  }, []);
+  }, [inputNodes]);
 
   const removeTrial = useCallback(
     (trial: number) => {
@@ -642,8 +692,8 @@ export function RunPanel() {
     setInputCells((prev) => {
       const next: Record<string, string[][]> = {};
       for (const [varName, rows] of Object.entries(prev)) {
-        const width = rows[0]?.length || last.values[varName]?.length || 1;
-        const restored = (last.values[varName] ?? Array(width).fill("0")).slice();
+        const node = inputNodes.find((n) => n.varName === varName);
+        const restored = (last.values[varName] ?? zeroTexts(node)).slice();
         const at = Math.min(last.trial, rows.length);
         next[varName] = [
           ...rows.slice(0, at).map((r) => r.slice()),
@@ -655,24 +705,17 @@ export function RunPanel() {
     });
     setNumTrials(restoredLength);
     setRemovedTrials((stack) => stack.slice(0, -1));
-  }, [removedTrials, inputCells]);
+  }, [removedTrials, inputCells, inputNodes]);
 
-  // CSV escape hatch: parse a pasted block (newline = trial, comma = element)
-  // into the structured cells for one node. Rows are padded/truncated to the
-  // node's element width so the grid stays rectangular. The pasted row count
+  // CSV escape hatch: parse a pasted block (newline = trial, comma = element,
+  // or one array per line in bracket notation, #330) into one node's trials.
+  // Comma rows are padded/truncated to the node's element width. The pasted row count
   // becomes the shared trial count, so every other node is padded (zero-filled)
   // or truncated to match — otherwise the input dict would carry mismatched
   // lengths and PsyNeuLink rejects the run.
   const applyCsv = useCallback(
     (varName: string, text: string, width: number) => {
-      const rows = text
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0)
-        .map((line) => {
-          const cells = line.split(",").map((v) => v.trim());
-          return Array.from({ length: width }, (_, i) => cells[i] ?? "0");
-        });
+      const rows = pastedRows(text, width).map((row) => [row]);
       if (rows.length === 0) return;
       const trials = rows.length;
       setInputCells((prev) => {
@@ -682,9 +725,9 @@ export function RunPanel() {
             next[k] = rows;
             continue;
           }
-          const w = prevRows[0]?.length || 1;
+          const node = inputNodes.find((n) => n.varName === k);
           next[k] = Array.from({ length: trials }, (_, t) =>
-            prevRows[t] ? prevRows[t].slice() : Array(w).fill("0"),
+            prevRows[t] ? prevRows[t].slice() : zeroTexts(node),
           );
         }
         return next;
@@ -694,16 +737,13 @@ export function RunPanel() {
       // the paste would restore rows that no longer fit.
       setRemovedTrials([]);
     },
-    [],
+    [inputNodes],
   );
 
-  // Any non-numeric / empty cell blocks the run and surfaces inline.
+  // Any input that doesn't fit its port blocks the run and surfaces inline.
   const hasInvalid = useMemo(
-    () =>
-      Object.values(inputCells).some((rows) =>
-        rows.some((row) => row.some((c) => !isValidCell(c))),
-      ),
-    [inputCells],
+    () => Object.values(parsedInputs).some((rows) => rows.some((ports) => ports.some((r) => !r.ok))),
+    [parsedInputs],
   );
 
   if (!filePath) {
@@ -830,7 +870,7 @@ export function RunPanel() {
                   kind="primary" size="compact"
                   onClick={handleRun}
                   disabled={running || hasInvalid}
-                  title={hasInvalid ? "Fix the highlighted input cells first" : undefined}
+                  title={hasInvalid ? "Fix the highlighted inputs first" : undefined}
                   style={{ whiteSpace: "nowrap" }}
                 >
                   {running
@@ -935,7 +975,7 @@ export function RunPanel() {
             )}
             {hasInvalid && !error && (
               <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-danger)", marginTop: 2 }}>
-                Some input cells aren't numbers — fix the highlighted slots to run.
+                Some inputs don't fit their node: fix the highlighted ones to run.
               </div>
             )}
             {removedTrials.length > 0 && (
@@ -976,6 +1016,8 @@ export function RunPanel() {
                 node={node}
                 labels={inputElementLabels(node, modelLabels)}
                 cells={inputCells[node.varName] || []}
+                parsed={parsedInputs[node.varName] || []}
+                cellGrid={inputCellGrid}
                 onCell={setCell}
                 onRemoveTrial={removeTrial}
                 onApplyCsv={applyCsv}
@@ -988,6 +1030,8 @@ export function RunPanel() {
                 inputNodes.map((n) => [n.varName, inputElementLabels(n, modelLabels)]),
               )}
               cells={inputCells}
+              parsed={parsedInputs}
+              cellGrid={inputCellGrid}
               onCell={setCell}
               onRemoveTrial={removeTrial}
             />
@@ -1140,7 +1184,7 @@ export function RunPanel() {
                             <span style={{ color: "var(--pnv-text-hint)" }}>
                               {results.outputLabels?.[i] ?? `output[${i}]`}:
                             </span>{" "}
-                            {JSON.stringify(row.map((v) => Math.round(v * 10000) / 10000))}
+                            {formatTensor(row, 4)}
                           </div>
                         ))}
                       </td>
@@ -1568,14 +1612,18 @@ function RecentRunsList({
   );
 }
 
-// Element-labeled, per-trial input editor for one input node (#461). Replaces
-// the free-form CSV textarea: each trial is a row of numeric cells headed by
-// the element name (red_ink / green_ink), with edit-time validation and a
-// CSV-paste escape hatch. Add-trial lives in the parent (shared trial count).
+// Per-trial input editor for one input node (#461, #330): each trial is a
+// row holding the trial's input in bracket notation, `[0, 1]`, one field per
+// input port, validated against the port's shape. With the per-element grid
+// setting on, each element has its own labelled box instead, as before #330.
+// Paste CSV fills every trial at once. Add-trial lives in the parent (shared
+// trial count).
 function InputNodeEditor({
   node,
   labels,
   cells,
+  parsed,
+  cellGrid,
   onCell,
   onRemoveTrial,
   onApplyCsv,
@@ -1583,7 +1631,9 @@ function InputNodeEditor({
   node: InputNodeInfo;
   labels: string[];
   cells: string[][];
-  onCell: (varName: string, trial: number, elem: number, value: string) => void;
+  parsed: ParseResult[][];
+  cellGrid: boolean;
+  onCell: (varName: string, trial: number, port: number, value: string) => void;
   onRemoveTrial: (trial: number) => void;
   onApplyCsv: (varName: string, text: string, width: number) => void;
 }) {
@@ -1596,7 +1646,7 @@ function InputNodeEditor({
       >
         {node.name}{" "}
         <span style={{ color: "var(--pnv-text-faint)" }}>
-          [{width} element{width === 1 ? "" : "s"}]
+          [{width} element{width === 1 ? "" : "s"}{elementNames(labels, cellGrid)}]
         </span>
       </label>
       {cells.map((row, t) => (
@@ -1607,16 +1657,15 @@ function InputNodeEditor({
           <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", minWidth: 42 }}>
             Trial {t + 1}
           </span>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, flex: 1 }}>
-            {row.map((val, e) => (
-              <InputCell
-                key={e}
-                label={labels[e] ?? `[${e}]`}
-                value={val}
-                onChange={(v) => onCell(node.varName, t, e, v)}
-              />
-            ))}
-          </div>
+          <TrialPorts
+            node={node}
+            trial={t}
+            labels={labels}
+            texts={row}
+            parsed={parsed[t] || []}
+            cellGrid={cellGrid}
+            onCell={onCell}
+          />
           <Button
             kind="small" size="icon"
             className="pnv-remove-x"
@@ -1636,7 +1685,8 @@ function InputNodeEditor({
           value={csvText}
           onChange={(e) => setCsvText(e.target.value)}
           rows={3}
-          placeholder={"1, 0\n0, 1"}
+          placeholder={"1, 0\n[0, 1]"}
+          title="One trial per line: comma-separated numbers, or an array in bracket notation"
           style={{
             width: "100%",
             fontFamily: "var(--pnv-font-mono)",
@@ -1664,18 +1714,133 @@ function InputNodeEditor({
   );
 }
 
-// One labeled numeric cell, shared by the by-node and by-trial layouts so
-// validation/edit behaviour can't drift between the two groupings (#570).
+/**
+ * ": red_ink, green_ink" after a node's element count, when the model names
+ * its elements: in bracket notation the names aren't on the boxes, so the
+ * header says which position is which. Positional names ([0], [1]) add
+ * nothing and are left out, as is the grid, which labels every box.
+ */
+function elementNames(labels: string[], cellGrid: boolean): string {
+  if (cellGrid || labels.length === 0 || labels.every((l, i) => l === `[${i}]`)) return "";
+  return `: ${labels.join(", ")}`;
+}
+
+/** `[_, _]`: the shape a port expects, as a placeholder (#330, #332). */
+function shapePlaceholder(shape: number[]): string {
+  const sh = portShape(shape);
+  const build = (dims: number[]): string =>
+    dims.length === 0 ? "_" : `[${Array.from({ length: dims[0] }, () => build(dims.slice(1))).join(", ")}]`;
+  return build(sh);
+}
+
+// One trial's input for one node: a bracket field per input port, or, with
+// the per-element grid setting on, a labelled box per element. Shared by the
+// by-node and by-trial layouts so editing and validation can't drift
+// between them (#570).
+function TrialPorts({
+  node,
+  trial,
+  labels,
+  texts,
+  parsed,
+  cellGrid,
+  onCell,
+}: {
+  node: InputNodeInfo;
+  trial: number;
+  labels: string[];
+  texts: string[];
+  parsed: ParseResult[];
+  cellGrid: boolean;
+  onCell: (varName: string, trial: number, port: number, value: string) => void;
+}) {
+  const shapes = inputPortShapes(node);
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
+      {shapes.map((shape, p) => {
+        const text = texts[p] ?? "";
+        const check = parsed[p];
+        const error = check && !check.ok ? check.error : null;
+        // The grid edits one element per box, so it serves a 1-D port; a
+        // deeper one keeps its bracket field even with the setting on.
+        if (cellGrid && portShape(shape).length === 1) {
+          const width = portShape(shape)[0];
+          const elems = splitElements(text);
+          const shown = Array.from({ length: Math.max(width, elems.length) }, (_, i) => elems[i] ?? "");
+          return (
+            <div key={p} style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {shown.map((val, e) => (
+                <InputCell
+                  key={e}
+                  label={labels[e] ?? `[${e}]`}
+                  value={val}
+                  extra={e >= width}
+                  onChange={(v) => {
+                    const next = shown.slice();
+                    next[e] = v;
+                    onCell(node.varName, trial, p, joinElements(next));
+                  }}
+                />
+              ))}
+            </div>
+          );
+        }
+        const placeholder = shapePlaceholder(shape);
+        return (
+          <span key={p} style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+            <input
+              value={text}
+              data-testid={`run-trial-input-${node.name}-${trial + 1}`}
+              aria-label={`${node.name}, trial ${trial + 1}`}
+              aria-invalid={error ? true : undefined}
+              placeholder={placeholder}
+              spellCheck={false}
+              autoComplete="off"
+              onChange={(ev) => onCell(node.varName, trial, p, ev.target.value)}
+              title={error ?? `${node.name}, trial ${trial + 1}: ${placeholder.replace(/_/g, "number")}`}
+              style={{
+                // Sized to its text in the monospace font, so a short vector
+                // stays compact and a long one isn't cut off.
+                width: `${Math.max(text.length, placeholder.length, 6) + 2}ch`,
+                maxWidth: "100%",
+                fontFamily: "var(--pnv-font-mono)",
+                fontSize: "var(--pnv-fs-11)",
+                padding: "2px 4px",
+                border: `1px solid ${error ? "var(--pnv-danger)" : "var(--pnv-border-light)"}`,
+                background: error ? "var(--pnv-danger-tint)" : "var(--pnv-surface)",
+                borderRadius: 3,
+              }}
+            />
+            {error && (
+              <span
+                data-testid={`run-trial-input-error-${node.name}-${trial + 1}`}
+                style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-danger)", whiteSpace: "nowrap" }}
+              >
+                {error}
+              </span>
+            )}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+// One labeled numeric cell of the per-element grid (Settings ▸ General ▸
+// Run inputs). `extra` marks a box beyond the port's length: there to be
+// cleared, flagged like any other wrong entry.
 function InputCell({
   label,
   value,
+  extra,
   onChange,
 }: {
   label: string;
   value: string;
+  extra?: boolean;
   onChange: (value: string) => void;
 }) {
-  const invalid = !isValidCell(value);
+  const invalid = extra || !isNumberCell(value);
   return (
     <label
       style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-muted)" }}
@@ -1685,7 +1850,7 @@ function InputCell({
         value={value}
         inputMode="decimal"
         onChange={(ev) => onChange(ev.target.value)}
-        title={invalid ? "Not a number" : undefined}
+        title={extra ? "More elements than the node takes" : invalid ? "Not a number" : undefined}
         style={{
           width: 48,
           fontFamily: "var(--pnv-font-mono)",
@@ -1700,7 +1865,6 @@ function InputCell({
   );
 }
 
-// Segmented control to pick which dimension is outermost in the input grid (#570).
 /**
  * The Run row's labelled selects (Backend, From), #109: the label beside its
  * select, both as tall as Reset and Run Model (the row's compact buttons),
@@ -1724,6 +1888,8 @@ const RUN_ROW_SELECT: CSSProperties = {
   color: "var(--pnv-text-body)",
 };
 
+// Segmented control choosing how the inputs are arranged (#570): by trial,
+// the default (#331), or by node. A view switch only: what runs is the same.
 function GroupingToggle({
   value,
   onChange,
@@ -1732,12 +1898,16 @@ function GroupingToggle({
   onChange: (grouping: InputGrouping) => void;
 }) {
   const options: Array<{ key: InputGrouping; label: string }> = [
-    { key: "byNode", label: "Node" },
-    { key: "byTrial", label: "Trial" },
+    { key: "byTrial", label: "By trial" },
+    { key: "byNode", label: "By node" },
   ];
   return (
     <div
-      title="Group input cells by node (each node's trials together) or by trial (each trial's nodes together)"
+      title={
+        "By trial: each trial's inputs together, one line per input node. " +
+        "By node: each node's inputs across all trials, as in PsyNeuLink's inputs dictionary. " +
+        "Only the view changes; the run is the same."
+      }
       data-testid="run-grouping"
       style={{
         display: "inline-flex",
@@ -1750,11 +1920,12 @@ function GroupingToggle({
         overflow: "hidden",
       }}
     >
-      <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", padding: "2px 6px", display: "flex", alignItems: "center" }}>Group by</span>
+      <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", padding: "2px 6px", display: "flex", alignItems: "center" }}>Arrange inputs:</span>
       {options.map((o) => (
         <button
           key={o.key}
           onClick={() => onChange(o.key)}
+          aria-pressed={value === o.key}
           style={{
             fontSize: "var(--pnv-fs-11)",
             padding: "2px 8px",
@@ -1773,20 +1944,24 @@ function GroupingToggle({
 }
 
 // By-trial layout: outer group is the trial, inner rows are the nodes (#570).
-// Reads the same `cells[varName][trial][elem]` grid as the by-node editor —
+// Reads the same `cells[varName][trial][port]` texts as the by-node editor —
 // purely a render inversion, no separate data path. Trial count is the max
 // across nodes (add/remove keep them aligned, but max is defensive).
 function TrialGroupedEditor({
   nodes,
   labelsByVar,
   cells,
+  parsed,
+  cellGrid,
   onCell,
   onRemoveTrial,
 }: {
   nodes: InputNodeInfo[];
   labelsByVar: Record<string, string[]>;
   cells: Record<string, string[][]>;
-  onCell: (varName: string, trial: number, elem: number, value: string) => void;
+  parsed: Record<string, ParseResult[][]>;
+  cellGrid: boolean;
+  onCell: (varName: string, trial: number, port: number, value: string) => void;
   onRemoveTrial: (trial: number) => void;
 }) {
   const trialCount = Math.max(0, ...nodes.map((n) => (cells[n.varName] || []).length));
@@ -1796,6 +1971,7 @@ function TrialGroupedEditor({
       {Array.from({ length: trialCount }, (_, t) => (
         <div
           key={t}
+          data-testid={`run-trial-group-${t + 1}`}
           style={{
             marginBottom: 10,
             border: "1px solid var(--pnv-border-faint)",
@@ -1825,26 +2001,28 @@ function TrialGroupedEditor({
             </Button>
           </div>
           {nodes.map((node) => {
-            const row = (cells[node.varName] || [])[t] || [];
             const labels = labelsByVar[node.varName] || [];
+            const names = elementNames(labels, cellGrid);
             return (
               <div
                 key={node.varName}
                 style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}
               >
-                <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", minWidth: 70 }}>
+                <span
+                  style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", minWidth: 70 }}
+                  title={names ? `${node.name}${names}` : undefined}
+                >
                   {node.name}
                 </span>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, flex: 1 }}>
-                  {row.map((val, e) => (
-                    <InputCell
-                      key={e}
-                      label={labels[e] ?? `[${e}]`}
-                      value={val}
-                      onChange={(v) => onCell(node.varName, t, e, v)}
-                    />
-                  ))}
-                </div>
+                <TrialPorts
+                  node={node}
+                  trial={t}
+                  labels={labels}
+                  texts={(cells[node.varName] || [])[t] || []}
+                  parsed={(parsed[node.varName] || [])[t] || []}
+                  cellGrid={cellGrid}
+                  onCell={onCell}
+                />
               </div>
             );
           })}

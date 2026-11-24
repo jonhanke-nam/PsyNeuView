@@ -8,7 +8,7 @@
 export interface SubmittedNodeInput {
   name: string;
   varName: string;
-  trials: number[][];
+  trials: unknown[];
 }
 
 /** Every number in a (possibly nested) value, in order. */

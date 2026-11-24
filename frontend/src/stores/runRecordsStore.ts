@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Tensor } from "@/utils/tensorInput";
 
 // A completed run captured as a stable, shareable record (#468). Inputs are
 // frozen at submit time (raw + element labels) so the pairing with outputs
@@ -8,7 +9,9 @@ export interface RunRecordInput {
   name: string;
   varName: string;
   labels: string[];
-  trials: number[][];
+  // Each trial's value as sent: `[0, 1]`, or one array per port for a node
+  // with several (#330). Records from before #330 hold the same 1-D vectors.
+  trials: Tensor[];
 }
 
 export interface RunRecord {
