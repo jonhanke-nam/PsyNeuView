@@ -58,6 +58,26 @@ async function showPorts(page: Page, on: boolean) {
   await page.keyboard.press("Escape");
 }
 
+/**
+ * Wait until the graph has stopped moving: nothing busy, and every node's box
+ * the same across several samples (#324). A fixed wait after showing ports
+ * read the top node's box while the layout was still settling on CI, so
+ * clicks in its upper half landed above it.
+ */
+async function waitForSettledGraph(page: Page) {
+  await expect(page.locator("html.pnv-busy")).toHaveCount(0, { timeout: 30_000 });
+  const boxes = () =>
+    page.locator(".react-flow__node").evaluateAll((ns) =>
+      ns.map((n) => { const r = n.getBoundingClientRect(); return `${(n as HTMLElement).dataset.id}:${r.x.toFixed(1)},${r.y.toFixed(1)},${r.width.toFixed(1)},${r.height.toFixed(1)}`; }).join("|"));
+  let last = "", same = 0;
+  await expect.poll(async () => {
+    const now = await boxes();
+    same = now === last && (await page.locator("html.pnv-busy").count()) === 0 ? same + 1 : 0;
+    last = now;
+    return same;
+  }, { timeout: 30_000, intervals: [150] }).toBeGreaterThanOrEqual(3);
+}
+
 const layoutIsAuto = (page: Page) => page.getByRole("button", { name: /^Layout: Auto$/ });
 
 test.describe("graph hit areas (#250)", { tag: "@ci" }, () => {
@@ -66,8 +86,9 @@ test.describe("graph hit areas (#250)", { tag: "@ci" }, () => {
       test.setTimeout(180_000);
       await openModel(page, "stroop_reference_basic.py");
       if (ports) await showPorts(page, true);
+      await waitForSettledGraph(page);
       await fitGraph(page);
-      await page.waitForTimeout(600);
+      await waitForSettledGraph(page);
       const pane = page.locator(".react-flow__pane");
       const ids = await page.locator(".react-flow__node-mechanismNode").evaluateAll((ns) => ns.map((n) => (n as HTMLElement).dataset.id!));
       expect(ids.length).toBeGreaterThan(3);
