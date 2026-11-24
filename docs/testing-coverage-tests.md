@@ -1849,6 +1849,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - a parameter edit keeps the run set the learner chose · CI · #57
 
+**`frontend/e2e/run-sticky-node-headers.spec.ts`** (Browser (Playwright))
+
+- Run panel sticky node headers (#363) › arranged by node, the current node's header stays just below the Run row · CI · #363
+
 **`frontend/e2e/run-trial-seconds.spec.ts`** (Browser (Playwright))
 
 - per-trial run times (#334) › each trial row shows how many seconds it took · CI · #334

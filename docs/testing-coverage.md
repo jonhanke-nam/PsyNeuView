@@ -9,7 +9,7 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 169 | 449 | 439 tests in 164 files |
+| Browser (Playwright) | 170 | 450 | 440 tests in 165 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 141 | 1252 | 1252 tests in 141 files |
 | Backend (pytest) | 192 | 1767 | 1767 tests in 192 files |
@@ -27,7 +27,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Building models in the UI](#building) | 4 files, 7 tests | – | 1 files, 9 tests | 13 files, 145 tests | 161 of 161 |
 | [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 359 of 362 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
-| [Running, learning and debugging](#running) | 15 files, 36 tests | – | 10 files, 94 tests | 52 files, 262 tests | 392 of 392 |
+| [Running, learning and debugging](#running) | 16 files, 37 tests | – | 10 files, 94 tests | 52 files, 262 tests | 393 of 393 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
@@ -599,6 +599,7 @@ No tests yet.
 | `run-panel-grouping.spec.ts` | Browser | 1 | yes | #570 | Run-panel input-grouping toggle (#570). |
 | `run-record-yaml.spec.ts` | Browser | 1 | yes | #525 | Run-record YAML export/import round-trip (#525). |
 | `run-set-survives-edit.spec.ts` | Browser | 1 | yes | #57 | A chosen run set survives a parameter edit (#57). |
+| `run-sticky-node-headers.spec.ts` | Browser | 1 | yes | #363 | Run panel, inputs arranged by node: each node's header sticks just below the sticky Run row while its trials scroll past, and the next node's header pushes it up (#363). |
 | `run-trial-seconds.spec.ts` | Browser | 1 | yes | #334 | Per-trial run times beside each trial number (#334). |
 | `stale-run-results.spec.ts` | Browser | 2 | yes | #337 | Run results go stale after an edit (#337). |
 | `stroop-lc-reference.spec.ts` | Browser | 2 | yes |  | Stroop + LC reference model — LC feedback edges render after the swap. |
@@ -700,6 +701,7 @@ No tests yet.
 | run panel input grouping › toggles between by-trial and by-node layouts | `run-panel-grouping.spec.ts` | Browser | yes | #570 |
 | run record YAML round-trip › exports YAML and re-imports it | `run-record-yaml.spec.ts` | Browser | yes | #525 |
 | a parameter edit keeps the run set the learner chose | `run-set-survives-edit.spec.ts` | Browser | yes | #57 |
+| Run panel sticky node headers (#363) › arranged by node, the current node's header stays just below the Run row | `run-sticky-node-headers.spec.ts` | Browser | yes | #363 |
 | per-trial run times (#334) › each trial row shows how many seconds it took | `run-trial-seconds.spec.ts` | Browser | yes | #334 |
 | Run results go stale after an edit (#337) › an edit warns and clears the highlights; Undo makes the results current | `stale-run-results.spec.ts` | Browser | yes | #337 |
 | Run results go stale after an edit (#337) › a fold toggle doesn't make results stale | `stale-run-results.spec.ts` | Browser | yes | #337 |
