@@ -5,6 +5,7 @@ import { tmpdir } from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import { staleDistReason } from "./e2e/distFreshness";
+import { userAgentForHost } from "./e2e/hostPlatform";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -164,7 +165,13 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      // The page is told the platform it really runs on, not the profile's
+      // Windows, so the app's ⌘/Ctrl agrees with ControlOrMeta on every host
+      // (#402; see e2e/hostPlatform.ts).
+      use: {
+        ...devices["Desktop Chrome"],
+        userAgent: userAgentForHost(devices["Desktop Chrome"].userAgent),
+      },
     },
   ],
   webServer: isDev ? devWebServers : prodWebServer,
