@@ -24,9 +24,8 @@ import {
   onMacAppSettingsChanged,
   type MacAppSettings,
 } from "@/utils/macAppSettings";
+import { AutoInstallOffer } from "@/components/common/AutoInstallOffer";
 import {
-  AUTO_INSTALL_QUESTION,
-  AUTO_INSTALL_QUESTION_HINT,
   loadDismissal,
   noticeKind,
   readyNoticeText,
@@ -46,6 +45,8 @@ const pick = (s: MacAppSettings): Shown => ({
 
 export function AppUpdateNotice() {
   const [shown, setShown] = useState<Shown | null>(null);
+  // Closed without an answer (× or Escape): asked again at the next launch.
+  const [offerClosed, setOfferClosed] = useState(false);
   const [dismissal, setDismissal] = useState<Dismissal | null>(() => loadDismissal());
   const addNotification = useNotificationStore((s) => s.addNotification);
 
@@ -77,16 +78,16 @@ export function AppUpdateNotice() {
 
   return (
     <>
-      {shown?.autoInstallOffer && (
-        <AutoInstallOffer
-          onAnswer={(yes) => {
-            setShown((prev) => (prev ? { ...prev, autoInstallOffer: false } : prev));
-            answerAutoInstallOffer(yes)
-              .then((s) => setShown(pick(s)))
-              .catch(fail("Couldn't save your choice"));
-          }}
-        />
-      )}
+      <AutoInstallOffer
+        open={!!shown?.autoInstallOffer && !offerClosed}
+        onClose={() => setOfferClosed(true)}
+        onAnswer={(yes) => {
+          setOfferClosed(true);
+          answerAutoInstallOffer(yes)
+            .then((s) => setShown(pick(s)))
+            .catch(fail("Couldn't save your choice"));
+        }}
+      />
       {kind && (
         <div role="status" data-testid="app-update-notice" data-kind={kind} style={noticeStyle}>
           <span
@@ -145,28 +146,6 @@ export function AppUpdateNotice() {
   );
 }
 
-/**
- * The one-time question (PsyNeuView-MacApp#79): consent first, automatic
- * install is off until the user says yes. Asked once, after setup; the app
- * keeps the answer and never asks again. A small card, not a modal.
- */
-function AutoInstallOffer({ onAnswer }: { onAnswer: (yes: boolean) => void }) {
-  return (
-    <div role="dialog" aria-label="Automatic updates" data-testid="auto-install-offer" style={offerStyle}>
-      <div style={{ fontWeight: 600 }}>{AUTO_INSTALL_QUESTION}</div>
-      <div style={{ color: "var(--pnv-text-hint)", fontSize: "var(--pnv-fs-12)", marginTop: 2 }}>{AUTO_INSTALL_QUESTION_HINT}</div>
-      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 8 }}>
-        <Button kind="small" data-testid="auto-install-offer-no" onClick={() => onAnswer(false)}>
-          No, ask me each time
-        </Button>
-        <Button kind="primary" data-testid="auto-install-offer-yes" onClick={() => onAnswer(true)}>
-          Yes, install automatically
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 const noticeStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
@@ -182,19 +161,3 @@ const noticeStyle: React.CSSProperties = {
 };
 
 const linkStyle: React.CSSProperties = { color: "var(--pnv-primary)", fontSize: "var(--pnv-fs-12)" };
-
-const offerStyle: React.CSSProperties = {
-  position: "fixed",
-  right: 16,
-  bottom: 16,
-  zIndex: 1000,
-  maxWidth: 360,
-  padding: "10px 12px",
-  fontSize: "var(--pnv-fs-13)",
-  color: "var(--pnv-text)",
-  background: "var(--pnv-surface)",
-  border: "1px solid var(--pnv-border)",
-  borderRadius: 6,
-  boxShadow: "var(--pnv-shadow-popover)",
-  whiteSpace: "normal",
-};
