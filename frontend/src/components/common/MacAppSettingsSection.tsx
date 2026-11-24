@@ -106,22 +106,32 @@ export function MacAppLaunchToggles() {
 }
 
 /**
- * General ▸ Updates ▸ Install updates automatically (when you quit)
- * (PsyNeuView-MacApp#79). Sparkle's own setting, kept by the app: off until
- * the user says yes (consent first). Off, an update shows a quiet notice with
- * Install and restart; on, it downloads and installs when the app quits. An
- * app that can't update itself sends no value, and nothing shows.
+ * General ▸ Updates (PsyNeuView-MacApp#79, #83), two switches the app keeps:
+ *
+ * - Check for updates automatically: the app's own launch and hourly checks,
+ *   on by default. Off, nothing checks on its own; Check for App Updates… in the
+ *   app menu still works. The app starts or stops the checks at once.
+ * - Install updates automatically (when you quit): Sparkle's own setting, off
+ *   until the user says yes (consent first). Off, an update shows a quiet
+ *   notice with Install and restart; on, it downloads and installs when the
+ *   app quits. Disabled while checking is off: nothing would find an update
+ *   to install.
+ *
+ * An app that can't update itself sends neither value, and nothing shows.
  */
 export function MacAppUpdates() {
   const { settings, setSettings } = useMacAppSettings();
   const [error, setError] = useState<string | null>(null);
-  if (typeof settings?.autoInstallUpdates !== "boolean") return null;
+  const hasCheck = typeof settings?.checkForUpdates === "boolean";
+  const hasAutoInstall = typeof settings?.autoInstallUpdates === "boolean";
+  if (!settings || (!hasCheck && !hasAutoInstall)) return null;
+  const checking = settings.checkForUpdates !== false;
 
-  const toggle = async (value: boolean) => {
+  const toggle = async (key: "checkForUpdates" | "autoInstallUpdates", value: boolean) => {
     setError(null);
-    setSettings({ ...settings, autoInstallUpdates: value }); // optimistic
+    setSettings({ ...settings, [key]: value }); // optimistic
     try {
-      setSettings(await setMacAppSetting("autoInstallUpdates", value));
+      setSettings(await setMacAppSetting(key, value));
     } catch (e: any) {
       setSettings({ ...settings });
       setError(String(e?.message ?? e));
@@ -131,20 +141,48 @@ export function MacAppUpdates() {
   return (
     <Group id="updates" title="Updates">
       <div style={{ fontSize: "var(--pnv-fs-13)" }}>
-        <label style={checkRow}>
-          <input
-            type="checkbox"
-            data-testid="setting-mac-auto-install-updates"
-            checked={settings.autoInstallUpdates}
-            onChange={(e) => toggle(e.target.checked)}
-          />
-          Install updates automatically (when you quit)
-        </label>
-        <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-hint)", marginLeft: 20 }}>
-          {settings.autoInstallUpdates
-            ? "A new version downloads in the background and installs when you quit. You'll see what it updated to."
-            : "When a new version is out, a small notice offers to install it."}
-        </div>
+        {hasCheck && (
+          <>
+            <label style={checkRow}>
+              <input
+                type="checkbox"
+                data-testid="setting-mac-check-for-updates"
+                checked={settings.checkForUpdates}
+                onChange={(e) => toggle("checkForUpdates", e.target.checked)}
+              />
+              Check for updates automatically
+            </label>
+            <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-hint)", marginLeft: 20 }}>
+              {checking
+                ? "Looks for a new version when the app opens and every hour."
+                : "Never looks on its own. Use Check for App Updates… in the PsyNeuView menu."}
+            </div>
+          </>
+        )}
+        {hasAutoInstall && (
+          <>
+            <label style={{ ...checkRow, opacity: checking ? 1 : 0.5 }}>
+              <input
+                type="checkbox"
+                data-testid="setting-mac-auto-install-updates"
+                checked={settings.autoInstallUpdates}
+                disabled={!checking}
+                onChange={(e) => toggle("autoInstallUpdates", e.target.checked)}
+              />
+              Install updates automatically (when you quit)
+            </label>
+            <div
+              data-testid="mac-auto-install-updates-note"
+              style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-hint)", marginLeft: 20 }}
+            >
+              {!checking
+                ? "Needs Check for updates automatically."
+                : settings.autoInstallUpdates
+                  ? "A new version downloads in the background and installs when you quit. You'll see what it updated to."
+                  : "When a new version is out, a small notice offers to install it."}
+            </div>
+          </>
+        )}
         {error && <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-danger)", marginTop: 6 }}>{error}</div>}
       </div>
     </Group>
