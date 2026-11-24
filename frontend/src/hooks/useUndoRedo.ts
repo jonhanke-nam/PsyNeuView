@@ -35,15 +35,27 @@ import {
  * current step already has this code, or when there is no history to add to.
  * `keepRedo` keeps the redo steps after it (#391), for Redo: the edit goes in
  * before them, so Undo after the Redo brings back what was typed.
+ *
+ * It records even in the 2 s after an Undo or Redo, while History holds
+ * recording off for the restored step's preview (#391): that pause is there
+ * for the app's own rebuild, not for what the user typed in it. A move puts
+ * its step's code in the editor before anything else can run, so code that
+ * differs from the current step here was typed.
  */
 export function recordPendingCodeEdit(opts?: { keepRedo?: boolean }): void {
-  const { past, isRestoring } = useHistoryStore.getState();
-  const current = past[past.length - 1];
-  if (!current || isRestoring) return;
+  const history = useHistoryStore.getState();
+  const current = history.past[history.past.length - 1];
+  if (!current) return;
   const { source, filePath } = useModelStore.getState();
   if (current.filePath && filePath && current.filePath !== filePath) return;
   if (current.source === source) return;
-  recordAction("Edited the code", opts?.keepRedo ? { keepRedo: true } : undefined);
+  const holding = history.isRestoring;
+  if (holding) history.setRestoring(false);
+  try {
+    recordAction("Edited the code", opts?.keepRedo ? { keepRedo: true } : undefined);
+  } finally {
+    if (holding) history.setRestoring(true);
+  }
 }
 
 let historyMoves = 0;

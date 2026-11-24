@@ -41,11 +41,15 @@ describe("Undo with an edit still waiting for its preview (#366)", () => {
     expect(useHistoryStore.getState().past).toHaveLength(1);
   });
 
-  it("records nothing while a step is being put back", () => {
+  it("records an edit typed in the pause after an Undo or Redo (#391)", () => {
+    // History holds recording off for 2 s after a move, for the restored
+    // step's preview; an edit typed in that pause still counts.
     useModelStore.getState().setSource(EDITED);
     useHistoryStore.getState().setRestoring(true);
     recordPendingCodeEdit();
-    expect(useHistoryStore.getState().past).toHaveLength(1);
+    expect(useHistoryStore.getState().past.map((s) => s.source)).toEqual([RAN, EDITED]);
+    // And the pause carries on.
+    expect(useHistoryStore.getState().isRestoring).toBe(true);
   });
 
   it("records nothing for another model's history", () => {
@@ -64,13 +68,11 @@ describe("Redo with an edit still waiting for its preview (#391)", () => {
     recordAction("Edited the code");
     await applyHistoryStep(false);
     expect(useModelStore.getState().source).toBe(RAN);
-    useHistoryStore.getState().setRestoring(false);
 
-    // Type, then Redo at once, before the preview has made it a step.
+    // Type, then Redo at once (still in the pause after the Undo), before the preview has made it a step.
     useModelStore.getState().setSource(TYPED);
     await applyHistoryStep(true);
     expect(useModelStore.getState().source).toBe(EDITED);
-    useHistoryStore.getState().setRestoring(false);
 
     // The typed edit is a step, just before the one Redo put back.
     const past = useHistoryStore.getState().past;
