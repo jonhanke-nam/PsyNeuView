@@ -25,6 +25,7 @@ import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { placementFromGraphviz } from "../src/utils/showGraphLayout";
+import { asGraphvizDrawsIt } from "../src/utils/graphvizColours";
 import { measureAgreement, share, type Agreement, type Box } from "../src/utils/layoutAgreement";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -352,7 +353,9 @@ async function measureCurrent(
     ...(!best && !refusal ? { error: "no show_graph description fetched" } : {}),
   };
   const canvasPng = await page.getByTestId("graph-canvas").locator(".react-flow").screenshot();
-  const svg = best ? gv.layout(best.dot, "svg", "dot") : "<p>No show_graph description.</p>";
+  // Graphviz leaves colour names in its SVG, which the sheet's browser would
+  // read from the CSS table; show_graph's PDF draws the X11 values (#424).
+  const svg = best ? asGraphvizDrawsIt(gv.layout(best.dot, "svg", "dot")) : "<p>No show_graph description.</p>";
   return { result, canvasPng, svg };
 }
 
