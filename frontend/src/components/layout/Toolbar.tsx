@@ -25,7 +25,7 @@ import { usePaletteStore } from "@/stores/paletteStore";
 import { displayBinding } from "@/shortcuts/binding";
 import { runCommand } from "@/shortcuts/commands";
 import { setPanelVisibleOrExplain } from "@/shortcuts/lastPanel";
-import { useResolvedShortcuts } from "@/shortcuts/useAppShortcuts";
+import { useResolvedShortcuts, useShortcutKeys } from "@/shortcuts/useAppShortcuts";
 import { focusComposition } from "@/utils/nodeActions";
 import { hasFileBridge, pickOpenPath, pickSavePath } from "@/utils/fileBridge";
 import { logLoadPerf } from "@/utils/loadPerf";
@@ -268,6 +268,8 @@ interface MdfGap {
 
 export function Toolbar() {
   const filePath = useModelStore((s) => s.filePath);
+  // #409: Save's tooltip names this platform's key, as rebound (⌘S on a Mac).
+  const saveKeys = useShortcutKeys("model.save");
   const source = useModelStore((s) => s.source);
   const savedSource = useModelStore((s) => s.savedSource);
   const setFilePath = useModelStore((s) => s.setFilePath);
@@ -2322,7 +2324,7 @@ export function Toolbar() {
               ? "No file loaded"
               : source === savedSource
               ? "No unsaved changes"
-              : "Save changes to the current file (Ctrl+S)"
+              : `Save changes to the current file (${saveKeys})`
           }
         >
           Save
