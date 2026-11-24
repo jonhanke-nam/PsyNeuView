@@ -88,7 +88,7 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
   "components/graph/GraphCanvas.tsx": { count: 1, what: "Compare with that version, in the stale-graph banner" },
   "components/graph/TraceControls.tsx": {
     count: 8,
-    what: "the trace bar's ⏮ ◀ ▶ ⏭ (4), its run / trial segments (2), autoplay ⏵⏵ (1) and ✕ clear (1), at the bar's size",
+    what: "the trace bar's ⏮ ◀ ▶ ⏭ (4), its run / trial segments (2), ▶ Auto-play / ⏸ Pause (1, #338) and ✕ clear (1), at the bar's size",
   },
   "App.tsx": { count: 2, what: "a bottom-panel tab, and the ⌄ that collapses the panel" },
   "components/graph/PaletteSidebar.tsx": {
