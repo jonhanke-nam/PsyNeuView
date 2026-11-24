@@ -3955,7 +3955,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/add-keeps-view.spec.ts`** (Browser (Playwright))
 
-- adding a component keeps the view still (#346) › the zoom and pan don't change, and the node is put down at the click · CI · #346
+- adding a component keeps the view still (#346) › the zoom and pan don't change, and the node's centre is at the click · CI · #346
 
 **`frontend/e2e/composition-cim-edges.spec.ts`** (Browser (Playwright))
 

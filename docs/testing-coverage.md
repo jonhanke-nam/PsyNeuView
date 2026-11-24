@@ -1071,7 +1071,7 @@ No tests yet.
 
 | Test | File | Layer | In CI | Issue |
 |---|---|---|---|---|
-| adding a component keeps the view still (#346) › the zoom and pan don't change, and the node is put down at the click | `add-keeps-view.spec.ts` | Browser | yes | #346 |
+| adding a component keeps the view still (#346) › the zoom and pan don't change, and the node's centre is at the click | `add-keeps-view.spec.ts` | Browser | yes | #346 |
 | nested-composition CIM edges (#644) › edges to/from the EM composition render | `composition-cim-edges.spec.ts` | Browser | yes | #644 |
 | expanding a folded, moved composition (#208, #209) › Like show_graph: the open frame clears the outer nodes and its projections reach its members | `composition-expand-geometry.spec.ts` | Browser | yes | #208 |
 | expanding a folded, moved composition (#208, #209) › dragging: an open frame dropped on outer nodes moves them aside, and a node dropped on it lands beside it | `composition-expand-geometry.spec.ts` | Browser | yes | #208 |
