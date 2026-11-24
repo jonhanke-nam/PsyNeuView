@@ -12,6 +12,7 @@ import { retargetFrameEdges } from "@/utils/frameEdges";
 import { makeRoomForFrames } from "@/utils/frameRoom";
 import { useHistoryStore } from "./historyStore";
 import { recordAction } from "@/utils/history";
+import { compositionMemberNames } from "@/utils/stepHighlight";
 import { usePortLayout } from "@/stores/portLayoutStore";
 import { useValueViews } from "@/stores/valueViewStore";
 import { useGraphSettings } from "./graphSettingsStore";
@@ -324,6 +325,9 @@ export interface MechanismData {
   // #230: PyTorch view only — the node runs but is excluded from the gradient
   // calculation (e.g. an EM STORE node).
   excludeFromGradientCalc?: boolean;
+  // #365: a collapsed composition only — the names of every node inside it
+  // (at any depth), so it shows the step highlight when one of them runs.
+  memberNames?: string[];
 }
 
 interface ModelState {
@@ -1322,6 +1326,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
                 params: {},
                 function: null,
                 line: lineMap[findVarName(name)],
+                memberNames: compositionMemberNames(nodeData),
               },
             });
             if (isNested) { cursorY += 140; } else { cursorX += 220; }

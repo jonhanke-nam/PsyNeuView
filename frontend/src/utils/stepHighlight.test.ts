@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyStepRow, ranAtStep } from "./stepHighlight";
+import { classifyStepRow, compositionMemberNames, ranAtStep } from "./stepHighlight";
 
 // Two trials of a small Stroop-like run: inputs, then hidden, then output.
 const trace = [
@@ -47,5 +47,28 @@ describe("classifyStepRow (#365)", () => {
   });
   it("ignores empty and missing names", () => {
     expect(classifyStepRow(trace, 2, 0, [undefined, null, ""])).toBe("pending");
+  });
+});
+
+describe("compositionMemberNames (#365)", () => {
+  it("lists every node inside, at any depth, with and without its -N suffix", () => {
+    const em = {
+      nodes: [
+        { name: "STORE" },
+        { name: "RETRIEVE-1" },
+        { name: "INNER", nodes: [{ name: "DEEP" }] },
+      ],
+    };
+    expect(compositionMemberNames(em).sort()).toEqual(
+      ["DEEP", "INNER", "RETRIEVE", "RETRIEVE-1", "STORE"],
+    );
+  });
+  it("is empty for a composition with no nodes", () => {
+    expect(compositionMemberNames({})).toEqual([]);
+  });
+  it("lets a collapsed composition match a member's step", () => {
+    const names = compositionMemberNames({ nodes: [{ name: "color_hidden" }] });
+    expect(ranAtStep(trace, 1, ["EM", ...names])).toBe(true);
+    expect(ranAtStep(trace, 2, ["EM", ...names])).toBe(false);
   });
 });

@@ -343,7 +343,8 @@ export const MechanismNode = memo(function MechanismNode({
   }
 
   // #365: the same test the current trial card uses, so the two agree.
-  const isActiveStep = ranAtStep(executionTrace, traceStep, [d.varName, d.label]);
+  // A collapsed composition is active when any node inside it runs.
+  const isActiveStep = ranAtStep(executionTrace, traceStep, [d.varName, d.label, ...(d.memberNames ?? [])]);
 
   // #312: while stepping, show the value this node produced at the active
   // step. Joined from debugger snapshots (which carry per-node output) by

@@ -53,3 +53,25 @@ function expandNames(names: readonly (string | null | undefined)[]): string[] {
   }
   return out;
 }
+
+/** A composition as /api/model/load describes it: its nodes, some of them compositions. */
+export interface CompositionTree {
+  nodes?: { name?: string; nodes?: unknown[] }[];
+}
+
+/** Every node name inside a composition, at any depth, with and without its
+    "-N" suffix: what a collapsed composition matches against the trace (#365). */
+export function compositionMemberNames(comp: CompositionTree): string[] {
+  const out = new Set<string>();
+  const walk = (c: CompositionTree) => {
+    for (const n of c.nodes ?? []) {
+      if (n.name) {
+        out.add(n.name);
+        out.add(n.name.replace(/-\d+$/, ""));
+      }
+      if (n.nodes) walk(n as CompositionTree);
+    }
+  };
+  walk(comp);
+  return [...out];
+}
