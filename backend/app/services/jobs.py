@@ -205,7 +205,7 @@ class JobManager:
                 text=True,
                 bufsize=1,
                 cwd=str(Path(task_params.get("file_path", ".")).parent),
-                env=os_sandbox.launch_env(policy) if policy else None,
+                env=os_sandbox.launch_env(policy),
                 # Its own session: nothing a model starts can join one of the
                 # user's process groups (#311, U1).
                 start_new_session=True,

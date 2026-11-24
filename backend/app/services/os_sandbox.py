@@ -712,10 +712,15 @@ def policy_key(model_path: str | None = None) -> str:
     return policy(scratch="-", model_path=model_path)["key"]
 
 
-def launch_env(p: dict) -> dict:
-    """The environment for a worker started for one task with policy ``p``:
-    it applies the policy first thing (``apply_from_env``)."""
-    env = dict(os.environ)
+def launch_env(p: dict | None = None) -> dict:
+    """The environment for a process that runs model code: the allow-listed
+    one (``model_env``, never the server's own, #179 B2), plus, for a worker
+    started for one task with policy ``p``, the policy it applies first
+    thing (``apply_from_env``)."""
+    from app.services.model_env import model_env
+    env = model_env()
+    if not p:
+        return env
     env[_apply.POLICY_ENV] = json.dumps(p)
     if p.get("mark"):
         env[_apply.MARK_ENV] = p["mark"]

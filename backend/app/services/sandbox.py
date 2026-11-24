@@ -115,7 +115,8 @@ class WarmWorker:
                 [sys.executable, WORKER_PATH, self.MODE],
                 # A pool worker started under the sandbox applies its policy
                 # before anything else (#311).
-                env=getattr(self, "_launch_env", None),
+                # Never the server's own environment (#179 B2).
+                env=getattr(self, "_launch_env", None) or os_sandbox.launch_env(None),
                 # A pool worker leads its own process group, so what its model
                 # started ends with it (#187).
                 start_new_session=self.NEW_SESSION,
@@ -419,6 +420,8 @@ class ForkServer(WarmWorker):
                 [sys.executable, WORKER_PATH, self.MODE, "--control-fd", str(control_w)],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 pass_fds=(control_w,), bufsize=0,
+                # Its children inherit it: the allow-listed one (#179 B2).
+                env=os_sandbox.launch_env(None),
                 # Its own session: a task's processes can't join one of the
                 # user's process groups (#311, U1).
                 start_new_session=True,
@@ -760,7 +763,7 @@ def _spawn_worker_process(model_path: str | None = None, on_popen=None) -> subpr
     # Its policy is set when it starts, so it is made for the model the pool
     # last ran: the same model again (the live preview) finds one ready.
     policy = os_sandbox.policy(model_path=model_path) if (os_sandbox.active() and not _POOL_PER_TASK) else None
-    member._launch_env = os_sandbox.launch_env(policy) if policy else None
+    member._launch_env = os_sandbox.launch_env(policy)
     member._on_popen = on_popen
     started = time.time()
     proc = WarmWorker._spawn(member)
@@ -1052,7 +1055,7 @@ def _run_cold(task: str, params: dict, timeout: int) -> dict:
             from app.services import bounded_run
             result = bounded_run.run([sys.executable, WORKER_PATH], input=payload, timeout=timeout,
                                      cwd=str(Path(params.get("file_path", ".")).parent),
-                                     env=os_sandbox.launch_env(policy) if policy else None)
+                                     env=os_sandbox.launch_env(policy))
             if result.timed_out:
                 raise subprocess.TimeoutExpired([WORKER_PATH], timeout)
         finally:
