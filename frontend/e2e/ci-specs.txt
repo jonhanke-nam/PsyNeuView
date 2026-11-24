@@ -98,6 +98,7 @@ open-menu-foldable.spec.ts
 open-menu-follows-source-switch.spec.ts
 open-menu-source-labels.spec.ts
 own-checkout-editable.spec.ts
+perf-smoke.spec.ts
 place-component.spec.ts
 place-function-on-mechanism.spec.ts
 pnl-record-mismatch.spec.ts
