@@ -232,10 +232,10 @@ test("the Run and Learn panels keep their row heights", { tag: "@ci" }, async ({
   await expectHeight(reset, BASELINE.runReset, "Reset");
   await expectHeight(runModel, BASELINE.runModel, "Run Model");
   expect(Math.abs((await height(reset)) - (await height(runModel))), "Reset beside Run Model").toBeLessThanOrEqual(1);
-  // #109: the Group by segments and the Execution mode select stand as tall as
+  // #109: the Arrange inputs segments and the Execution mode select stand as tall as
   // Reset and Run Model (they were 21 and 19px), the row unchanged.
   for (const [el, what] of [
-    [panel.getByTestId("run-grouping"), "Group by Node / Trial"],
+    [panel.getByTestId("run-grouping"), "Arrange inputs By trial / By node"],
     [panel.getByTestId("run-backend").locator("select"), "the Execution mode select"],
   ] as const) {
     await expectHeight(el, BASELINE.runModel, what);
@@ -248,7 +248,7 @@ test("the Run and Learn panels keep their row heights", { tag: "@ci" }, async ({
   await addTrial.click();
   await expectHeight(panel.locator('button[title="Remove this trial"]').first(), BASELINE.runTrialX, "a trial's ✕");
 
-  await page.getByRole("button", { name: "Trial", exact: true }).click();
+  await page.getByRole("button", { name: "By trial", exact: true }).click();
   const trialX = panel.locator('button[title="Remove this trial"]').first();
   await expectHeight(trialX.locator("xpath=.."), BASELINE.runTrialHeaderRow, "the Trial 1 ✕ line");
 
