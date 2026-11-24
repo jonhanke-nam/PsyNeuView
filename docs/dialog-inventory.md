@@ -78,6 +78,7 @@ Escape, which every row has.
 | Sidecar placement | menu | `editor/SidecarPlacementPicker.tsx` | `sidecar-placement-menu` | Files: in the editor header | the button, click outside, a pick |
 | Sidecar variant | menu | `editor/SidecarVariantPicker.tsx` | `sidecar-variant-menu` | Layout: / Labels: in the editor header | the button, click outside, a pick |
 | The file changed on disk | dialog | `common/ExternalChangeModal.tsx` | `external-change-modal` | an external editor saves the open file while there are unsaved edits here | × (Keep my changes), either answer; no click outside — a stray click is not an answer |
+| Couldn't open X (a failed open) | notice | `graph/FailedOpenBanner.tsx` | `failed-open-dismiss` | opening a model that fails outright: a missing file, a server error (#401). Over the graph; the open model stays | the × (Dismiss), Escape, Try again, opening any model |
 | Toasts | notice | `common/NotificationBar.tsx` | `notification-dismiss` | an error, warning or message; one with a `key` replaces the last with that key in place, so a burst (undo, #1377) is one notice | the × on each; no Escape, on purpose |
 
 ## Drawn on top, but not a dialog

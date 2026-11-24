@@ -45,6 +45,7 @@ import { DanglingNode } from "./DanglingNode";
 import { EDGE_MENU_EVENT, GSCEdge } from "./GSCEdge";
 import { ProjectionEdge } from "./ProjectionEdge";
 import { GSCLegend } from "./GSCLegend";
+import { FailedOpenBanner } from "./FailedOpenBanner";
 import { useSchedulingArrowsStore } from "@/stores/schedulingArrowsStore";
 import { TraceControls } from "./TraceControls";
 import { ValidationPanel } from "./ValidationPanel";
@@ -1265,6 +1266,7 @@ export function GraphCanvas() {
             <EmptyGraphMessage />
           )}
           {ready && nodes.length > 0 && <StaleGraphBanner />}
+          <FailedOpenBanner />
           {ready && (
             <ReactFlow
               nodes={displayNodes}
