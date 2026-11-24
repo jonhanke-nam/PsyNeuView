@@ -489,3 +489,12 @@ body:has([data-pnv-customized="true"]) .pnv-inspector-legend {
   white-space: nowrap;
   border: 0;
 }
+
+/* #412: a row in the current trial card for a node not reached yet. Every
+   piece of its text (the node's blue or green name, its value, a Δ line)
+   takes the pending grey, so the row reads as secondary and still clears
+   WCAG AA. Important because those pieces set their colours inline. */
+.pnv-step-pending,
+.pnv-step-pending * {
+  color: var(--pnv-step-pending-text) !important;
+}

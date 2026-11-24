@@ -2792,7 +2792,8 @@ function ValueText({ text }: { text: string }) {
 // in the card's padding (negative margin), so the rows don't move.
 // #365: in the current trial card, `step` says where the node stands at the
 // trace step: "active" rows get the selection-blue highlight the graph's step
-// ring uses, "pending" rows (not reached yet this trial) are dimmed, "done"
+// ring uses, "pending" rows (not reached yet this trial) are in a grey that still
+// reads at AA (.pnv-step-pending, #412), "done"
 // rows read normally. The highlight is a background and an inset ring, so the
 // rows don't move. The band itself stays the role colour, and says so.
 function NodeBand({
@@ -2818,7 +2819,7 @@ function NodeBand({
       // The active row is told apart by more than its blue: the inset ring
       // marks it on screen, and aria-current names it to assistive tech.
       aria-current={step === "active" ? "step" : undefined}
-      className={step === "active" ? "pnv-step-active" : undefined}
+      className={step === "active" ? "pnv-step-active" : step === "pending" ? "pnv-step-pending" : undefined}
       title={`Band: role colour (${role}), as on the graph. The current step is shown in blue.`}
       style={{
         ...style,
@@ -2831,9 +2832,7 @@ function NodeBand({
               boxShadow: "inset 0 0 0 1px var(--pnv-step-active-ring)",
               borderRadius: "0 3px 3px 0",
             }
-          : step === "pending"
-            ? { opacity: "var(--pnv-step-pending-opacity)" }
-            : {}),
+          : {}),
       }}
     >
       {children}
