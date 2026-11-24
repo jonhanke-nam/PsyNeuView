@@ -9,10 +9,10 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 168 | 445 | 435 tests in 163 files |
+| Browser (Playwright) | 169 | 449 | 439 tests in 164 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 139 | 1246 | 1246 tests in 139 files |
-| Backend (pytest) | 191 | 1759 | 1759 tests in 191 files |
+| Frontend unit (vitest) | 141 | 1252 | 1252 tests in 141 files |
+| Backend (pytest) | 192 | 1767 | 1767 tests in 192 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
 
@@ -27,10 +27,10 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Building models in the UI](#building) | 4 files, 7 tests | – | 1 files, 9 tests | 13 files, 145 tests | 161 of 161 |
 | [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 359 of 362 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
-| [Running, learning and debugging](#running) | 14 files, 32 tests | – | 9 files, 92 tests | 51 files, 254 tests | 378 of 378 |
+| [Running, learning and debugging](#running) | 15 files, 36 tests | – | 10 files, 94 tests | 52 files, 262 tests | 392 of 392 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
-| [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 28 files, 263 tests | 19 files, 322 tests | 640 of 640 |
+| [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
@@ -594,6 +594,7 @@ No tests yet.
 | `pytorch-view.spec.ts` | Browser | 3 | yes | #230 | PyTorch (autodiff) view (#230). |
 | `reference-models-runnable.spec.ts` | Browser | 2 | yes | #818, #577, #652 | Reference-model runnability gate (#818, #577, #652). |
 | `run-array-inputs.spec.ts` | Browser | 1 | yes | #330, #331 | Trial inputs as arrays (#330), arranged by trial by default (#331). |
+| `run-followups.spec.ts` | Browser | 4 | yes | #357 | Run and Learn follow-ups (#357). |
 | `run-multiport-inputs.spec.ts` | Browser | 1 | yes | #332 | Input nodes with several input ports (#332). |
 | `run-panel-grouping.spec.ts` | Browser | 1 | yes | #570 | Run-panel input-grouping toggle (#570). |
 | `run-record-yaml.spec.ts` | Browser | 1 | yes | #525 | Run-record YAML export/import round-trip (#525). |
@@ -609,6 +610,7 @@ No tests yet.
 | `inputSets.test.ts` | Frontend unit | 12 | yes |  |  |
 | `learnPlan.test.ts` | Frontend unit | 19 | yes |  |  |
 | `runEcho.test.ts` | Frontend unit | 4 | yes | #49 | An input node's OUT row is dropped only when it would repeat its IN row (#49). |
+| `runProgress.test.ts` | Frontend unit | 2 | yes |  |  |
 | `timeline.test.ts` | Frontend unit | 6 | yes | #177 | The timeline (#177): the merge order, what each kind is marked as, a wait as its start and stop lines, errors linked to their cause, and the text file's one time format. |
 | `valueGrid.test.ts` | Frontend unit | 18 | yes |  |  |
 | `test_autodiff_observability.py` | Backend | 7 | yes | #629 | Autodiff (PyTorch) runs synthesize the scheduler path's observability contract so the stepper / Run State / value pills / snapshot table light up (#629). |
@@ -650,6 +652,7 @@ No tests yet.
 | `test_run_composition_by_name.py` | Backend | 4 | yes | #886, #859 | Run/learn resolve a composition by its display name, not just its module variable (#886 follow-up to #859). |
 | `test_run_error_real_cause.py` | Backend | 3 | yes | #1235 | Run says why a model couldn't be built, not just that it's missing (#1235). |
 | `test_run_execution_mode.py` | Backend | 7 | yes | #764 | Execution-mode selection on the *run* path (#764). |
+| `test_run_progress.py` | Backend | 8 | yes | #357 | Live run progress and Learn's per-trial times (#357). |
 | `test_run_warnings_contract.py` | Backend | 3 | yes | #1101 | Warnings travel beside a run failure, not inside it (#1101). |
 | `test_sandbox.py` | Backend | 9 | yes |  | Tests for subprocess sandbox execution. |
 | `test_sandbox_gives_way.py` | Backend | 3 | yes | #175 | Work nobody is waiting for lets user-requested work go first (#175). |
@@ -689,6 +692,10 @@ No tests yet.
 | reference models: load + run without crashing › coverage: spec lists every bundled reference model | `reference-models-runnable.spec.ts` | Browser | yes | #818 |
 | reference models: load + run without crashing › loads + runs without white-screen: ${label} | `reference-models-runnable.spec.ts` | Browser | yes | #818 |
 | trial inputs are typed as arrays and sent as typed | `run-array-inputs.spec.ts` | Browser | yes | #330 |
+| Run and Learn follow-ups (#357) › a run in flight shows which trial it is on | `run-followups.spec.ts` | Browser | yes | #357 |
+| Run and Learn follow-ups (#357) › Learn shows each trial's time | `run-followups.spec.ts` | Browser | yes | #357 |
+| Run and Learn follow-ups (#357) › a saved run says whether it matches the open file | `run-followups.spec.ts` | Browser | yes | #357 |
+| Run and Learn follow-ups (#357) › arranged by node, the sticky Run row never covers a node header | `run-followups.spec.ts` | Browser | yes | #357 |
 | a two-port input node takes one array per port | `run-multiport-inputs.spec.ts` | Browser | yes | #332 |
 | run panel input grouping › toggles between by-trial and by-node layouts | `run-panel-grouping.spec.ts` | Browser | yes | #570 |
 | run record YAML round-trip › exports YAML and re-imports it | `run-record-yaml.spec.ts` | Browser | yes | #525 |
@@ -876,6 +883,7 @@ No tests yet.
 | `pnlSourceEvents.test.ts` | Frontend unit | 2 | yes |  |  |
 | `pnlSources.test.ts` | Frontend unit | 52 | yes |  |  |
 | `pnlUpdates.test.ts` | Frontend unit | 13 | yes |  | 2026-10-07 10:42 local time, and a check 20 minutes earlier. |
+| `recordVersion.test.ts` | Frontend unit | 4 | yes |  |  |
 | `test_app_config.py` | Backend | 9 | yes | #1025 | The preferences-file path resolves through one accessor (#1025). |
 | `test_branch_lookup.py` | Backend | 10 | yes |  | Tests for app.services.branch_lookup. |
 | `test_checkout_updates.py` | Backend | 15 | yes | #1304 | Update options for a developer's checkouts (#1304): the check reports behind or up to date, the pull is fast-forward only, and it refuses with uncommitted changes or a diverged branch and never switches branch. |

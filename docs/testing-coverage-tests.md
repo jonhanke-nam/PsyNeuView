@@ -1826,6 +1826,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - trial inputs are typed as arrays and sent as typed · CI · #330
 
+**`frontend/e2e/run-followups.spec.ts`** (Browser (Playwright))
+
+- Run and Learn follow-ups (#357) › a run in flight shows which trial it is on · CI · #357
+- Run and Learn follow-ups (#357) › Learn shows each trial's time · CI · #357
+- Run and Learn follow-ups (#357) › a saved run says whether it matches the open file · CI · #357
+- Run and Learn follow-ups (#357) › arranged by node, the sticky Run row never covers a node header · CI · #357
+
 **`frontend/e2e/run-multiport-inputs.spec.ts`** (Browser (Playwright))
 
 - a two-port input node takes one array per port · CI · #332
@@ -1948,6 +1955,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - echoesSubmitted › is false when the node changed it (slope 2, or a Hopfield update) · CI · #49
 - echoesSubmitted › is false for a node nothing was submitted to · CI · #49
 - echoesSubmitted › matches a session-suffixed log name · CI · #49
+
+**`frontend/src/utils/runProgress.test.ts`** (Frontend unit (vitest))
+
+- formatRunProgress (#357) › reads trials finished of the total, and the last one's time · CI · #357
+- formatRunProgress (#357) › leaves the time out until a trial has one · CI · #357
 
 **`frontend/src/utils/timeline.test.ts`** (Frontend unit (vitest))
 
@@ -2297,6 +2309,17 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - test_execution_modes_endpoint_advertises_default_run: The Run selector seeds itself from `defaultRun`; Learn uses defaultLearn. · CI · #764
 - test_default_run_mode_is_actually_available: A default nothing can run under would break every omitted-mode request. · CI · #764
 - test_run_request_accepts_execution_mode_field: RunModelRequest gained the field LearnModelRequest already had. · CI · #764
+
+**`backend/tests/test_run_progress.py`** (Backend (pytest))
+
+- test_the_timing_hook_reports_each_finished_trial · CI · #357
+- test_a_failing_progress_callback_never_fails_the_run · CI · #357
+- test_the_sandboxed_run_streams_one_event_per_trial · CI · #357
+- test_progress_entries_live_only_while_their_run_does · CI · #357
+- test_a_run_with_a_progress_id_succeeds_and_cleans_up · CI · #357
+- test_mean_trial_seconds_averages_each_trial_over_the_epochs · CI · #357
+- test_learn_returns_one_time_per_trial · CI · #357
+- test_autodiff_learn_returns_one_time_per_trial · CI · #357
 
 **`backend/tests/test_run_warnings_contract.py`** (Backend (pytest))
 
@@ -3460,6 +3483,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - a checkout's status line in Developer › says uncommitted changes mean no pull · CI
 - a checkout's status line in Developer › passes on a diverged branch's sentence · CI
 - a checkout's status line in Developer › reports the last pull at launch · CI
+
+**`frontend/src/utils/recordVersion.test.ts`** (Frontend unit (vitest))
+
+- recordVersion (#357) › matches when the open source hashes the same · CI · #357
+- recordVersion (#357) › is from an earlier version when the hash differs · CI · #357
+- recordVersion (#357) › is from another file when the paths differ · CI · #357
+- recordVersion (#357) › can't tell for an unhashed record or before the open source is hashed · CI · #357
 
 **`backend/tests/test_app_config.py`** (Backend (pytest))
 
