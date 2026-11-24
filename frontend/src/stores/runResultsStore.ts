@@ -15,6 +15,10 @@ export interface RunResults {
   // at run time, and the composition. Set by the Run panel, not the backend.
   sourceHash?: string;
   compositionName?: string;
+  // The composition chosen in the app when the run started (activeComposition),
+  // compared like with like to tell when another one is chosen. Null when none
+  // was chosen, which never counts as a switch.
+  chosenComposition?: string | null;
 }
 
 interface RunResultsState {

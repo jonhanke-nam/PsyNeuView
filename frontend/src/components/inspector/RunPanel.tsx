@@ -468,6 +468,7 @@ export function RunPanel() {
         const data = await resp.json();
         data.sourceHash = sourceHash;
         data.compositionName = compositionName;
+        data.chosenComposition = useModelStore.getState().activeComposition;
         outcome = "ok";
         setResults(data);
         setModelWarnings(data.model_warnings ?? null);
@@ -1213,7 +1214,7 @@ export function RunPanel() {
 function StaleResultsNote({ onRunAgain, disabled }: { onRunAgain: () => void; disabled: boolean }) {
   // Which kind of stale: another composition chosen, or the code edited.
   const activeComposition = useModelStore((s) => s.activeComposition);
-  const ran = useRunResults((s) => s.results?.compositionName);
+  const ran = useRunResults((s) => s.results?.chosenComposition);
   const ranComposition = ran && activeComposition && ran !== activeComposition ? ran : null;
   return (
     <div

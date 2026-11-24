@@ -28,7 +28,7 @@ export const STALE_STYLE = { opacity: 0.45 } as const;
 
 /** Did the composition that ran differ from `composition`, the one now chosen? */
 export function isOtherComposition(composition: string | null | undefined): boolean {
-  const ran = useRunResults.getState().results?.compositionName;
+  const ran = useRunResults.getState().results?.chosenComposition;
   return !!ran && !!composition && ran !== composition;
 }
 

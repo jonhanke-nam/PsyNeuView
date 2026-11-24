@@ -14,6 +14,7 @@ function runOn(source: string) {
     numTrials: 0,
     sourceHash: cachedSourceHash(source),
     compositionName: "stroop",
+    chosenComposition: "stroop",
   });
 }
 
