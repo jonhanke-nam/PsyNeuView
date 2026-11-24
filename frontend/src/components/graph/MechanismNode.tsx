@@ -17,6 +17,7 @@ import { TYPE_COLORS, ROLE_COLORS, ROLE_TEXT_COLORS, ROLE_PRIORITY, roleColorFor
 import { functionRefusal, toggleCompositionCollapse } from "@/utils/nodeActions";
 import { usePaletteStore } from "@/stores/paletteStore";
 import { formatTraceValue } from "@/utils/traceValues";
+import { ranAtStep } from "@/utils/stepHighlight";
 import { ValueGrid, poolValues, useNodeGrid } from "@/components/common/ValueGrid";
 import { useValueViews, valueViewFor } from "@/stores/valueViewStore";
 import { NODE_OUTLINE_EMPHASIS_EXTRA, NODE_OUTLINE_SELECTED_EXTRA, useNodeOutlineWidth } from "@/stores/nodeOutlineStore";
@@ -344,9 +345,9 @@ export const MechanismNode = memo(function MechanismNode({
     }
   }
 
-  const isActiveStep = traceStep !== null
-    && executionTrace[traceStep]
-    && (executionTrace[traceStep].includes(d.varName) || executionTrace[traceStep].includes(d.label));
+  // #365: the same test the current trial card uses, so the two agree.
+  // A collapsed composition is active when any node inside it runs.
+  const isActiveStep = ranAtStep(executionTrace, traceStep, [d.varName, d.label, ...(d.memberNames ?? [])]);
 
   // #312: while stepping, show the value this node produced at the active
   // step. Joined from debugger snapshots (which carry per-node output) by
@@ -426,7 +427,9 @@ export const MechanismNode = memo(function MechanismNode({
   // #318: one uniform border on all four sides. The previous code forced the
   // top border to min 3px (and a different color), which read as a thicker
   // top/bottom edge on the oval — a user flagged it as a rendering bug.
-  const ovalBorderColor = isActiveStep ? "var(--pnv-trace-active)" : selected ? accentColor : (colorByRole ? accentColor : "var(--pnv-node-border)");
+  // #365: a node active at the current step keeps its role outline; the step
+  // shows as the selection-blue fill, ring and glow instead (never green).
+  const ovalBorderColor = selected ? accentColor : (colorByRole ? accentColor : "var(--pnv-node-border)");
   // Heavier than its own outline at any width, so selection always shows (#42).
   const ovalBorderWidth = isActiveStep || selected ? borderWidth + NODE_OUTLINE_SELECTED_EXTRA : borderWidth;
   const ovalBorderStyle = isActiveStep || selected ? "solid" : borderStyle;
@@ -436,9 +439,9 @@ export const MechanismNode = memo(function MechanismNode({
   // shape in the border's colour and width with the ring and shadow the oval
   // would have. The cut corners of an octagon, and the second line of a
   // double outline, need more room round the name.
-  const background = isActiveStep ? "var(--pnv-trace-tint)" : "var(--pnv-surface)";
+  const background = isActiveStep ? "var(--pnv-step-active-fill)" : "var(--pnv-surface)";
   const ring = isActiveStep
-    ? undefined
+    ? "var(--pnv-step-active-ring)"
     : selected
     // #335: the ring is the one selection blue, the same as a selected edge
     // and the current trial; the outline itself keeps the node's role colour.
@@ -546,7 +549,14 @@ export const MechanismNode = memo(function MechanismNode({
       // #253: a valid drop target pulses a teal halo (index.css), held steady
       // under the pointer; a halo, so it doesn't read as the selection ring,
       // and nothing moves or resizes.
-      className={dropStatus === "valid" ? `pnv-connect-target${pointerOnHere ? " pnv-connect-locked" : ""}` : undefined}
+      className={
+        [
+          dropStatus === "valid" ? `pnv-connect-target${pointerOnHere ? " pnv-connect-locked" : ""}` : "",
+          isActiveStep ? "pnv-step-active" : "",
+        ].filter(Boolean).join(" ") || undefined
+      }
+      data-step-active={isActiveStep ? "true" : undefined}
+      data-testid="mechanism-node-body"
       // #348: with a function picked up, the pointer says why it can't go here.
       title={functionReason ?? nodeTooltip}
       style={{
@@ -558,7 +568,7 @@ export const MechanismNode = memo(function MechanismNode({
         boxShadow: drawnOutline
           ? "none"
           : isActiveStep
-          ? "var(--pnv-trace-glow), var(--pnv-shadow-node-raised)"
+          ? "0 0 0 2px var(--pnv-step-active-ring), var(--pnv-step-active-glow), var(--pnv-shadow-node-raised)"
           : selected
           ? "0 0 0 2px color-mix(in srgb, var(--pnv-selection-border) 40%, transparent), var(--pnv-shadow-node-raised)"
           : isCursorHighlighted
@@ -585,7 +595,7 @@ export const MechanismNode = memo(function MechanismNode({
           ring={ring}
           shadow={
             isActiveStep
-              ? "drop-shadow(var(--pnv-trace-glow))"
+              ? "drop-shadow(var(--pnv-step-active-glow))"
               : selected
               ? "drop-shadow(var(--pnv-shadow-node-raised))"
               : isCursorHighlighted
@@ -639,7 +649,7 @@ export const MechanismNode = memo(function MechanismNode({
             position: "absolute",
             top: -8,
             right: -8,
-            background: isActiveStep ? "var(--pnv-trace-active)" : "var(--pnv-count-badge)",
+            background: isActiveStep ? "var(--pnv-step-active-ring)" : "var(--pnv-count-badge)",
             color: "var(--pnv-on-primary)",
             fontSize: 10,
             fontWeight: 700,
@@ -822,9 +832,9 @@ export const MechanismNode = memo(function MechanismNode({
             style={{
               fontSize: 10,
               fontFamily: "monospace",
-              color: "var(--pnv-trace-value)",
-              background: "var(--pnv-trace-pill)",
-              border: "1px solid var(--pnv-trace-border)",
+              color: "var(--pnv-step-active-text)",
+              background: "var(--pnv-step-active-fill)",
+              border: "1px solid var(--pnv-step-active-ring)",
               borderRadius: 3,
               padding: "1px 6px",
               maxWidth: 180,

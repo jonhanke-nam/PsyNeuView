@@ -1485,11 +1485,14 @@ export function InspectorPanel() {
 
       {stepEntry && (
         <div
+          data-testid="inspector-step-value"
+          className="pnv-step-active"
           style={{
             marginBottom: 12,
             padding: "8px 10px",
-            background: "var(--pnv-trace-tint)",
-            border: "1px solid var(--pnv-trace-border)",
+            // #365: this node is active at the current step: the step blue.
+            background: "var(--pnv-step-active-fill)",
+            border: "1px solid var(--pnv-step-active-ring)",
             borderRadius: 4,
             fontSize: s(12),
             fontFamily: "var(--pnv-font-mono)",

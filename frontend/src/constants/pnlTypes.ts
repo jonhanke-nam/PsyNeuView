@@ -425,3 +425,14 @@ export function roleColorFor(roles: string[] | undefined, custom?: Record<string
   return colors.INTERNAL || "var(--pnv-role-internal)";
 }
 
+
+/** The role whose colour roleColorFor picks, in plain words ("input",
+    "output", "input and output", "internal", ...), for a legend (#365). */
+export function roleNameFor(roles: string[] | undefined): string {
+  if (!roles || roles.length === 0) return "internal";
+  if (roles.includes("INPUT") && roles.includes("OUTPUT")) return "input and output";
+  for (const role of ROLE_PRIORITY) {
+    if (roles.includes(role)) return role.toLowerCase().replace(/_/g, " ");
+  }
+  return "internal";
+}

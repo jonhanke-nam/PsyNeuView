@@ -34,6 +34,8 @@ same chunking the autodiff stream path already uses.
 
 from __future__ import annotations
 
+import time
+
 import numpy as np
 
 METRICS = {
@@ -262,6 +264,15 @@ def _weight_change(before, after):
     return relative, absolute
 
 
+def mean_trial_seconds(seconds: list, num_trials: int, epochs: int) -> list:
+    """Each trial's mean time over the epochs (#357), or [] when the timings
+    don't come one per trial per epoch."""
+    if num_trials < 1 or epochs < 1 or len(seconds) != num_trials * epochs:
+        return []
+    per_trial = np.asarray(seconds, dtype=float).reshape(epochs, num_trials).mean(axis=0)
+    return [round(float(t), 6) for t in per_trial]
+
+
 def _finite(x):
     return float(x) if x is not None and np.isfinite(x) else None
 
@@ -305,9 +316,26 @@ def train(
         if per_obj:
             trial_errors.append(float(np.mean(per_obj)))
 
-    learn_kwargs = {"execution_mode": exec_mode}
-    if objectives:
-        learn_kwargs["call_after_trial"] = after_trial
+    # #357: how long each trial takes, every epoch, measured with the same
+    # per-trial hooks the Run panel's times use (#334).
+    trial_seconds: list[float] = []
+    trial_started = [None]
+
+    def before_trial():
+        trial_started[0] = time.perf_counter()
+
+    def timed_after_trial():
+        if trial_started[0] is not None:
+            trial_seconds.append(time.perf_counter() - trial_started[0])
+            trial_started[0] = None
+        if objectives:
+            after_trial()
+
+    learn_kwargs = {
+        "execution_mode": exec_mode,
+        "call_before_trial": before_trial,
+        "call_after_trial": timed_after_trial,
+    }
     if learning_rate is not None:
         learn_kwargs["learning_rate"] = float(learning_rate)
 
@@ -343,7 +371,12 @@ def train(
         if on_epoch is not None:
             on_epoch(e + 1, value, extra)
 
-    return {"epoch_values": epoch_values, "abs_changes": abs_changes, "warnings": warnings}
+    return {
+        "epoch_values": epoch_values,
+        "abs_changes": abs_changes,
+        "warnings": warnings,
+        "trial_seconds": trial_seconds,
+    }
 
 
 def learn_pathway_composition(
@@ -454,6 +487,10 @@ def learn_pathway_composition(
         "learningKind": "pathway",
         "metric": profile["metric"],
         "warnings": trained["warnings"],
+        # #357: seconds per trial, aligned with `results`: each trial's mean
+        # over the epochs. Empty when the hooks didn't fire once per trial
+        # per epoch (a compiled mode).
+        "trial_seconds": mean_trial_seconds(trained["trial_seconds"], num_trials, epochs),
     }
     if profile["metric"]["id"] == "weight_change":
         response["epochWeightChangeAbsolute"] = trained["abs_changes"]

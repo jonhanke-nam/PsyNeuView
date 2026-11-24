@@ -1517,7 +1517,10 @@ def task_run(params):
     pnl_call = format_pnl_call("run", comp.name, run_kwargs)
     # #334: time each trial inside the run (added after pnl_call so the shown
     # call stays the user's own).
-    trial_seconds = add_trial_timing(run_kwargs)
+    trial_seconds = add_trial_timing(
+        run_kwargs,
+        on_trial=_emit_trial_progress if params.get("stream_progress") else None,
+    )
 
     debugger_snapshots, execution_trial_boundaries, snapshots_dropped = _run_capturing_debugger_snapshots(
         comp, pnl_inputs, run_kwargs=run_kwargs
@@ -1603,7 +1606,7 @@ def task_run(params):
 def task_learn(params):
     """Train a learning-capable composition (#534 L1; non-autodiff #997)."""
     import psyneulink as pnl
-    from app.services.pathway_learning import METRICS
+    from app.services.pathway_learning import METRICS, mean_trial_seconds
 
     file_path = params["file_path"]
     comp_name = params["composition_name"]
@@ -1694,6 +1697,9 @@ def task_learn(params):
             **learn_base,
         },
     )
+    # #357: per-trial times for the Learn panel, added after pnl_call so the
+    # shown call stays the user's own.
+    learn_trial_seconds = add_trial_timing(learn_base)
 
     if params.get("stream_progress"):
         # Job mode (#535): drive learn() one epoch at a time — weights and
@@ -1756,6 +1762,8 @@ def task_learn(params):
         # #997: name what epochLosses measure, so the UI labels it honestly.
         "learningKind": "autodiff",
         "metric": METRICS["loss"],
+        # #357: each trial's mean time over the epochs, aligned with `results`.
+        "trial_seconds": mean_trial_seconds(learn_trial_seconds, num_trials, epochs),
     }
 
 
@@ -1800,8 +1808,23 @@ def _debugger_hook_available() -> bool:
     return True
 
 
-def add_trial_timing(run_kwargs):
+def _emit_trial_progress(count, seconds):
+    """One progress line per finished trial, for the parent to relay (#357).
+
+    Written to the real stdout: a model's own prints are routed to stderr
+    while it loads (#865), and this line is for the parent, not the model.
+    """
+    out = sys.__stdout__
+    out.write(PROGRESS_MARKER + json.dumps({"trial": count, "seconds": round(seconds, 6)}) + "\n")
+    out.flush()
+
+
+def add_trial_timing(run_kwargs, on_trial=None):
     """Time each trial of a ``Composition.run`` call (#334).
+
+    ``on_trial(count, seconds)``, when given, is called after each trial with
+    how many trials have finished and how long the last one took: the live
+    "Trial 3 of 10" progress (#357).
 
     Wraps ``call_before_trial`` / ``call_after_trial`` in ``run_kwargs`` (in
     place), chaining any callbacks already there, and returns the list that
@@ -1829,6 +1852,11 @@ def add_trial_timing(run_kwargs):
         if started[0] is not None:
             seconds.append(time.perf_counter() - started[0])
             started[0] = None
+            if on_trial is not None:
+                try:
+                    on_trial(len(seconds), seconds[-1])
+                except Exception:
+                    pass  # progress is a courtesy; it must never fail a run
         if after is not None:
             call_with_pruned_args(after, context=context)
 

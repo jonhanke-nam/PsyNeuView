@@ -61,6 +61,9 @@ interface JobResult {
   pnlCall?: string;               // the concrete PsyNeuLink call (#766)
   metric?: LearnMetric;           // what epochLosses/finalLoss measure (#997)
   warnings?: string[];
+  // #357: seconds each trial took, each trial's mean over the epochs, aligned
+  // with `results`. Empty when the mode runs trials in compiled code.
+  trial_seconds?: number[];
 }
 
 type JobPhase = "idle" | "submitting" | "running" | "done" | "error" | "canceled";
@@ -668,6 +671,22 @@ export function LearnPanel() {
               {formatMetricValue(result?.finalLoss)} after{" "}
               {result?.epochs ?? progress.length} epochs
             </span>
+          )}
+          {/* #357: per-trial times, as the Run panel shows them (#334). */}
+          {phase === "done" && (result?.trial_seconds?.length ?? 0) > 0 && (
+            <div
+              data-testid="learn-trial-seconds"
+              title={`Each trial's mean time over the ${result?.epochs ?? ""} epochs`}
+              style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-secondary)", marginTop: 2 }}
+            >
+              Per trial:{" "}
+              {result!.trial_seconds!.map((sec, i) => (
+                <span key={i} data-testid="learn-trial-time">
+                  {i > 0 ? ", " : ""}
+                  Trial {i + 1} · {sec < 0.01 ? sec.toFixed(3) : sec.toFixed(2)} s
+                </span>
+              ))}
+            </div>
           )}
           {phase === "done" &&
             (result?.warnings ?? []).map((w) => (

@@ -82,7 +82,7 @@ for (const scheme of ["light", "dark"] as const) {
       let id = "";
       for (const candidate of ["decision", "output", "task_input", "color_hidden", "word_hidden"]) {
         const html = await page.locator(`.react-flow__node[data-id="${candidate}"]`).innerHTML();
-        if (!html.includes("--pnv-trace-active")) {
+        if (!html.includes('data-step-active="true"')) {
           id = candidate;
           break;
         }

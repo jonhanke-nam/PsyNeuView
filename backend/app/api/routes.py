@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, UploadFile, File
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -44,6 +45,7 @@ def _attach_dangling(model: dict, source: str) -> dict:
     return model
 from app.services.executor import run_model, get_input_nodes, learn_model
 from app.services.jobs import job_manager, build_provenance
+from app.services import run_progress
 from app.services.layout import load_layout, save_layout, stamp_demo_origin, sidecar_path
 from app.services.labels import load_labels, save_labels, labels_path
 from app.services.sidecar_index import (
@@ -1749,6 +1751,9 @@ class RunModelRequest(BaseModel):
     inputs: dict  # {var_name: [[trial1_values], [trial2_values], ...]}
     execution_mode: str | None = None  # Python | PyTorch | LLVM (#764); None → default
     log_nodes: list[str] | None = None  # #768: value-log only these nodes; None → all
+    # #357: names this run, so GET /model/run/progress/{id} can report its
+    # trials as they finish. Omitted: no progress is kept.
+    progress_id: str | None = None
 
 
 class InputNodesRequest(BaseModel):
@@ -1769,6 +1774,16 @@ async def input_nodes(request: InputNodesRequest):
     return result
 
 
+@router.get("/model/run/progress/{progress_id}")
+async def run_progress_endpoint(progress_id: str):
+    """How far a run in flight has got (#357): trials finished of the total,
+    and how long the last one took. 404 once the run is over (or unknown)."""
+    entry = run_progress.get(progress_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="No run in progress with that id")
+    return {"trial": entry["trial"], "total": entry["total"], "seconds": entry["seconds"]}
+
+
 @router.post("/model/run")
 async def run_model_endpoint(request: RunModelRequest):
     """Run a composition with provided inputs and return results."""
@@ -1777,13 +1792,27 @@ async def run_model_endpoint(request: RunModelRequest):
         raise HTTPException(status_code=404, detail=f"File not found: {path}")
 
     t0 = time.time()
-    result = run_model(
-        request.file_path,
-        request.composition_name,
-        request.inputs,
-        execution_mode=request.execution_mode,
-        log_nodes=request.log_nodes,
-    )
+    progress_id = request.progress_id
+    on_progress = None
+    if progress_id:
+        counts = [len(v) for v in request.inputs.values() if isinstance(v, list)]
+        run_progress.start(progress_id, max(counts) if counts else 0)
+        on_progress = lambda ev: run_progress.update(progress_id, ev)  # noqa: E731
+    try:
+        # #357: off the event loop, so the progress endpoint (and everything
+        # else) still answers while the run is going.
+        result = await run_in_threadpool(
+            run_model,
+            request.file_path,
+            request.composition_name,
+            request.inputs,
+            execution_mode=request.execution_mode,
+            log_nodes=request.log_nodes,
+            on_progress=on_progress,
+        )
+    finally:
+        if progress_id:
+            run_progress.finish(progress_id)
     if "error" in result:
         # #1101: when the worker also emitted warnings, carry them next to the
         # error instead of folding them into the message. detail stays a plain

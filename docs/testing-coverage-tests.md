@@ -1830,6 +1830,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - trial inputs are typed as arrays and sent as typed · CI · #330
 
+**`frontend/e2e/run-followups.spec.ts`** (Browser (Playwright))
+
+- Run and Learn follow-ups (#357) › a run in flight shows which trial it is on · CI · #357
+- Run and Learn follow-ups (#357) › Learn shows each trial's time · CI · #357
+- Run and Learn follow-ups (#357) › a saved run says whether it matches the open file · CI · #357
+- Run and Learn follow-ups (#357) › arranged by node, the sticky Run row never covers a node header · CI · #357
+
 **`frontend/e2e/run-multiport-inputs.spec.ts`** (Browser (Playwright))
 
 - a two-port input node takes one array per port · CI · #332
@@ -1845,6 +1852,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 **`frontend/e2e/run-set-survives-edit.spec.ts`** (Browser (Playwright))
 
 - a parameter edit keeps the run set the learner chose · CI · #57
+
+**`frontend/e2e/run-sticky-node-headers.spec.ts`** (Browser (Playwright))
+
+- Run panel sticky node headers (#363) › arranged by node, the current node's header stays just below the Run row · CI · #363
 
 **`frontend/e2e/run-trial-seconds.spec.ts`** (Browser (Playwright))
 
@@ -1953,6 +1964,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - echoesSubmitted › is false when the node changed it (slope 2, or a Hopfield update) · CI · #49
 - echoesSubmitted › is false for a node nothing was submitted to · CI · #49
 - echoesSubmitted › matches a session-suffixed log name · CI · #49
+
+**`frontend/src/utils/runProgress.test.ts`** (Frontend unit (vitest))
+
+- formatRunProgress (#357) › reads trials finished of the total, and the last one's time · CI · #357
+- formatRunProgress (#357) › leaves the time out until a trial has one · CI · #357
 
 **`frontend/src/utils/timeline.test.ts`** (Frontend unit (vitest))
 
@@ -2302,6 +2318,17 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - test_execution_modes_endpoint_advertises_default_run: The Run selector seeds itself from `defaultRun`; Learn uses defaultLearn. · CI · #764
 - test_default_run_mode_is_actually_available: A default nothing can run under would break every omitted-mode request. · CI · #764
 - test_run_request_accepts_execution_mode_field: RunModelRequest gained the field LearnModelRequest already had. · CI · #764
+
+**`backend/tests/test_run_progress.py`** (Backend (pytest))
+
+- test_the_timing_hook_reports_each_finished_trial · CI · #357
+- test_a_failing_progress_callback_never_fails_the_run · CI · #357
+- test_the_sandboxed_run_streams_one_event_per_trial · CI · #357
+- test_progress_entries_live_only_while_their_run_does · CI · #357
+- test_a_run_with_a_progress_id_succeeds_and_cleans_up · CI · #357
+- test_mean_trial_seconds_averages_each_trial_over_the_epochs · CI · #357
+- test_learn_returns_one_time_per_trial · CI · #357
+- test_autodiff_learn_returns_one_time_per_trial · CI · #357
 
 **`backend/tests/test_run_warnings_contract.py`** (Backend (pytest))
 
@@ -3465,6 +3492,13 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - a checkout's status line in Developer › says uncommitted changes mean no pull · CI
 - a checkout's status line in Developer › passes on a diverged branch's sentence · CI
 - a checkout's status line in Developer › reports the last pull at launch · CI
+
+**`frontend/src/utils/recordVersion.test.ts`** (Frontend unit (vitest))
+
+- recordVersion (#357) › matches when the open source hashes the same · CI · #357
+- recordVersion (#357) › is from an earlier version when the hash differs · CI · #357
+- recordVersion (#357) › is from another file when the paths differ · CI · #357
+- recordVersion (#357) › can't tell for an unhashed record or before the open source is hashed · CI · #357
 
 **`backend/tests/test_app_config.py`** (Backend (pytest))
 
@@ -4744,6 +4778,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - round trips between the graph and the code (#319) › connect: dragged in the graph, to the code and back; and typed in the code, to the graph · CI · #319
 - round trips between the graph and the code (#319) › a parameter: changed in the Inspector, to the code and back; and in the code, to the Inspector · CI · #319
 
+**`frontend/e2e/step-highlight.spec.ts`** (Browser (Playwright))
+
+- step highlight (#365) › graph and current trial card highlight the same nodes in the selection blue · CI · #365
+- step highlight (#365) › a collapsed composition lights up when a node inside it runs (EGO) · CI · #365
+
 **`frontend/e2e/trace-autoplay-label.spec.ts`** (Browser (Playwright))
 
 - the trace bar's auto-play button (#338) › reads Auto-play, then Pause while playing, then Auto-play again · CI · #338
@@ -4875,6 +4914,21 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - nodeSelector › leaves no raw newline, quote or backslash in the value for %j · CI · #1236
 - nodeSelector › leaves an ordinary name alone · CI · #1236
+
+**`frontend/src/utils/stepHighlight.test.ts`** (Frontend unit (vitest))
+
+- ranAtStep (#365) › is false with no step · CI · #365
+- ranAtStep (#365) › matches any of the node's names · CI · #365
+- ranAtStep (#365) › is false past the end of the trace · CI · #365
+- classifyStepRow (#365) › marks the nodes at the current step active · CI · #365
+- classifyStepRow (#365) › marks nodes that ran earlier in this trial done · CI · #365
+- classifyStepRow (#365) › marks nodes not reached yet in this trial pending · CI · #365
+- classifyStepRow (#365) › does not count steps from an earlier trial · CI · #365
+- classifyStepRow (#365) › tries a log name without its -N suffix · CI · #365
+- classifyStepRow (#365) › ignores empty and missing names · CI · #365
+- compositionMemberNames (#365) › lists every node inside, at any depth, with and without its -N suffix · CI · #365
+- compositionMemberNames (#365) › is empty for a composition with no nodes · CI · #365
+- compositionMemberNames (#365) › lets a collapsed composition match a member's step · CI · #365
 
 **`frontend/src/utils/tensorInput.test.ts`** (Frontend unit (vitest))
 

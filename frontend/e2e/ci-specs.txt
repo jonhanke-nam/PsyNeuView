@@ -117,10 +117,12 @@ reference-models-runnable.spec.ts
 restore-saved-layout.spec.ts
 round-trips.spec.ts
 run-array-inputs.spec.ts
+run-followups.spec.ts
 run-multiport-inputs.spec.ts
 run-panel-grouping.spec.ts
 run-record-yaml.spec.ts
 run-set-survives-edit.spec.ts
+run-sticky-node-headers.spec.ts
 run-trial-seconds.spec.ts
 save-copy-sidecars.spec.ts
 saves-in-history.spec.ts
@@ -137,6 +139,7 @@ show-ports.spec.ts
 sidecar-placement.spec.ts
 spline-straightness.spec.ts
 stale-run-results.spec.ts
+step-highlight.spec.ts
 stroop-lc-reference.spec.ts
 style-conventions.spec.ts
 style-sizes.spec.ts
