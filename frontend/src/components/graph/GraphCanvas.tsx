@@ -45,7 +45,7 @@ import { DanglingNode } from "./DanglingNode";
 import { EDGE_MENU_EVENT, GSCEdge } from "./GSCEdge";
 import { ProjectionEdge } from "./ProjectionEdge";
 import { GSCLegend } from "./GSCLegend";
-import { FailedOpenBanner } from "./FailedOpenBanner";
+import { FailedOpenBanner, useFailedOpenShowing } from "./FailedOpenBanner";
 import { useSchedulingArrowsStore } from "@/stores/schedulingArrowsStore";
 import { TraceControls } from "./TraceControls";
 import { ValidationPanel } from "./ValidationPanel";
@@ -375,13 +375,16 @@ export function GraphCanvas() {
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
 
-  // Re-fit the graph when panes are shown/hidden (#226). The canvas resizes
+  // Re-fit the graph when panes are shown/hidden (#226), or the failed-open strip (#401). The canvas resizes
   // as the layout reflows, so without this the graph stays cramped or
   // off-center in its new footprint. Skip the first render — the initial fit
   // is handled by the load effect / ReactFlow's fitView prop.
   const codeVisible = useLayoutStore((s) => s.codeVisible);
   const graphVisible = useLayoutStore((s) => s.graphVisible);
   const bottomVisible = useLayoutStore((s) => s.bottomVisible);
+  // #401: the failed-open strip takes its height from the canvas, so the
+  // graph is fitted again when it comes and goes, and no node is cut off.
+  const failedOpenShowing = useFailedOpenShowing();
   const didMountRef = useRef(false);
   useEffect(() => {
     if (!didMountRef.current) {
@@ -392,7 +395,7 @@ export function GraphCanvas() {
     // Wait for the Allotment reflow to settle before measuring.
     const t = setTimeout(fitGraph, 120);
     return () => clearTimeout(t);
-  }, [codeVisible, graphVisible, bottomVisible, fitGraph]);
+  }, [codeVisible, graphVisible, bottomVisible, failedOpenShowing, fitGraph]);
 
   // Per-node shift table for the current view state (refs #288). The
   // table is rebuilt whenever the node set or a label-affecting toggle
@@ -1148,6 +1151,8 @@ export function GraphCanvas() {
       tabIndex={0}
     >
       <GraphToolbar />
+      {/* #401: a strip above the canvas, never a layer over the graph. */}
+      <FailedOpenBanner />
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
         <PaletteSidebar />
         <div
@@ -1266,7 +1271,6 @@ export function GraphCanvas() {
             <EmptyGraphMessage />
           )}
           {ready && nodes.length > 0 && <StaleGraphBanner />}
-          <FailedOpenBanner />
           {ready && (
             <ReactFlow
               nodes={displayNodes}
