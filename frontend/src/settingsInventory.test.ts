@@ -135,6 +135,7 @@ describe("settings inventory (#1279)", () => {
     expect(keys.sort()).toEqual([
       "autoInstallUpdates",
       "autoRestart",
+      "checkForUpdates",
       "install",
       "launchAtLogin",
       "receiveReleaseCandidates",

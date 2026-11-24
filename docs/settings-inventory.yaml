@@ -205,6 +205,22 @@ settings:
     control: setting-mac-launch-at-login
     bridge_key: launchAtLogin
 
+  - id: mac-check-for-updates
+    label: General ▸ Updates ▸ Check for updates automatically
+    keywords: ["update", "automatic", "check", "hourly", "sparkle"]
+    home: settings:mac-app
+    section: general
+    storage: Mac app UserDefaults (checkForUpdates, the app's own record; Sparkle's SUEnableAutomaticChecks stays off)
+    control: setting-mac-check-for-updates
+    bridge_key: checkForUpdates
+    notes: >-
+      On by default (PsyNeuView-MacApp#81, #83). The app is the only update
+      scheduler: on, it checks at launch and every hour; off, there are no
+      automatic checks at all, and Check for App Updates… in the app menu still
+      works. The change takes effect at once. While it is off, "Install
+      updates automatically" is disabled with a short note. Apps that can't
+      update themselves send no value, and the switch is hidden.
+
   - id: mac-auto-install-updates
     label: General ▸ Updates ▸ Install updates automatically (when you quit)
     keywords: ["update", "automatic", "auto-update", "upgrade", "sparkle"]
