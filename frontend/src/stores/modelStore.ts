@@ -667,6 +667,17 @@ let pendingFreshOpenLayout = false;
 // like a fresh open: a view with nothing saved has no custom layout to keep,
 // and staying in Custom there would hide the automatic layout (#33).
 let lastPositionsView: "nested" | "flat" | null = null;
+// #323: set while a fold in the flattened or PyTorch view rebuilds the graph.
+// That fold shows the model nested, so the build reads the nested view's
+// positions, but it is a fold, not a switch of view: an automatic layout stays
+// automatic rather than opening the nested view's saved Custom layout, which
+// would leave Like show_graph unapplied after the fold.
+let keepAutoLayoutForFold = false;
+
+/** Keep an automatic layout automatic across the next build, for a fold that leaves a flattened view (#323). */
+export function keepAutoLayoutAcrossFold(on: boolean): void {
+  keepAutoLayoutForFold = on;
+}
 // #48: whether the loaded model nests a composition. Flattening a model that
 // doesn't changes nothing, so it keeps the nested view's saved positions.
 let loadedModelHasNesting = false;
@@ -1064,7 +1075,9 @@ export const useModelStore = create<ModelState>((set, get) => ({
     const screenNodes = get().nodes;
     const screenEdges = get().edges;
     const isReload = !pendingFreshOpenLayout && !viewChanged && screenNodes.length > 0;
-    if (pendingFreshOpenLayout || viewChanged) {
+    const keepAuto = keepAutoLayoutForFold && viewChanged && !pendingFreshOpenLayout && get().autoLayout;
+    keepAutoLayoutForFold = false;
+    if ((pendingFreshOpenLayout || viewChanged) && !keepAuto) {
       pendingFreshOpenLayout = false;
       set({ autoLayout: Object.keys(savedPositions).length === 0 });
     }
