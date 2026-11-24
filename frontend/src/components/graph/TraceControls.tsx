@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useModelStore } from "@/stores/modelStore";
 import { record } from "@/utils/activityLog";
+import { AUTO_PLAY_TOOLTIP, autoPlayButtonLabel } from "./traceAutoPlay";
 
 export function TraceControls() {
   const executionTrace = useModelStore((s) => s.executionTrace);
@@ -117,7 +118,7 @@ export function TraceControls() {
 
   // When the user changes speed mid-playback, restart the interval at the
   // new rate. If autoplay isn't running, just stash the new speed for the
-  // next press of ⏵⏵.
+  // next press of Auto-play.
   useEffect(() => {
     if (!isPlaying) return;
     if (autoPlayRef.current) clearInterval(autoPlayRef.current);
@@ -388,10 +389,17 @@ export function TraceControls() {
         </span>
       )}
 
+      {/* #338: says Auto-play in words (it was a bare ⏵⏵, which read like
+          fast-forward), and Pause while playing. A minimum width keeps the
+          bar from shifting when the word changes. */}
       <button onClick={toggleAutoPlay}
+        data-testid="trace-autoplay"
+        aria-pressed={isPlaying}
         style={{
           fontSize: "var(--pnv-fs-11)",
           padding: "2px 8px",
+          minWidth: 76,
+          whiteSpace: "nowrap",
           border: "1px solid var(--pnv-border)",
           borderRadius: 4,
           // Highlight while playing so the button doubles as a status
@@ -401,16 +409,22 @@ export function TraceControls() {
           fontWeight: isPlaying ? 700 : 400,
           cursor: "pointer",
         }}
-        title={isPlaying ? "Pause autoplay" : "Auto-play"}
-      >{isPlaying ? "⏸" : "⏵⏵"}</button>
+        title={AUTO_PLAY_TOOLTIP}
+      >{autoPlayButtonLabel(isPlaying)}</button>
 
       {/* #378: playback speed multiplier. 1× is the default 400 ms/step;
           higher speeds shorten the interval (and lower speeds lengthen).
-          Restarts the interval mid-playback via the useEffect above. */}
+          Restarts the interval mid-playback via the useEffect above.
+          #338: labelled Speed, right beside Auto-play. */}
+      <label
+        style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-muted)", whiteSpace: "nowrap" }}
+      >
+        Speed
       <select
+        data-testid="trace-autoplay-speed"
         value={playbackSpeed}
         onChange={(e) => setPlaybackSpeed(parseFloat(e.target.value))}
-        title="Autoplay speed (relative to 400 ms/step)"
+        title="Auto-play speed (relative to 400 ms/step)"
         style={{
           fontSize: "var(--pnv-fs-11)",
           fontFamily: "var(--pnv-font-mono)",
@@ -428,6 +442,7 @@ export function TraceControls() {
         <option value="2">2×</option>
         <option value="4">4×</option>
       </select>
+      </label>
 
       {/* #336 gap 3: the active-nodes list used to live here as
           `word_hidden, color_hi…` — but the canvas green highlight already
