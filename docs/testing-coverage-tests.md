@@ -4672,6 +4672,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - round trips between the graph and the code (#319) › connect: dragged in the graph, to the code and back; and typed in the code, to the graph · CI · #319
 - round trips between the graph and the code (#319) › a parameter: changed in the Inspector, to the code and back; and in the code, to the Inspector · CI · #319
 
+**`frontend/e2e/trace-autoplay-label.spec.ts`** (Browser (Playwright))
+
+- the trace bar's auto-play button (#338) › reads Auto-play, then Pause while playing, then Auto-play again · CI · #338
+
 **`frontend/src/ciSpecs.test.ts`** (Frontend unit (vitest))
 
 - the list is sorted, one file per line, with no repeats · CI
@@ -4707,6 +4711,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - placeInWindow › opens to the left of the pointer near the right edge · CI · #109
 - placeInWindow › stays inside a window too short for it to open upward · CI · #109
 - placeInWindow › never leaves the bottom edge even when the space above is short · CI · #109
+
+**`frontend/src/components/graph/traceAutoPlay.test.ts`** (Frontend unit (vitest))
+
+- the trace bar's auto-play button (#338) › reads Auto-play, then Pause while playing, then Auto-play again · CI · #338
+- the trace bar's auto-play button (#338) › says in words, not only a symbol, and explains itself · CI · #338
 
 **`frontend/src/e2eDistFreshness.test.ts`** (Frontend unit (vitest))
 

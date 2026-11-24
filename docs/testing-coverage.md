@@ -9,9 +9,9 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 158 | 430 | 418 tests in 152 files |
+| Browser (Playwright) | 159 | 431 | 419 tests in 153 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 134 | 1203 | 1203 tests in 134 files |
+| Frontend unit (vitest) | 135 | 1205 | 1205 tests in 135 files |
 | Backend (pytest) | 188 | 1747 | 1747 tests in 188 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -34,7 +34,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Look and style conventions](#style) | 13 files, 31 tests | – | 8 files, 47 tests | – | 76 of 78 |
 | [Layout, views and compositions](#layout) | 21 files, 47 tests | – | 21 files, 151 tests | 5 files, 56 tests | 253 of 254 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 13 files, 78 tests | 18 files, 194 tests | 288 of 291 |
+| [App shell, diagnostics and everything else](#shell) | 10 files, 20 tests | – | 14 files, 80 tests | 18 files, 194 tests | 291 of 294 |
 
 <a id="tutorials"></a>
 
@@ -1205,11 +1205,13 @@ No tests yet.
 | `pycharm-live.local.spec.ts` | Browser | 1 | no |  | LOCAL ONLY — the full two-headed loop with a real PyCharm. |
 | `read-only-badge-note.spec.ts` | Browser | 1 | yes | #50 | Clicking the "PsyNeuLink from … · read only" tag explains it (#50). |
 | `round-trips.spec.ts` | Browser | 5 | yes | #319 | Round trips: an edit in the graph reaches the code and survives a reload; an edit in the code reaches the graph (#319). |
+| `trace-autoplay-label.spec.ts` | Browser | 1 | yes | #338 | The trace bar's auto-play button says what it does (#338). |
 | `ciSpecs.test.ts` | Frontend unit | 3 | yes |  | The CI e2e set is the specs tagged `@ci`; e2e/ci-specs.txt names their files. |
 | `DiagnosticPanel.test.ts` | Frontend unit | 4 | yes | #109 | The diagnostics bar (#109): amber only when there is something to act on, the toolbar's neutral grey otherwise, and no "click to expand" line — the bar's tooltip says it expands. |
 | `StatusBar.test.ts` | Frontend unit | 1 | yes | #222 | The status bar has no spinner of its own (#222 follow-up): the busy wheel is the one spinner on screen. |
 | `exportFormats.test.ts` | Frontend unit | 8 | yes |  |  |
 | `useMenuInWindow.test.ts` | Frontend unit | 5 | yes | #109 | A 160×120 menu in a 1000×700 window (#109). |
+| `traceAutoPlay.test.ts` | Frontend unit | 2 | yes |  |  |
 | `e2eDistFreshness.test.ts` | Frontend unit | 3 | yes |  |  |
 | `errorReveal.test.ts` | Frontend unit | 4 | yes | #1103 | Clicking a model error to jump to its line (#1103). |
 | `activityLog.test.ts` | Frontend unit | 17 | yes | #1287 | The activity log's rules (#1287): the cap, the order, `~` for the home folder, and no secrets — the value of a key that looks like a token or a password is never recorded, however it gets in. |
@@ -1260,6 +1262,7 @@ No tests yet.
 | round trips between the graph and the code (#319) › rename a node: in the Inspector, to the code and back; and in the code, to the graph | `round-trips.spec.ts` | Browser | yes | #319 |
 | round trips between the graph and the code (#319) › connect: dragged in the graph, to the code and back; and typed in the code, to the graph | `round-trips.spec.ts` | Browser | yes | #319 |
 | round trips between the graph and the code (#319) › a parameter: changed in the Inspector, to the code and back; and in the code, to the Inspector | `round-trips.spec.ts` | Browser | yes | #319 |
+| the trace bar's auto-play button (#338) › reads Auto-play, then Pause while playing, then Auto-play again | `trace-autoplay-label.spec.ts` | Browser | yes | #338 |
 
 </details>
 
