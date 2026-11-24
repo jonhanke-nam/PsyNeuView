@@ -1071,6 +1071,7 @@ export function RunPanel() {
                 onCell={setCell}
                 onRemoveTrial={removeTrial}
                 onApplyCsv={applyCsv}
+                stickyTop={stickyRowHeight}
               />
             ))
           ) : (
@@ -1735,6 +1736,7 @@ function InputNodeEditor({
   onCell,
   onRemoveTrial,
   onApplyCsv,
+  stickyTop,
 }: {
   node: InputNodeInfo;
   labels: string[];
@@ -1744,13 +1746,30 @@ function InputNodeEditor({
   onCell: (varName: string, trial: number, port: number, value: string) => void;
   onRemoveTrial: (trial: number) => void;
   onApplyCsv: (varName: string, text: string, width: number) => void;
+  /** The sticky Run row's height: the header pins just below it (#363). */
+  stickyTop: number;
 }) {
   const [csvText, setCsvText] = useState("");
   const width = labels.length;
   return (
     <div style={{ marginBottom: 12 }} data-testid={`run-input-${node.name}`}>
+      {/* #363: the header sticks just below the sticky Run row while this
+          node's trials scroll past; it stays inside this node's box, so the
+          next node's header pushes it up. A solid background keeps rows from
+          showing through, and padding (not margin) below it keeps the
+          layout the same while covering the gap under the text. */}
       <label
-        style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-secondary)", display: "block", marginBottom: 3 }}
+        data-testid={`run-input-header-${node.name}`}
+        style={{
+          fontSize: "var(--pnv-fs-12)",
+          color: "var(--pnv-text-secondary)",
+          display: "block",
+          paddingBottom: 3,
+          position: "sticky",
+          top: stickyTop,
+          background: "var(--pnv-surface)",
+          zIndex: 1,
+        }}
       >
         {node.name}{" "}
         <span style={{ color: "var(--pnv-text-faint)" }}>
