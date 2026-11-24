@@ -26,7 +26,7 @@ test.describe("Components panel opening setting (#113)", { tag: "@ci" }, () => {
     await page.goto("/");
     const palette = page.getByTestId("palette-sidebar");
     await expect(palette).toBeVisible();
-    await expect(palette.getByTitle("Expand palette")).toBeVisible();
+    await expect(palette.getByTitle("Show the full Components panel")).toBeVisible();
     await expect(palette.getByPlaceholder("Search components…")).toHaveCount(0);
   });
 
@@ -37,12 +37,12 @@ test.describe("Components panel opening setting (#113)", { tag: "@ci" }, () => {
 
     await chooseComponentsStart(page, "strip");
     // The choice shows straight away…
-    await expect(palette.getByTitle("Expand palette")).toBeVisible();
+    await expect(palette.getByTitle("Show the full Components panel")).toBeVisible();
 
     // ...and is how the panel opens next time.
     await page.reload();
     await expect(palette).toBeVisible();
-    await expect(palette.getByTitle("Expand palette")).toBeVisible();
+    await expect(palette.getByTitle("Show the full Components panel")).toBeVisible();
     await expect(palette.getByPlaceholder("Search components…")).toHaveCount(0);
   });
 
