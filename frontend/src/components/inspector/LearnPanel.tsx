@@ -21,7 +21,8 @@ import Plot from "react-plotly.js";
 import { useModelStore, selectExecPath } from "@/stores/modelStore";
 import { useLearnResults } from "@/stores/learnResultsStore";
 import { cellsFromSet, preloadable, setsFor } from "@/utils/inputSets";
-import { resolveInputLabels, resolveOutputLabels } from "@/utils/labels";
+import { portElementLabels, resolveInputLabels, resolveOutputLabels } from "@/utils/labels";
+import { flatTrial, gridPortSizes, trialForPorts } from "@/utils/learnPorts";
 import { record as recordActivity } from "@/utils/activityLog";
 import type { ExecutionModeInfo, LearnMetric } from "@/types/model";
 import { formatMetricValue, isLearnable, learnGridNodes, learnMetric, pickLearnMode } from "@/utils/learnPlan";
@@ -40,6 +41,19 @@ interface LearnNodeInfo {
   varName: string;
   shape: number[];
   ports: PortInfo[];
+  // Elements per port the grid edits: every input port of a multi-port
+  // input node, else the first port (#358).
+  sizes: number[];
+}
+
+/** How many boxes a trial of this node has, across its ports. */
+const gridWidth = (node: LearnNodeInfo) => node.sizes.reduce((a, b) => a + b, 0);
+
+/** A declared set with each multi-port trial laid out one box per element. */
+function flatSet(values: Record<string, number[][]>): Record<string, number[][]> {
+  return Object.fromEntries(
+    Object.entries(values).map(([k, rows]) => [k, (rows as unknown[]).map((r) => flatTrial(r) as number[])]),
+  );
 }
 
 interface ProgressEvent {
@@ -241,11 +255,14 @@ export function LearnPanel() {
     const collect = (node: (typeof candidates)[number], kind: "input" | "output"): LearnNodeInfo => {
       const data = node.data as any;
       const ports: PortInfo[] = (kind === "input" ? data?.inputPorts : data?.outputPorts) || [];
+      const shape = ports[0]?.shape || [];
       return {
         name: data?.label || node.id,
         varName: data?.varName || node.id,
-        shape: ports[0]?.shape || [],
+        shape,
         ports,
+        // Targets pair with the node's primary output, one array (#358).
+        sizes: gridPortSizes(ports, shape, kind === "input"),
       };
     };
     // #997: which nodes get grids depends on how the composition learns — a
@@ -264,13 +281,13 @@ export function LearnPanel() {
     setTargetNodes(targets);
 
     const inDefaults: Record<string, string[][]> = {};
-    for (const node of inputs) inDefaults[node.varName] = defaultCells(node.shape[0] || 1, numTrials);
+    for (const node of inputs) inDefaults[node.varName] = defaultCells(gridWidth(node), numTrials);
     const tgtDefaults: Record<string, string[][]> = {};
-    for (const node of targets) tgtDefaults[node.varName] = defaultCells(node.shape[0] || 1, numTrials);
+    for (const node of targets) tgtDefaults[node.varName] = defaultCells(gridWidth(node), numTrials);
     // #1216: a model that declares its own training sets opens with the first
     // small enough to preload.
     const declared = preloadable(setsFor(inputSets, "learn", compositionName, compositionNames.length));
-    const ins = declared ? cellsFromSet(declared.inputs, inputs) : null;
+    const ins = declared ? cellsFromSet(flatSet(declared.inputs), inputs) : null;
     const tgts = targetCellsFromSet(declared, targets, ins?.trials);
     if (declared && ins && tgts && ins.trials === tgts.trials) {
       setInputCells(ins.cells);
@@ -297,7 +314,7 @@ export function LearnPanel() {
   const applyTrainingSet = useCallback(
     (name: string) => {
       const chosen = trainingSets.find((s) => s.name === name);
-      const ins = chosen ? cellsFromSet(chosen.inputs, inputNodes) : null;
+      const ins = chosen ? cellsFromSet(flatSet(chosen.inputs), inputNodes) : null;
       const tgts = targetCellsFromSet(chosen, targetNodes, ins?.trials);
       if (chosen && ins && tgts && ins.trials === tgts.trials) {
         setInputCells(ins.cells);
@@ -307,9 +324,9 @@ export function LearnPanel() {
         setTrainingSetName(name);
       } else {
         const inD: Record<string, string[][]> = {};
-        for (const node of inputNodes) inD[node.varName] = defaultCells(node.shape[0] || 1, numTrials);
+        for (const node of inputNodes) inD[node.varName] = defaultCells(gridWidth(node), numTrials);
         const tgD: Record<string, string[][]> = {};
-        for (const node of targetNodes) tgD[node.varName] = defaultCells(node.shape[0] || 1, numTrials);
+        for (const node of targetNodes) tgD[node.varName] = defaultCells(gridWidth(node), numTrials);
         setInputCells(inD);
         setTargetCells(tgD);
         setTrainingSetName("");
@@ -325,7 +342,7 @@ export function LearnPanel() {
       const resize = (cells: Record<string, string[][]>, nodes: LearnNodeInfo[]) => {
         const out: Record<string, string[][]> = {};
         for (const node of nodes) {
-          const size = node.shape[0] || 1;
+          const size = gridWidth(node);
           const prev = cells[node.varName] || [];
           out[node.varName] = Array.from({ length: clamped }, (_, t) =>
             prev[t] ? [...prev[t]] : Array.from({ length: size }, (_, i) => (i === t % size ? "1" : "0")),
@@ -426,10 +443,11 @@ export function LearnPanel() {
     setJobId(null);
 
     const toNumbers = (cells: Record<string, string[][]>, nodes: LearnNodeInfo[]) => {
-      const out: Record<string, number[][]> = {};
+      // A multi-port node's trial goes as one array per port (#358).
+      const out: Record<string, (number[] | number[][])[]> = {};
       for (const node of nodes) {
         out[node.varName] = (cells[node.varName] || []).map((trial) =>
-          trial.map((c) => Number(c.trim())),
+          trialForPorts(trial.map((c) => Number(c.trim())), node.sizes),
         );
       }
       return out;
@@ -773,7 +791,7 @@ function targetCellsFromSet(
 ): { cells: Record<string, string[][]>; trials: number } | null {
   if (!set) return null;
   if (targetNodes.length === 0) return inputTrials != null ? { cells: {}, trials: inputTrials } : null;
-  return set.targets ? cellsFromSet(set.targets, targetNodes) : null;
+  return set.targets ? cellsFromSet(flatSet(set.targets), targetNodes) : null;
 }
 
 function NodeGrid({
@@ -807,13 +825,33 @@ function NodeGrid({
         {title}
       </div>
       {nodes.map((node) => {
-        const labels = elementLabels(node, kind, modelLabels);
+        // Several ports (#358): each port's boxes under its name, labelled
+        // by element name per port.
+        const multi = node.sizes.length > 1;
+        const labels = multi
+          ? portElementLabels(modelLabels, node.name, node.ports, kind).flat()
+          : elementLabels(node, kind, modelLabels);
         const trials = cells[node.varName] || [];
         return (
           <div key={node.varName} style={{ marginBottom: 10 }}>
             <div style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-body)", marginBottom: 3 }}>{node.name}</div>
             <table style={{ borderCollapse: "collapse" }}>
               <thead>
+                {multi && (
+                  <tr>
+                    <th></th>
+                    {node.ports.map((port, p) => (
+                      <th
+                        key={port.name}
+                        colSpan={node.sizes[p]}
+                        data-testid={`learn-${kind}-${node.name}-port-${port.name}`}
+                        style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-muted)", fontWeight: 500, fontFamily: "var(--pnv-font-mono)", padding: "0 4px", borderBottom: "1px solid var(--pnv-border-faint)" }}
+                      >
+                        {port.name}
+                      </th>
+                    ))}
+                  </tr>
+                )}
                 <tr>
                   <th style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", padding: "0 4px" }}></th>
                   {labels.map((l, i) => (
