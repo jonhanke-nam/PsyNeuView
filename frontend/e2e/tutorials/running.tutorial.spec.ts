@@ -49,7 +49,7 @@ test.describe("Tutorial: Running a model", () => {
   test("the Run tab shows the inputs grid and a Run Model button", async ({ page }) => {
     await loadAndOpenRun(page, MODELS[0].label);
     const panel = page.getByTestId("run-panel");
-    await expect(panel.getByText(/Group by/)).toBeVisible();
+    await expect(panel.getByText(/Arrange inputs/)).toBeVisible();
     await page.screenshot({ path: shot("01-run-tab.png") });
   });
 
