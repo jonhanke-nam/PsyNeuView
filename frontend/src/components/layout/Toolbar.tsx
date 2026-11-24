@@ -3,7 +3,9 @@
  */
 
 import { Z_MENU, DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
+import { ModelTitle, titleVariant } from "./ModelTitle";
+import { useModelIdentityStore } from "@/stores/modelIdentityStore";
 import { errorDetail } from "@/utils/errorDetail";
 import { Button } from "@/components/common/Button";
 import { MENU_ROW_HOVER, menuRowColours, toggleColours } from "@/components/common/toolbarStyles";
@@ -917,6 +919,7 @@ export function Toolbar() {
       }
       const data = await resp.json();
       const t2 = performance.now();
+      useModelIdentityStore.getState().note(data.identity); // #422
       setFilePath(path);
       setSource(data.source);
       setStatus(`Building graph for ${fileName}…`);
@@ -1004,6 +1007,7 @@ export function Toolbar() {
       }
       const data = await resp.json();
       const parseDoneAt = performance.now();
+      useModelIdentityStore.getState().note(data.identity); // #422
       // Use the working path the backend actually wrote to; fall back to the
       // pristine-derived guess only for older backends that don't return it.
       const workingPath =
@@ -1185,6 +1189,7 @@ export function Toolbar() {
       }
       const data = await resp.json();
       const parseDoneAt = performance.now();
+      useModelIdentityStore.getState().note(data.identity); // #422
       // Use the working path the backend actually wrote to; fall back to the
       // pristine-derived guess only for older backends that don't return it
       // (the guess is wrong when the working dir is isolated, e.g. in CI).
@@ -1260,6 +1265,7 @@ export function Toolbar() {
       }
       const data = await resp.json();
       const parseDoneAt = performance.now();
+      useModelIdentityStore.getState().note(data.identity); // #422
       noteModelOrigin(data.file_path ?? m.path, { kind: "example", section: "examples" });
       setFilePath(data.file_path ?? m.path);
       // setFilePath clears currentReference; re-arm it so the Open dropdown marks
@@ -2419,11 +2425,6 @@ export function Toolbar() {
           filePath={filePath}
           bundleOrigin={bundleOrigin}
           dirty={source !== savedSource}
-          onCopy={() => {
-            const toCopy = bundleOrigin || filePath || "";
-            navigator.clipboard.writeText(toCopy);
-            addNotification("info", "File path copied to clipboard");
-          }}
         />
       )}
 
@@ -2837,39 +2838,61 @@ export function Toolbar() {
 }
 
 // Model-identity chip (#504 Phase C; was the file-path chip from #344).
-// The editor header owns the filename (#504 Phases A/B), so the toolbar
-// shows model-level identity — the composition name — instead of
-// duplicating the path. The full path stays one hover away in the
-// tooltip and one click away via copy.
+// Since #422 it shows which model is open as the menus name it — the menu
+// label, the file name and where it came from — from the identity the server
+// returns with every open (ModelTitle.tsx). The composition name is in the
+// composition selector beside it. The full path is in the hover text and the
+// model card.
+/** The least width the model title keeps; below it the badges beside it give way (#422). */
+const MIN_TITLE_WIDTH = 120;
+
 function FilePathChip({
   filePath,
   bundleOrigin,
   dirty,
-  onCopy,
 }: {
   filePath: string;
   bundleOrigin?: string | null;
   dirty: boolean;
-  onCopy: () => void;
 }) {
   const showChangesSinceSave = useChangesSinceSaveStore((s) => s.show);
-  const activeComposition = useModelStore((s) => s.activeComposition);
-  const compositionNames = useModelStore((s) => s.compositionNames);
-  const compositionDisplayNames = useModelStore((s) => s.compositionDisplayNames);
-  // For an opened .pnlproject, the tooltip / copy target is the bundle (not
-  // the hashed working dir): Save round-trips into that bundle, so it's the
-  // user's real artifact.
-  const shownPath = bundleOrigin || filePath;
-  const parts = shownPath.split("/").filter(Boolean);
-  const basename = parts[parts.length - 1] || shownPath;
-  // #515: render the composition's canonical display label (name= attribute),
-  // matching the selector/breadcrumb/status bar. Fall back to the .py
-  // basename until diagnostics yield a composition.
-  const compKey = activeComposition || compositionNames[0];
-  const display = (compKey && compositionDisplayNames[compKey]) || compKey || basename;
+  const chipRef = useRef<HTMLSpanElement | null>(null);
+  const titleRef = useRef<HTMLSpanElement | null>(null);
+  const [available, setAvailable] = useState(0);
+  const [variant] = useState(titleVariant);
+
+  const badgesRef = useRef<HTMLSpanElement | null>(null);
+  // The room the title has: the chip's width less the unsaved dot, the BUNDLE
+  // tag and the badges after the title at their full width — but never less
+  // than MIN_TITLE_WIDTH. Below that the badges give way (they are cut off at
+  // the right) rather than the label (#422).
+  useLayoutEffect(() => {
+    const chip = chipRef.current;
+    if (!chip) return;
+    const update = () => {
+      let others = 0;
+      let count = 0;
+      for (const child of Array.from(chip.children)) {
+        count += 1;
+        if (child === titleRef.current) continue;
+        others += child === badgesRef.current
+          ? (child as HTMLElement).scrollWidth
+          : (child as HTMLElement).getBoundingClientRect().width;
+      }
+      const gaps = 6 * Math.max(0, count - 1);
+      setAvailable(Math.max(MIN_TITLE_WIDTH, Math.floor(chip.clientWidth - others - gaps)));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(chip);
+    for (const child of Array.from(chip.children)) if (child !== titleRef.current) ro.observe(child);
+    if (badgesRef.current) for (const b of Array.from(badgesRef.current.children)) ro.observe(b);
+    return () => ro.disconnect();
+  });
 
   return (
     <span
+      ref={chipRef}
       data-testid="model-name"
       style={{
         fontSize: "var(--pnv-fs-12)",
@@ -2877,9 +2900,11 @@ function FilePathChip({
         display: "flex",
         alignItems: "center",
         gap: 6,
-        // Grow into the toolbar's free space so the model name shows in full
-        // when there's room, and only ellipsize when genuinely cramped (#471).
-        flex: "1 1 auto",
+        // A fixed starting width, not the title's own (#422): the toolbar wraps
+        // whole controls onto a second row when they don't fit, so a long
+        // label must shorten rather than push the chip onto a new row. The
+        // chip grows into the free space and the title fits what it gets.
+        flex: "1 1 160px",
         minWidth: 0,
       }}
     >
@@ -2918,28 +2943,21 @@ function FilePathChip({
           BUNDLE
         </span>
       )}
-      <span
-        style={{
-          cursor: "pointer",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          fontFamily: "var(--pnv-font-mono)",
-          minWidth: 0,
-        }}
-        onClick={onCopy}
-        title={
-          bundleOrigin
-            ? `${bundleOrigin}\n(opened in place; working copy: ${filePath})\n(click to copy bundle path)`
-            : `${filePath}\n(click to copy full path)`
-        }
-      >
-        {display}
+      <span ref={titleRef} style={{ display: "flex", flex: "0 0 auto" }}>
+        <ModelTitle filePath={filePath} bundleOrigin={bundleOrigin} available={available} variant={variant} />
       </span>
-      <FormatBadge />
-      <EditModeBadge />
-      <PnlSourceBadge />
-      <AutosaveStatus />
+      {/* Cut off at the right when the window is too narrow for them and the
+          title's least width; clipped across only, so a badge's pop-up
+          below still shows. */}
+      <span
+        ref={badgesRef}
+        style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flex: "0 1 auto", overflowX: "clip", overflowY: "visible" }}
+      >
+        <FormatBadge />
+        <EditModeBadge />
+        <PnlSourceBadge />
+        <AutosaveStatus />
+      </span>
     </span>
   );
 }
