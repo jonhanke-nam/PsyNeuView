@@ -2,7 +2,7 @@
   "version": 1,
   "positions": {
     "words_input_layer": {
-      "x": 18,
+      "x": 10,
       "y": 900
     },
     "bias_input": {
@@ -10,7 +10,7 @@
       "y": 900
     },
     "colors_input_layer": {
-      "x": 358,
+      "x": 366,
       "y": 900
     },
     "task_input_layer": {
