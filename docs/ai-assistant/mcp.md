@@ -19,10 +19,12 @@ exactly like the built-in assistant's.
 3. Turn on **Use an AI assistant** if it isn't on. Claude can connect only
    while it is on and this agent is chosen.
 4. Copy the setup for the Claude program you use (below). The status line
-   above it says when a Claude client is connected.
+   above it says when a Claude client is connected, which program it is,
+   and how many tool calls it has made in the current limit window.
 
-Both setups contain the **connection token** (see below) and the address of
-the running PsyNeuView, so copy them from Settings rather than typing them.
+Both setups contain the **connection token** (see below), so copy them from
+Settings rather than typing them. They name no address: the command finds
+the running PsyNeuView by itself (see "Finding PsyNeuView" below).
 
 ### Claude Code
 
@@ -31,11 +33,13 @@ Terminal:
 
 ```sh
 claude mcp add psyneuview --transport stdio --scope user \
-  -e PSYNEUVIEW_URL=http://127.0.0.1:8000 \
   -e PSYNEUVIEW_MCP_TOKEN=<the token> \
   -e PYTHONPATH=/path/to/PsyNeuView/backend \
-  -- /path/to/PsyNeuView/backend/.venv/bin/python -m app.mcp_server
+  -- /path/to/PsyNeuView/backend/.venv/bin/psyneuview-mcp
 ```
+
+(Where `psyneuview-mcp` isn't installed, the line ends `.../python -m
+app.mcp_server` instead; the two are the same command.)
 
 The name `psyneuview` comes first: `-e` takes several values, so a name after it is read as another variable. `--scope user` makes PsyNeuView available in every project. Check it with
 `claude mcp list` (it should say `psyneuview ... ✓ Connected`), or `/mcp`
@@ -52,10 +56,9 @@ add only the `"psyneuview"` entry inside it):
 {
   "mcpServers": {
     "psyneuview": {
-      "command": "/path/to/PsyNeuView/backend/.venv/bin/python",
-      "args": ["-m", "app.mcp_server"],
+      "command": "/path/to/PsyNeuView/backend/.venv/bin/psyneuview-mcp",
+      "args": [],
       "env": {
-        "PSYNEUVIEW_URL": "http://127.0.0.1:8000",
         "PSYNEUVIEW_MCP_TOKEN": "<the token>",
         "PYTHONPATH": "/path/to/PsyNeuView/backend"
       }
@@ -67,11 +70,31 @@ add only the `"psyneuview"` entry inside it):
 Save the file and quit and reopen Claude Desktop. PsyNeuView's tools appear
 under the tools button in a new chat.
 
-### If PsyNeuView's address changes
+### Finding PsyNeuView
 
-The setup names the port PsyNeuView's backend is running on. If it starts on
-another port, copy the setup again (for Claude Code, `claude mcp remove
-psyneuview --scope user` first).
+The Mac app may start PsyNeuView's backend on a different port each time, so
+the setup names no address. Instead, while Claude over MCP is the chosen
+agent, the backend writes a small **discovery file** with its port and
+process id, `~/.psyneuview/mcp-backend.json`, readable by you only. The
+command reads it on every request, so it keeps working after PsyNeuView
+restarts on another port, with no need to copy the setup again.
+
+If PsyNeuView isn't running, Claude sees a plain reason, such as
+"PsyNeuView isn't running (the last one, process 12345, has stopped). Start
+PsyNeuView and try again."
+
+The command refuses a discovery file that another account could read or
+write, a link instead of a file, or one naming another machine.
+
+- **`PSYNEUVIEW_URL`** (`http://127.0.0.1:<port>`) in the setup overrides the
+  lookup, for a backend you want to pin.
+- **`PSYNEUVIEW_MCP_DISCOVERY_FILE`** names another discovery file. When a
+  backend runs with its preferences redirected (`PSYNEUVIEW_CONFIG_FILE`: the
+  test harness, a trial run), it writes `mcp-backend.json` beside that file
+  instead, and the setup it shows sets this variable, so a test backend never
+  takes over your real one.
+- With several backends running, the first one keeps the file; another takes
+  it over only when that one stops.
 
 ## What Claude can do
 
@@ -87,6 +110,7 @@ same checks on every call against the settings as they are at that moment:
 | `list_files`, `read_file` | Lists and reads model files in the allowed folders (never runs them) |
 | `propose_file_write` | Proposes writing a model file in a read-and-write folder |
 | `propose_open_file` | Asks you to open a model file |
+| `check_proposal` | Whether one of its proposals is still pending, or you accepted or rejected it (or it was stale: the model had changed), so Claude can follow up. Read-only |
 
 Every `propose_*` call puts a card in the Assistant tab. Nothing changes until
 you accept it there, and anything Claude writes stays unreviewed, so it
@@ -115,7 +139,8 @@ between you and it. PsyNeuView limits only what is done through its tools.
 
 `limits.tool_calls` applies to any stretch of `limits.minutes`: once Claude has
 made that many tool calls in that many minutes, the next is refused until the
-oldest falls out of the window. `limits.max_tokens` doesn't apply, because
+oldest falls out of the window. Settings shows the count under the status
+line, for example "4 tool calls in the last 10 minutes, of 25 allowed." `limits.max_tokens` doesn't apply, because
 PsyNeuView never sees Claude's tokens; your subscription's own limits do.
 
 ## The connection token
@@ -140,8 +165,9 @@ PsyNeuView accepts MCP calls only:
 - with the right token;
 - while the assistant is on and Claude over MCP is the chosen agent.
 
-The MCP command sends the token only to this machine: it refuses a
-`PSYNEUVIEW_URL` that isn't plain `http` to `127.0.0.1`, `::1` or `localhost`.
+The MCP command sends the token only to this machine: it refuses an address,
+from `PSYNEUVIEW_URL` or the discovery file, that isn't plain `http` to
+`127.0.0.1`, `::1` or `localhost`.
 
 ## How it fits together
 
@@ -162,10 +188,51 @@ Assistant tab                  polls the MCP session; you accept or reject
 ```
 
 The command uses only the standard library and the MCP SDK (`mcp`, a backend
-dependency), and never imports PsyNeuLink. It is also installed as
-`psyneuview-mcp` when the backend package is installed. Only stdio is offered:
-a streamable HTTP endpoint on localhost would need its own protection against
+dependency), and never imports PsyNeuLink. Only stdio is offered: a
+streamable HTTP endpoint on localhost would need its own protection against
 other sites and is a follow-up.
+
+## The `psyneuview-mcp` command, and what the Mac app needs
+
+`backend/pyproject.toml` declares the console script:
+
+```toml
+[project.scripts]
+psyneuview-mcp = "app.mcp_server:main"
+```
+
+so `pip install -e backend` (or `uv pip install -e backend`) puts
+`psyneuview-mcp` in the environment's `bin/`, beside its `python`.
+`python -m app.mcp_server` is the same command and stays the fallback. The
+setup text picks, in order:
+
+1. the launcher named by `PSYNEUVIEW_MCP_LAUNCHER` in the backend's
+   environment, if it is an executable file (no `PYTHONPATH` needed);
+2. `psyneuview-mcp` beside the backend's Python, with `PYTHONPATH` set to the
+   backend so it runs this checkout's code;
+3. `python -m app.mcp_server`, likewise.
+
+The Mac app already runs `pip install -e .` in the install's `backend/`, so
+`<install>/backend/.venv/bin/psyneuview-mcp` exists. But that path names the
+installed version (`.../PsyNeuView/psyneuview-0.6.16/backend/...`), and an
+update moves it, which would break the setup pasted into Claude. So that the
+setup survives updates, the Mac app needs to (a change for the Mac app repo,
+not made here):
+
+1. After each install or update, once the backend's `pip install -e .` has
+   finished, make a link at a path that doesn't change, for example
+   `~/Library/Application Support/PsyNeuView/bin/psyneuview-mcp`, pointing to
+   the current install's `backend/.venv/bin/psyneuview-mcp`. Replace it
+   atomically (make the new link beside it, then rename it over the old), and
+   make the `bin` folder writable by the user only.
+2. Start the backend with `PSYNEUVIEW_MCP_LAUNCHER` set to that path, beside
+   the other variables it passes (`backendOverrides`). The setup text then
+   names the stable path, and no `PYTHONPATH`.
+3. The test app keeps its own link (its own folder), as it keeps its own
+   preferences, so it never takes over the real app's setup.
+
+Nothing else is needed: the command finds the backend's port through the
+discovery file, and the token is in the login Keychain.
 
 ## Trying it without Claude
 
@@ -178,7 +245,7 @@ from mcp import Client
 from mcp.client.stdio import StdioServerParameters
 
 params = StdioServerParameters(command="<python>", args=["-m", "app.mcp_server"],
-                               env={"PSYNEUVIEW_URL": "...", "PSYNEUVIEW_MCP_TOKEN": "...", "PYTHONPATH": "..."})
+                               env={"PSYNEUVIEW_MCP_TOKEN": "...", "PYTHONPATH": "..."})
 
 async def main():
     async with Client(params) as client:

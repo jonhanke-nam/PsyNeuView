@@ -255,6 +255,7 @@ plain data is a `refused` event and no proposal.
 | `read_file` | Reads a model file's text, **without running it** | `visibility.files` |
 | `propose_file_write` | Creates a `file_write` proposal | `visibility.files`, and a `read_write` folder holding the path. A new `.py` must be a PsyNeuLink model by content; a name that would shadow a module (`numpy.py`, `os.py`, `__init__.py`, `sitecustomize.py`, any `_`-prefixed stem) is refused |
 | `propose_open_file` | Asks the user to open a file; only the user can accept | `visibility.files` |
+| `check_proposal` | `{id}` in, `{id, state}` out: whether one of this session's own proposals is `pending`, `accepted`, `rejected` or `stale` (couldn't apply: the model changed). Reads only; never changes a proposal; another session's id is refused as unknown | Always |
 
 Permissions are read again on every call, so a setting lowered mid-turn
 applies at once. Limits: `tool_calls` and `minutes` per turn, `max_tokens`
@@ -371,19 +372,48 @@ state file at all means nothing is tracked. Tests and a second instance redirect
 ## Claude over MCP (#201)
 
 With `agent.type: claude_mcp`, the agent is Claude Desktop or Claude Code,
-signed in with the user's subscription. It launches `python -m
-app.mcp_server` (also installed as `psyneuview-mcp`) over stdio; that command
-calls the backend over HTTP on `127.0.0.1` with the connection token, and
-forwards the backend's tool list and tool results unchanged. Setup and
-limits for users: `mcp.md`.
+signed in with the user's subscription. It launches `psyneuview-mcp` (the
+console script `[project.scripts]` declares; `python -m app.mcp_server` is
+the same command) over stdio; that command calls the backend over HTTP on
+`127.0.0.1` with the connection token, and forwards the backend's tool list
+and tool results unchanged. Setup and limits for users: `mcp.md`.
+
+**Finding the backend.** The command finds the running backend itself on
+every request, so the setup names no address (`mcp_discovery.py`):
+
+- The backend writes a discovery file, `{pid, port, host, version,
+  started}`, made `0600` (never widened, whatever the umask) and moved into
+  place whole. It writes it at start when `agent.type` is `claude_mcp`
+  (port from uvicorn's `--port`, `--port=` or `UVICORN_PORT`), and the
+  page's `setup` and (while active) `status` routes rewrite it with the port
+  the request really came in on. It removes it at shutdown if it still
+  names this process.
+- Where: `PSYNEUVIEW_MCP_DISCOVERY_FILE`; else `mcp-backend.json` beside a
+  redirected preferences file (`PSYNEUVIEW_CONFIG_FILE`), and the setup then
+  names it in `PSYNEUVIEW_MCP_DISCOVERY_FILE`; else
+  `~/.psyneuview/mcp-backend.json`.
+- One holder: a backend doesn't overwrite a file naming another live
+  process; it takes over a file whose process has stopped.
+- The command refuses a file that isn't a plain file owned by the user with
+  no group or other permission bits, names a host other than loopback, or a
+  pid that isn't alive and the user's; each refusal is a sentence the user
+  can act on ("PsyNeuView isn't running…").
+- `PSYNEUVIEW_URL` overrides the lookup; it must still be plain `http` to
+  loopback.
+
+**How the setup starts the command** (`mcp_link.command`): the Mac app's
+launcher when the backend has `PSYNEUVIEW_MCP_LAUNCHER` naming an executable
+file; else `psyneuview-mcp` beside the backend's Python; else `python -m
+app.mcp_server`. In the last two the setup also sets `PYTHONPATH` to this
+backend, so a checkout that borrows another's environment runs its own code.
 
 **The page's routes**, `same_site` like every other assistant route:
 
 | Route | Does |
 |---|---|
-| `GET /api/assistant/mcp/setup` | `{url, command, args, env_names, claude_code, claude_desktop, token}`: the `claude mcp add` line and the `claude_desktop_config.json` snippet, with this backend's port and the token, made on first use. Works with the assistant off, outside `container` and `hosted` |
+| `GET /api/assistant/mcp/setup` | `{url, command, args, env_names, discovery_file, claude_code, claude_desktop, token}`: the `claude mcp add` line and the `claude_desktop_config.json` snippet, with the token, made on first use, and no address (`url` is this backend's, for information only). Writes the discovery file. Works with the assistant off, outside `container` and `hosted` |
 | `POST /api/assistant/mcp/token` | A new token, same shape; any client set up with the old one gets 401 from then on |
-| `GET /api/assistant/mcp/status` | `{connected, last_seen, seconds_ago, client, active, session_id}`. `connected`: heard from in the last 90 s (the command says hello every 30 s). `session_id`: the MCP session, while `active` (on, with `claude_mcp` chosen) |
+| `GET /api/assistant/mcp/status` | `{connected, last_seen, seconds_ago, client, active, session_id, tool_calls: {used, limit, minutes}}`. `connected`: heard from in the last 90 s (the command says hello every 30 s). `client`: the connected program's own name and version, as it gave them to the MCP command. `tool_calls.used`: calls in the current `limits.minutes` window, the count the limit applies to. `session_id`: the MCP session, while `active` (on, with `claude_mcp` chosen); while active it also rewrites the discovery file if needed |
 | `PUT /api/assistant/mcp/context` | `{context}`, as with a message; filtered by `visibility` on arrival. Needs the assistant on |
 
 **The MCP command's routes**, `/api/assistant/mcp-client/...`, not

@@ -757,8 +757,9 @@ settings:
       choosing it replaces the model and API key with setup text, not further settings: the `claude mcp add` line
       for Claude Code and the claude_desktop_config.json snippet for Claude Desktop (GET /api/assistant/mcp/setup,
       each with a Copy button and the connection token, which "Make a new token" replaces), and a status line
-      saying whether a Claude client is connected and when it was last heard from (GET /api/assistant/mcp/status).
-      See docs/ai-assistant/mcp.md.
+      saying whether a Claude client is connected, which one, when it was last heard from, and how many tool calls
+      it has made in the current limit window (GET /api/assistant/mcp/status). The setup names no address: the
+      command finds the running backend through a discovery file. See docs/ai-assistant/mcp.md.
 
   - id: assistant-agent-model
     label: Developer ▸ AI assistant model ▸ Model id
