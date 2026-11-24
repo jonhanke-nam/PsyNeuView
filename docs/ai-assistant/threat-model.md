@@ -2,7 +2,7 @@
 
 What the assistant could be used to do to the user's machine and work, who
 would do it, every way in, and what stops each one. Written against the code
-as it is on the `feature/ai-assistant-179` branch and the rules in
+as it is on the `feature/ai-integrated-179` branch and the rules in
 [`contract.md`](contract.md). The security checklist each phase must pass is
 in [`security-review.md`](security-review.md); the containment experiment is
 in [`containment.md`](containment.md).
@@ -123,13 +123,13 @@ checks that following it is refused by the backend.
 
 | Route | Attacker | Defence | Test |
 |---|---|---|---|
-| Assistant routes | Another program, another account | **Assistant routes accept requests only from the app's own page** (`same_site`); a per-session credential is not built yet (open item below); off by default; off in `container` and `hosted` modes via the `assistant` capability | `test_off_by_default`, `test_capability_off_in_container_and_hosted`, `test_same_site_check`, `test_review_routes_accept_only_the_apps_own_page` |
+| Assistant page routes: settings and consent, key, sessions, proposals, log, review, MCP setup, token, status and context | Another program on this Mac (`curl`, another app, Claude Code's own shell), another account, another site | **The page secret (#381)**, below: every page route needs this launch's secret in `X-PsyNeuView-Session` (403 `page_secret_missing` / `page_secret_wrong`, compared with `hmac.compare_digest`), and no HTTP route serves it. A request that changes anything must also name a site: no `Origin` on a PUT, POST or DELETE is 403 `no_origin`. Then `same_site`'s `Host` and `Origin` rules (403 `not_app_page`); off by default; off in `container` and `hosted` modes via the `assistant` capability. No page route is exempt, reads included: a read that needs the secret tells a tab without it how to get one, which a silently open read wouldn't | `test_assistant_page_secret.py` (every page route refused with no `Origin` and no secret, with a forged `Origin`, with a wrong secret, and a change with the secret but no `Origin`; the review packet's reproduction step by step), `test_off_by_default`, `test_capability_off_in_container_and_hosted`, `test_same_site_check`, `test_review_routes_accept_only_the_apps_own_page` |
 | Settings routes | Rogue agent; another site | There is no tool that reaches `PUT /api/assistant/settings`, and it accepts requests only from the app's own page (`same_site`). Turning the assistant on, and a new destination while on, need `confirm_raise`, which only the page sends after the user's consent (#369) | `test_non_allowlisted_tools_are_refused`, `test_only_turning_on_and_a_new_destination_while_on_need_consent`, `test_settings_from_another_site_are_refused` |
 | Key routes | Rogue agent | `GET /api/assistant/key` returns `{"set": bool}` only; the key never appears in logs, reports or the runner's environment | `test_key_never_in_responses_logs_settings_or_environment` |
 | MCP route group `/api/assistant/mcp-client/*` (#201) | Another program on this Mac; a web page; another machine | Separate from the page's routes, with its own check on every request: the peer is loopback and `Host` names this machine (403 `not_local`); no `Origin`, so no browser request, even the app's own page, gets in (403 `not_mcp_client`); `Authorization: Bearer` must match the connection token in constant time (401 `bad_token`; with no token stored nothing matches); and the assistant must be on with `claude_mcp` chosen (403 `off` / `not_chosen`), so it stays off until the user turns it on. The group has only hello, the tool list and a tool call: no route for settings, the key, the token, proposals, reviews or models. A tool call goes through `Session.call_tool`, the built-in agent's dispatcher, so the allowlist, per-call settings checks, events and log are shared and can't drift; `limits.tool_calls` applies per `limits.minutes` window | `test_token_is_required`, `test_no_token_stored_means_nothing_matches`, `test_localhost_only_and_never_a_web_page`, `test_only_while_on_with_claude_over_mcp_chosen`, `test_tools_are_the_built_in_agents`, `test_cannot_approve_change_settings_or_read_the_key`, `test_tool_call_limit_applies` (`test_assistant_mcp.py`) |
-| The MCP connection token (#201) | Another program on this Mac; a leaked config file; a web page | Random (`secrets.token_urlsafe(32)`), made on first use of the setup, kept in the login Keychain beside the API key and cached in the backend; never logged. Shown only through the page's `same_site` setup route, to copy into Claude's own config (`~/.claude.json`, `claude_desktop_config.json`), where any program running as the user can read it, as it can the Keychain item through `security`: the token keeps out web pages, other accounts' and other machines' requests, and programs that don't have it, not a program already running as the user (out of scope, section 6). "Make a new token" replaces it at once. The MCP command refuses to send it anywhere but plain `http` to loopback, and ignores proxies | `test_a_new_token_refuses_the_old_one`, `test_the_mcp_command_sends_the_token_only_to_this_machine`, `test_mcp_server_reports_a_bad_token` |
+| The MCP connection token (#201) | Another program on this Mac; a leaked config file; a web page | Random (`secrets.token_urlsafe(32)`), made on first use of the setup, kept in the login Keychain beside the API key and cached in the backend; never logged. Shown only through the page's `same_site` setup route, to copy into Claude's own config (`~/.claude.json`, `claude_desktop_config.json`), where any program running as the user can read it, as it can the Keychain item through `security`: the setup route needs the page secret (#381), so a program can't fetch the token over HTTP; it keeps out web pages, other accounts' and other machines' requests, and programs that don't have it. A program running as the user can still read it from Claude's config or the Keychain (section 6). "Make a new token" replaces it at once. The MCP command refuses to send it anywhere but plain `http` to loopback, and ignores proxies | `test_a_new_token_refuses_the_old_one`, `test_the_mcp_command_sends_the_token_only_to_this_machine`, `test_mcp_server_reports_a_bad_token` |
 | The MCP discovery file (#201): `~/.psyneuview/mcp-backend.json` | Another program or account on this Mac; a stale file | Holds no secret (pid, port, version), but it decides where the command sends the token, so it is made `0600` and moved into place whole, and the command refuses one that isn't a plain file owned by the user with no group or other bits (a symlink included), names a host other than loopback, or a pid that isn't alive. A program running as the user can still rewrite it to a loopback port it listens on, and then receive the token: the same program can read the token from Claude's config anyway (out of scope, section 6). A stopped backend's file is refused by the dead pid, and a live backend's is never overwritten by another | `test_discovery_file_is_for_the_user_only_and_names_this_backend`, `test_discovery_refuses_a_file_others_can_read_or_write`, `test_discovery_says_plainly_when_psyneuview_has_stopped`, `test_one_live_holder_and_a_stale_one_is_replaced` |
-| The page's MCP routes `/api/assistant/mcp/*` (#201): setup (with the token), new token, status, context | Another site; rogue agent | `same_site`, like every page route; the MCP client has no route to them. Context is filtered by `visibility` on arrival and again when a tool reads it | `test_cannot_approve_change_settings_or_read_the_key`, `test_read_open_model_respects_visibility` |
+| The page's MCP routes `/api/assistant/mcp/*` (#201): setup (with the token), new token, status, context | Another program; another site; rogue agent | The page secret and `same_site`, like every page route (#381); the MCP client has no route to them. Context is filtered by `visibility` on arrival and again when a tool reads it | `test_cannot_approve_change_settings_or_read_the_key`, `test_read_open_model_respects_visibility` |
 | `/model/load`, watcher reload, autosave reload, undo, redo | Rogue agent via write-then-open; malicious file | Every route that executes a model consults `is_runnable`; unreviewed content is refused everywhere | `test_route_refuses_unreviewed`, `test_watchers_refuse_unreviewed`, `test_inprocess_and_sandbox_entry_points_refuse` |
 
 **Decision: one clear consent (#369, 2026-11-24).** Asking before every
@@ -140,12 +140,115 @@ user consents once, to turning the assistant on, with a clear statement of
 what is shared, with whom and what it can do; a new destination while it is
 on asks again, since that changes who receives the data; and Settings always
 shows what is shared and with whom. What does not change: only the app's own
-page can change settings (`same_site`); the agent has no route to them; the
+page can change settings (`same_site` and the page secret, #381); the agent has no route to them; the
 sandbox requirement (`sandbox.require`, the 400 `sandbox_required` when
 turning on), review before anything the assistant wrote runs, and accepting
 each proposal are all as before. The trade: a widening made later in
 Settings is the user's own action in the app's own page, shown in the
 summary, rather than a confirmed one.
+
+### The page secret (#381)
+
+**What was wrong.** `same_site` refused a foreign `Origin` but let through a
+request with **no** `Origin`, and there was no per-session credential. A
+browser always sends `Origin` on a cross-site request, so web pages were kept
+out; programs weren't. `curl`, another app, another account (any account can
+connect to `127.0.0.1`), or **Claude Code's own shell** while Claude is
+connected over MCP could read the MCP token from `GET /mcp/setup`, turn the
+assistant on with `confirm_raise`, accept proposals, and approve
+unreviewed assistant-written code, which then ran. The review packet
+reproduced it end to end with a shell script (known-gaps B1).
+
+**What we chose, and why.** The protection has to come through a channel the
+assistant's own reachable paths can't use. Anything served over HTTP fails
+that test, because whatever the page can fetch, `curl` can fetch. So:
+
+1. **A per-launch secret that no HTTP route serves**
+   (`services/assistant/page_secret.py`): 32 random bytes, required on every
+   assistant page route in `X-PsyNeuView-Session`, compared with
+   `hmac.compare_digest`. Missing or wrong is a 403 with a plain-English
+   reason (`page_secret_missing`, `page_secret_wrong`).
+   - **Mac app** (PsyNeuView-MacApp#85): the app makes the secret at launch,
+     writes it to a new `0600` file in a `0700` folder, and names it in
+     `PSYNEUVIEW_PAGE_SECRET_FILE`. The backend reads the file once and
+     deletes it. The app puts the secret into the web view's
+     `sessionStorage` with a user script at document start, main frame
+     only, on the backend's origin only. A file rather than an environment
+     variable, because a program running as the user can read another
+     process's environment (`ps eww`). Developer mode runs the backend with
+     `--reload`, whose restarts would find the file gone, so there the app
+     uses `PSYNEUVIEW_PAGE_SECRET`.
+   - **Browser and dev server**: a Jupyter-style link. With no secret handed
+     in, the backend makes one and prints
+     `http://127.0.0.1:<port>/#pnv-session=<secret>` at start
+     (`PSYNEUVIEW_PAGE_URL` changes the address, for a dev server). The
+     secret is in the **fragment**, which a browser never sends to a server.
+     The page (`utils/pageSecret.ts`) moves it into `sessionStorage` and
+     takes it out of the address bar, so it isn't left in history,
+     bookmarks or a shared screenshot. `make dev` makes one secret for both
+     servers, so `--reload` keeps it, and prints the dev server's link.
+   - The variables are removed from the backend's environment as soon as
+     they are read, before any worker starts, so model runs (which inherit
+     the environment, known-gaps B2) never see the secret.
+   - **Tests**: the e2e harness gets the secret from `GET
+     /api/test/page-secret`, which exists only with `PSYNEUVIEW_TEST_MODE=1`,
+     and seeds each page with it (`e2e/test-base.ts`), as the user script
+     does.
+2. **A site must be named to change anything.** A PUT, POST or DELETE to a
+   page route with no `Origin` is refused (`no_origin`), whatever else it
+   carries. Browsers send `Origin` on every such request, the app's own
+   page included (WKWebView too), so only programs leave it out. It is a
+   second, independent check: a program that somehow had the secret would
+   still have to forge an `Origin`.
+3. **Which routes.** All page routes, reads included; none are exempt. The
+   reads (settings, sandbox status, log, events, review status, MCP status)
+   would leak less, but they show what is shared and with whom, the
+   assistant's conversation, and the full text of files awaiting review. A
+   single rule is also easier to check: the test enumerates every route from
+   the OpenAPI listing, so a new page route can't be added without the check.
+   The MCP command's own group (`/mcp-client/*`) keeps its separate check
+   (loopback, no `Origin`, the connection token).
+
+The issue proposed an HttpOnly cookie for the browser instead. A cookie set by
+the page's first load can't tell the page from `curl`, which can make the same
+first request, so it doesn't meet the test above. The fragment does: only
+someone who saw the printed link has it.
+
+**What it keeps out.** Any program, under this account or another, that
+reaches PsyNeuView only over HTTP: `curl`, scripts, other apps, another
+account's processes, web pages (also kept out by `Origin`), and **Claude Code
+or Claude Desktop making ordinary HTTP requests** from their shell or fetch
+tools. Through those paths an agent can no longer read the token, consent,
+change settings, accept, reject or approve.
+
+**What remains (residual risk, stated plainly).**
+
+- **A program running as the same user can in principle get the secret
+  another way:** by reading the memory of the backend or the app (macOS
+  makes this hard without a debugger's entitlements, but it isn't a
+  boundary), by reading the file in the moment between the app writing it
+  and the backend deleting it, by reading the backend's environment in
+  developer mode, or, in a browser setup, **by reading the line the backend
+  printed** (a terminal's scrollback or a log file such as
+  `~/psyneuview-ai-trial/backend.log`). The Mac app never prints it. Such a
+  program can also drive the user's browser or simulate clicks. Programs
+  running as the user remain out of scope (section 6); the goal here is that
+  the assistant's *own reachable paths* can't approve or consent.
+- **Claude Code's shell can run anything the user can**, so it is such a
+  program if it decides to read the log or the process. `mcp.md` gives
+  permission rules that deny Claude Code's shell and fetch tools access to
+  the backend's port and to the trial's log, so these attempts stop at Claude
+  Code's own permission check. Pattern rules on shell commands can be
+  bypassed (another command, a variable), which is why the secret, not the
+  rule, is the protection; the rules close the easy paths and make an
+  attempt visible.
+- **A script running in the page** (a bug that let model text run as script)
+  could read `sessionStorage`. The page treats all agent text as inert
+  (`safeText.ts`, the "hostile text is inert" test); the bridges have the
+  same exposure (known-gaps A16).
+- **`sessionStorage` is per tab.** A new browser tab needs the link again;
+  the Settings section says so. A restarted backend has a new secret, and an
+  old tab is told to open the new link.
 
 ### 4.5 Through files and folders
 
@@ -238,8 +341,10 @@ containment rather than a better approval view.
   MCP (#201) that agent is Claude Desktop or Claude Code: the connection
   token proves the connection is one the user set up, but a program already
   running as the user can read Claude's config or the Keychain item, as it
-  could the API key, and the page routes accept requests with no `Origin`
-  from this machine (the per-session credential below is still open).
+  could the API key. Since #381 the page routes need the page secret, so
+  that agent's ordinary HTTP requests (its shell's `curl`, a fetch tool)
+  can't approve, consent or read the token; what remains is in "The page
+  secret" below.
 - A model the user wrote and chose to run has always been able to do anything
   the user can. The assistant doesn't change that; it adds a second author.
 - Containment (Phase 4) is a separate decision; see `containment.md`.
@@ -568,9 +673,8 @@ reviewers, not boundaries.
 Named by the rows above as "not built yet". Each is tracked under #179 until
 it has its own issue.
 
-- **A per-session credential for the assistant routes.** The routes refuse a
-  request that isn't the app's own page (`same_site`); a credential the page
-  gets at startup and sends with each request is not built yet.
+- ~~**A per-session credential for the assistant routes.**~~ Built in #381:
+  the page secret (section 4.4).
 - **Per-folder consent at a cloud agent's first use of it.** Turning the
   assistant on names the folders it may use, and the summary shows them;
   since #369 adding a folder later saves without a question, and a further

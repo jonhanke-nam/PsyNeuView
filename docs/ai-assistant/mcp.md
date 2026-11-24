@@ -124,6 +124,8 @@ anything to read.
 
 ## What Claude can't do
 
+Through its PsyNeuView tools, Claude can't:
+
 - Change any PsyNeuView setting, including turning the assistant on, the
   folders, what it can see or the limits.
 - Accept, reject or approve anything. Only you can, in PsyNeuView.
@@ -131,9 +133,56 @@ anything to read.
 - Run a model, run a command, or reach the network through PsyNeuView.
 - Use any tool that isn't in the list above.
 
-PsyNeuView can't limit what Claude Desktop or Claude Code does by itself. Claude
-Code in particular has its own file and command access on your Mac, which is
-between you and it. PsyNeuView limits only what is done through its tools.
+**And not around them, over HTTP (#381).** Claude Code has its own shell, and
+Claude Desktop can have tools of its own, so either can send requests straight
+to PsyNeuView's server, as `curl` would. Those requests get nowhere: every
+route that changes settings, gives consent, reads the token, accepts, rejects
+or approves needs the page secret, which PsyNeuView gives only to its own page
+(the Mac app hands it to its window; a browser gets it from the link the server
+printed), and never serves over HTTP. A change also has to name its site, which
+only a browser does. See [`threat-model.md`](threat-model.md), "The page secret".
+
+**What PsyNeuView can't stop.** A program running as you can, in principle,
+find the secret another way: by reading the server's memory, or, when you run
+PsyNeuView from a terminal or a script instead of the Mac app, by reading the
+line the server printed with the link (scrollback or a log file). Claude Code's
+shell runs as you. So, while Claude is connected, give Claude Code these
+permission rules, in `~/.claude/settings.json` (or the project's
+`.claude/settings.json`). Change `8353` to PsyNeuView's port (the number after the colon in
+the address PsyNeuView runs at) and the log path to wherever your server's
+output goes; the Mac app prints no link, so its users need only the first four:
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Bash(*127.0.0.1:8353*)",
+      "Bash(*localhost:8353*)",
+      "WebFetch(domain:127.0.0.1)",
+      "WebFetch(domain:localhost)",
+      "Read(~/psyneuview-ai-trial/backend.log)",
+      "Bash(*psyneuview-ai-trial/backend.log*)"
+    ]
+  }
+}
+```
+
+The `WebFetch` rules block every port on that host (they match host names
+only). The `Bash` rules match the command's text, so they stop the plain
+attempts (`curl http://127.0.0.1:8353/…`, `cat …/backend.log`), and Claude Code
+asks no question for them: they are refused. Claude Code's own documentation
+says such text patterns can be got around (another program, a variable,
+another spelling of the address). They aren't the protection; the page secret
+is. They close the obvious paths and make an attempt show up in the
+conversation. For a hard block on the shell's network access, run Claude
+Code's shell in its sandbox: by default a sandboxed command can't connect to a
+server running on your Mac outside the sandbox (leave
+`sandbox.network.allowLocalBinding` off).
+
+PsyNeuView can't limit what Claude Desktop or Claude Code does otherwise.
+Claude Code in particular has its own file and command access on your Mac,
+which is between you and it. PsyNeuView limits only what is done through its
+tools and its server.
 
 ## Limits
 
@@ -164,6 +213,11 @@ PsyNeuView accepts MCP calls only:
   every browser sends, is refused, so no web page can use the token);
 - with the right token;
 - while the assistant is on and Claude over MCP is the chosen agent.
+
+The token is shown only in Settings: the setup route that returns it needs the
+page secret (#381), so no other program can fetch it from PsyNeuView. A
+program running as you can still read it where Claude keeps it (Claude's
+configuration file) or from the Keychain.
 
 The MCP command sends the token only to this machine: it refuses an address,
 from `PSYNEUVIEW_URL` or the discovery file, that isn't plain `http` to

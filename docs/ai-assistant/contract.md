@@ -16,6 +16,9 @@ is. The rules behind it are in issue #179; the threat model is in
   assistant-written Python never runs with the user's permissions, by any route.
 - **There is no tool for running models** in this round. The containment that
   would need is Phase 4.
+- **Only the app's own page acts as the page (#381).** Every assistant page
+  route needs this launch's page secret, which no HTTP route serves, and a
+  change must name its site (`Origin`). See "Same site" below.
 - **Agents never get the general API.** Only the tools in `TOOL_ALLOWLIST`.
 - **An app edit is structured data, never text.** The only way free-form
   Python reaches a file is a `file_write`, approved and then reviewed.
@@ -26,7 +29,7 @@ is. The rules behind it are in issue #179; the threat model is in
 |---|---|
 | Threat model, containment findings, review checklist | `docs/ai-assistant/` |
 | Settings, keys, agent connection, session loop, tools, routes | `backend/app/services/assistant/`, `backend/app/api/assistant_routes.py` |
-| Folder rules, file tools, review state, execution guard, review routes | `backend/app/services/assistant/files.py`, `review.py`, `same_site.py`, `backend/app/api/assistant_review_routes.py` |
+| Folder rules, file tools, review state, execution guard, review routes | `backend/app/services/assistant/files.py`, `review.py`, `same_site.py`, `page_secret.py`, `backend/app/api/assistant_review_routes.py`; the page's side in `frontend/src/utils/pageSecret.ts` |
 | Claude over MCP (#201): connection token, page context, MCP session, routes, the stdio server | `backend/app/services/assistant/mcp_link.py`, `backend/app/api/assistant_mcp_routes.py`, `backend/app/mcp_server.py`; setup in `docs/ai-assistant/mcp.md` |
 | Panel, Settings section, applying proposals | `frontend/src/components/assistant/`, `frontend/src/stores/assistantStore.ts`, `frontend/src/utils/assistantApply.ts`, `frontend/src/components/common/settings/AssistantSection.tsx` |
 
@@ -407,7 +410,7 @@ file; else `psyneuview-mcp` beside the backend's Python; else `python -m
 app.mcp_server`. In the last two the setup also sets `PYTHONPATH` to this
 backend, so a checkout that borrows another's environment runs its own code.
 
-**The page's routes**, `same_site` like every other assistant route:
+**The page's routes**, `same_site` and the page secret like every other assistant page route:
 
 | Route | Does |
 |---|---|
@@ -456,13 +459,39 @@ Desktop or Claude Code, polls the status every 1.5 s and the MCP session's
 events, shares the context whenever the open model, its source or the
 selection changes, and shows proposals with Accept and Reject as usual.
 
-## Same site
+## Same site and the page secret (#381)
 
 Every assistant route, the review routes included, except the MCP command's
 token-checked group above, carries the one `same_site` dependency
-(`same_site.py`): a request whose `Origin` isn't this server's own site is
-refused, and in `local` and `mac_app` modes so is a
-`Host` that isn't this machine. Both answer 403 with `reason: "not_app_page"`.
+(`same_site.py`). In order, each refusal a 403 with a `reason` and a
+plain-English `message`:
+
+1. An `Origin` that isn't this server's own site, or in `local` and
+   `mac_app` modes a `Host` that isn't this machine: `not_app_page`.
+2. A PUT, POST or DELETE with no `Origin`: `no_origin`. Browsers send one on
+   every such request; only programs leave it out.
+3. No `X-PsyNeuView-Session` header: `page_secret_missing`; one that isn't
+   this launch's secret (`hmac.compare_digest`): `page_secret_wrong`. Reads
+   included; no page route is exempt.
+
+The secret (`page_secret.py`) is made once per backend start, and **no HTTP
+route serves it** (the test-only `GET /api/test/page-secret` exists only with
+`PSYNEUVIEW_TEST_MODE=1`). Where it comes from, in order:
+
+| Source | Who uses it |
+|---|---|
+| `PSYNEUVIEW_PAGE_SECRET_FILE`: a file the backend reads once and deletes | The Mac app, which writes it `0600` and puts the same secret into its web view with a user script (PsyNeuView-MacApp#85) |
+| `PSYNEUVIEW_PAGE_SECRET` | `make dev` and `make backend` (so `--reload` keeps it), the Mac app in developer mode, tests |
+| Made by the backend | Anything else; the backend prints `http://127.0.0.1:<port>/#pnv-session=<secret>` (or `PSYNEUVIEW_PAGE_URL` with the same ending) |
+
+Shorter than 32 characters is refused and a new one made. Both variables are
+removed from the environment as soon as they are read, before any worker
+starts. The link is printed unless the secret came from the Mac app's file.
+
+The page (`utils/pageSecret.ts`) takes `#pnv-session=…` from the address into
+`sessionStorage` (`psyneuview.pageSecret`), removes it from the address bar,
+and sends it on every assistant request. A tab without it shows, in Settings ▸
+AI assistant, the backend's message saying how to get it.
 
 ## Log
 

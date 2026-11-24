@@ -18,7 +18,12 @@ are the ones the checklist refers to.
 - [ ] Off in `container` and `hosted` modes (`test_capability_off_in_container_and_hosted`).
 - [ ] No tool reaches settings, the key, the general API or a tool outside
       `TOOL_ALLOWLIST` (`test_non_allowlisted_tools_are_refused`,
-      `test_non_allowlisted_tools_are_refused`, `test_key_never_in_responses_logs_settings_or_environment`).
+      `test_key_never_in_responses_logs_settings_or_environment`).
+- [ ] Every assistant page route needs the page secret, and a change needs an
+      `Origin`; a request from an outside program (no `Origin`, no secret, a
+      forged `Origin`, a wrong secret) is refused on every route
+      (`test_assistant_page_secret.py`, which lists the routes from the
+      OpenAPI schema, so a new one is covered) (#381).
 - [ ] Every new setting is in `docs/settings-inventory.yaml` with one control.
 - [ ] Every tool call is logged with its arguments, result, allowed or refused,
       and who approved it; prompts, replies and source stay out of problem
@@ -362,18 +367,32 @@ accepted and carried, not fixed:
   follow-up above (F1, F2): a tracked, unapproved file's own text is now
   refused through each of them; what remains is in the threat model's
   section 7.*
-- **No per-session credential** for the assistant routes yet; `same_site`
-  is what there is.
+- ~~**No per-session credential** for the assistant routes yet; `same_site`
+  is what there is.~~ Closed by #381; see "The page secret (#381)" below.
 - **`saving: structured_without_asking`** is stored and shown but not acted
   on; the page asks for every proposal.
 - **Phase 4** (running models with containment) is not built; there is no
   run tool.
 
-Still open after this review (also in the threat model's open items): a
-per-session credential for the assistant routes; per-folder consent at a
+Still open after this review (also in the threat model's open items):
+~~a per-session credential for the assistant routes~~ (built in #381);
+per-folder consent at a
 cloud agent's first use; the `structured_without_asking` setting isn't acted
 on; running and containment (Phase 4); the review of Phases 1 to 3 by the
 reviewer after these fixes.
+
+### The page secret (#381), 2026-11-24
+
+Found by the outside-review packet (#200, known-gaps B1) and reproduced end to
+end: a request with no `Origin` passed every assistant page route, so a script
+with no human step read the MCP token, turned the assistant on with
+`claude_mcp` and `confirm_raise`, added a read-and-write folder, proposed a
+model through MCP, accepted it, approved it and loaded it, and the model's
+code ran. With Claude over MCP, Claude Code's shell is such a script.
+
+| # | Severity | Finding | Fix | Proof | What remains |
+|---|---|---|---|---|---|
+| P1 | High for Claude over MCP | No per-session credential; a request naming no site was the app's own page | A per-launch page secret on every page route (`X-PsyNeuView-Session`, `hmac.compare_digest`), served by no HTTP route: the Mac app hands it over in a 0600 file it deletes after reading and a user script (PsyNeuView-MacApp#85); a browser gets it from the printed link's fragment. A change with no `Origin` is refused as well | `test_assistant_page_secret.py`: every page route refused to an outside program four ways; the packet's script step by step (nothing approved, the code doesn't run); the secret's sources, its removal from the environment, and that no route answers with it. `pageSecret.test.ts`; `ai-assistant-page-secret.spec.ts`; `PageSecretTests.swift` | A program running as the user that reads process memory, the printed link, or the moment the file exists (threat model, "The page secret"); Claude Code permission rules in `mcp.md` |
 
 ## Reporting a problem
 
