@@ -37,7 +37,8 @@ steps:
       testid: run-input-set
     pointer: true
     instruct: >-
-      The grid holds one block of trials per input node. This model declares
+      Each trial lists every input node's input as an array in brackets,
+      the way PsyNeuLink takes it. This model declares
       its own input sets, so the From menu offers them by name and the first,
       kick, is already filled in: a push on the first trial, then nothing for
       nine more.

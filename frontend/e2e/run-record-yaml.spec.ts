@@ -27,8 +27,9 @@ test.describe("run record YAML round-trip", { tag: "@ci" }, () => {
     // Open the Run tab and give the first input cell a distinctive value.
     await page.getByRole("button", { name: "Run", exact: true }).click();
     await expect(page.getByRole("button", { name: /Run Model/ })).toBeVisible();
-    const firstCell = page.locator('input[inputmode="decimal"]').first();
-    await firstCell.fill("5");
+    // Each trial's input is one field in bracket notation (#330).
+    const firstCell = page.locator('[data-testid^="run-trial-input-"]').first();
+    await firstCell.fill("[5, 0]");
 
     // Run — this pins a record into "Recent runs".
     await page.getByRole("button", { name: /Run Model/ }).click();
@@ -48,13 +49,13 @@ test.describe("run record YAML round-trip", { tag: "@ci" }, () => {
     expect(yamlText.trimStart().startsWith("{")).toBe(false);
 
     // Change the form so a successful import is observable, then re-import the
-    // exported YAML and confirm the recorded value (5) is restored.
-    await firstCell.fill("9");
+    // exported YAML and confirm the recorded value ([5, 0]) is restored.
+    await firstCell.fill("[9, 0]");
     const tmpFile = path.join(tmpdir(), `pnv-525-${download.suggestedFilename()}`);
     writeFileSync(tmpFile, yamlText);
     // The Run panel's import input is the one that also accepts the YAML mime
     // type (the toolbar's Open input does not), which disambiguates it.
     await page.locator('input[accept*="application/yaml"]').setInputFiles(tmpFile);
-    await expect(page.locator('input[inputmode="decimal"]').first()).toHaveValue("5");
+    await expect(page.locator('[data-testid^="run-trial-input-"]').first()).toHaveValue("[5, 0]");
   });
 });

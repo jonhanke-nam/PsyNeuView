@@ -374,6 +374,10 @@ async function act(page: Page, step: TourStep): Promise<void> {
     // node's rows sets the shared trial count and zero-pads the others, so
     // filling the nodes in turn gives the right grid.
     await page.getByTestId("tab-run").click();
+    // Paste CSV is on each node's card, which the by-node arrangement shows
+    // (#331 made by trial the default).
+    const byNode = page.getByTestId("run-grouping").getByRole("button", { name: "By node" });
+    if ((await byNode.getAttribute("aria-pressed")) !== "true") await byNode.click();
     for (const [node, trials] of Object.entries(step.act.setTrialInputs)) {
       // The card's id carries the node's model name; a long session can add
       // a "-<n>" suffix, matched the same way the canvas helpers do.
