@@ -432,3 +432,11 @@ body:has([data-pnv-customized="true"]) .pnv-inspector-legend {
 .pnv-fav-star:focus-visible {
   opacity: 1;
 }
+
+/* #357: in the Run panel's inputs column, whatever is scrolled into view (a
+   node's header, a focused trial input) stops below the sticky Run row. Set
+   per element, not as the panel's scroll padding, so a trial card in the
+   results, which the row never covers, scrolls flush to the top. */
+.pnv-run-inputs * {
+  scroll-margin-top: var(--pnv-run-sticky-h, 0px);
+}
