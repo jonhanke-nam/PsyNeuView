@@ -110,6 +110,12 @@ test.describe("Narration voice setting", { tag: "@ci" }, () => {
 
   test("lists the real voices, plays a sample in the chosen one, and remembers it", async ({ page }) => {
     await stubSpeech(page);
+    // As Windows, whatever the host: the help below is the Windows one. (The
+    // test browser otherwise reports the platform it runs on, #402.)
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "platform", { get: () => "Win32" });
+      Object.defineProperty(navigator, "userAgent", { get: () => "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" });
+    });
     await page.goto("/");
     await openNarrationSettings(page);
 
@@ -126,7 +132,7 @@ test.describe("Narration voice setting", { tag: "@ci" }, () => {
       "Daniel · British",
       "Samantha · American",
     ]);
-    // Where to get more voices is right there (this browser reports Windows).
+    // Where to get more voices is right there.
     await expect(page.getByTestId("narration-voice-help")).toContainText("Add voices");
 
     await select.selectOption(DANIEL);

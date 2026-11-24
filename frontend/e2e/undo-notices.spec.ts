@@ -77,11 +77,9 @@ test.describe("Undo and redo notices (#1377)", { tag: "@ci" }, () => {
     // Twenty Cmd+Z presses in quick succession, with the canvas focused (not
     // a text field, where Cmd+Z is the field's own).
     await page.locator(".react-flow__pane").click({ position: { x: 10, y: 10 } });
-    // The app picks Cmd or Ctrl from the platform the page reports, which in
-    // the headless browser need not be the machine's (it can say Win32 on a
-    // Mac), so the key follows the page, not ControlOrMeta.
-    const mod = await page.evaluate(() => (/mac/i.test(navigator.platform) ? "Meta" : "Control"));
-    for (let i = 0; i < 20; i++) await page.keyboard.press(`${mod}+z`);
+    // ControlOrMeta is ⌘ on a Mac and Ctrl elsewhere, as the app expects: the
+    // test browser reports the platform it runs on (#402).
+    for (let i = 0; i < 20; i++) await page.keyboard.press("ControlOrMeta+z");
     await expect.poll(() => editorText(page)).not.toContain("# edit 41\n");
     await expect(notices(page)).toHaveCount(1);
     await expect(notices(page).getByTestId("notification-message")).toHaveText("Undid 20 edits: back to Edit 40");
