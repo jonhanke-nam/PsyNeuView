@@ -184,3 +184,15 @@ def test_a_fresh_process_per_task_stops_a_model_over_a_limit(low_limits, st, mod
 def test_the_one_shot_fallback_stops_a_spin(low_limits, tmp_path):
     result = sandbox._run_cold("introspect", {"file_path": str(_hostile(tmp_path / "Own", "cpu"))}, 60)
     assert result.get("run_limit") == "cpu", result
+
+
+def test_the_sandboxed_converter_stops_a_spin(low_limits, tmp_path):
+    from app.services import os_sandbox
+    from tests.test_assistant_runner_guard import client
+    if not os_sandbox.active():
+        pytest.skip("the converter runs in its own process only under the sandbox (PSYNEUVIEW_OS_SANDBOX=on)")
+    model = _hostile(tmp_path / "Own", "cpu")
+    t0 = time.time()
+    r = client.post("/api/model/convert", json={"file_path": str(model), "backup": False})
+    assert r.status_code == 422 and r.json()["limit"] == "cpu", r.text[:400]
+    assert time.time() - t0 < 60

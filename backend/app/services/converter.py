@@ -271,13 +271,21 @@ def _standard_source_in_sandbox(file_path: str) -> str:
     env = os_sandbox.launch_env(policy)
     env[_IN_SANDBOX_ENV] = "1"
     backend_root = str(Path(__file__).resolve().parents[2])
+    from app.services import run_limits
+    from app.services.sandbox import _end_group
+    started: list = []
+    # Watched against the run limits like every model run (#179, B3).
+    watch = run_limits.Watch(lambda: started[0].pid if started else None, _end_group)
     try:
         from app.services import bounded_run
         proc = bounded_run.run([sys.executable, "-c", _SANDBOXED_CONVERT, file_path, backend_root],
-                               env=env, timeout=300, cwd=str(Path(file_path).parent))
+                               env=env, timeout=300, cwd=str(Path(file_path).parent), on_start=started.append)
     finally:
+        reason = watch.stop()
         os_sandbox.discard_scratch(policy["scratch"])
         os_sandbox.sweep_survivors()
+    if reason:
+        raise run_limits.RunStopped(reason, run_limits.message(reason))
     lines = [ln for ln in (proc.stdout or "").splitlines() if ln.startswith(_SOURCE_MARKER)]
     if not lines:
         tail = (proc.stderr or "").strip().splitlines()[-1:] or ["no output"]
