@@ -110,8 +110,12 @@ def run_model(
     use_sandbox: bool = True,
     execution_mode: str | None = None,
     log_nodes: list[str] | None = None,
+    on_progress=None,
 ) -> dict:
     """Execute a composition from a .py file with the given inputs.
+
+    ``on_progress({"trial": k, "seconds": s})`` is called as each trial
+    finishes, on the sandboxed path (#357).
 
     Args:
         file_path: Path to the .py model file.
@@ -132,7 +136,8 @@ def run_model(
             "inputs": inputs,
             "execution_mode": execution_mode,
             "log_nodes": log_nodes,
-        })
+            "stream_progress": on_progress is not None,
+        }, on_progress=on_progress)
     return _run_model_inprocess(file_path, composition_name, inputs, execution_mode)
 
 

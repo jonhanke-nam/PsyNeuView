@@ -41,6 +41,9 @@ RUN_TIMEOUT = 300  # 5 minutes for execution runs
 WORKER_PATH = str(Path(__file__).parent / "sandbox_worker.py")
 
 RESULT_MARKER = "###PSYNEUVIEW_RESULT###"
+# A task's progress lines (sandbox_worker.PROGRESS_MARKER): the warm worker
+# relays them to the caller's ``on_progress`` while the task runs (#357).
+PROGRESS_MARKER = "###PSYNEUVIEW_PROGRESS###"
 
 
 class WarmWorker:
@@ -191,8 +194,18 @@ class WarmWorker:
     def is_alive(self) -> bool:
         return self._proc is not None and self._proc.poll() is None
 
-    def send_task(self, task: str, params: dict, timeout: int) -> dict:
-        """Send a task to the warm worker and wait for the result."""
+    def send_task(
+        self,
+        task: str,
+        params: dict,
+        timeout: int,
+        on_progress: Optional[Callable[[dict], None]] = None,
+    ) -> dict:
+        """Send a task to the warm worker and wait for the result.
+
+        ``on_progress`` receives each progress line the task emits, parsed
+        (#357); without it they are collected like any other output.
+        """
         with self._lock:
             if not self.is_alive():
                 self._restart()
@@ -242,6 +255,12 @@ class WarmWorker:
                             return {"error": "Worker closed connection"}
 
                         line = line.rstrip("\n")
+                        if on_progress is not None and line.startswith(PROGRESS_MARKER):
+                            try:
+                                on_progress(json.loads(line[len(PROGRESS_MARKER):]))
+                            except Exception:
+                                pass  # a garbled progress line never fails the task
+                            continue
                         if line == RESULT_MARKER:
                             result_line = self._proc.stdout.readline().rstrip("\n")
                             elapsed = time.time() - t0
@@ -347,10 +366,16 @@ def _user_task():
             _user_tasks_cond.notify_all()
 
 
-def run_in_sandbox(task: str, params: dict, timeout: int | None = None) -> dict:
+def run_in_sandbox(
+    task: str,
+    params: dict,
+    timeout: int | None = None,
+    on_progress: Optional[Callable[[dict], None]] = None,
+) -> dict:
     """Run a task using the warm worker process.
 
-    Falls back to cold-start subprocess if the warm worker fails.
+    Falls back to cold-start subprocess if the warm worker fails (which
+    reports no progress: it only reads the output once the task is done).
     """
     if timeout is None:
         # introspect with developer_mode=True actually runs the script's
@@ -360,14 +385,16 @@ def run_in_sandbox(task: str, params: dict, timeout: int | None = None) -> dict:
         else:
             timeout = INTROSPECT_TIMEOUT
 
+    # Only a caller that wants progress passes it on.
+    extra = {"on_progress": on_progress} if on_progress is not None else {}
     if gives_way():
         wait_for_user_tasks()
         worker = _get_warm_worker()
-        result = worker.send_task(task, params, timeout)
+        result = worker.send_task(task, params, timeout, **extra)
     else:
         with _user_task():
             worker = _get_warm_worker()
-            result = worker.send_task(task, params, timeout)
+            result = worker.send_task(task, params, timeout, **extra)
 
     # If the warm worker failed, try a cold-start fallback
     if "error" in result and "Worker" in result["error"]:
