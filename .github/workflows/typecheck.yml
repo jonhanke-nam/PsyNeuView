@@ -37,8 +37,8 @@ jobs:
           # docs/settings-inventory.yaml: vitest checks it against the
           # Settings controls (#1279), so editing it alone must run vitest.
           # backend/tests/, scripts/test_map.py and docs/testing-coverage*:
-          # the What's tested page is generated from every test file, so a
-          # change to any of them must check the page is current (#319).
+          # the What's tested pages are built from every test file and the
+          # snapshots there, so a change to any of them must build them (#319).
           PATTERN: '^(frontend/|backend/tests/|scripts/test_map\.py|docs/testing-coverage|docs/settings-inventory\.yaml|\.github/workflows/typecheck\.yml)'
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -144,9 +144,20 @@ jobs:
         working-directory: frontend
         run: node scripts/style-report.mjs --check
 
-      # #319: docs/testing-coverage.md (What's tested) is generated from the
-      # test files. A test added, renamed or moved in or out of CI without
-      # regenerating it fails here; so does a browser spec left out of CI
-      # without a `Not in CI:` line saying why. Standard library only.
-      - name: What's tested page is current
-        run: python3 scripts/test_map.py --check
+      # #319: the What's tested pages are built from the test files. They are
+      # not committed (#380: every PR rewrote them, so every PR conflicted);
+      # this builds them, fails on a browser spec that is neither tagged @ci
+      # nor says why in a `Not in CI:` line, and keeps the pages as an
+      # artifact. The docs build (mkdocs) builds them for the site. Standard
+      # library only.
+      - name: What's tested pages build, every spec accounted for
+        run: python3 scripts/test_map.py --check --out build/test-map
+
+      - name: Upload the What's tested pages
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: whats-tested-${{ github.run_id }}
+          path: build/test-map/
+          retention-days: 14
+          if-no-files-found: ignore

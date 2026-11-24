@@ -9,6 +9,11 @@ repo_name: jonhanke-nam/PsyNeuView
 docs_dir: docs
 site_dir: site
 
+# The What's tested pages (testing-coverage*.md) are built from the test files
+# on every build, not committed (#380).
+hooks:
+  - scripts/mkdocs_hooks.py
+
 theme:
   name: material
   features:
@@ -85,6 +90,7 @@ nav:
       - Python conventions (PEPs): python-code-conventions-peps.md
       - Python conventions (survey): python-code-conventions-survey.md
       - Icon ontology: icon-ontology.md
+      - Design principles: design-principles.md
       - UI interaction conventions: ui-interaction-conventions.md
       - Settings and the Mac app: settings-and-mac-app.md
       - Keyboard shortcuts (the standard set): keyboard-shortcuts.md

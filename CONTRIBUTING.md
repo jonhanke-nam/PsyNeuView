@@ -40,8 +40,9 @@ cd frontend && npx tsc --noEmit -p .
 cd frontend && npm run test:e2e:ci # the e2e specs CI runs (tagged @ci)
 ```
 
-A new e2e spec that CI should run gets the `@ci` tag and a line in
-`frontend/e2e/ci-specs.txt`; a unit test checks the two agree. More in
+A new e2e spec that CI should run gets the `@ci` tag; one CI shouldn't run
+says why in a `Not in CI:` line in its header, and a unit test fails on a spec
+with neither. No list or generated page to update. More in
 [docs/testing.md](docs/testing.md).
 
 ## Style

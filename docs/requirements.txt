@@ -3,3 +3,5 @@
 #   .docs-venv/bin/mkdocs serve     # live preview at http://127.0.0.1:8000
 #   .docs-venv/bin/mkdocs build     # static site → site/
 mkdocs-material>=9.5
+# File.generated, used by scripts/mkdocs_hooks.py for the What's tested pages (#380).
+mkdocs>=1.6
