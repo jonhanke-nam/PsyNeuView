@@ -1798,6 +1798,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - Busy wheel (#38) › with reduced motion every style stands still (#169) · CI · #38
 - Busy wheel (#38) › a problem report has each wait's start and stop, and the action it came from · CI · #38
 
+**`frontend/e2e/execution-mode-label.spec.ts`** (Browser (Playwright))
+
+- Execution mode label › the Run and Learn panels say Execution mode, and no option says graph · CI · #329
+
 **`frontend/e2e/learning-nodes-run-inspector.spec.ts`** (Browser (Playwright))
 
 - learning models: Run inputs and the Inspector › the TD demo's Run tab lists only the cue, and runs · CI · #1383
@@ -2153,6 +2157,8 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - test_default_learn_mode_is_a_learnable_mode_when_present · CI · #537
 - test_unavailable_modes_carry_a_reason · CI · #537
 - test_endpoint_shape · CI · #537
+- test_option_labels_use_psyneulinks_mode_names: The Run and Learn selectors show these labels (#329): PsyNeuLink's own ExecutionMode names, with LLVM's "(compiled)" kept. · CI · #329
+- test_no_label_or_reason_says_graph: #329: "graph" came out of the options and their tooltips, for every install and every kind of composition. · CI · #329
 
 **`backend/tests/test_executor.py`** (Backend (pytest))
 

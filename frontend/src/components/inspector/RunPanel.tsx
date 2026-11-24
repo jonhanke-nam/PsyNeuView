@@ -146,7 +146,7 @@ export function RunPanel() {
   const [running, setRunning] = useState(false);
   // #764: execution backend for the forward run. Mirrors the Learn panel's
   // selector, but gates on `available` only — every available backend can
-  // execute a forward graph; `learnable` is a training-only constraint.
+  // execute a forward pass; `learnable` is a training-only constraint.
   const [installModes, setInstallModes] = useState<ExecutionModeInfo[]>([]);
   const [executionMode, setExecutionMode] = useState("Python");
   const [error, setError] = useState<string | null>(null);
@@ -775,10 +775,10 @@ export function RunPanel() {
                     style={{ ...RUN_ROW_LABEL }}
                     title={
                       executionModes.find((m) => m.id === executionMode)?.reason ??
-                      "Execution backend used for this run"
+                      "Execution mode used for this run"
                     }
                   >
-                    Backend
+                    Execution mode
                     <select
                       value={executionMode}
                       onChange={(e) => setExecutionMode(e.target.value)}

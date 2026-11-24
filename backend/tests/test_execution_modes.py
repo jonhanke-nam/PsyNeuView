@@ -3,8 +3,12 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+import pytest
+
+from app.services import execution_modes
 from app.services.execution_modes import (
     DEFAULT_LEARN_MODE,
+    composition_execution_modes,
     get_execution_modes,
 )
 
@@ -44,3 +48,26 @@ def test_endpoint_shape():
     body = resp.json()
     assert body["defaultLearn"] == DEFAULT_LEARN_MODE
     assert {m["id"] for m in body["modes"]} == {"PyTorch", "Python", "LLVM"}
+
+
+def test_option_labels_use_psyneulinks_mode_names():
+    """The Run and Learn selectors show these labels (#329): PsyNeuLink's own
+    ExecutionMode names, with LLVM's "(compiled)" kept."""
+    labels = {m["id"]: m["label"] for m in get_execution_modes()}
+    assert labels == {"PyTorch": "PyTorch", "Python": "Python", "LLVM": "LLVM (compiled)"}
+
+
+@pytest.mark.parametrize("torch_ok", [True, False])
+@pytest.mark.parametrize("llvm_ok", [True, False])
+def test_no_label_or_reason_says_graph(monkeypatch, torch_ok, llvm_ok):
+    """#329: "graph" came out of the options and their tooltips, for every
+    install and every kind of composition."""
+    monkeypatch.setattr(execution_modes, "_torch_available", lambda: torch_ok)
+    monkeypatch.setattr(execution_modes, "_llvm_available", lambda: llvm_ok)
+    shown = [*get_execution_modes()]
+    for is_autodiff in (True, False):
+        for has_learning in (True, False):
+            shown += composition_execution_modes(is_autodiff=is_autodiff, has_learning=has_learning)
+    for m in shown:
+        assert "graph" not in m["label"].lower(), m
+        assert "graph" not in (m["reason"] or "").lower(), m
