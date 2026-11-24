@@ -9,9 +9,9 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 175 | 460 | 450 tests in 170 files |
+| Browser (Playwright) | 175 | 461 | 451 tests in 170 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 148 | 1291 | 1291 tests in 148 files |
+| Frontend unit (vitest) | 148 | 1293 | 1293 tests in 148 files |
 | Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -27,8 +27,8 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Building models in the UI](#building) | 4 files, 7 tests | – | 1 files, 9 tests | 13 files, 145 tests | 161 of 161 |
 | [Editing: code and graph in step](#sync) | 17 files, 40 tests | – | 10 files, 81 tests | 26 files, 247 tests | 365 of 368 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
-| [Running, learning and debugging](#running) | 16 files, 38 tests | – | 11 files, 99 tests | 52 files, 262 tests | 399 of 399 |
-| [Saving, history and undo](#saving) | 12 files, 29 tests | – | 11 files, 90 tests | 10 files, 189 tests | 307 of 308 |
+| [Running, learning and debugging](#running) | 16 files, 39 tests | – | 11 files, 99 tests | 52 files, 262 tests | 400 of 400 |
+| [Saving, history and undo](#saving) | 12 files, 29 tests | – | 11 files, 92 tests | 10 files, 189 tests | 309 of 310 |
 | [Mac app bridges and what's running](#macapp) | 5 files, 18 tests | – | 5 files, 51 tests | 7 files, 99 tests | 168 of 168 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
@@ -607,7 +607,7 @@ No tests yet.
 | `run-set-survives-edit.spec.ts` | Browser | 1 | yes | #57 | A chosen run set survives a parameter edit (#57). |
 | `run-sticky-node-headers.spec.ts` | Browser | 1 | yes | #363 | Run panel, inputs arranged by node: each node's header sticks just below the sticky Run row while its trials scroll past, and the next node's header pushes it up (#363). |
 | `run-trial-seconds.spec.ts` | Browser | 1 | yes | #334 | Per-trial run times beside each trial number (#334). |
-| `stale-run-results.spec.ts` | Browser | 3 | yes | #337 | Run results go stale after an edit (#337). |
+| `stale-run-results.spec.ts` | Browser | 4 | yes | #337 | Run results go stale after an edit (#337). |
 | `stroop-lc-reference.spec.ts` | Browser | 2 | yes |  | Stroop + LC reference model — LC feedback edges render after the swap. |
 | `value-grid.spec.ts` | Browser | 1 | yes | #1387 | A layer's values as a grid (#1387). |
 | `BusyIndicator.test.ts` | Frontend unit | 3 | yes | #169 | The busy indicator's styles (#169): every one takes the same space, and everything that moves stands still under reduced motion. |
@@ -712,6 +712,7 @@ No tests yet.
 | per-trial run times (#334) › each trial row shows how many seconds it took | `run-trial-seconds.spec.ts` | Browser | yes | #334 |
 | Run results go stale after an edit (#337) › an edit warns and clears the highlights | `stale-run-results.spec.ts` | Browser | yes | #337 |
 | Run results go stale after an edit (#337) › Undo back to the source that ran makes the results current (#366) | `stale-run-results.spec.ts` | Browser | yes | #337 |
+| Run results go stale after an edit (#337) › Redo right after an edit keeps it: Undo brings it back (#391) | `stale-run-results.spec.ts` | Browser | yes | #337 |
 | Run results go stale after an edit (#337) › a fold toggle doesn't make results stale | `stale-run-results.spec.ts` | Browser | yes | #337 |
 | stroop_with_lc reference model › loads and renders all four LC modulatory edges | `stroop-lc-reference.spec.ts` | Browser | yes |  |
 | stroop_with_lc reference model › runs a trial without the scalar-conflict shape error | `stroop-lc-reference.spec.ts` | Browser | yes |  |
@@ -737,7 +738,7 @@ No tests yet.
 | `sidecar-placement.spec.ts` | Browser | 3 | yes | #933 | Sidecar placement toggle actually moves files (#933). |
 | `undo-depth.spec.ts` | Browser | 1 | yes | #558 | Undo as far back as the session goes (#558). |
 | `undo-notices.spec.ts` | Browser | 2 | yes | #1377 | Undo and redo: one notice for a burst, not one per step (#1377). |
-| `undoPendingEdit.test.ts` | Frontend unit | 4 | yes | #366 | #366: a code edit becomes a History step only once its live preview has rebuilt the model (the 1.5 s pause, then the build). |
+| `undoPendingEdit.test.ts` | Frontend unit | 6 | yes | #366 | #366: a code edit becomes a History step only once its live preview has rebuilt the model (the 1.5 s pause, then the build). |
 | `flushBuffer.test.ts` | Frontend unit | 3 | yes | #1 | Inspector and canvas edits flush typed code first; the flush must not write over a change made in another editor (#1). |
 | `historyDepth.test.ts` | Frontend unit | 11 | yes | #558 | Unlimited undo depth (#558): every step is kept; older ones compactly (no graph, code as a delta from the next newer step), and only past a memory budget is the oldest dropped. |
 | `historyStore.test.ts` | Frontend unit | 17 | yes | #1091 | Undo crossing model boundaries (#1091). |

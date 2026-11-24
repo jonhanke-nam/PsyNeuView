@@ -1877,6 +1877,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - Run results go stale after an edit (#337) › an edit warns and clears the highlights · CI · #337
 - Run results go stale after an edit (#337) › Undo back to the source that ran makes the results current (#366) · CI · #337
+- Run results go stale after an edit (#337) › Redo right after an edit keeps it: Undo brings it back (#391) · CI · #337
 - Run results go stale after an edit (#337) › a fold toggle doesn't make results stale · CI · #337
 
 **`frontend/e2e/stroop-lc-reference.spec.ts`** (Browser (Playwright))
@@ -2509,8 +2510,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 - Undo with an edit still waiting for its preview (#366) › takes back the edit · CI · #366
 - Undo with an edit still waiting for its preview (#366) › records nothing when History already has the code · CI · #366
-- Undo with an edit still waiting for its preview (#366) › records nothing while a step is being put back · CI · #366
+- Undo with an edit still waiting for its preview (#366) › records an edit typed in the pause after an Undo or Redo (#391) · CI · #366
 - Undo with an edit still waiting for its preview (#366) › records nothing for another model's history · CI · #366
+- Redo with an edit still waiting for its preview (#391) › keeps the typed edit: Undo after the Redo brings it back · CI · #391
+- Redo with an edit still waiting for its preview (#391) › with nothing to redo, records the edit and leaves it in the editor · CI · #391
 
 **`frontend/src/stores/flushBuffer.test.ts`** (Frontend unit (vitest))
 
