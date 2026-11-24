@@ -811,7 +811,7 @@ export function RunPanel() {
             view while stepping should not stop short of it. */}
         <div
           className="pnv-run-inputs"
-          style={{ minWidth: 250, ["--pnv-run-sticky-h" as string]: `${stickyRowHeight}px` }}
+          style={{ minWidth: 250, ["--run-sticky-row-h" as string]: `${stickyRowHeight}px` }}
         >
           {/* Header + Run Model button live in a sticky strip at the top of
               the Run panel so the button is always reachable without scrolling

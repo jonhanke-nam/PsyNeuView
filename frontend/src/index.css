@@ -438,5 +438,5 @@ body:has([data-pnv-customized="true"]) .pnv-inspector-legend {
    per element, not as the panel's scroll padding, so a trial card in the
    results, which the row never covers, scrolls flush to the top. */
 .pnv-run-inputs * {
-  scroll-margin-top: var(--pnv-run-sticky-h, 0px);
+  scroll-margin-top: var(--run-sticky-row-h, 0px);
 }
