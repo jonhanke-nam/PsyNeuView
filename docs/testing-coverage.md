@@ -1292,7 +1292,7 @@ No tests yet.
 | Docs pictures: saving › Changes since save, after a change outside PsyNeuView | `docs-shots-saving.spec.ts` | Browser | no | #662 |
 | an edit that breaks the model is named, with Undo (#353) › adding a node that writes a failing line: the warning names the add; Undo restores the file | `graph-edit-broke-model.spec.ts` | Browser | yes | #353 |
 | @smoke harness › mutatingTest fixture reaches /api/test/reset | `harness.spec.ts` | Browser | yes | #147 |
-| Components icon strip (#372) › a fresh strip shows the Components heading, four categories and no shortcuts | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
+| Components icon strip (#372) › a fresh strip shows the All heading, four categories and no shortcuts | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
 | Components icon strip (#372) › with the setting on, favourites and recents sit below the categories under their heading | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
 | Components icon strip (#372) › a row's empty star shows on hover or focus; a starred row keeps its star | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
 | success toast dwells past the old 2s window | `notification-dwell.spec.ts` | Browser | yes | #879 |

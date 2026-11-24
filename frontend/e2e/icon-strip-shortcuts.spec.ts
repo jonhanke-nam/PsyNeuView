@@ -1,10 +1,10 @@
 /**
  * The Components icon strip (#372).
  *
- * A fresh strip shows a tiny "Components" heading over the four category
+ * A fresh strip shows a tiny "All" heading over the four category
  * menus and no shortcuts. Settings ▸ Appearance ▸ "Show favourite and
  * recently used components in the icon strip" brings the shortcuts back, at
- * the bottom under a tiny "Favourites & recent" heading, favourites first,
+ * the bottom under a tiny "Recent" heading, favourites first,
  * each once. The fold-out chevron is much smaller than a component icon. In
  * the word list, a row's empty ☆ shows only on hover or keyboard focus; a
  * starred row keeps its ★.
@@ -28,11 +28,11 @@ async function seed(page: Page, start: "strip" | "open") {
 }
 
 test.describe("Components icon strip (#372)", { tag: "@ci" }, () => {
-  test("a fresh strip shows the Components heading, four categories and no shortcuts", async ({ page }) => {
+  test("a fresh strip shows the All heading, four categories and no shortcuts", async ({ page }) => {
     await seed(page, "strip");
     await page.goto("/");
     const palette = page.getByTestId("palette-sidebar");
-    await expect(palette.getByTestId("palette-strip-heading-components")).toHaveAccessibleName("Components");
+    await expect(palette.getByTestId("palette-strip-heading-components")).toHaveAccessibleName("All components");
     const categories = palette.getByTestId("palette-category");
     await expect(categories).toHaveCount(4);
     await expect(palette.getByTestId("palette-item")).toHaveCount(0);
@@ -67,7 +67,7 @@ test.describe("Components icon strip (#372)", { tag: "@ci" }, () => {
 
     const palette = page.getByTestId("palette-sidebar");
     const heading = palette.getByTestId("palette-strip-heading-shortcuts");
-    await expect(heading).toHaveAccessibleName("Favourites & recent");
+    await expect(heading).toHaveAccessibleName("Recent and favourite components");
     const items = palette.getByTestId("palette-item");
     // Favourites first, then recents, each once.
     await expect(items).toHaveCount(3);

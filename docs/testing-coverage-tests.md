@@ -4726,7 +4726,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 **`frontend/e2e/icon-strip-shortcuts.spec.ts`** (Browser (Playwright))
 
-- Components icon strip (#372) › a fresh strip shows the Components heading, four categories and no shortcuts · CI · #372
+- Components icon strip (#372) › a fresh strip shows the All heading, four categories and no shortcuts · CI · #372
 - Components icon strip (#372) › with the setting on, favourites and recents sit below the categories under their heading · CI · #372
 - Components icon strip (#372) › a row's empty star shows on hover or focus; a starred row keeps its star · CI · #372
 

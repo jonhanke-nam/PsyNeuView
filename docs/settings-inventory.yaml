@@ -667,7 +667,7 @@ settings:
       Off by default (#372): the icon strip shows just the four category
       menus, under a small "Components" heading. On, your favourite and
       recently used components sit at the bottom of the strip, under a small
-      "Favourites & recent" heading, favourites first and each once. The word
+      "Recent" heading, favourites first and each once. The word
       list's Favorites and Recently Used sections are not affected. A stored
       choice is kept.
 

@@ -279,7 +279,7 @@ export function PaletteSidebar() {
             <div style={{ padding: isCompact ? 0 : "4px 0" }}>
               {isCompact ? (
                 <>
-                  <StripHeading testId="palette-strip-heading-components" label="Components">{"Compo\u00ADnents"}</StripHeading>
+                  <StripHeading testId="palette-strip-heading-components" label="All components">{"All"}</StripHeading>
                   {taxonomy.map((node) => (
                     <CompactCategoryIcon
                       key={node.id}
@@ -291,7 +291,7 @@ export function PaletteSidebar() {
                   ))}
                   {showStripShortcuts && stripShortcuts.length > 0 && (
                     <div data-testid="palette-strip-shortcuts" style={{ marginTop: 6 }}>
-                      <StripHeading testId="palette-strip-heading-shortcuts" label="Favourites & recent">{"Favour\u00ADites & recent"}</StripHeading>
+                      <StripHeading testId="palette-strip-heading-shortcuts" label="Recent and favourite components">{"Recent"}</StripHeading>
                       {stripShortcuts.map(({ item, kind }) => (
                         <PaletteLeaf
                           key={`strip-${item.type}`}
@@ -676,11 +676,11 @@ function StripHeading({ children, testId, label }: { children: React.ReactNode; 
         color: "var(--pnv-text-hint)",
         textAlign: "center",
         lineHeight: 1.15,
-        // The strip's full width (its 4px padding given back). A word too
-        // long for it breaks at its soft hyphen (the caller puts one in).
+        // The strip's full width (its 4px padding given back). The headings
+        // are one short word each ("All", "Recent"), so they never wrap.
         margin: "0 -4px",
         padding: "4px 0 2px",
-        hyphens: "manual",
+        whiteSpace: "nowrap",
       }}
     >
       {children}
