@@ -17,7 +17,9 @@ test.describe("per-trial run times (#334)", { tag: "@ci" }, () => {
     await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 30_000 });
 
     await page.getByTestId("tab-run").click();
-    const runResp = page.waitForResponse((r) => r.url().includes("/api/model/run") && r.ok(), {
+    // The run itself, not the progress polls beside it
+    // (/api/model/run/progress/{id}, #357), whose answers carry no results.
+    const runResp = page.waitForResponse((r) => r.url().endsWith("/api/model/run") && r.ok(), {
       timeout: 60_000,
     });
     await page.getByRole("button", { name: /Run Model/ }).click();
