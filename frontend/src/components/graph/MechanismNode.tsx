@@ -3,7 +3,7 @@
  * Supports role-based coloring (show_graph parity) and execution trace highlighting.
  */
 
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Handle, Position, useConnection, type NodeProps } from "@xyflow/react";
 import { CONNECT_HANDLE, NODE_TARGET_HANDLE } from "./connectHandles";
 import { targetStatus, useConnectTargets } from "@/stores/connectTargetsStore";
@@ -12,7 +12,7 @@ import { usePortLayout } from "@/stores/portLayoutStore";
 import type { MechanismData } from "@/stores/modelStore";
 import { useGraphSettings, type GraphDirection } from "@/stores/graphSettingsStore";
 import { useModelStore, NODE_HEIGHT, NODE_WIDTH } from "@/stores/modelStore";
-import { outlineThickness, ovalBoxFor } from "@/utils/nodeBox";
+import { expandedBoxFor, outlineThickness, ovalBoxFor } from "@/utils/nodeBox";
 import { TYPE_COLORS, ROLE_COLORS, ROLE_TEXT_COLORS, ROLE_PRIORITY, roleColorFor } from "@/constants/pnlTypes";
 import { toggleCompositionCollapse } from "@/utils/nodeActions";
 import { formatTraceValue } from "@/utils/traceValues";
@@ -127,6 +127,29 @@ function getRoleBorderWidth(roles: string[], regular: number, emphasis: number):
   if (!roles || roles.length === 0) return regular;
   const boldRoles = ["INPUT", "OUTPUT", "PROBE", "CONTROL", "CONTROLLER", "CONTROLLER_OBJECTIVE"];
   return roles.some((r) => boldRoles.includes(r)) ? emphasis : regular;
+}
+
+/** A child of the node laid out with its text, not pinned at an edge (badges, ports, outline). */
+function inFlow(child: Element): boolean {
+  return child instanceof HTMLElement && getComputedStyle(child).position !== "absolute";
+}
+
+/**
+ * The box round the node's text (#333): the union of its children that are
+ * laid out in the column, in the node's own pixels, so the canvas's zoom
+ * doesn't enter into it. Null when there is none.
+ */
+function textExtent(el: HTMLElement): { width: number; height: number } | null {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const child of Array.from(el.children)) {
+    if (!inFlow(child)) continue;
+    const c = child as HTMLElement;
+    x0 = Math.min(x0, c.offsetLeft);
+    y0 = Math.min(y0, c.offsetTop);
+    x1 = Math.max(x1, c.offsetLeft + c.offsetWidth);
+    y1 = Math.max(y1, c.offsetTop + c.offsetHeight);
+  }
+  return x1 > x0 && y1 > y0 ? { width: x1 - x0, height: y1 - y0 } : null;
 }
 
 export const MechanismNode = memo(function MechanismNode({
@@ -441,6 +464,35 @@ export const MechanismNode = memo(function MechanismNode({
   const expandRoom = isCollapsedComposition ? EXPAND_BUTTON_ROOM : 0;
   const padding = `${padY}px ${padX + expandRoom}px`;
 
+  // #333: an expanded node is as big as its shape needs to be to hold its
+  // text. The text's box, measured once it is laid out, is enlarged to the
+  // shape that holds it (utils/nodeBox.ts). Measured before paint, so the
+  // node never shows at the smaller size; and again when the text's size
+  // changes on its own (a font arriving). A collapsed node is untouched.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [expandedFit, setExpandedFit] = useState<{ width: number; height: number } | null>(null);
+  const fitExpanded = useCallback(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const content = textExtent(el);
+    const box = content ? expandedBoxFor(content, shape, outline) : null;
+    setExpandedFit((was) =>
+      was && box && Math.abs(was.width - box.width) < 1 && Math.abs(was.height - box.height) < 1 ? was : box,
+    );
+  }, [shape, outline]);
+  useLayoutEffect(() => {
+    if (expanded) fitExpanded();
+    else if (expandedFit) setExpandedFit(null);
+  });
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!expanded || !el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => fitExpanded());
+    for (const child of Array.from(el.children)) if (inFlow(child)) ro.observe(child);
+    return () => ro.disconnect();
+  }, [expanded, fitExpanded]);
+  const fit = expanded ? expandedFit : null;
+
   return (
     <>
       {/* Outside the node's box, so it isn't dimmed with it. */}
@@ -471,7 +523,12 @@ export const MechanismNode = memo(function MechanismNode({
           </div>
         )}
     <div
-      onDoubleClick={onDoubleClick}
+      ref={bodyRef}
+      // #333: caught on the way down, not on the way back up. Where nodes
+      // can't be dragged (an automatic layout), React Flow's double-click zoom
+      // on the pane stops the event before React's own handler sees it, so
+      // the node zoomed the canvas instead of expanding.
+      onDoubleClickCapture={onDoubleClick}
       data-node-shape={shape}
       data-connect-target={dropStatus ?? undefined}
       // #253: a valid drop target pulses a teal halo (index.css), held steady
@@ -495,8 +552,8 @@ export const MechanismNode = memo(function MechanismNode({
           ? "0 0 0 2px var(--pnv-cursor-highlight), var(--pnv-cursor-glow)"
           : "var(--pnv-shadow-node)",
         boxSizing: "border-box",
-        minWidth: minBox.width,
-        minHeight: minBox.height,
+        minWidth: fit ? Math.max(minBox.width, fit.width) : minBox.width,
+        minHeight: fit ? Math.max(minBox.height, fit.height) : minBox.height,
         textAlign: "center" as const,
         display: "flex",
         flexDirection: "column" as const,
