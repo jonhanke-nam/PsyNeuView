@@ -13,6 +13,8 @@ from fastapi.responses import JSONResponse
 
 from app import __version__
 from app.api.assistant_review_routes import router as assistant_review_router
+from app.api.assistant_mcp_routes import client_router as assistant_mcp_client_router
+from app.api.assistant_mcp_routes import page_router as assistant_mcp_page_router
 from app.api.assistant_routes import router as assistant_router
 from app.api.routes import router
 from app.api.ws import handle_websocket
@@ -231,6 +233,9 @@ app.add_middleware(RequestGuard)
 
 app.include_router(router, prefix="/api")
 app.include_router(assistant_router, prefix="/api")
+# Claude over MCP (#201): the page's routes (same site) and the MCP command's (token checked).
+app.include_router(assistant_mcp_page_router, prefix="/api")
+app.include_router(assistant_mcp_client_router, prefix="/api")
 app.include_router(assistant_review_router, prefix="/api")
 
 
