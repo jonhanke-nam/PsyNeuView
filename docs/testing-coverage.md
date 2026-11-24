@@ -9,10 +9,10 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 159 | 431 | 419 tests in 153 files |
+| Browser (Playwright) | 160 | 432 | 420 tests in 154 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 134 | 1203 | 1203 tests in 134 files |
-| Backend (pytest) | 188 | 1749 | 1749 tests in 188 files |
+| Backend (pytest) | 189 | 1752 | 1752 tests in 189 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
 
@@ -24,7 +24,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | AI assistant | – | – | – | – | **no tests** |
 | [Matching show_graph](#showgraph) | 8 files, 19 tests | – | 8 files, 66 tests | 5 files, 34 tests | 118 of 119 |
 | [Dragging and pointer interaction](#pointer) | 17 files, 53 tests | – | 6 files, 37 tests | – | 90 of 90 |
-| [Building models in the UI](#building) | 3 files, 6 tests | – | 1 files, 9 tests | 13 files, 145 tests | 160 of 160 |
+| [Building models in the UI](#building) | 4 files, 7 tests | – | 1 files, 9 tests | 13 files, 145 tests | 161 of 161 |
 | [Editing: code and graph in step](#sync) | 16 files, 38 tests | – | 9 files, 77 tests | 26 files, 247 tests | 359 of 362 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
 | [Running, learning and debugging](#running) | 10 files, 27 tests | – | 8 files, 84 tests | 51 files, 254 tests | 365 of 365 |
@@ -34,7 +34,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Look and style conventions](#style) | 13 files, 31 tests | – | 8 files, 47 tests | – | 76 of 78 |
 | [Layout, views and compositions](#layout) | 21 files, 47 tests | – | 21 files, 151 tests | 5 files, 56 tests | 253 of 254 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 13 files, 78 tests | 18 files, 194 tests | 288 of 291 |
+| [App shell, diagnostics and everything else](#shell) | 9 files, 19 tests | – | 13 files, 78 tests | 19 files, 197 tests | 291 of 294 |
 
 <a id="tutorials"></a>
 
@@ -409,6 +409,7 @@ No tests yet.
 | `component-icons.spec.ts` | Browser | 2 | yes | #283 | The Components panel draws each component's icon (#283), in the list and in the folded strip, in light and dark mode, without moving anything. |
 | `learn-pathway.spec.ts` | Browser | 3 | yes | #997 | The Learn tab trains non-autodiff learning models (#997). |
 | `modulatory-param-edges.spec.ts` | Browser | 1 | yes | #616 | Modulatory projections to parameter ports render as edges (#616). |
+| `place-function-on-mechanism.spec.ts` | Browser | 1 | yes | #348, #349 | A function picked up in the Components panel goes onto a mechanism, as its function= (#348). |
 | `componentIcons.test.ts` | Frontend unit | 9 | yes | #283 | Every Components panel item has an icon (#283), and the icon files are safe to put in the page as markup. |
 | `test_add_projection_placement.py` | Backend | 2 | yes | #253 | A new projection is defined before the code that uses it (#253). |
 | `test_broken_projections.py` | Backend | 3 | yes | #1235 | The graph learns which connections PsyNeuLink refused to make (#1235). |
@@ -434,6 +435,7 @@ No tests yet.
 | Learn: non-autodiff learning › the TD demo charts a falling prediction error | `learn-pathway.spec.ts` | Browser | yes | #997 |
 | Learn: non-autodiff learning › the autodiff demo still trains under PyTorch and reports a loss | `learn-pathway.spec.ts` | Browser | yes | #997 |
 | modulatory projections to parameter ports (#616) › LC→gain control edges render | `modulatory-param-edges.spec.ts` | Browser | yes | #616 |
+| a function goes onto a mechanism (#348, #349) › empty canvas: a message, the pick stays, nothing is written; decision: its function changes; Undo puts it back | `place-function-on-mechanism.spec.ts` | Browser | yes | #348 |
 
 </details>
 
@@ -1221,6 +1223,7 @@ No tests yet.
 | `nodeSelector.test.ts` | Frontend unit | 2 | yes | #1236 | #1236: a node name is any Python string, and must never make an invalid selector. |
 | `waitLog.test.ts` | Frontend unit | 10 | yes | #177 | The action-logging setting is remembered in localStorage (#177); the suite runs on node, so stub it. |
 | `test_activity_log.py` | Backend | 7 | yes | #177 | The page's activity log on disk (#177): batches appended as sent, the file rotated at start so the previous launch is kept, a size cap, and the actions removed when action logging is turned off. |
+| `test_add_function_refused.py` | Backend | 3 | yes | #349, #348 | A Function is never written as a standalone node (#349, #348). |
 | `test_anchor_collisions.py` | Backend | 5 | yes | #1134 | The anchor collision detector must tell apart three fates (#1134). |
 | `test_api.py` | Backend | 60 | yes |  | Tests for the REST API endpoints. |
 | `test_app_logging.py` | Backend | 3 | yes | #864 | Guard: the app's own loggers must actually be emitted (#864). |

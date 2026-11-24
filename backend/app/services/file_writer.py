@@ -689,10 +689,42 @@ def _first_composition_line(source: str) -> int:
     return -1
 
 
+# The Function classes the Components panel offers (frontend pnlTypes.ts,
+# "functions"). A Function is not a node: it belongs to a mechanism, as its
+# ``function=``. Written as ``x = pnl.Logistic(name='x')`` it is not even valid
+# (a Function takes no ``name``), and the model then fails to load (#349).
+_PALETTE_FUNCTION_TYPES = frozenset({
+    "AcceleratingTimer", "AccumulatorIntegrator", "AdaptiveIntegrator", "Angle",
+    "AsymptoticTimer", "BinomialDistort", "DeceleratingTimer",
+    "DriftDiffusionAnalytical", "DriftDiffusionIntegrator",
+    "DriftOnASphereIntegrator", "Dropout", "DualAdaptiveIntegrator",
+    "Exponential", "ExponentialDist", "FitzHughNagumoIntegrator", "GammaDist",
+    "Gaussian", "GaussianDistort", "HypersphericalToCartesian", "Identity",
+    "InteractiveActivationIntegrator", "LeakyCompetingIntegrator", "Linear",
+    "LinearCombination", "LinearTimer", "Logistic", "MatrixTransform",
+    "NormalDist", "OrnsteinUhlenbeckIntegrator", "ReLU", "SimpleIntegrator",
+    "SoftMax", "Tanh", "TransferWithCosts", "UniformDist",
+    "UniformToNormalDist", "UserDefinedFunction", "WaldDist",
+})
+
+
+def is_function_type(type_name: str) -> bool:
+    """True for a PsyNeuLink Function class name (not a node) (#349)."""
+    return type_name in _PALETTE_FUNCTION_TYPES or type_name.endswith(
+        ("Integrator", "Dist", "Function")
+    )
+
+
 def _add_node(source: str, changes: dict) -> str:
     """Add a new mechanism declaration to the Mechanisms section."""
     var_name = changes["var_name"]
     mech_type = changes.get("type", "TransferMechanism")
+    if is_function_type(mech_type):
+        # #349: never write a Function as a standalone node.
+        raise ValueError(
+            f"{mech_type} is a function, not a node: it belongs to a mechanism "
+            f"as its function=. Give a mechanism this function instead."
+        )
     params = changes.get("params", {})
     comp_var = changes.get("composition", None)
 

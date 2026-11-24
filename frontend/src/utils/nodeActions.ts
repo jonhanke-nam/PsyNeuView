@@ -386,3 +386,56 @@ async function saveDroppedPosition(
   }
 }
 
+
+/** #348: clicking empty canvas (or a non-mechanism) while a function is picked up. */
+export const FUNCTION_NEEDS_MECHANISM =
+  "A function belongs to a mechanism. Click one of the highlighted mechanisms, or press Esc.";
+
+/**
+ * #348: may this mechanism take function `fnType`? Answers PsyNeuLink's own
+ * list (the Inspector's function dropdown, `_valid_function_types`). Returns
+ * null when it may, or the reason it may not, in plain words.
+ */
+export function functionRefusal(
+  data: { label?: string; varName?: string; function?: { type: string; validTypes?: string[] } | null } | undefined,
+  fnType: string,
+): string | null {
+  const name = data?.label || data?.varName || "This node";
+  const fn = data?.function;
+  if (!fn) return `${name} has no function to replace.`;
+  const valid = fn.validTypes ?? [];
+  if (valid.includes(fnType)) return null;
+  return `${name} can't use ${fnType}: its function must be one of ${valid.length ? valid.join(", ") : fn.type}.`;
+}
+
+/**
+ * #348: give a mechanism a new function, the same change as the Inspector's
+ * function dropdown (/model/update-function-type), so it is one Undo step.
+ */
+export async function setMechanismFunction(
+  filePath: string,
+  varName: string,
+  label: string,
+  fnType: string,
+  setSource: (s: string) => void,
+  loadModel: (m: any, l?: any) => void,
+  addNotification: (type: any, msg: string) => void,
+) {
+  recordAction(`Changed function of ${varName} to ${fnType}`);
+  // Unsaved editor text must reach the file first (#1029).
+  await useModelStore.getState().flushBuffer();
+  try {
+    const resp = await fetch("/api/model/update-function-type", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_path: filePath, var_name: varName, new_function_class: fnType }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.detail || "Function change failed");
+    if (data.source) setSource(data.source);
+    if (data.model) loadModel(data.model, data.layout);
+    addNotification("success", `${label} now uses ${fnType}`);
+  } catch (e: any) {
+    addNotification("error", `Function change failed: ${e.message ?? e}`);
+  }
+}
