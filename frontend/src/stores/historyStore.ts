@@ -169,7 +169,12 @@ interface HistoryState {
   /** Whether we're currently restoring (to prevent recording during undo/redo) */
   isRestoring: boolean;
 
-  pushSnapshot: (snapshot: Snapshot) => void;
+  /**
+   * Add a step. A new step normally clears the redo steps; `keepRedo` keeps
+   * them, for an edit typed after an Undo that Redo is about to step over
+   * (#391): it goes in before them, so Undo after the Redo brings it back.
+   */
+  pushSnapshot: (snapshot: Snapshot, opts?: { keepRedo?: boolean }) => void;
   /**
    * Record that `snapshot.source` was just written to the model file. Marks
    * the current step when it holds that text; otherwise `snapshot` is added
@@ -483,8 +488,9 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
   batchWindowMs: 500,
   isRestoring: false,
 
-  pushSnapshot: (snapshot) => {
+  pushSnapshot: (snapshot, opts) => {
     const state = get();
+    const future = opts?.keepRedo ? state.future : [];
 
     // Don't record during undo/redo restore
     if (state.isRestoring) return;
@@ -521,7 +527,7 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       rebaseOnto(state.past, lastEntry, next);
       set({
         past: [...state.past.slice(0, -1), next],
-        future: [],
+        future,
         lastPushTime: now,
       });
       return;
@@ -531,7 +537,7 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     const { past, dropped } = enforceBudget([...state.past, next], state.budget);
     set({
       past,
-      future: [], // Clear redo stack on new action
+      future, // A new action clears the redo steps, unless asked to keep them
       lastPushTime: now,
       evicted: state.evicted + dropped,
     });

@@ -33,15 +33,17 @@ import {
  * Record the code in the editor as a step when History doesn't hold it yet
  * (#366): an edit still waiting for its preview. Nothing is recorded when the
  * current step already has this code, or when there is no history to add to.
+ * `keepRedo` keeps the redo steps after it (#391), for Redo: the edit goes in
+ * before them, so Undo after the Redo brings back what was typed.
  */
-export function recordPendingCodeEdit(): void {
+export function recordPendingCodeEdit(opts?: { keepRedo?: boolean }): void {
   const { past, isRestoring } = useHistoryStore.getState();
   const current = past[past.length - 1];
   if (!current || isRestoring) return;
   const { source, filePath } = useModelStore.getState();
   if (current.filePath && filePath && current.filePath !== filePath) return;
   if (current.source === source) return;
-  recordAction("Edited the code");
+  recordAction("Edited the code", opts?.keepRedo ? { keepRedo: true } : undefined);
 }
 
 let historyMoves = 0;
@@ -116,8 +118,10 @@ async function moveInHistoryNow(redo: boolean, steps: number, origin: HistoryMov
   // after the live-preview pause (1.5 s) and the build. Until then it is in
   // the editor but not in History, and ⌘Z there said "Nothing to undo" and
   // left the edit, or went back a step past it (#366). Take it as a step
-  // first, so Undo takes back what was just typed.
-  if (!redo && origin === "step") recordPendingCodeEdit();
+  // first, so Undo takes back what was just typed. Redo would otherwise put
+  // the next step over the typed text and lose it (#391): the edit goes in
+  // before the redo steps, so Undo after the Redo brings it back.
+  if (origin === "step") recordPendingCodeEdit({ keepRedo: redo });
 
   const history = useHistoryStore.getState();
   const notifications = useNotificationStore.getState();
