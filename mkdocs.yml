@@ -85,6 +85,7 @@ nav:
       - Python conventions (PEPs): python-code-conventions-peps.md
       - Python conventions (survey): python-code-conventions-survey.md
       - Icon ontology: icon-ontology.md
+      - Design principles: design-principles.md
       - UI interaction conventions: ui-interaction-conventions.md
       - Settings and the Mac app: settings-and-mac-app.md
       - Keyboard shortcuts (the standard set): keyboard-shortcuts.md
