@@ -100,18 +100,38 @@ async function chooseLayout(page: Page, layout: Layout) {
   }
 }
 
-/** Nodes are dragged in a custom layout; switch to it if the toolbar says Auto. */
+/**
+ * Nodes are dragged in a custom layout; switch to it if the toolbar says Auto.
+ * The button toggles, so it is read only once the graph has settled (see
+ * press), and a press waits for the reload the switch starts.
+ */
 async function ensureCustomLayout(page: Page) {
   const button = page.getByRole("button", { name: /^Layout: (Auto|Custom)$/ });
-  if ((await button.textContent())?.includes("Auto")) await button.click();
+  if ((await button.textContent())?.includes("Auto")) await Promise.all([loaded(page), button.click()]);
   await expect(button).toHaveText("Layout: Custom");
 }
 
-/** Press a frame button by its aria-label and wait for the rebuild it starts. */
+/**
+ * Press a frame button by its aria-label and wait for the rebuild it starts
+ * to land on the canvas, not just for the server's answer (#325).
+ *
+ * The answer arrives before the graph is rebuilt from it, and the rebuild can
+ * change more than the frame: EGO opens in the view with every composition
+ * drawn open, which has no saved positions and so shows Layout: Auto, and
+ * folding EM goes to the nested view, which has them and opens in Custom.
+ * Read straight after the answer, the toolbar could still say Auto; the
+ * Layout button, pressed to switch, then landed on the rebuilt Custom and
+ * turned it back to Auto. So wait until the frame shows the opposite button,
+ * which only the rebuilt graph has, and nothing is still busy.
+ */
 async function press(page: Page, name: RegExp) {
-  const button = page.getByTestId("graph-canvas").getByRole("button", { name }).first();
+  const canvas = page.getByTestId("graph-canvas");
+  const button = canvas.getByRole("button", { name }).first();
   await expect(button).toBeVisible({ timeout: 15_000 });
   await Promise.all([loaded(page), button.click()]);
+  const opposite = new RegExp(name.source.replace(/Collapse|Expand/, (w) => (w === "Collapse" ? "Expand" : "Collapse")));
+  await expect(canvas.getByRole("button", { name: opposite }).first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator("html.pnv-busy")).toHaveCount(0, { timeout: 30_000 });
 }
 
 /**
