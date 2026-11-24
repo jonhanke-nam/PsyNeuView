@@ -3,14 +3,18 @@
  * Shows clickable undo/redo with tooltips showing the action description.
  * Also shows the history depth count.
  *
- * The buttons call the same step the ⌘Z / ⌘⇧Z shortcuts run. They used to
+ * The buttons call the same step the Undo / Redo shortcuts run. They used to
  * fake a keydown on `window`, which the shortcut listener no longer acted on
  * (found by the orientation walkthrough's undo step, #1313): the buttons were
  * enabled, clicked, and did nothing.
+ *
+ * The tooltips name the keys as they are on this platform, and as rebound in
+ * Settings: ⌘Z on a Mac, Ctrl+Z elsewhere (#409).
  */
 
 import { applyHistoryStep } from "@/hooks/useUndoRedo";
 import { useHistoryStore } from "@/stores/historyStore";
+import { useShortcutKeys } from "@/shortcuts/useAppShortcuts";
 
 export function UndoRedoButtons() {
   const canUndo = useHistoryStore((s) => s.past.length > 1);
@@ -24,6 +28,8 @@ export function UndoRedoButtons() {
     return s.future[0]?.description;
   });
   const historyDepth = useHistoryStore((s) => s.past.length - 1);
+  const undoKeys = useShortcutKeys("history.undo");
+  const redoKeys = useShortcutKeys("history.redo");
 
   const handleUndo = () => void applyHistoryStep(false);
   const handleRedo = () => void applyHistoryStep(true);
@@ -36,7 +42,7 @@ export function UndoRedoButtons() {
         onClick={handleUndo}
         data-testid="undo-button"
         disabled={!canUndo}
-        title={undoDesc ? `Undo: ${undoDesc} (⌘Z)` : "Nothing to undo"}
+        title={undoDesc ? `Undo: ${undoDesc} (${undoKeys})` : "Nothing to undo"}
         style={{
           fontSize: "var(--pnv-fs-14)",
           padding: "2px 6px",
@@ -54,7 +60,7 @@ export function UndoRedoButtons() {
         onClick={handleRedo}
         data-testid="redo-button"
         disabled={!canRedo}
-        title={redoDesc ? `Redo: ${redoDesc} (⌘⇧Z)` : "Nothing to redo"}
+        title={redoDesc ? `Redo: ${redoDesc} (${redoKeys})` : "Nothing to redo"}
         style={{
           fontSize: "var(--pnv-fs-14)",
           padding: "2px 6px",
