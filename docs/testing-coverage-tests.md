@@ -764,6 +764,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - a click never connects (#317) › clicks on connectors and port dots, with and without a wobble, add nothing · CI · #317
 - a click never connects (#317) › clicks on handles while the graph rebuilds add nothing · CI · #317
 
+**`frontend/e2e/drag-function-onto-mechanism.spec.ts`** (Browser (Playwright))
+
+- drag a function onto a mechanism (#354) › empty canvas writes nothing; the DDM refuses Logistic; DriftDiffusionIntegrator goes onto decision; one Undo · CI · #354
+
 **`frontend/e2e/drag-to-connect-stage2.spec.ts`** (Browser (Playwright))
 
 - drag to connect, second part (#253) › onto a collapsed composition: into its input node · CI · #253
@@ -4712,6 +4716,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - Docs pictures: saving › History with two saves, and the revert confirm · not in CI · #662
 - Docs pictures: saving › Changes since save, after a change outside PsyNeuView · not in CI · #662
 
+**`frontend/e2e/graph-edit-broke-model.spec.ts`** (Browser (Playwright))
+
+- an edit that breaks the model is named, with Undo (#353) › adding a node that writes a failing line: the warning names the add; Undo restores the file · CI · #353
+
 **`frontend/e2e/harness.spec.ts`** (Browser (Playwright))
 
 - @smoke harness › mutatingTest fixture reaches /api/test/reset · CI · #147
@@ -4848,6 +4856,16 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - errorDetail (#1396) › shows a plain-text reply as it is, instead of a JSON parse error · CI · #1396
 - errorDetail (#1396) › writes out a detail that isn't a string (a validation error list) · CI · #1396
 - errorDetail (#1396) › falls back to the status when the body is empty or unreadable · CI · #1396
+
+**`frontend/src/utils/graphEditBlame.test.ts`** (Frontend unit (vitest))
+
+- writtenLines › is null when nothing changed · CI · #353
+- writtenLines › covers everything between the first and last line written · CI · #353
+- writtenLines › points at the place lines were taken out from · CI · #353
+- blameGraphEdit › names the edit when the failing line is one it wrote · CI · #353
+- blameGraphEdit › uses the words for each kind of edit · CI · #353
+- blameGraphEdit › blames nothing for a line the edit did not write · CI · #353
+- blameGraphEdit › blames nothing without an edit, a line, or a change · CI · #353
 
 **`frontend/src/utils/joinNames.test.ts`** (Frontend unit (vitest))
 
