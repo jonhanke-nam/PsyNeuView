@@ -42,6 +42,7 @@ import {
   SOFT_TENSION, anchorHandles, handlePath, handleTip, hasPinnedHandles, pinFromDrag, type Anchor,
 } from "@/utils/curveHandles";
 import { targetStatus, useConnectTargets } from "@/stores/connectTargetsStore";
+import { optionKeyName } from "@/shortcuts/keyLabels";
 
 const FAN_SPACING_PX = 18;
 // Label width estimate: monospace 10px font ≈ 6px per char, plus ~12px
@@ -847,7 +848,7 @@ export function ProjectionEdge({
                   // (index.css); it has nothing to say under Auto, so it is
                   // left as it is there.
                   className="nodrag nopan graph-control-point"
-                  title={`${d.label}\ndrag: move this edge · Option-drag: move the whole port${autoLayout ? "\n(the layout becomes Custom)" : ""}`}
+                  title={`${d.label}\ndrag: move this edge · ${optionKeyName()}-drag: move the whole port${autoLayout ? "\n(the layout becomes Custom)" : ""}`}
                   onPointerDown={startDotDrag(d.end)}
                   // #250: the dot sits on the node's rim, above it, so a click
                   // on it is a click on the node: hand it on, and stop it here.

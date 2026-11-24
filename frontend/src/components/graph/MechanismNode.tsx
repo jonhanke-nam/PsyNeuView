@@ -28,6 +28,10 @@ import {
 } from "@/utils/labels";
 import { boundaryDir, boundaryInward, isDrawnOutline, nodeShapeFor, shapeTooltip, type NodeShape } from "@/utils/nodeShape";
 import { NodeShapeOutline } from "./NodeShapeOutline";
+import { optionKeyName } from "@/shortcuts/keyLabels";
+
+/** #409: Option-drag on a Mac, Alt-drag elsewhere — the same key (`altKey`). */
+const PORT_DRAG_TIP = `${optionKeyName()}-drag to move this port around the node`;
 
 /** A collapsed composition's Expand button: the frame buttons' 28 px (#194), and its gap from the edge. */
 const EXPAND_BUTTON_WIDTH = 28;
@@ -1018,7 +1022,7 @@ export const MechanismNode = memo(function MechanismNode({
                   type="target"
                   position={inputPos}
                   id={port.name}
-                  title="Alt-drag to move this port around the node"
+                  title={PORT_DRAG_TIP}
                   onPointerDownCapture={startPortDrag(port.name)}
                   onMouseEnter={() => setHoveredPort({ name: port.name, role: "input", shape: port.shape })}
                   onMouseLeave={() => setHoveredPort(null)}
@@ -1050,7 +1054,7 @@ export const MechanismNode = memo(function MechanismNode({
                   type="source"
                   position={outputPos}
                   id={port.name}
-                  title="Alt-drag to move this port around the node"
+                  title={PORT_DRAG_TIP}
                   onPointerDownCapture={startPortDrag(port.name)}
                   onMouseEnter={() => setHoveredPort({ name: port.name, role: "output", shape: port.shape })}
                   onMouseLeave={() => setHoveredPort(null)}
@@ -1089,7 +1093,7 @@ export const MechanismNode = memo(function MechanismNode({
                   type="target"
                   position={paramPos}
                   id={port.name}
-                  title="Alt-drag to move this port around the node"
+                  title={PORT_DRAG_TIP}
                   onPointerDownCapture={startPortDrag(port.name)}
                   onMouseEnter={() => setHoveredPort({ name: port.name, role: "parameter", shape: port.shape })}
                   onMouseLeave={() => setHoveredPort(null)}
