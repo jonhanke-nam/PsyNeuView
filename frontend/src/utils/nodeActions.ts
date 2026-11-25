@@ -66,13 +66,17 @@ function leaveFlattenedViews() {
 /**
  * Fold a composition to a single node, or open a folded one (#395).
  *
- * In a flattened view the frame is open whatever the setting says (the nested
- * view folds compositions on first sight, #395, and that can already be on
- * record), so a press there always folds.
+ * `want` is what the pressed control does, read from what is drawn: Collapse
+ * on a frame folds, Expand on a folded node opens (#428). Without it, the
+ * settings decide: in a flattened view the frame is open whatever the setting
+ * says (the nested view folds compositions on first sight, #395, and that can
+ * already be on record), so a press there folds. Deciding from the settings
+ * alone turned Expand into a second fold whenever a folded node was drawn
+ * under a flattened view.
  */
-export async function toggleCompositionCollapse(label: string) {
+export async function toggleCompositionCollapse(label: string, want?: "fold" | "open") {
   const gs = useGraphSettings.getState();
-  const folding = gs.flat || gs.pytorch || !gs.collapsedCompositions.has(label);
+  const folding = want ? want === "fold" : gs.flat || gs.pytorch || !gs.collapsedCompositions.has(label);
   try {
     await changeCompositionView(
       folding ? `Collapsing ${label}` : `Expanding ${label}`,

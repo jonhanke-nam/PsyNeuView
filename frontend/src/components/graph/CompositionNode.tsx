@@ -88,7 +88,7 @@ export const CompositionNode = memo(function CompositionNode({
 
   const onCollapse = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    void toggleCompositionCollapse(d.label);
+    void toggleCompositionCollapse(d.label, "fold");
   }, [d.label]);
 
   const onFocus = useCallback((e: React.MouseEvent) => {
