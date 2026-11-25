@@ -9,10 +9,10 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 176 | 468 | 458 tests in 171 files |
+| Browser (Playwright) | 178 | 472 | 461 tests in 172 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 147 | 1295 | 1295 tests in 147 files |
-| Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
+| Frontend unit (vitest) | 149 | 1309 | 1309 tests in 149 files |
+| Backend (pytest) | 195 | 1793 | 1793 tests in 195 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
 
@@ -25,16 +25,16 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Matching show_graph](#showgraph) | 8 files, 19 tests | – | 8 files, 66 tests | 5 files, 34 tests | 118 of 119 |
 | [Dragging and pointer interaction](#pointer) | 18 files, 54 tests | – | 6 files, 37 tests | – | 91 of 91 |
 | [Building models in the UI](#building) | 4 files, 7 tests | – | 1 files, 9 tests | 13 files, 145 tests | 161 of 161 |
-| [Editing: code and graph in step](#sync) | 17 files, 40 tests | – | 10 files, 81 tests | 26 files, 247 tests | 365 of 368 |
+| [Editing: code and graph in step](#sync) | 17 files, 40 tests | – | 10 files, 81 tests | 27 files, 255 tests | 373 of 376 |
 | [Same results whichever way a model runs (equivalence, MDF)](#equivalence) | 2 files, 7 tests | – | – | 17 files, 70 tests | 77 of 77 |
 | [Running, learning and debugging](#running) | 16 files, 38 tests | – | 11 files, 99 tests | 52 files, 262 tests | 399 of 399 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 6 files, 26 tests | – | 5 files, 59 tests | 7 files, 99 tests | 184 of 184 |
-| [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
+| [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 323 tests | 645 of 645 |
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
-| [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
+| [Layout, views and compositions](#layout) | 23 files, 49 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 256 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 13 files, 26 tests | – | 20 files, 133 tests | 21 files, 206 tests | 362 of 365 |
+| [App shell, diagnostics and everything else](#shell) | 14 files, 29 tests | – | 22 files, 147 tests | 23 files, 221 tests | 394 of 397 |
 
 <a id="tutorials"></a>
 
@@ -499,6 +499,7 @@ No tests yet.
 | `test_watch_registry.py` | Backend | 12 | yes | #272, #308 | One watcher per watched file, for every window that has it open (#272), and one watch per folder however many of those files it holds (#308). |
 | `test_watcher.py` | Backend | 5 | yes |  | Tests for the file watcher service. |
 | `test_working_copies.py` | Backend | 19 | yes | #1319 | Working copies of included models live outside the install, and the one-time move there (#1319). |
+| `test_working_copy_sources.py` | Backend | 8 | yes | #422 | Working copies of two different models never share a file (#422). |
 | `test_write_guard.py` | Backend | 7 | yes | #1102 | PsyNeuView must not write a model it cannot read (#1102). |
 
 <details><summary>Every browser and tutorial test in this area</summary>
@@ -918,7 +919,7 @@ No tests yet.
 | `test_pnl_freshness.py` | Backend | 16 | yes | #116 | Freshness of a branch-pinned PsyNeuLink install (#116). |
 | `test_pnl_health.py` | Backend | 8 | yes | #1143 | Whether the installed PsyNeuLink actually works (#1143). |
 | `test_pnl_releases.py` | Backend | 7 | yes | #1295 | The official PsyNeuLink releases, and the kept ones (#1295 round 5). |
-| `test_pnl_source_guard.py` | Backend | 16 | yes | #1225, #1305 | PsyNeuView writes a PsyNeuLink file only when its source allows it (#1225, #1305). |
+| `test_pnl_source_guard.py` | Backend | 17 | yes | #1225, #1305 | PsyNeuView writes a PsyNeuLink file only when its source allows it (#1225, #1305). |
 | `test_pnl_sources.py` | Backend | 26 | yes | #1276 | Remembered PsyNeuLink sources and quick switching between them (#1276). |
 | `test_pnl_updates.py` | Backend | 25 | yes | #1304 | Keeping PsyNeuLink current (#1304): the schedule, the check, an update ready for the next start, and the start-time install that keeps the current install when it fails. |
 | `test_settings_info.py` | Backend | 24 | yes | #120 | Tests for the /settings/info endpoint and supporting helpers (#120). |
@@ -1082,6 +1083,7 @@ No tests yet.
 | `layout-graph-only-default.spec.ts` | Browser | 6 | yes | #189, #191 | The window opens with the graph alone (#189), and one key per panel brings the others back (#191). |
 | `layout-mode-per-view.spec.ts` | Browser | 1 | yes | #47, #33 | Auto/Custom is picked per view (#47, #33). |
 | `layout-spacing.spec.ts` | Browser | 4 | yes | #278 | Spacing between nodes (#278): Settings ▸ Appearance ▸ Automatic layout. |
+| `model-title-review.spec.ts` | Browser | 1 | no | #422 | Review screenshots of the toolbar's model title (#422), not a test. |
 | `nested-cluster-frames.spec.ts` | Browser | 1 | yes | #718 | Nested composition cluster frames — box-in-box (#718). |
 | `occlusion-audit.spec.ts` | Browser | 1 | yes | #1006, #963, #967 | Occlusion audit — measures edges that pass behind nodes (#1006, #963, #967). |
 | `show-cims-at-once.spec.ts` | Browser | 2 | yes | #257 | Interface nodes (CIMs) appear as soon as the option is ticked (#257). |
@@ -1160,6 +1162,7 @@ No tests yet.
 | Spacing between nodes (#278) › Settings says what the default is | `layout-spacing.spec.ts` | Browser | yes | #278 |
 | Spacing between nodes (#278) › Like show_graph keeps show_graph's own spacing by default | `layout-spacing.spec.ts` | Browser | yes | #278 |
 | Spacing between nodes (#278) › a nested model, compact, has no overlapping nodes | `layout-spacing.spec.ts` | Browser | yes | #278 |
+| toolbar title review shots (#422) | `model-title-review.spec.ts` | Browser | no | #422 |
 | nested cluster frames › inner composition frame sits inside its parent frame | `nested-cluster-frames.spec.ts` | Browser | yes | #718 |
 | occlusion: ${m.slug} | `occlusion-audit.spec.ts` | Browser | yes | #1006 |
 | Interface nodes (CIMs) apply at once (#257) › ticking shows them and unticking hides them, with no save | `show-cims-at-once.spec.ts` | Browser | yes | #257 |
@@ -1255,6 +1258,7 @@ No tests yet.
 | `graph-edit-broke-model.spec.ts` | Browser | 1 | yes | #353, #349 | When an edit made on the graph writes a line that doesn't run, the warning names that edit ("Adding X broke the model at line N.") and offers Undo, which puts the file back as it was (#353). |
 | `harness.spec.ts` | Browser | 1 | yes | #147 | Proves the test harness wiring end-to-end (#147): playwright.config env vars → backend in test mode → /api/test/reset open → mutatingTest fixture fires it. |
 | `icon-strip-shortcuts.spec.ts` | Browser | 3 | yes | #372 | The Components icon strip (#372). |
+| `model-identity.spec.ts` | Browser | 3 | yes | #422 | The toolbar always says which model is open, as the menu names it (#422). |
 | `notification-dwell.spec.ts` | Browser | 1 | yes | #879 | #879: info/success toasts dwell long enough to read. |
 | `pycharm-live.local.spec.ts` | Browser | 1 | no |  | LOCAL ONLY — the full two-headed loop with a real PyCharm. |
 | `read-only-badge-note.spec.ts` | Browser | 1 | yes | #50 | Clicking the "PsyNeuLink from … · read only" tag explains it (#50). |
@@ -1277,6 +1281,8 @@ No tests yet.
 | `errorDetail.test.ts` | Frontend unit | 4 | yes |  |  |
 | `graphEditBlame.test.ts` | Frontend unit | 7 | yes | #353 | #353: a failing load is blamed on the last graph edit only when the line that failed is one the edit wrote. |
 | `joinNames.test.ts` | Frontend unit | 1 | yes |  | Mirrors the formatter in PresenceIndicator — kept as a pure function test so the phrasing is pinned without rendering the component. |
+| `modelTitle.test.ts` | Frontend unit | 12 | yes |  |  |
+| `nameClashes.test.ts` | Frontend unit | 2 | yes |  |  |
 | `nodeSelector.test.ts` | Frontend unit | 2 | yes | #1236 | #1236: a node name is any Python string, and must never make an invalid selector. |
 | `stepHighlight.test.ts` | Frontend unit | 12 | yes |  | Two trials of a small Stroop-like run: inputs, then hidden, then output. |
 | `tensorInput.test.ts` | Frontend unit | 21 | yes |  |  |
@@ -1292,6 +1298,8 @@ No tests yet.
 | `test_e2e_pnl_install_override.py` | Backend | 3 | yes | #1305 | The test-only ``/api/test/pnl-install`` override (#1305). |
 | `test_e2e_reset.py` | Backend | 4 | yes | #147 | Unit tests for the test-only /api/test/reset endpoint (#147). |
 | `test_frontend_cache_headers.py` | Backend | 6 | yes | #2 | The built page is served so an update can't be hidden by a cached copy (#2). |
+| `test_model_identity.py` | Backend | 5 | yes | #422 | Every open says which model it is, as the menus name it (#422). |
+| `test_model_names.py` | Backend | 10 | yes | #422 | One model, one file name (#422). |
 | `test_model_warnings.py` | Backend | 11 | yes | #1101 | Showing what PsyNeuLink said about a model that ran fine (#1101). |
 | `test_multiport_inputs.py` | Backend | 6 | yes | #332 | An input node with several input ports gets one array per port (#332). |
 | `test_no_event_loop_blocking.py` | Backend | 4 | yes | #860 | Regression guards against backend freezes (#860). |
@@ -1322,6 +1330,9 @@ No tests yet.
 | Components icon strip (#372) › a fresh strip shows the All heading, four categories and no shortcuts | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
 | Components icon strip (#372) › with the setting on, favourites and recents sit below the categories under their heading | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
 | Components icon strip (#372) › a row's empty star shows on hover or focus; a starred row keeps its star | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
+| which model is open (#422) › every Reference Model shows its menu label and file | `model-identity.spec.ts` | Browser | yes | #422 |
+| which model is open (#422) › a Library model carries the Reference Model's label, tagged Library | `model-identity.spec.ts` | Browser | yes | #422 |
+| which model is open (#422) › a user's own file is named by its file, with its folder | `model-identity.spec.ts` | Browser | yes | #422 |
 | success toast dwells past the old 2s window | `notification-dwell.spec.ts` | Browser | yes | #879 |
 | a real PyCharm save updates the PsyNeuView canvas | `pycharm-live.local.spec.ts` | Browser | no |  |
 | the read-only tag explains itself and offers Save a copy as… (#50) | `read-only-badge-note.spec.ts` | Browser | yes | #50 |
@@ -1633,7 +1644,7 @@ Nodes: show_graph's nodes the canvas draws. Rows: pairs of nodes whose above, le
 
 ## Browser tests CI doesn't run
 
-5 browser spec files aren't in CI at all. Each says why in a `Not in CI:` line in its header; this table is read from those lines. (Every tutorial runs, in the tutorials job.)
+6 browser spec files aren't in CI at all. Each says why in a `Not in CI:` line in its header; this table is read from those lines. (Every tutorial runs, in the tutorials job.)
 
 | Spec | Why | Detail |
 |---|---|---|
@@ -1641,6 +1652,7 @@ Nodes: show_graph's nodes the canvas draws. Rows: pairs of nodes whose above, le
 | `_measure-undo-memory.spec.ts` | measurement | it only logs heap use, with no assertions; run it with PERF_MEASURE=1 when measuring |
 | `docs-shots-saving.spec.ts` | pictures only | it retakes the docs' pictures; the behaviour is tested by saves-in-history and changes-since-save |
 | `editor-drag-select.spec.ts` | broken | on the Linux runners the forwards-and-backwards test finds |
+| `model-title-review.spec.ts` | pictures only | it makes review screenshots for a person to look at, and checks nothing; model-identity.spec.ts is the CI test |
 | `pycharm-live.local.spec.ts` | local only | it drives a real PyCharm on macOS, which the runners don't have; external-edit-sync.spec.ts is the CI version |
 
 Spec files in CI that hold tests CI skips (untagged, or a measurement run only on request):

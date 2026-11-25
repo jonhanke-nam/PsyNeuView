@@ -1654,6 +1654,17 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - test_a_demo_resets_into_the_new_folder · CI · #1319
 - test_locations_say_where_working_copies_are · CI · #1319
 
+**`backend/tests/test_working_copy_sources.py`** (Backend (pytest))
+
+- test_each_source_has_its_own_folder · CI · #422
+- test_source_folder_names · CI · #422
+- test_an_old_shared_copy_moves_with_its_edits_and_sidecars · CI · #422
+- test_a_copy_is_never_overwritten · CI · #422
+- test_a_renamed_models_old_copy_moves_and_is_adopted · CI · #422
+- test_reopening_after_the_move_keeps_the_edits: The whole path: an edited copy in the shared folder, then an open. · CI · #422
+- test_a_recent_entry_for_the_old_place_opens_the_moved_copy · CI · #422
+- test_the_move_is_recorded_for_a_problem_report · CI · #422
+
 **`backend/tests/test_write_guard.py`** (Backend (pytest))
 
 - TestGeneratedWrites.test_valid_source_is_written · CI · #1102
@@ -3832,6 +3843,7 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - test_ordinary_files_are_untouched_by_the_policy · CI · #1225
 - test_a_local_checkout_example_opens_in_place_and_editable · CI · #1225
 - test_a_github_example_opens_as_a_copy · CI · #1225
+- test_reopening_a_github_example_keeps_your_edits: #1010 for examples (#422): reopening used to copy the example over the working copy every time, losing any edits without asking. · CI · #1010
 - test_a_git_install_is_called_github_not_pypi: The badge and the editor's lock said "PyPI" for a `pip install git+…` from GitHub devel (#1280). · CI · #1280
 
 **`backend/tests/test_pnl_sources.py`** (Backend (pytest))
@@ -4174,6 +4186,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - Spacing between nodes (#278) › Settings says what the default is · CI · #278
 - Spacing between nodes (#278) › Like show_graph keeps show_graph's own spacing by default · CI · #278
 - Spacing between nodes (#278) › a nested model, compact, has no overlapping nodes · CI · #278
+
+**`frontend/e2e/model-title-review.spec.ts`** (Browser (Playwright))
+
+- toolbar title review shots (#422) · not in CI · #422
 
 **`frontend/e2e/nested-cluster-frames.spec.ts`** (Browser (Playwright))
 
@@ -4803,6 +4819,12 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - Components icon strip (#372) › with the setting on, favourites and recents sit below the categories under their heading · CI · #372
 - Components icon strip (#372) › a row's empty star shows on hover or focus; a starred row keeps its star · CI · #372
 
+**`frontend/e2e/model-identity.spec.ts`** (Browser (Playwright))
+
+- which model is open (#422) › every Reference Model shows its menu label and file · CI · #422
+- which model is open (#422) › a Library model carries the Reference Model's label, tagged Library · CI · #422
+- which model is open (#422) › a user's own file is named by its file, with its folder · CI · #422
+
 **`frontend/e2e/notification-dwell.spec.ts`** (Browser (Playwright))
 
 - success toast dwells past the old 2s window · CI · #879
@@ -4967,6 +4989,26 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 **`frontend/src/utils/joinNames.test.ts`** (Frontend unit (vitest))
 
 - name list phrasing › reads the way a person would say it · CI
+
+**`frontend/src/utils/modelTitle.test.ts`** (Frontend unit (vitest))
+
+- model title parts (#422) › a reference model shows its menu label, its file and its source · CI · #422
+- model title parts (#422) › the user's own file is named by its file, with its folder · CI · #422
+- model title parts (#422) › a short folder is shown whole · CI · #422
+- model title parts (#422) › the window title is the label · CI · #422
+- shortening the label (#422) › leaves a label that fits alone · CI · #422
+- shortening the label (#422) › keeps the start and the author/year end · CI · #422
+- shortening the label (#422) › shortens in the middle when there is no author/year end · CI · #422
+- shortening the label (#422) › is never empty · CI · #422
+- fitting the title to the room (#422) › shows everything when it fits · CI · #422
+- fitting the title to the room (#422) › drops the folder first, then the tag, then the file · CI · #422
+- fitting the title to the room (#422) › then shortens the label, keeping its author/year end, never hiding it · CI · #422
+- fitting the title to the room (#422) › counts the gaps between parts · CI · #422
+
+**`frontend/src/utils/nameClashes.test.ts`** (Frontend unit (vitest))
+
+- the name-clash notice (#422) › is new only with clashes and an unseen key · CI · #422
+- the name-clash notice (#422) › names the clashes once, and logs them · CI · #422
 
 **`frontend/src/utils/nodeSelector.test.ts`** (Frontend unit (vitest))
 
@@ -5176,6 +5218,27 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - test_cache_control_for_paths · CI · #2
 - test_the_app_mounts_the_page_with_these_headers · CI · #2
 - test_narration_clips_are_served_as_audio_mp4: WebKit, the Mac app's web view, plays audio/mp4; macOS's own name for .m4a, audio/mp4a-latm, it need not (#159). · CI · #159
+
+**`backend/tests/test_model_identity.py`** (Backend (pytest))
+
+- test_reference_load_carries_label_file_and_source · CI · #422
+- test_reopening_the_working_copy_by_path_keeps_the_label: A Recent entry reopens the working copy through /model/load. · CI · #422
+- test_a_tutorial_copy_is_still_the_reference_model · CI · #422
+- test_demo_load_is_a_demo · CI · #422
+- test_a_users_file_is_named_by_its_file · CI · #422
+
+**`backend/tests/test_model_names.py`** (Backend (pytest))
+
+- test_reference_models_have_unique_file_names · CI · #422
+- test_reference_models_have_unique_labels · CI · #422
+- test_a_reference_model_shares_a_name_with_the_library_only_when_declared · CI · #422
+- test_library_names_are_unique · CI · #422
+- test_demos_share_no_name_with_reference_or_library_models · CI · #422
+- test_the_library_shows_the_reference_label_for_the_same_model · CI · #422
+- test_a_clean_source_has_no_clashes · CI · #422
+- test_a_planted_duplicate_is_named · CI · #422
+- test_the_install_log_gets_a_warning_line · CI · #422
+- test_the_page_is_told_about_the_active_source · CI · #422
 
 **`backend/tests/test_model_warnings.py`** (Backend (pytest))
 

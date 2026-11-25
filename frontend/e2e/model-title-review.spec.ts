@@ -11,6 +11,8 @@
  *
  * Against a build from before #422, set PNV_TITLE_REVIEW_BEFORE=1: it has no
  * model card to photograph.
+ *
+ * Not in CI: pictures only: it makes review screenshots for a person to look at, and checks nothing; model-identity.spec.ts is the CI test.
  */
 import { copyFileSync, mkdirSync, writeFileSync } from "fs";
 import path from "path";
