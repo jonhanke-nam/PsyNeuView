@@ -75,6 +75,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { isManaged, isOwnCheckout, isProtected, usePnlSourceStore } from "@/stores/pnlSourceStore";
 import { useEditLockStore } from "@/stores/editLockStore";
 import { onPnlSourceChanged } from "@/utils/pnlSourceEvents";
+import { checkNameClashes } from "@/utils/nameClashes";
 import { RECENT_PATHS_CHANGED, addRecentPath, getRecentPaths, removeRecentPath } from "@/utils/recentPaths";
 import { pnlSourceLabel, sourceSwitchNote, type PsyNeuLinkInfo } from "@/utils/pnlSources";
 import { abbreviateHome } from "@/components/common/settings/shared";
@@ -650,9 +651,16 @@ export function Toolbar() {
         // The marks belonged to the old source's examples (#175).
         pnlStatusFetched.current = false;
         setPnlStatus({});
+        // #422: model files in the new source that share a name, named once.
+        void checkNameClashes((m) => addNotification("warning", m, { key: "pnl-name-clashes" }));
       }),
     [],
   );
+  // #422: and the PsyNeuLink this page started with.
+  useEffect(() => {
+    void checkNameClashes((m) => addNotification("warning", m, { key: "pnl-name-clashes" }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // And whenever the menu opens (#1395): the announcement above can come
   // while the server is restarting, and a failed fetch kept the old install's
   // label and paths until the window was reloaded. The Library header and its
