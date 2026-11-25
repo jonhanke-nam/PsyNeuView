@@ -9,7 +9,7 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 176 | 468 | 458 tests in 171 files |
+| Browser (Playwright) | 178 | 470 | 459 tests in 172 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
 | Frontend unit (vitest) | 147 | 1295 | 1295 tests in 147 files |
 | Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
@@ -34,7 +34,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 9 files, 52 tests | – | 88 of 88 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 13 files, 26 tests | – | 20 files, 133 tests | 21 files, 206 tests | 362 of 365 |
+| [App shell, diagnostics and everything else](#shell) | 15 files, 28 tests | – | 20 files, 133 tests | 21 files, 206 tests | 363 of 367 |
 
 <a id="tutorials"></a>
 
@@ -1248,6 +1248,7 @@ No tests yet.
 
 | File | Layer | Tests | In CI | Issues | What it checks |
 |---|---|---|---|---|---|
+| `_measure-perf-baseline.spec.ts` | Browser | 1 | no | #406 | The performance baseline for the reference models (#406). |
 | `app-shell.spec.ts` | Browser | 1 | yes |  | Tag with @smoke so CI can run only the smoke surface on PRs. |
 | `developer-mode-marking.spec.ts` | Browser | 5 | yes | #1291 | Everything developer mode adds says so (#1291). |
 | `diagnostics.spec.ts` | Browser | 2 | yes | #1287 | Diagnostics (#1287): `window.__pnvDiagnostics` answers with the page's state and the activity since launch, and Settings ▸ About downloads the same object as a JSON file in a browser. |
@@ -1256,6 +1257,7 @@ No tests yet.
 | `harness.spec.ts` | Browser | 1 | yes | #147 | Proves the test harness wiring end-to-end (#147): playwright.config env vars → backend in test mode → /api/test/reset open → mutatingTest fixture fires it. |
 | `icon-strip-shortcuts.spec.ts` | Browser | 3 | yes | #372 | The Components icon strip (#372). |
 | `notification-dwell.spec.ts` | Browser | 1 | yes | #879 | #879: info/success toasts dwell long enough to read. |
+| `perf-smoke.spec.ts` | Browser | 1 | yes | #406 | Performance smoke check (#406): a few key timings, held to generous budgets so a large slowdown fails and ordinary noise does not. |
 | `pycharm-live.local.spec.ts` | Browser | 1 | no |  | LOCAL ONLY — the full two-headed loop with a real PyCharm. |
 | `read-only-badge-note.spec.ts` | Browser | 1 | yes | #50 | Clicking the "PsyNeuLink from … · read only" tag explains it (#50). |
 | `round-trips.spec.ts` | Browser | 5 | yes | #319 | Round trips: an edit in the graph reaches the code and survives a reload; an edit in the code reaches the graph (#319). |
@@ -1307,6 +1309,7 @@ No tests yet.
 
 | Test | File | Layer | In CI | Issue |
 |---|---|---|---|---|
+| performance baseline (#406) › baseline: ${label} | `_measure-perf-baseline.spec.ts` | Browser | no | #406 |
 | @smoke app shell › loads with toolbar, palette, and canvas — no console errors | `app-shell.spec.ts` | Browser | yes |  |
 | developer mode is marked › off: no indicator, no badges, no developer-only items | `developer-mode-marking.spec.ts` | Browser | yes | #1291 |
 | developer mode is marked › on: the indicator shows, dev-only sections and the Tests entry carry the badge | `developer-mode-marking.spec.ts` | Browser | yes | #1291 |
@@ -1323,6 +1326,7 @@ No tests yet.
 | Components icon strip (#372) › with the setting on, favourites and recents sit below the categories under their heading | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
 | Components icon strip (#372) › a row's empty star shows on hover or focus; a starred row keeps its star | `icon-strip-shortcuts.spec.ts` | Browser | yes | #372 |
 | success toast dwells past the old 2s window | `notification-dwell.spec.ts` | Browser | yes | #879 |
+| performance smoke (#406) › key timings stay inside their budgets | `perf-smoke.spec.ts` | Browser | yes | #406 |
 | a real PyCharm save updates the PsyNeuView canvas | `pycharm-live.local.spec.ts` | Browser | no |  |
 | the read-only tag explains itself and offers Save a copy as… (#50) | `read-only-badge-note.spec.ts` | Browser | yes | #50 |
 | round trips between the graph and the code (#319) › add a node: placed in the graph, written to the code, there after reopening | `round-trips.spec.ts` | Browser | yes | #319 |
@@ -1633,11 +1637,12 @@ Nodes: show_graph's nodes the canvas draws. Rows: pairs of nodes whose above, le
 
 ## Browser tests CI doesn't run
 
-5 browser spec files aren't in CI at all. Each says why in a `Not in CI:` line in its header; this table is read from those lines. (Every tutorial runs, in the tutorials job.)
+6 browser spec files aren't in CI at all. Each says why in a `Not in CI:` line in its header; this table is read from those lines. (Every tutorial runs, in the tutorials job.)
 
 | Spec | Why | Detail |
 |---|---|---|
 | `_measure-load-latency.spec.ts` | measurement | it only logs load timings, with no assertions; run it with PERF_MEASURE=1 when measuring |
+| `_measure-perf-baseline.spec.ts` | measurement | takes 10–15 minutes and only records timings; the CI check is perf-smoke.spec.ts |
 | `_measure-undo-memory.spec.ts` | measurement | it only logs heap use, with no assertions; run it with PERF_MEASURE=1 when measuring |
 | `docs-shots-saving.spec.ts` | pictures only | it retakes the docs' pictures; the behaviour is tested by saves-in-history and changes-since-save |
 | `editor-drag-select.spec.ts` | broken | on the Linux runners the forwards-and-backwards test finds |

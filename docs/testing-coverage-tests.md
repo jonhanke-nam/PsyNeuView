@@ -4767,6 +4767,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 
 ## App shell, diagnostics and everything else
 
+**`frontend/e2e/_measure-perf-baseline.spec.ts`** (Browser (Playwright))
+
+- performance baseline (#406) › baseline: ${label} · not in CI · #406
+
 **`frontend/e2e/app-shell.spec.ts`** (Browser (Playwright))
 
 - @smoke app shell › loads with toolbar, palette, and canvas — no console errors · CI
@@ -4806,6 +4810,10 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 **`frontend/e2e/notification-dwell.spec.ts`** (Browser (Playwright))
 
 - success toast dwells past the old 2s window · CI · #879
+
+**`frontend/e2e/perf-smoke.spec.ts`** (Browser (Playwright))
+
+- performance smoke (#406) › key timings stay inside their budgets · CI · #406
 
 **`frontend/e2e/pycharm-live.local.spec.ts`** (Browser (Playwright))
 
