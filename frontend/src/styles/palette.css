@@ -50,6 +50,15 @@
   --pnv-primary-tint: #e8f0fe; /* the selected sidebar item, the chosen option, a numbered badge */
   --pnv-primary-tint-border: #c9ddf3;
   --pnv-primary-text-on-tint: #1c4f8a; /* a note in a blue box */
+  /* The primary blue as text (#421): an input's name in the Run panel's
+     trial cards, the chosen half of the trace bar's run/trial switch, the
+     open inspector tab. The primary blue itself is 3.9:1 on the selection
+     fill and 4.3:1 on the panel; this is the lightest shade of the same hue
+     that reads at WCAG AA (4.5:1) on the panel (--pnv-surface-muted), a card
+     or toolbar (--pnv-surface-sunken), the selection fill and the active
+     step's row (--pnv-step-active-row). Text only: the buttons, rings and
+     selection stay the primary blue. textContrast.test.ts checks it. */
+  --pnv-primary-text: #165fc1;
   --pnv-primary-ring: rgba(26, 115, 232, 0.2); /* the glow round a focused field */
 
   /* Selection (#335): one pale blue for whatever is selected or current: a
@@ -84,6 +93,16 @@
   --pnv-warning-tint: #fff8e1;
   --pnv-warning-border: #ffe082;
   --pnv-warning-text-on-tint: #5a3e00; /* a note in an amber box, where the amber is too light to read */
+  /* The amber as text (#421): "Trace truncated" and the other amber notes
+     and Δ lines in the Run panel. The amber itself is 4.0:1 on its tint and
+     4.2:1 on white; this is the lightest shade of the same hue that reads at
+     WCAG AA (4.5:1) on the amber tint, the canvas or a dialog, the panel, a
+     card, the selection fill and the active step's row. */
+  --pnv-warning-text: #8e5400;
+  /* The amber behind white text (#421): the warning count badge beside the
+     model's summary, the scheduling-mode button when not STANDARD. The
+     lightest shade of the amber that white reads on at AA (it was 4.2:1). */
+  --pnv-warning-badge: #ac6600;
   /* An amber tag: "view only", "protected", "read only" beside the model
      name, and Reset to Original. Darker than the box's border, so a tag a
      few pixels high still has an edge. */

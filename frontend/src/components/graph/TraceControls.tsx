@@ -382,7 +382,7 @@ export function TraceControls() {
               padding: "2px 6px",
               border: "none",
               background: effectiveMode === "run" ? "var(--pnv-primary-tint)" : "var(--pnv-surface-muted)",
-              color: effectiveMode === "run" ? "var(--pnv-primary)" : "var(--pnv-node-text-detail)",
+              color: effectiveMode === "run" ? "var(--pnv-primary-text)" : "var(--pnv-text-hint)",
               fontWeight: effectiveMode === "run" ? 700 : 400,
               cursor: "pointer",
             }}
@@ -398,7 +398,7 @@ export function TraceControls() {
               border: "none",
               borderLeft: "1px solid var(--pnv-border)",
               background: effectiveMode === "trial" ? "var(--pnv-primary-tint)" : "var(--pnv-surface-muted)",
-              color: effectiveMode === "trial" ? "var(--pnv-primary)" : "var(--pnv-node-text-detail)",
+              color: effectiveMode === "trial" ? "var(--pnv-primary-text)" : "var(--pnv-text-hint)",
               fontWeight: effectiveMode === "trial" ? 700 : 400,
               cursor: "pointer",
             }}
@@ -426,7 +426,7 @@ export function TraceControls() {
           // Highlight while playing so the button doubles as a status
           // indicator (#378). Clicking again pauses.
           background: isPlaying ? "var(--pnv-primary-tint)" : "var(--pnv-surface-muted)",
-          color: isPlaying ? "var(--pnv-primary)" : "var(--pnv-text-body)",
+          color: isPlaying ? "var(--pnv-primary-text)" : "var(--pnv-text-body)",
           fontWeight: isPlaying ? 700 : 400,
           cursor: "pointer",
         }}
