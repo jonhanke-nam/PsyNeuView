@@ -276,16 +276,17 @@
      writing var(). Inactive is a projection the composition does not use
      (shown under More ▸ Inactive); dangling is one whose sender or receiver
      is missing from the file. */
-  --pnv-projection-mapping: #555;
-  /* #425: show_graph's own colours, exactly, as for the node roles: a
-     control projection in control_color blue, the controller's in
-     controller_color purple, a learning projection in learning_color
-     orange. A node's projection to itself (an AutoAssociativeProjection) is
-     an ordinary projection to show_graph, drawn like a mapping one. */
+  /* #425: show_graph's own colours, exactly, as for the node roles: an
+     ordinary (mapping) projection in default_node_color black, a control
+     projection in control_color blue, the controller's in controller_color
+     purple, a learning projection in learning_color orange. A node's
+     projection to itself (an AutoAssociativeProjection) is an ordinary
+     projection to show_graph, drawn like a mapping one. */
+  --pnv-projection-mapping: #000000;     /* default_node_color black */
   --pnv-projection-control: #0000ff;     /* control_color blue */
   --pnv-projection-controller: #a020f0;  /* controller_color purple */
   --pnv-projection-learning: #ffa500;    /* learning_color orange */
-  --pnv-projection-autoassociative: #555;
+  --pnv-projection-autoassociative: #000000;
   --pnv-projection-inactive: #ff0000; /* show_graph's inactive_projection_color red, exactly (#306) */
   --pnv-projection-cim: #888;
   --pnv-projection-dangling: #c62828;

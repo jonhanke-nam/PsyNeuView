@@ -10,7 +10,7 @@
  *     such as Gilzenrat's LC is show_graph's control blue, X11 values);
  *   - each projection ends as show_graph's does (a box for a control
  *     projection, an arrow otherwise), is solid where show_graph's is, and is
- *     in show_graph's colour (show_graph's black is the canvas's mapping grey);
+ *     in show_graph's colour, exactly (X11 values);
  *   - each self-loop show_graph draws (a node's projection to itself) is on
  *     the canvas, leaving and coming back at two different points, outside the
  *     node, and selectable by a click on the loop;
@@ -87,7 +87,7 @@ interface DrawnEdge {
 }
 
 /** The canvas as drawn: each mechanism node's outline, each projection. Colours as #rrggbb. */
-async function drawn(page: Page): Promise<{ nodes: Map<string, DrawnNode>; edges: DrawnEdge[]; mapping: string }> {
+async function drawn(page: Page): Promise<{ nodes: Map<string, DrawnNode>; edges: DrawnEdge[] }> {
   const out = await page.evaluate(() => {
     const probe = document.createElement("span");
     document.body.appendChild(probe);
@@ -138,11 +138,10 @@ async function drawn(page: Page): Promise<{ nodes: Map<string, DrawnNode>; edges
         end: at(len),
       };
     });
-    const mapping = hex("var(--pnv-projection-mapping)");
     probe.remove();
-    return { nodes, edges, mapping };
+    return { nodes, edges };
   });
-  return { nodes: new Map(out.nodes), edges: out.edges, mapping: out.mapping };
+  return { nodes: new Map(out.nodes), edges: out.edges };
 }
 
 /** The outermost composition, by the page's rule (modelStore). */
@@ -235,7 +234,7 @@ test("every reference model and Library Gilzenrat, every view: colours, projecti
         const look = (x: DotEdge) => ({
           arrowhead: arrowKind(x.arrowhead),
           line: lineKind(x.style),
-          stroke: x.color === "black" ? canvas.mapping : (X11[x.color] ?? x.color),
+          stroke: X11[x.color] ?? x.color,
         });
         const mine = { arrowhead: e.arrowhead, line: e.line, stroke: e.stroke };
         const ok = theirs.some((x) => JSON.stringify(look(x)) === JSON.stringify(mine));
@@ -262,7 +261,7 @@ test("every reference model and Library Gilzenrat, every view: colours, projecti
 
       // Line weight: an ordinary line against an emphasised (input or output) outline.
       const emphasised = [...sg.nodes].find(([name, n]) => (n.penwidth ?? 1) > 1 && canvas.nodes.has(name));
-      const plain = canvas.edges.find((e) => e.arrowhead === "normal" && !e.selfLoop && e.stroke === canvas.mapping);
+      const plain = canvas.edges.find((e) => e.arrowhead === "normal" && !e.selfLoop && e.stroke === X11.black);
       const sgPlain = sg.edges.find((x) => arrowKind(x.arrowhead) === "normal" && x.color === "black");
       if (emphasised && plain && sgPlain) {
         seen.weights++;

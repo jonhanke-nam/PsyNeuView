@@ -16,7 +16,7 @@ from ``frontend/src/styles/palette.css``:
     learning_color             orange      #ffa500  --pnv-role-learning (+ projection-learning)
     probe_color                pink        #ffc0cb  --pnv-role-probe
     input_and_output_color     brown       #a52a2a  --pnv-role-singleton
-    default_node_color         black       #000000  --pnv-role-internal (+ feedback-sender, cycle)
+    default_node_color         black       #000000  --pnv-role-internal (+ feedback-sender, cycle, projection-mapping)
     inactive_projection_color  red         #ff0000  --pnv-projection-inactive
 
 Every ``*_color`` argument ShowGraph has must be either compared here or
@@ -52,7 +52,11 @@ MATCHED = {
     "learning_color": ["--pnv-role-learning", "--pnv-projection-learning"],
     "probe_color": ["--pnv-role-probe"],
     "input_and_output_color": ["--pnv-role-singleton"],
-    "default_node_color": ["--pnv-role-internal", "--pnv-role-feedback-sender", "--pnv-role-cycle"],
+    "default_node_color": [
+        "--pnv-role-internal", "--pnv-role-feedback-sender", "--pnv-role-cycle",
+        # #425: an ordinary projection is drawn in it too.
+        "--pnv-projection-mapping",
+    ],
     "inactive_projection_color": ["--pnv-projection-inactive"],
 }
 # show_graph's ``*_color`` arguments with no palette token to match, and why.

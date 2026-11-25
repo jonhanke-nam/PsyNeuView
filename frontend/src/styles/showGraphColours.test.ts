@@ -34,7 +34,9 @@ const SHOW_GRAPH: Record<string, [argument: string, name: string, x11: string]> 
   "--pnv-role-feedback-sender": ["default_node_color", "black", "#000000"],
   "--pnv-role-cycle": ["default_node_color", "black", "#000000"],
   "--pnv-projection-inactive": ["inactive_projection_color", "red", "#ff0000"],
-  // #425: a control, controller or learning projection, in its role's colour.
+  // #425: a projection in show_graph's colour: an ordinary one black, a
+  // control, controller or learning one in its role's colour.
+  "--pnv-projection-mapping": ["default_node_color", "black", "#000000"],
   "--pnv-projection-control": ["control_color", "blue", "#0000ff"],
   "--pnv-projection-controller": ["controller_color", "purple", "#a020f0"],
   "--pnv-projection-learning": ["learning_color", "orange", "#ffa500"],

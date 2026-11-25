@@ -57,8 +57,8 @@ PsyNeuView matches it, and CI holds it to that:
   canvas as drawn: each node's outline colour is show_graph's (a control
   mechanism node, such as Gilzenrat's LC, in show_graph's control blue); each
   projection ends as show_graph's does (a box for a control projection, an
-  arrow otherwise), solid where show_graph's is, in show_graph's colour (its
-  black is the canvas's mapping grey); every self-loop show_graph draws is
+  arrow otherwise), solid where show_graph's is, in show_graph's colour
+  exactly (X11 values); every self-loop show_graph draws is
   there, with two attachment points, and a click selects it; and an ordinary
   line's weight against an input or output node's outline is show_graph's
   1 pt against 3 pt, within 0.08 (#425). On a mismatch it attaches a table
