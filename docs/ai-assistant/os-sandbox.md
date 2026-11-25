@@ -328,7 +328,7 @@ platform, in two layers:
 | Layer | Where | What |
 |---|---|---|
 | `setrlimit`, in the task's own process before any model code runs | `os_sandbox_apply.apply_run_limits`, called from `sandbox_worker._handle_one_task` | Processor seconds (`RLIMIT_CPU`; the model gets a `RunLimitExceeded` at the limit, the kernel ends it 5 s later) and processes (`RLIMIT_NPROC`, counted over all the user's processes, so the allowance is added to what the user has now) everywhere; memory (`RLIMIT_DATA`) on Linux. Hard limits in a process that runs one task (a fork server's child, a pool worker, the one-shot fallback, a Learn job); soft ones, reset per task, in the warm worker |
-| The server's watch, from a thread, every 0.25 s | `run_limits.Watch`, in every way a task is sent, and the sandboxed converter | Each process's memory (macOS refuses any memory `setrlimit`), the number of processes the task started and their processor time together. Over a limit, it ends them all |
+| The server's watch, from a thread, every 0.25 s | `run_limits.Watch`, in every way a task is sent, and the sandboxed converter | Each process's memory (macOS refuses any memory `setrlimit`; there the physical footprint, which counts compressed and swapped-out memory, so memory pressure can't hide a growing model), the number of processes the task started and their processor time together. Over a limit, it ends them all |
 
 A run a limit stopped answers 422 with `reason: "run_limit"` and a
 plain-English message naming the limit and the variable that raises it; it

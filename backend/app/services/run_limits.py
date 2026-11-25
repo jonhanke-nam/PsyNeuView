@@ -193,6 +193,49 @@ def exit_reason(returncode: int | None) -> str | None:
 # ── the server's watch ──────────────────────────────────────────────────
 
 
+def _footprint_reader():
+    """macOS: a process's physical footprint (``proc_pid_rusage``), which
+    counts compressed and swapped-out memory too. Resident memory alone
+    drops when the system compresses or swaps a growing process, so a model
+    could pass the limit unseen under memory pressure. None elsewhere."""
+    if sys.platform != "darwin":
+        return None
+    try:
+        import ctypes
+        import ctypes.util
+        libproc = ctypes.CDLL(ctypes.util.find_library("proc") or "/usr/lib/libproc.dylib", use_errno=True)
+
+        class _RusageInfoV0(ctypes.Structure):
+            _fields_ = [("uuid", ctypes.c_uint8 * 16), ("user_time", ctypes.c_uint64),
+                        ("system_time", ctypes.c_uint64), ("pkg_idle_wkups", ctypes.c_uint64),
+                        ("interrupt_wkups", ctypes.c_uint64), ("pageins", ctypes.c_uint64),
+                        ("wired_size", ctypes.c_uint64), ("resident_size", ctypes.c_uint64),
+                        ("phys_footprint", ctypes.c_uint64), ("proc_start_abstime", ctypes.c_uint64),
+                        ("proc_exit_abstime", ctypes.c_uint64)]
+
+        def read(pid: int) -> int | None:
+            info = _RusageInfoV0()
+            if libproc.proc_pid_rusage(int(pid), 0, ctypes.byref(info)) != 0:
+                return None
+            return int(info.phys_footprint)
+        return read
+    except Exception:  # noqa: BLE001 - resident memory is used instead
+        return None
+
+
+_footprint = _footprint_reader()
+
+
+def _memory(p) -> int:
+    """A process's memory for the limit: its footprint on macOS, else resident."""
+    if _footprint is not None:
+        value = _footprint(p.pid)
+        if value is not None:
+            return value
+    return p.memory_info().rss
+
+
+
 class Watch:
     """Watches one task's process and everything it started, from a thread
     of the server, until ``stop``. Over a limit it ends them all (and calls
@@ -240,7 +283,7 @@ class Watch:
                 try:
                     # Per process: forked children share their parent's
                     # pages, so a sum would count them many times over.
-                    rss = max(rss, p.memory_info().rss)
+                    rss = max(rss, _memory(p))
                     t = p.cpu_times()
                     used = t.user + t.system
                     # A warm worker has run earlier tasks: only this task's time counts.
