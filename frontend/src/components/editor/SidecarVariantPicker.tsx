@@ -172,6 +172,8 @@ export function SidecarVariantPicker({ kind }: { kind: SidecarKind }) {
       <button
         data-testid="sidecar-variant-button"
         onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
         style={{
           fontSize: "var(--pnv-fs-11)",
           fontFamily: "var(--pnv-font-mono)",
