@@ -4,7 +4,7 @@
 
 import { Z_MENU, DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
-import { ModelTitle, titleVariant } from "./ModelTitle";
+import { ModelTitle } from "./ModelTitle";
 import { useModelIdentityStore } from "@/stores/modelIdentityStore";
 import { errorDetail } from "@/utils/errorDetail";
 import { Button } from "@/components/common/Button";
@@ -2946,7 +2946,6 @@ function FilePathChip({
   const chipRef = useRef<HTMLSpanElement | null>(null);
   const titleRef = useRef<HTMLSpanElement | null>(null);
   const [available, setAvailable] = useState(0);
-  const [variant] = useState(titleVariant);
 
   const badgesRef = useRef<HTMLSpanElement | null>(null);
   // The room the title has: the chip's width less the unsaved dot, the BUNDLE
@@ -3031,7 +3030,7 @@ function FilePathChip({
         </span>
       )}
       <span ref={titleRef} style={{ display: "flex", flex: "0 0 auto" }}>
-        <ModelTitle filePath={filePath} bundleOrigin={bundleOrigin} available={available} variant={variant} />
+        <ModelTitle filePath={filePath} bundleOrigin={bundleOrigin} available={available} />
       </span>
       {/* Cut off at the right when the window is too narrow for them and the
           title's least width; clipped across only, so a badge's pop-up

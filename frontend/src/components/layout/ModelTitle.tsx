@@ -1,16 +1,13 @@
 /**
  * The toolbar's model title: which model is open, as the menus name it (#422).
  *
- * "<label> · <file>" with a small source tag, from the identity the server
- * gives every open (stores/modelIdentityStore.ts). What is dropped when space
- * runs out follows one written rule (utils/modelTitle.ts, and
- * docs/file-conventions.md). Clicking it opens the model card: everything in
- * full, with a Copy path button. The window or tab title is the label.
- *
- * Two layouts are on trial for the owner to choose between (#422 design
- * question): A, one line; B, two lines within the toolbar's height. Which one
- * shows is `localStorage["psyneuview.titleMock"]` ("A" by default) — a review
- * switch only, removed once one is chosen.
+ * Two lines within the toolbar's height: the menu label on top, and below it
+ * in small text the file name (for the user's own file, its folder) and the
+ * source tag. From the identity the server gives every open
+ * (stores/modelIdentityStore.ts). What is dropped when space runs out follows
+ * one written rule (utils/modelTitle.ts, and docs/file-conventions.md).
+ * Clicking it opens the model card: everything in full, with a Copy path
+ * button. The window or tab title is the label.
  */
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
@@ -30,16 +27,6 @@ import {
 } from "@/utils/modelTitle";
 import { pnlSourceName, type PsyNeuLinkInfo } from "@/utils/pnlSources";
 
-export type TitleVariant = "A" | "B";
-
-export function titleVariant(): TitleVariant {
-  try {
-    return localStorage.getItem("psyneuview.titleMock") === "B" ? "B" : "A";
-  } catch {
-    return "A";
-  }
-}
-
 const GAP = 6;
 
 const STYLE: Record<keyof TitleParts, CSSProperties> = {
@@ -57,7 +44,7 @@ const STYLE: Record<keyof TitleParts, CSSProperties> = {
   folder: { fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)" },
 };
 
-/** Line 2 of layout B is smaller throughout. */
+/** Line 2 is smaller throughout. */
 const SMALL: Partial<Record<keyof TitleParts, CSSProperties>> = {
   label: { fontSize: "var(--pnv-fs-10)", fontWeight: 400, fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-text-hint)" },
   folder: { fontSize: "var(--pnv-fs-10)" },
@@ -69,7 +56,6 @@ const ONE_LINE: CSSProperties = { whiteSpace: "nowrap", flexShrink: 0 };
 /** A width measurer: a hidden span styled like each part. */
 function useMeasure(small: boolean) {
   const ref = useRef<HTMLSpanElement | null>(null);
-  const dot = useRef<HTMLSpanElement | null>(null);
   const measure = (text: string, part: keyof TitleParts) => {
     const el = ref.current;
     if (!el) return text.length * 7;
@@ -77,44 +63,15 @@ function useMeasure(small: boolean) {
     Object.assign(el.style, STYLE[part], small ? SMALL[part] : {});
     el.textContent = text;
     const w = el.getBoundingClientRect().width;
-    // In layout A the file name follows a "·" and one more gap.
-    if (part === "file" && !small && dot.current) return w + dot.current.getBoundingClientRect().width + GAP;
     return w;
   };
   const hidden: CSSProperties = { position: "absolute", visibility: "hidden", whiteSpace: "nowrap", left: -10000, top: 0 };
   const node = (
     <>
       <span ref={ref} aria-hidden="true" style={hidden} />
-      <span ref={dot} aria-hidden="true" style={hidden}>·</span>
     </>
   );
   return { measure, node };
-}
-
-function Parts({ parts, small = false }: { parts: TitleParts; small?: boolean }) {
-  return (
-    <>
-      <span data-testid={small ? "model-title-file" : "model-title-label"} style={{ ...ONE_LINE, ...STYLE.label, ...(small ? SMALL.label : {}) }}>
-        {parts.label}
-      </span>
-      {parts.file && (
-        <>
-          <span aria-hidden="true" style={{ ...ONE_LINE, color: "var(--pnv-text-faint)" }}>·</span>
-          <span data-testid="model-title-file" style={{ ...ONE_LINE, ...STYLE.file }}>{parts.file}</span>
-        </>
-      )}
-      {parts.folder && (
-        <span data-testid="model-title-folder" style={{ ...ONE_LINE, ...STYLE.folder, ...(small ? SMALL.folder : {}) }}>
-          {parts.folder}
-        </span>
-      )}
-      {parts.tag && (
-        <span data-testid="model-title-source" style={{ ...ONE_LINE, ...STYLE.tag, ...(small ? SMALL.tag : {}) }}>
-          {parts.tag}
-        </span>
-      )}
-    </>
-  );
 }
 
 /** Everything about the open model in full, in the hover text. */
@@ -131,13 +88,11 @@ export function ModelTitle({
   filePath,
   bundleOrigin,
   available,
-  variant,
 }: {
   filePath: string;
   bundleOrigin?: string | null;
   /** Pixels the title may take; measured by the toolbar chip around it. */
   available: number;
-  variant: TitleVariant;
 }) {
   const identity = useModelIdentity(filePath);
   const ensure = useModelIdentityStore((s) => s.ensure);
@@ -167,31 +122,26 @@ export function ModelTitle({
 
   const big = useMeasure(false);
   const small = useMeasure(true);
-  const [fitted, setFitted] = useState<{ one: TitleParts; two: TitleParts | null } | null>(null);
 
   const id: ModelIdentity =
     identity ?? { source: "user", label: null, file: filePath.split("/").pop() || filePath, path: filePath };
   const parts = titleParts(id);
+  // Line 2 leads with the file name, or for the user's own file its folder.
+  const secondKind: "file" | "folder" = parts.file ? "file" : "folder";
+  const second = parts.file ?? parts.folder ?? "";
 
+  const [fitted, setFitted] = useState<{ label: string; second: string; tag: string | null } | null>(null);
   useLayoutEffect(() => {
     const room = Math.max(0, available);
-    if (variant === "A") {
-      setFitted({ one: fitTitle(parts, room, big.measure, GAP), two: null });
-    } else {
-      const one = fitTitle({ label: parts.label, file: null, tag: "", folder: null }, room, big.measure, GAP);
-      // Line 2: the file name (or, for the user's own file, its folder), then the tag.
-      const two = fitTitle(
-        { label: parts.file ?? parts.folder ?? "", file: null, tag: parts.tag, folder: null },
-        room,
-        small.measure,
-        GAP,
-      );
-      setFitted({ one, two });
-    }
+    // Each line by the same rule: line 1 is the label alone; line 2 drops
+    // the tag before it shortens the file name (or folder).
+    const one = fitTitle({ label: parts.label, file: null, tag: "", folder: null }, room, big.measure, GAP);
+    const two = fitTitle({ label: second, file: null, tag: parts.tag, folder: null }, room, small.measure, GAP);
+    setFitted({ label: one.label, second: second ? two.label : "", tag: two.tag });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [available, variant, parts.label, parts.file, parts.tag, parts.folder]);
+  }, [available, parts.label, second, parts.tag]);
 
-  const shown = fitted ?? { one: parts, two: null };
+  const shown = fitted ?? { label: parts.label, second, tag: parts.tag };
   const tooltip = identityTooltip(id, bundleOrigin);
 
   return (
@@ -201,7 +151,6 @@ export function ModelTitle({
       <button
         type="button"
         data-testid="model-title"
-        data-title-variant={variant}
         data-model-source={id.source}
         aria-expanded={cardOpen}
         aria-haspopup="dialog"
@@ -209,10 +158,9 @@ export function ModelTitle({
         title={tooltip}
         style={{
           display: "flex",
-          flexDirection: variant === "B" ? "column" : "row",
-          alignItems: variant === "B" ? "flex-start" : "center",
+          flexDirection: "column",
+          alignItems: "flex-start",
           justifyContent: "center",
-          gap: variant === "B" ? 0 : GAP,
           minWidth: 0,
           overflow: "hidden",
           background: "none",
@@ -222,19 +170,25 @@ export function ModelTitle({
           textAlign: "left",
         }}
       >
-        {variant === "A" ? (
-          <Parts parts={shown.one} />
-        ) : (
-          <>
-            <span style={{ display: "flex", gap: GAP, alignItems: "center", lineHeight: "15px", height: 15 }}>
-              <Parts parts={shown.one} />
-            </span>
-            {shown.two && (shown.two.label || shown.two.tag) && (
-              <span style={{ display: "flex", gap: GAP, alignItems: "center", lineHeight: "12px", height: 12 }}>
-                <Parts parts={shown.two} small />
+        <span style={{ display: "flex", alignItems: "center", lineHeight: "15px", height: 15 }}>
+          <span data-testid="model-title-label" style={{ ...ONE_LINE, ...STYLE.label }}>{shown.label}</span>
+        </span>
+        {(shown.second || shown.tag) && (
+          <span style={{ display: "flex", gap: GAP, alignItems: "center", lineHeight: "12px", height: 12 }}>
+            {shown.second && (
+              <span
+                data-testid={`model-title-${secondKind}`}
+                style={{ ...ONE_LINE, ...(secondKind === "file" ? { ...STYLE.label, ...SMALL.label } : { ...STYLE.folder, ...SMALL.folder }) }}
+              >
+                {shown.second}
               </span>
             )}
-          </>
+            {shown.tag && (
+              <span data-testid="model-title-source" style={{ ...ONE_LINE, ...STYLE.tag, ...SMALL.tag }}>
+                {shown.tag}
+              </span>
+            )}
+          </span>
         )}
       </button>
       {cardOpen && <ModelCard identity={id} bundleOrigin={bundleOrigin} onClose={() => setCardOpen(false)} />}
