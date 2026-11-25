@@ -766,6 +766,9 @@ export const MechanismNode = memo(function MechanismNode({
           onClick={onExpandComposition}
           title="Expand this composition to show its contents"
           aria-label={`Expand composition ${d.label}`}
+          // #418: + stays its own symbol, but says the composition is collapsed.
+          aria-expanded={false}
+          data-testid="composition-expand"
           // The size of the frame's buttons (#194), so Expand is as easy
           // to find and press as the Collapse it undoes.
           style={{

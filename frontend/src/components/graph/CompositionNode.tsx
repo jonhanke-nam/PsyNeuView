@@ -284,6 +284,9 @@ export const CompositionNode = memo(function CompositionNode({
                 ? "Collapse this composition to a single node (shows the model nested, not flattened)"
                 : "Collapse this composition to a single node"}
               aria-label={`Collapse composition ${d.label}`}
+              // #418: − stays its own symbol (a graph operation), but says the composition is open.
+              aria-expanded={true}
+              data-testid="composition-collapse"
               style={controlStyle}
             >
               −
