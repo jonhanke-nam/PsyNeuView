@@ -73,6 +73,7 @@ import { graphCursorVars, graphPointerClass } from "@/utils/graphCursor";
 import { modelLoadOptions, modelViewOptions } from "@/utils/showGraphLoadRequest";
 import { clampIoDrag, tidyIoRows } from "@/utils/ioRows";
 import { ioRowsNotApplying, registerCanvasTidy, useIoRowsStore } from "@/stores/ioRowsStore";
+import { noteLayoutMove } from "@/utils/layoutMoves";
 
 /** How long after a model opens (or the view switches) the graph may still settle and be re-fitted (#346). */
 const FIT_SETTLE_MS = 1500;
@@ -106,6 +107,9 @@ const edgeTypes = {
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 function saveLayoutDebounced(filePath: string, nodes: any[]) {
+  // Every move the user makes is saved through here: count it, so a layout
+  // reload already on its way doesn't put the nodes back (#444).
+  noteLayoutMove();
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     // #697/#713: cluster frames are never saved; CIMs by a stable key.
@@ -917,8 +921,10 @@ export function GraphCanvas() {
     setPendingProjectionGesture(null);
   }, [placeArmed, setSelectedNodeId, setSelectedEdgeId, setPendingConditionGesture, setPendingProjectionGesture]);
 
-  // Resize group nodes after drag completes (not during — that blocks dragging)
-  const onNodeDrag: OnNodeDrag = useCallback(() => {}, []);
+  // Resize group nodes after drag completes (not during — that blocks dragging).
+  // Counted while it moves, not only when dropped: a layout reload landing
+  // mid-drag would otherwise snap the node back under the pointer (#444).
+  const onNodeDrag: OnNodeDrag = useCallback(() => noteLayoutMove(), []);
 
   const onNodeDragStop: OnNodeDrag = useCallback(
     (_, node, dragged) => {
