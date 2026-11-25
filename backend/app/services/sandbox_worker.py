@@ -1199,14 +1199,19 @@ def task_introspect(params):
             pass
     if compositions and not developer_mode:
         # #385: the shape show_graph draws each node in, so the canvas draws
-        # the same one (a circle where show_graph draws a circle).
+        # the same one (a circle where show_graph draws a circle); #425: and
+        # how it draws each projection.
         try:
             t_shapes = time.time()
-            shapes, asked = _show_graph_shapes(module, compositions, pnl, result.get("showGraph"))
+            shapes, edges, asked = _show_graph_looks(module, compositions, pnl, result.get("showGraph"))
             _sys.stderr.write(f"[perf] show_graph shapes: {time.time() - t_shapes:.3f}s "
                               f"({'asked' if asked else 'reused'})\n")
             if shapes:
                 result["showGraphShapes"] = shapes
+            if edges:
+                # #425: each projection's arrowhead, line and colour, as
+                # show_graph draws it.
+                result["showGraphEdges"] = edges
             if asked:
                 # Kept like the layout's answers, so "Like show_graph" with
                 # these options needn't ask again.
@@ -1338,22 +1343,66 @@ def show_graph_node_shapes(dot):
     return shapes
 
 
-def _show_graph_shapes(module, compositions, pnl, answers=None):
-    """show_graph's shape for each node of the model (#385).
+# An edge statement: its two ends (each a name, maybe with a :port), then its
+# attributes.
+_DOT_NAME = r'(?:"(?:[^"\\]|\\.)*"|[A-Za-z_][\w.]*)'
+_DOT_EDGE = re.compile(
+    rf'^\s*({_DOT_NAME})(?::{_DOT_NAME})*\s*->\s*({_DOT_NAME})(?::{_DOT_NAME})*\s*\[(.*)\]\s*;?\s*$'
+)
+_DOT_ATTR = re.compile(r'(\w+)=("(?:[^"\\]|\\.)*"|[^\s\]]+)')
+
+
+def _dot_unquote(text):
+    if text.startswith('"'):
+        return re.sub(r'\\(.)', r'\1', text[1:-1])
+    return text
+
+
+def show_graph_edge_looks(dot):
+    """How show_graph draws each projection, from its own description (#425).
+
+    One entry per drawn edge, in show_graph's order: the two nodes it joins
+    (by name) and the edge's ``arrowhead`` (``normal``, or ``box`` for a
+    control projection), ``color``, ``style`` and ``penwidth`` as show_graph
+    gave them. The invisible edges show_graph adds to rank its nodes are
+    left out, and so are attributes it didn't set.
+    """
+    looks = []
+    for line in (dot or "").splitlines():
+        m = _DOT_EDGE.match(line)
+        if not m:
+            continue
+        attrs = {k: _dot_unquote(v) for k, v in _DOT_ATTR.findall(m.group(3))}
+        if attrs.get("style") == "invis":
+            continue
+        look = {"sender": _dot_unquote(m.group(1)), "receiver": _dot_unquote(m.group(2))}
+        for key in ("arrowhead", "color", "style", "penwidth"):
+            if attrs.get(key):
+                look[key] = attrs[key]
+        looks.append(look)
+    return looks
+
+
+def _show_graph_looks(module, compositions, pnl, answers=None):
+    """show_graph's shape for each node of the model (#385), and how it draws
+    each projection (#425).
 
     Uses show_graph's description of the outermost composition with nested
     compositions open, which names every node. An answer this load already
     has (the "Like show_graph" layout's) is reused; otherwise show_graph is
-    asked once, about 0.04-0.09 s. Returns the shapes and, when it asked, the
-    answer, for the route to keep.
+    asked once, about 0.04-0.09 s. Returns the shapes, the edges (see
+    show_graph_edge_looks) and, when it asked, the answer, for the route to
+    keep.
     """
     outer = _outermost_composition(compositions)
     if not outer:
-        return {}, None
+        return {}, [], None
     shapes = {}
+    edges = None
     # The plain picture first; one with learning shown only adds its learning
-    # nodes. A PyTorch picture (an answer with a note, #72) draws the model
-    # differently, so it isn't used.
+    # nodes, and draws a projection that learns as a node of its own, so its
+    # edges aren't used. A PyTorch picture (an answer with a note, #72) draws
+    # the model differently, so it isn't used.
     usable = [a for a in answers or []
               if a.get("composition") == outer
               and (a.get("options") or {}).get("show_nested") == "nested"
@@ -1362,11 +1411,13 @@ def _show_graph_shapes(module, compositions, pnl, answers=None):
     for a in sorted(usable, key=lambda a: bool(a["options"].get("show_learning"))):
         for name, shape in show_graph_node_shapes(a["answer"]["dot"]).items():
             shapes.setdefault(name, shape)
-    if shapes:
-        return shapes, None
+        if edges is None and not a["options"].get("show_learning"):
+            edges = show_graph_edge_looks(a["answer"]["dot"])
+    if shapes and edges is not None:
+        return shapes, edges, None
     comp = _resolve_composition(module, outer)
     if comp is None or not isinstance(comp, pnl.Composition):
-        return {}, None
+        return shapes, edges or [], None
     options = {
         "show_controller": True,
         "show_learning": False,
@@ -1375,8 +1426,10 @@ def _show_graph_shapes(module, compositions, pnl, answers=None):
     }
     answer = _show_graph_source(pnl, comp, options)
     if "dot" not in answer:
-        return {}, None
-    return show_graph_node_shapes(answer["dot"]), {"composition": outer, "options": options, "answer": answer}
+        return shapes, edges or [], None
+    for name, shape in show_graph_node_shapes(answer["dot"]).items():
+        shapes.setdefault(name, shape)
+    return shapes, show_graph_edge_looks(answer["dot"]), {"composition": outer, "options": options, "answer": answer}
 
 
 def _show_graph_while_loaded(module, compositions, request, pnl):
