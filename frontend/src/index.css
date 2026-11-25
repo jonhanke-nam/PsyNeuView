@@ -276,7 +276,8 @@ body.pnv-resizing-row, body.pnv-resizing-row * { cursor: row-resize !important; 
   outline: 2px solid var(--pnv-primary);
   outline-offset: 0;
 }
-.pnv-disclosure-toggle:hover { background: var(--pnv-selection-hover); }
+/* !important: these rows draw their own resting background inline. */
+.pnv-disclosure-toggle:hover { background: var(--pnv-selection-hover) !important; }
 
 /* #409: brief flash highlight on the labels.yaml line the Inspector
    just jumped to, in the amber of the YAML-cursor row (#1302). The fade-out is purely visual — the StateField
