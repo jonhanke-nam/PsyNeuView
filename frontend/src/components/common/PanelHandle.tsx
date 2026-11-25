@@ -191,9 +191,9 @@ export function PanelHandle({
   };
 
   const placement = tabAt ?? (vertical ? "start" : "end");
-  const tabPos: CSSProperties = vertical
-    ? placement === "start" ? { top: tabOffset } : { bottom: tabOffset }
-    : placement === "start" ? { left: tabOffset } : { right: tabOffset };
+  // The tab's place is set in CSS from a class and a custom property, so the
+  // button carries no style of its own.
+  const rootStyle = { ...style, ["--handle-tab-offset" as string]: `${tabOffset}px` } as CSSProperties;
   const label = expanded ? collapseLabel : expandLabel;
 
   return (
@@ -203,8 +203,8 @@ export function PanelHandle({
       data-pnv-panel-handle={orientation}
       data-expanded={expanded ? "true" : "false"}
       data-at={at}
-      className={`pnv-handle pnv-handle--${vertical ? "v" : "h"}${resize ? " pnv-handle--resizable" : ""}${className ? ` ${className}` : ""}`}
-      style={style}
+      className={`pnv-handle pnv-handle--${vertical ? "v" : "h"} pnv-handle--tab-${placement}${resize ? " pnv-handle--resizable" : ""}${className ? ` ${className}` : ""}`}
+      style={rootStyle}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endPress}
@@ -234,7 +234,6 @@ export function PanelHandle({
         aria-controls={controls}
         aria-label={label}
         title={label}
-        style={tabPos}
         onClick={() => {
           if (suppressClick.current) {
             suppressClick.current = false;

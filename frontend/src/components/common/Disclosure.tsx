@@ -18,10 +18,20 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { Chevron } from "./PanelHandle";
 
-export function DisclosureArrow({ open, small = false }: { open: boolean; small?: boolean }) {
+export function DisclosureArrow({
+  open,
+  small = false,
+  hidden = false,
+}: {
+  open: boolean;
+  small?: boolean;
+  /** Keep the space but draw nothing: a row that does not fold, lined up with those that do. */
+  hidden?: boolean;
+}) {
   return (
     <span
       aria-hidden="true"
+      style={hidden ? { visibility: "hidden" } : undefined}
       data-disclosure-arrow=""
       data-open={open ? "true" : "false"}
       className={`pnv-disclosure-arrow${small ? " pnv-disclosure-arrow--small" : ""}`}
@@ -35,6 +45,8 @@ export interface DisclosureDetailsProps {
   summary: ReactNode;
   children: ReactNode;
   defaultOpen?: boolean;
+  /** Controlled: the caller keeps whether it is open (pair with onToggle). */
+  open?: boolean;
   /** Called after the user opens or closes it. */
   onToggle?: (open: boolean) => void;
   style?: CSSProperties;
@@ -49,6 +61,7 @@ export function DisclosureDetails({
   summary,
   children,
   defaultOpen = false,
+  open: openProp,
   onToggle,
   style,
   summaryStyle,
@@ -57,7 +70,8 @@ export function DisclosureDetails({
   testId,
   summaryTestId,
 }: DisclosureDetailsProps) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [openState, setOpen] = useState(defaultOpen);
+  const open = openProp ?? openState;
   return (
     <details
       open={open}

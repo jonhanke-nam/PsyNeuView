@@ -216,6 +216,10 @@ button:hover {
 }
 .pnv-handle--v .pnv-handle__tab { left: 50%; width: 14px; height: 36px; margin-left: -7px; }
 .pnv-handle--h .pnv-handle__tab { top: 50%; width: 40px; height: 14px; margin-top: -7px; }
+.pnv-handle--v.pnv-handle--tab-start .pnv-handle__tab { top: var(--handle-tab-offset, 8px); }
+.pnv-handle--v.pnv-handle--tab-end .pnv-handle__tab { bottom: var(--handle-tab-offset, 8px); }
+.pnv-handle--h.pnv-handle--tab-start .pnv-handle__tab { left: var(--handle-tab-offset, 8px); }
+.pnv-handle--h.pnv-handle--tab-end .pnv-handle__tab { right: var(--handle-tab-offset, 8px); }
 /* On the window's edge (a pane hidden), the band and the tab stay inside it. */
 .pnv-handle--v[data-at="start"] { margin-left: 0; }
 .pnv-handle--v[data-at="end"] { margin-left: -8px; }
@@ -248,21 +252,24 @@ button:hover {
   align-items: center;
   justify-content: center;
   width: 16px;
-  height: 16px;
+  /* 16px tall in a row of normal text; never taller than the line it sits on,
+     so a section heading keeps its height. */
+  height: min(16px, 1.2em);
   flex-shrink: 0;
   color: var(--pnv-text-hint);
-  vertical-align: middle;
+  vertical-align: -0.15em;
 }
 .pnv-disclosure-arrow > svg { transition: transform 0.12s; }
 .pnv-disclosure-arrow[data-open="true"] > svg { transform: rotate(90deg); }
-.pnv-disclosure-arrow--small { width: 12px; height: 12px; }
+.pnv-disclosure-arrow--small { width: 12px; }
 /* Native <details>: our arrow replaces the browser's own marker. */
 .pnv-disclosure-summary { list-style: none; cursor: pointer; }
 .pnv-disclosure-summary::-webkit-details-marker { display: none; }
 .pnv-disclosure-summary::marker { content: ""; }
 .pnv-disclosure-summary:hover { background: var(--pnv-selection-hover); }
 .pnv-disclosure-summary:focus-visible,
-.pnv-disclosure-toggle:focus-visible {
+.pnv-disclosure-toggle:focus-visible,
+.pnv-history-step:focus-visible {
   outline: 2px solid var(--pnv-primary);
   outline-offset: 0;
 }
@@ -296,6 +303,23 @@ button:hover {
    context, which would draw the popover underneath the panes below. */
 .diagnostics-collapsed-bar:hover:not(:has(.sync-indicator-zone:hover)):not(:has([data-testid="sync-popover"])) {
   filter: brightness(0.97);
+}
+
+/* #418: the folded bar's toggle is a real button that fills the bar up to the
+   file-watch status; it draws nothing of its own, so the bar looks as before. */
+.diagnostics-toggle {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+.diagnostics-toggle:focus-visible {
+  outline: 2px solid var(--pnv-primary);
+  outline-offset: 1px;
 }
 
 /* A small × that removes something from a row (a port, a condition) is grey
