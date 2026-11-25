@@ -4,6 +4,7 @@
  * Collapsible, shown after file load.
  */
 
+import { DisclosureArrow } from "@/components/common/Disclosure";
 import { useState, useEffect } from "react";
 import { useModelStore } from "@/stores/modelStore";
 import { useNotificationStore } from "@/stores/notificationStore";
@@ -90,20 +91,29 @@ export function DiagnosticPanel() {
     return (
       <div
         className="diagnostics-collapsed-bar"
-        onClick={() => setCollapsed(false)}
         data-tone={hasIssues ? "attention" : "neutral"}
-        // #109: the bar says it expands on hover, not in a line of text.
-        title="Model Diagnostics: click to expand"
         style={{
           padding: "3px 12px",
           ...barColours,
           fontSize: "var(--pnv-fs-11)",
           color: "var(--pnv-text-muted)",
-          cursor: "pointer",
           display: "flex",
           gap: 8,
         }}
       >
+        {/* #418: a real button, so the keyboard reaches it and it says it is
+            folded. It fills the bar up to the file-watch status, which is a
+            control of its own. #109: the bar says it expands on hover. */}
+        <button
+          type="button"
+          className="diagnostics-toggle"
+          data-testid="diagnostics-toggle"
+          aria-expanded={false}
+          aria-controls="pnv-model-diagnostics"
+          onClick={() => setCollapsed(false)}
+          title="Model Diagnostics: click to expand"
+        >
+        <DisclosureArrow open={false} small />
         <span>
           {compLabel}: {diagnostics.mechanismCount} mechanisms, {diagnostics.projectionCount} projections
         </span>
@@ -127,6 +137,7 @@ export function DiagnosticPanel() {
             {diagnostics.warnings.length}
           </span>
         )}
+        </button>
         {/* #103: the file-watch status lives here, not in a row of its own,
             at the right end of the bar. */}
         <span style={{ marginLeft: "auto", display: "flex" }}>
@@ -138,6 +149,7 @@ export function DiagnosticPanel() {
 
   return (
     <div
+      id="pnv-model-diagnostics"
       style={{
         padding: "8px 12px",
         ...barColours,
@@ -151,6 +163,9 @@ export function DiagnosticPanel() {
         </span>
         <button
           onClick={() => setCollapsed(true)}
+          aria-expanded={true}
+          aria-controls="pnv-model-diagnostics"
+          data-testid="diagnostics-toggle"
           style={{
             fontSize: "var(--pnv-fs-10)", border: "none", background: "none",
             color: "var(--pnv-text-faint)", cursor: "pointer",
