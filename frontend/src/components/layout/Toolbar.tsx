@@ -95,7 +95,7 @@ import { applyTutorialViewModes } from "@/utils/tutorialView";
 import { SAVE_COPY_EVENT, requestSaveCopy } from "@/utils/saveRequest";
 import { stripProtectionLine } from "@/utils/protectionLine";
 import { AutosaveStatus } from "./AutosaveStatus";
-import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { appendModelView, modelViewOptions, showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
 import { beginModelOpen, isNewestModelOpen, reportFailedOpen } from "@/utils/modelOpenSequence";
 import { ioRowViolations } from "@/utils/ioRows";
 import { canvasTidyHandle } from "@/stores/ioRowsStore";
@@ -840,7 +840,7 @@ export function Toolbar() {
       const resp = await fetch("/api/model/open-project", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bundle_path: bundlePath }),
+        body: JSON.stringify({ bundle_path: bundlePath, ...modelViewOptions() }), // #428
       });
       // #386: a newer open was asked for while this one was out.
       if (!isNewestModelOpen(ticket)) return;
@@ -1014,7 +1014,11 @@ export function Toolbar() {
       const resp = await fetch("/api/demos/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(tutorial ? { demo_name: demo.name, tutorial } : { demo_name: demo.name }),
+        // #428: opened in the view the menu shows, as every open is.
+        body: JSON.stringify({
+          ...(tutorial ? { demo_name: demo.name, tutorial } : { demo_name: demo.name }),
+          ...modelViewOptions(),
+        }),
       });
       const apiDoneAt = performance.now();
       if (!isNewestModelOpen(ticket)) return;
@@ -1128,6 +1132,7 @@ export function Toolbar() {
                     body: JSON.stringify({
                       source: newModelTemplate(pnlVer).replace(/my_model/g, varName),
                       file_name: `${varName}.py`,
+                      ...modelViewOptions(), // #428
                     }),
                   });
                   if (!resp.ok) {
@@ -1202,7 +1207,12 @@ export function Toolbar() {
       const resp = await fetch("/api/reference-models/load", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(tutorial ? { name: rm.name, tutorial } : { name: rm.name, restore_pristine: restore }),
+        // #428: opened in the view the menu shows, as every open is. Left out,
+        // the model came back nested under "Flatten (all compositions)".
+        body: JSON.stringify({
+          ...(tutorial ? { name: rm.name, tutorial } : { name: rm.name, restore_pristine: restore }),
+          ...modelViewOptions(),
+        }),
       });
       const apiDoneAt = performance.now();
       if (!isNewestModelOpen(ticket)) return;
@@ -1282,7 +1292,7 @@ export function Toolbar() {
       const resp = await fetch("/api/psyneulink-examples/load", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: m.name }),
+        body: JSON.stringify({ name: m.name, ...modelViewOptions() }), // #428
       });
       const apiDoneAt = performance.now();
       if (!isNewestModelOpen(ticket)) return;
@@ -1368,7 +1378,7 @@ export function Toolbar() {
         const resp = await fetch("/api/models/save-as", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ source: file.content, file_name: name }),
+          body: JSON.stringify({ source: file.content, file_name: name, ...modelViewOptions() }), // #428
         });
         if (resp.ok) {
           saved = await resp.json();
@@ -1440,6 +1450,7 @@ export function Toolbar() {
             // those to no-ops, which would surface as "NoneType is not
             // iterable" on any test that consumes its own results.
             developer_mode: true,
+            ...modelViewOptions(), // #428
           }),
         });
         if (resp.ok) {
@@ -1521,6 +1532,7 @@ export function Toolbar() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      appendModelView(formData); // #428
       const resp = await fetch("/api/model/import-mdf", {
         method: "POST",
         body: formData,
@@ -1574,6 +1586,7 @@ export function Toolbar() {
           overwrite,
           // #1244: the copy takes this model's layout, labels and index.
           source_path: filePath || null,
+          ...modelViewOptions(), // #428
         }),
       });
       if (!resp.ok) {
