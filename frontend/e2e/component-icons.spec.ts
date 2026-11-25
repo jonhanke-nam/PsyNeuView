@@ -34,10 +34,10 @@ async function open(page: Page, colorScheme: "light" | "dark") {
 async function unfoldAll(page: Page) {
   for (let round = 0; round < 6; round++) {
     const clicked = await page.getByTestId("palette-sidebar").evaluate((root) => {
-      const folded = Array.from(root.querySelectorAll("button")).filter((b) => {
-        const arrow = b.querySelector(":scope > span");
-        return arrow?.textContent === "▶" && (arrow as HTMLElement).style.transform === "rotate(0deg)";
-      });
+      // A folded tree row says so (#418); the panel's own edge tab is not a row.
+      const folded = Array.from(root.querySelectorAll<HTMLButtonElement>('button[aria-expanded="false"]')).filter(
+        (b) => !b.classList.contains("pnv-handle__tab"),
+      );
       folded.forEach((b) => b.click());
       return folded.length;
     });

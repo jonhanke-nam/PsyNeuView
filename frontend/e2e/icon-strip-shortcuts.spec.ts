@@ -66,7 +66,8 @@ test.describe("Components icon strip (#372, #395)", { tag: "@ci" }, () => {
     await expect(chevron).toHaveAttribute("title", "Show the full Components panel");
     const c = (await chevron.boundingBox())!;
     expect(c.width).toBeLessThan(first.width / 2);
-    expect(c.x).toBeGreaterThanOrEqual(first.x + first.width);
+    // It sits across the strip's edge, clear of the icons' column.
+    expect(c.x + c.width / 2).toBeGreaterThan(first.x + first.width);
     // The strip keeps its width and the icons their size.
     expect(first).toMatchObject({ width: 32, height: 32 });
     expect((await palette.boundingBox())!.width).toBe(48);
