@@ -2242,6 +2242,8 @@ function PortRow({
       ) : (
         <input
           type="text"
+          // Stable handle per port, as port-shape-<name> (#431).
+          data-testid={`port-name-${name}`}
           value={draft}
           onChange={(e) => { setDraft(e.target.value); setEditing(true); }}
           onFocus={() => setEditing(true)}
