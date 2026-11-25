@@ -2,6 +2,7 @@
  * Top toolbar with file operations, model browser, and demo models.
  */
 
+import { DisclosureArrow } from "@/components/common/Disclosure";
 import { Z_MENU, DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { errorDetail } from "@/utils/errorDetail";
@@ -563,15 +564,8 @@ export function Toolbar() {
           textAlign: "left",
         }}
       >
-        {/*
-          Same glyph and size as the Components palette, so the two fold
-          controls read as the same control. The small ▸/▾ pair sits well
-          inside its em box, so bumping its size alone still left a speck —
-          ▶/▼ fills the box and is legible at the same 11px.
-        */}
-        <span aria-hidden="true" style={{ fontSize: "var(--pnv-fs-11)", width: 13, color: "var(--pnv-text-hint)" }}>
-          {isSectionCollapsed(id) ? "▶" : "▼"}
-        </span>
+        {/* The one row arrow (#418), as in the Components panel and Settings. */}
+        <DisclosureArrow open={!isSectionCollapsed(id)} small />
         {/* The name stays on one line; a long source path is what shortens.
             It used to squeeze "My Project Folder" onto three lines. */}
         <span style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{label}</span>
@@ -2214,6 +2208,8 @@ export function Toolbar() {
                   {!isRoot && (
                     <button
                       onClick={() => toggleFolder(folder)}
+                      aria-expanded={isExpanded}
+                      data-testid="open-menu-folder-toggle"
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -2230,9 +2226,7 @@ export function Toolbar() {
                       }}
                       title={isExpanded ? "Collapse folder" : "Expand folder"}
                     >
-                      <span style={{ width: 10, display: "inline-block", color: "var(--pnv-text-faint)" }}>
-                        {isExpanded ? "▾" : "▸"}
-                      </span>
+                      <DisclosureArrow open={isExpanded} small />
                       <span>{folder}/</span>
                       <span style={{ marginLeft: "auto", fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", fontWeight: 400 }}>
                         {models.length}
@@ -3625,10 +3619,8 @@ function WalkthroughMenu() {
                   lineHeight: "inherit",
                 }}
               >
-                {/* Same fold glyph as the Open menu's section headings. */}
-                <span aria-hidden="true" style={{ fontSize: "var(--pnv-fs-9)", width: 10, color: "var(--pnv-text-hint)" }}>
-                  {folded.has(group.id) ? "\u25b6" : "\u25bc"}
-                </span>
+                {/* The one row arrow (#418), as in the Open menu's section headings. */}
+                <DisclosureArrow open={!folded.has(group.id)} small />
                 <span>{group.title}</span>
                 {folded.has(group.id) && (
                   <span style={{ marginLeft: "auto", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>

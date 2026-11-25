@@ -23,6 +23,7 @@ import { iconForCategory, iconForType } from "@/utils/componentIcons";
 import { ComponentIcon } from "./ComponentIcon";
 import { Button } from "@/components/common/Button";
 import { PanelHandle } from "@/components/common/PanelHandle";
+import { DisclosureArrow } from "@/components/common/Disclosure";
 
 /** #354: the drag is over, dropped or not. */
 const endDrag = () => usePaletteStore.getState().setDraggingFunction(null);
@@ -449,6 +450,8 @@ function TreeNode({
     <div>
       <button
         onClick={() => usePaletteStore.getState().toggleNode(node.id)}
+        aria-expanded={isExpanded}
+        className="pnv-disclosure-toggle"
         style={{
           display: "flex",
           alignItems: "center",
@@ -467,19 +470,8 @@ function TreeNode({
           letterSpacing: isTopLevel ? "0.05em" : "normal",
         }}
       >
-        <span
-          style={{
-            display: "inline-block",
-            transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-            transition: "transform 0.15s ease",
-            // 8px read as a speck rather than a control, which matters more now
-            // that it is the thing you click to open every category.
-            fontSize: "var(--pnv-fs-11)",
-            flexShrink: 0,
-          }}
-        >
-          {"\u25B6"}
-        </span>
+        {/* #418: the standard row arrow, turned; the row says whether it is open. */}
+        <DisclosureArrow open={isExpanded} small />
         {node.label}
         {!isTopLevel && node.children && (
           <span style={{ fontSize: "var(--pnv-fs-9)", color: "var(--pnv-text-faint)", marginLeft: 4 }}>
