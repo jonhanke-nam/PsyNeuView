@@ -118,7 +118,7 @@ for (const scheme of ["light", "dark"] as const) {
 
     test("the folded strip shows the category icons and the favourites' icons", async ({ page }) => {
       const palette = await open(page, scheme);
-      await palette.getByTitle("Compact mode").click();
+      await palette.getByTestId("palette-fold").click();
       const categories = palette.getByTestId("palette-category");
       await expect(categories.first()).toBeVisible();
       // One icon per category, no placeholder letters, and the boxes keep their 32px.

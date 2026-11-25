@@ -104,33 +104,32 @@ export function SplitPane({
     onSizesChange(next);
   };
 
-  const resize = both
-    ? {
-        valueNow: pct(collapsibleNow),
-        valueMin: pct(collapsibleMin),
-        valueMax: Math.max(pct(collapsibleMin), 100 - pct(otherMin)),
-        onDragStart: () => {
-          dragStart.current = measure();
-        },
-        onDragMove: (delta: number) => {
-          const s = dragStart.current;
-          if (!s) return;
-          const f = clampFirst(s.first + delta, s.total);
-          setLive([f, s.total - f]);
-        },
-        onDragEnd: () => {
-          const s = dragStart.current;
-          dragStart.current = null;
-          if (!s) return;
-          const m = measure();
-          commit(m.first, m.total);
-        },
-        onStep: (delta: number) => {
-          const m = measure();
-          commit(clampFirst(m.first + delta, m.total), m.total);
-        },
-      }
-    : undefined;
+  const resize = {
+    disabled: !both,
+    valueNow: pct(collapsibleNow),
+    valueMin: pct(collapsibleMin),
+    valueMax: Math.max(pct(collapsibleMin), 100 - pct(otherMin)),
+    onDragStart: () => {
+      dragStart.current = measure();
+    },
+    onDragMove: (delta: number) => {
+      const s = dragStart.current;
+      if (!s) return;
+      const f = clampFirst(s.first + delta, s.total);
+      setLive([f, s.total - f]);
+    },
+    onDragEnd: () => {
+      const s = dragStart.current;
+      dragStart.current = null;
+      if (!s) return;
+      const m = measure();
+      commit(m.first, m.total);
+    },
+    onStep: (delta: number) => {
+      const m = measure();
+      commit(clampFirst(m.first + delta, m.total), m.total);
+    },
+  };
 
   const foldToward: Direction =
     collapsible === "first" ? (row ? "left" : "up") : row ? "right" : "down";

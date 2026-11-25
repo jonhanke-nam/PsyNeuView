@@ -330,8 +330,8 @@ function ComponentsStartRow() {
       <SettingLabel title="How the panel opens" htmlFor="setting-components-start">
         The Components panel on the left of the graph view. Open, it shows the
         search box and the list of sections; as the icon strip, it is a narrow
-        column of icons. Either way, the panel's own fold button (◀ when open,
-        › in the strip) switches it until you next open PsyNeuView.
+        column of icons. Either way, the arrow tab on the panel's right edge
+        (‹ when open, › in the strip) switches it until you next open PsyNeuView.
       </SettingLabel>
       <select
         id="setting-components-start"

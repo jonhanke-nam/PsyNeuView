@@ -1,7 +1,7 @@
 /**
  * Which of the four panels are showing (#189, #191), asked two ways.
  *
- * A hidden Allotment pane keeps its contents mounted at zero size, so
+ * A hidden pane keeps its contents mounted (display: none, #418), so
  * Playwright's `isVisible` still says yes to a tab button nobody can see.
  * So each panel is hit-tested at its centre (is the element what's really
  * there?), and the app's own diagnostics snapshot says what its layout store

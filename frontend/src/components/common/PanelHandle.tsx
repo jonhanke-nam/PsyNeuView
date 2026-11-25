@@ -136,6 +136,12 @@ export interface PanelHandleResize {
   onDragEnd: () => void;
   /** A keyboard step of this many pixels (+ = right / down); persists at once. */
   onStep: (deltaPx: number) => void;
+  /**
+   * Nothing to resize just now (the pane on the other side is hidden). The
+   * separator stays focusable, so Enter still collapses and restores; it is
+   * the same when the pane is collapsed.
+   */
+  disabled?: boolean;
 }
 
 export interface PanelHandleProps {
@@ -190,7 +196,7 @@ export function PanelHandle({
   // Set when a press turned into a drag, so the click that may follow is not a toggle.
   const suppressClick = useRef(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const canResize = !!resize && expanded;
+  const canResize = !!resize && expanded && !resize.disabled;
 
   const onPointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
@@ -247,7 +253,7 @@ export function PanelHandle({
       data-pnv-panel-handle={orientation}
       data-expanded={expanded ? "true" : "false"}
       data-at={at}
-      className={`pnv-handle pnv-handle--${vertical ? "v" : "h"} pnv-handle--tab-${placement}${resize ? " pnv-handle--resizable" : ""}${className ? ` ${className}` : ""}`}
+      className={`pnv-handle pnv-handle--${vertical ? "v" : "h"} pnv-handle--tab-${placement}${canResize ? " pnv-handle--resizable" : ""}${className ? ` ${className}` : ""}`}
       style={rootStyle}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -261,7 +267,7 @@ export function PanelHandle({
           aria-orientation={orientation}
           aria-label={resizeLabel}
           aria-controls={controls}
-          aria-valuenow={Math.round(resize.valueNow)}
+          aria-valuenow={Math.round(expanded ? resize.valueNow : 0)}
           aria-valuemin={Math.round(resize.valueMin)}
           aria-valuemax={Math.round(resize.valueMax)}
           className="pnv-handle__line"

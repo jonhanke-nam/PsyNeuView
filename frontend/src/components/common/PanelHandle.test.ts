@@ -70,6 +70,13 @@ describe("PanelHandle markup", () => {
     expect(html).toMatch(/data-direction="right"/);
   });
 
+  it("collapsed, the separator stays focusable (Enter restores), its value 0, and the line inert", () => {
+    const html = render({ expanded: false });
+    expect(html).toMatch(/role="separator" tabindex="0"/);
+    expect(html).toMatch(/aria-valuenow="0"/);
+    expect(html).not.toMatch(/pnv-handle--resizable/);
+  });
+
   it("open: the arrow points to the edge the pane folds into", () => {
     expect(render()).toMatch(/data-direction="left"/);
     expect(render({ orientation: "horizontal", foldToward: "down" })).toMatch(/data-direction="down"/);
