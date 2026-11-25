@@ -4,8 +4,8 @@
  * A node showing just its name is the size show_graph draws it, not the
  * 170 by 80 slot it used to fill, so the same graph fitted to the same window
  * has text about show_graph's size. Measured as drawn, with show_graph's own
- * sizes from Graphviz (here in the browser test's own process: CI's browser
- * machine has no Graphviz program, and doesn't need one for this).
+ * sizes from Graphviz (here in the browser test's own process, which needs no
+ * Graphviz program).
  *
  * Also checked: every name stays inside its node's innermost outline, at the
  * default width and the heaviest; no two nodes overlap; a frame's header stays

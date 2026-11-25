@@ -5,8 +5,7 @@
  * (#42). Widths are checked as drawn: Chrome draws borders at whole pixels.
  * The default colours are show_graph's as its own PDF draws them (#190):
  * green #00ff00 for INPUT, red #ff0000 for OUTPUT, black for an ordinary
- * node. The show_graph tab draws the same green (backend test_show_graph_picture.py:
- * CI's browser tests have no Graphviz to draw that tab with).
+ * node. The show_graph tab draws the same green (backend test_show_graph_picture.py).
  */
 import { mutatingTest as test, expect, clickCanvasNode } from "./test-base";
 import { writeFileSync, mkdtempSync, realpathSync } from "fs";
