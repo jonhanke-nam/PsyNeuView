@@ -45,6 +45,61 @@ export function arrowDirection(foldToward: Direction, expanded: boolean): Direct
   return expanded ? foldToward : OPPOSITE[foldToward];
 }
 
+/**
+ * What a key on the focused separator does: "toggle" (Enter), a resize step
+ * in pixels along the line's axis (+ = right / down), or nothing. Arrow keys
+ * across the axis do nothing, so they stay free for the page.
+ */
+export function separatorKeyAction(
+  key: string,
+  shift: boolean,
+  orientation: "vertical" | "horizontal",
+): "toggle" | number | null {
+  if (key === "Enter") return "toggle";
+  const step = shift ? KEY_STEP_LARGE_PX : KEY_STEP_PX;
+  const vertical = orientation === "vertical";
+  if (key === (vertical ? "ArrowLeft" : "ArrowUp")) return -step;
+  if (key === (vertical ? "ArrowRight" : "ArrowDown")) return step;
+  if (key === "Home") return -1e6;
+  if (key === "End") return 1e6;
+  return null;
+}
+
+/**
+ * Tells a click from a drag. A press becomes a drag once it has moved
+ * DRAG_THRESHOLD_PX along the line's axis; until then a release is a click.
+ */
+export class PressTracker {
+  private start: { x: number; y: number; id: number } | null = null;
+  dragging = false;
+  constructor(private readonly vertical: boolean) {}
+  down(x: number, y: number, id: number) {
+    this.start = { x, y, id };
+    this.dragging = false;
+  }
+  /** The move's distance along the axis, and whether this move began the drag; null when no press is under way. */
+  move(x: number, y: number, id: number): { delta: number; began: boolean } | null {
+    const s = this.start;
+    if (!s || id !== s.id) return null;
+    const delta = this.vertical ? x - s.x : y - s.y;
+    if (!this.dragging) {
+      if (Math.abs(delta) < DRAG_THRESHOLD_PX) return null;
+      this.dragging = true;
+      return { delta, began: true };
+    }
+    return { delta, began: false };
+  }
+  /** The press ended: was it a drag? Null when it was not this press. */
+  up(id: number): { wasDrag: boolean } | null {
+    const s = this.start;
+    if (!s || id !== s.id) return null;
+    this.start = null;
+    const wasDrag = this.dragging;
+    this.dragging = false;
+    return { wasDrag };
+  }
+}
+
 /** The standard chevron, pointing `direction`. Shared by panel edges; rows use DisclosureArrow. */
 export function Chevron({ direction, size = 10 }: { direction: Direction; size?: number }) {
   return (
@@ -131,7 +186,7 @@ export function PanelHandle({
 }: PanelHandleProps) {
   const vertical = orientation === "vertical";
   // A press in progress: where it began, and whether it has become a drag.
-  const press = useRef<{ x: number; y: number; dragging: boolean; pointerId: number } | null>(null);
+  const press = useRef<PressTracker>(new PressTracker(vertical));
   // Set when a press turned into a drag, so the click that may follow is not a toggle.
   const suppressClick = useRef(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -141,15 +196,13 @@ export function PanelHandle({
     if (e.button !== 0) return;
     suppressClick.current = false;
     if (!canResize) return;
-    press.current = { x: e.clientX, y: e.clientY, dragging: false, pointerId: e.pointerId };
+    press.current.down(e.clientX, e.clientY, e.pointerId);
   };
   const onPointerMove = (e: PointerEvent) => {
-    const p = press.current;
-    if (!p || !resize || e.pointerId !== p.pointerId) return;
-    const delta = vertical ? e.clientX - p.x : e.clientY - p.y;
-    if (!p.dragging) {
-      if (Math.abs(delta) < DRAG_THRESHOLD_PX) return;
-      p.dragging = true;
+    if (!resize) return;
+    const m = press.current.move(e.clientX, e.clientY, e.pointerId);
+    if (!m) return;
+    if (m.began) {
       suppressClick.current = true;
       // Capture only once it is a drag: until then a release on the tab is a click on it.
       rootRef.current?.setPointerCapture(e.pointerId);
@@ -157,13 +210,11 @@ export function PanelHandle({
       resize.onDragStart();
     }
     e.preventDefault();
-    resize.onDragMove(delta);
+    resize.onDragMove(m.delta);
   };
   const endPress = (e: PointerEvent) => {
-    const p = press.current;
-    if (!p || e.pointerId !== p.pointerId) return;
-    press.current = null;
-    if (p.dragging) {
+    const ended = press.current.up(e.pointerId);
+    if (ended?.wasDrag) {
       rootRef.current?.classList.remove("pnv-handle--dragging");
       if (rootRef.current?.hasPointerCapture(e.pointerId)) rootRef.current.releasePointerCapture(e.pointerId);
       resize?.onDragEnd();
@@ -171,23 +222,16 @@ export function PanelHandle({
   };
 
   const onSeparatorKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Enter") {
+    const action = separatorKeyAction(e.key, e.shiftKey, orientation);
+    if (action === null) return;
+    if (action === "toggle") {
       e.preventDefault();
       onToggle();
       return;
     }
     if (!canResize || !resize) return;
-    const step = e.shiftKey ? KEY_STEP_LARGE_PX : KEY_STEP_PX;
-    const back = vertical ? "ArrowLeft" : "ArrowUp";
-    const fwd = vertical ? "ArrowRight" : "ArrowDown";
-    let delta = 0;
-    if (e.key === back) delta = -step;
-    else if (e.key === fwd) delta = step;
-    else if (e.key === "Home") delta = -1e6;
-    else if (e.key === "End") delta = 1e6;
-    else return;
     e.preventDefault();
-    resize.onStep(delta);
+    resize.onStep(action);
   };
 
   const placement = tabAt ?? (vertical ? "start" : "end");
