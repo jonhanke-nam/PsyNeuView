@@ -75,7 +75,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { isManaged, isOwnCheckout, isProtected, usePnlSourceStore } from "@/stores/pnlSourceStore";
 import { useEditLockStore } from "@/stores/editLockStore";
 import { onPnlSourceChanged } from "@/utils/pnlSourceEvents";
-import { RECENT_PATHS_CHANGED, addRecentPath, getRecentPaths } from "@/utils/recentPaths";
+import { RECENT_PATHS_CHANGED, addRecentPath, getRecentPaths, removeRecentPath } from "@/utils/recentPaths";
 import { pnlSourceLabel, sourceSwitchNote, type PsyNeuLinkInfo } from "@/utils/pnlSources";
 import { abbreviateHome } from "@/components/common/settings/shared";
 import { record as recordActivity } from "@/utils/activityLog";
@@ -920,7 +920,11 @@ export function Toolbar() {
       const data = await resp.json();
       const t2 = performance.now();
       useModelIdentityStore.getState().note(data.identity); // #422
-      setFilePath(path);
+      // #422: a working copy from before each source had its own folder opens
+      // where it is now; Recent follows it.
+      const opened: string = data.file_path ?? path;
+      if (opened !== path) removeRecentPath(path);
+      setFilePath(opened);
       setSource(data.source);
       setStatus(`Building graph for ${fileName}…`);
       loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
@@ -939,7 +943,7 @@ export function Toolbar() {
         buildDoneAt: t3,
         backend: data.timings,
       });
-      addRecentPath(path);
+      addRecentPath(opened);
       setRecentPaths(getRecentPaths());
 
       // If this working copy was derived from a demo (#40), restore the
