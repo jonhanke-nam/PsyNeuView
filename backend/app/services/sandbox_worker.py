@@ -3173,12 +3173,28 @@ def _resolve_cim(mech, comp, direction):
 
 
 def _get_node_roles(comp, node):
-    """Get the set of role names for a node in a composition."""
+    """Get the set of role names for a node in a composition.
+
+    Adds ``CONTROL`` for a ControlMechanism that is one of the composition's
+    nodes rather than its controller (an LCControlMechanism, #425):
+    show_graph draws such a node in its ``control_color``, and PsyNeuLink has
+    no node role that says so. The composition's controller is drawn apart,
+    as ``CONTROLLER``.
+    """
     try:
         roles = comp.get_roles_by_node(node)
-        return sorted(r.name for r in roles) if roles else []
+        names = sorted(r.name for r in roles) if roles else []
     except Exception:
-        return []
+        names = []
+    try:
+        import psyneulink as pnl
+        if (isinstance(node, pnl.ControlMechanism)
+                and node is not getattr(comp, "controller", None)
+                and "CONTROL" not in names):
+            names = sorted(names + ["CONTROL"])
+    except Exception:
+        pass
+    return names
 
 
 def _ensure_graph_analyzed(comp):
