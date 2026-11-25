@@ -23,7 +23,7 @@
  * holds exactly.
  */
 
-import { SOFT_TENSION, capHandle, oneWay } from "@/utils/curveHandles";
+import { SOFT_TENSION, HANDLE_REACH, capHandle, oneWay } from "@/utils/curveHandles";
 
 export interface Pt { x: number; y: number }
 /** Axis-aligned box, top-left origin. */
@@ -400,7 +400,7 @@ const RELAX_STEPS = [1, 0.6, 0.35, 0.15];
 
 /**
  * Catmull-Rom spline through the waypoints, emitted as cubic Béziers, each
- * handle capped at a third of its own segment (#416). The curve
+ * handle reaching no further than its own segment (#416). The curve
  * interpolates every waypoint (each sits on the clearance boundary), so it only
  * ever bows *outward* of the taut string at the corners.
  *
@@ -423,11 +423,11 @@ function smooth(path: Pt[], tension: number, vis: Rect[]): string {
     const p2 = path[i + 1];
     const p3 = path[i + 2] ?? p2;
 
-    // #416: no handle longer than a third of its own segment. A Catmull-Rom
+    // #416: no handle longer than its own segment (HANDLE_REACH). A Catmull-Rom
     // handle is set by the corner's two neighbours, so a short segment next
     // to a long run would otherwise get a handle many times its own length
     // and overshoot into a loop.
-    const cap = dist(p1, p2) / 3;
+    const cap = dist(p1, p2) * HANDLE_REACH;
     let drawn = false;
     for (const frac of RELAX_STEPS) {
       const t = tension * frac;

@@ -58,14 +58,14 @@ export function anchorHandles(points: Anchor[], tension: number, ends?: EndHandl
   // kept from wiggling (#416).
   const autoOut: boolean[] = [];
   const autoIn: boolean[] = [];
-  const third = (a: Pt, b: Pt) => Math.hypot(b.x - a.x, b.y - a.y) / 3;
+  const reach = (a: Pt, b: Pt) => Math.hypot(b.x - a.x, b.y - a.y) * HANDLE_REACH;
   for (let i = 0; i < n; i++) {
     const prev = points[i - 1] ?? points[i]; // clamped at the ends, as smooth() is
     const next = points[i + 1] ?? points[i];
     const auto = { x: ((next.x - prev.x) / 6) * tension, y: ((next.y - prev.y) / 6) * tension };
-    // #416: an automatic handle reaches at most a third of its own segment.
-    const autoOutH = capHandle(auto, third(points[i], next));
-    const autoInH = capHandle({ x: -auto.x, y: -auto.y }, third(prev, points[i]));
+    // #416: an automatic handle reaches no further than its own segment.
+    const autoOutH = capHandle(auto, reach(points[i], next));
+    const autoInH = capHandle({ x: -auto.x, y: -auto.y }, reach(prev, points[i]));
     if (i === 0) {
       out.push({ in: null, out: ends?.s ? { ...ends.s } : autoOutH });
       autoOut.push(!ends?.s);
@@ -92,6 +92,16 @@ export function anchorHandles(points: Anchor[], tension: number, ends?: EndHandl
   return out;
 }
 
+/**
+ * #416: the longest an automatic handle reaches, as a share of its own
+ * segment. A Catmull-Rom handle is set by the corner's two neighbours, so a
+ * short segment beside a long run would otherwise get a handle many times its
+ * own length and loop. A whole segment stops the loops; a third (the usual
+ * choice) also pulls in the curves that keep a fan of lines apart, and the
+ * nothing-hidden check (#389) saw lines run together longer.
+ */
+export const HANDLE_REACH = 1;
+
 /** The handle (dx, dy), shortened to at most `cap` long, same direction (#416). */
 export function capHandle(h: Pt, cap: number): Pt {
   const len = Math.hypot(h.x, h.y);
@@ -104,19 +114,39 @@ const cross = (a: Pt, b: Pt, c: Pt, d: Pt) => (b.x - a.x) * (d.y - c.y) - (b.y -
 /**
  * #416: keep a segment that should bend one way from wiggling. Its end
  * directions on opposite sides of the straight line between its ends mean
- * one bend; while its control polygon still turns one way and then the
- * other, both handles are shortened. Short enough, the middle leg runs along
- * the straight line, which lies between the two end directions, so this
- * ends. A real S (both end directions on one side) is left as it is.
+ * one bend; it wiggles when one handle is too long for the other, so its
+ * control polygon turns back at the other end. Only that handle is
+ * shortened, as little as it takes, so the curve keeps its reach (a fan of
+ * lines from one node keeps spreading as soon as it did). A real S (both end
+ * directions on one side) is left as it is.
  */
+// A turn back this small leaves no visible wiggle; correcting it would only
+// pull the curve in.
+const TURN_BACK_DEG = 2;
+
 export function oneWay(p1: Pt, c1: Pt, c2: Pt, p2: Pt): [Pt, Pt] {
-  if (cross(p1, p2, p1, c1) * cross(p1, p2, c2, p2) >= 0) return [c1, c2];
-  let k = 1;
+  // Which side of the straight line each end direction leaves on: -1, 0
+  // (along it, within a degree) or 1.
+  const side = (u: Pt, v: Pt) => {
+    const c = cross(p1, p2, u, v);
+    const len = Math.hypot(p2.x - p1.x, p2.y - p1.y) * Math.hypot(v.x - u.x, v.y - u.y);
+    return len && Math.abs(c) / len > Math.sin(Math.PI / 180) ? Math.sign(c) : 0;
+  };
+  const bend = cross(p1, c1, c2, p2);
+  if (side(p1, c1) * side(c2, p2) >= 0 || bend === 0) return [c1, c2];
+  // How far the polygon turns against the bend at a corner, in degrees.
+  const back = (u: Pt, v: Pt, w: Pt, x: Pt) => {
+    const c = cross(u, v, w, x) * Math.sign(bend);
+    const d = (v.x - u.x) * (x.x - w.x) + (v.y - u.y) * (x.y - w.y);
+    return c < 0 ? (Math.atan2(-c, d) * 180) / Math.PI : 0;
+  };
   let a = c1, b = c2;
-  for (let i = 0; i < 12 && cross(p1, a, a, b) * cross(a, b, b, p2) < 0; i++) {
-    k *= 0.8;
-    a = { x: p1.x + (c1.x - p1.x) * k, y: p1.y + (c1.y - p1.y) * k };
-    b = { x: p2.x + (c2.x - p2.x) * k, y: p2.y + (c2.y - p2.y) * k };
+  for (let i = 0; i < 20; i++) {
+    const atA = back(p1, a, a, b), atB = back(a, b, b, p2);
+    if (atA <= TURN_BACK_DEG && atB <= TURN_BACK_DEG) break;
+    // Turning back at the start: the end's handle is too long, and the reverse.
+    if (atA > atB) b = { x: p2.x + (b.x - p2.x) * 0.8, y: p2.y + (b.y - p2.y) * 0.8 };
+    else a = { x: p1.x + (a.x - p1.x) * 0.8, y: p1.y + (a.y - p1.y) * 0.8 };
   }
   return [a, b];
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { routeAroundObstacles, routeWaypoints, renderStyledPath, type Pt, type Rect, expandedCorners } from "./edgeRouter";
 import { resample, samplePath, smoothness } from "./curveSmoothness";
+import { HANDLE_REACH } from "./curveHandles";
 
 // Parse an SVG path emitted by the "straight" renderer ("M x y L x y L ...")
 // into its vertex list. Only the straight style is a pure polyline, so these
@@ -161,7 +162,7 @@ describe("spline handles are capped (#416)", () => {
   // curve overshoots into a loop.
   const route: Pt[] = [{ x: 0, y: 0 }, { x: 0, y: 1500 }, { x: 50, y: 1560 }, { x: 400, y: 1560 }];
 
-  it("no handle is longer than a third of its own segment", () => {
+  it("no handle is longer than its own segment", () => {
     const d = renderStyledPath(route, "spline");
     const nums = d.match(/-?\d+(\.\d+)?(e-?\d+)?/g)!.map(Number);
     let from = { x: nums[0], y: nums[1] };
@@ -169,8 +170,8 @@ describe("spline handles are capped (#416)", () => {
       const c1 = { x: nums[i], y: nums[i + 1] }, c2 = { x: nums[i + 2], y: nums[i + 3] };
       const to = { x: nums[i + 4], y: nums[i + 5] };
       const seg = Math.hypot(to.x - from.x, to.y - from.y);
-      expect(Math.hypot(c1.x - from.x, c1.y - from.y)).toBeLessThanOrEqual(seg / 3 + 1e-6);
-      expect(Math.hypot(c2.x - to.x, c2.y - to.y)).toBeLessThanOrEqual(seg / 3 + 1e-6);
+      expect(Math.hypot(c1.x - from.x, c1.y - from.y)).toBeLessThanOrEqual(seg * HANDLE_REACH + 1e-6);
+      expect(Math.hypot(c2.x - to.x, c2.y - to.y)).toBeLessThanOrEqual(seg * HANDLE_REACH + 1e-6);
       from = to;
     }
   });
@@ -185,11 +186,9 @@ describe("spline handles are capped (#416)", () => {
 
 describe("a segment that bends one way doesn't wiggle (#416)", () => {
   // Corners turning steadily one way. With only the handle cap, the curve
-  // between two of them bent one way and back (a 1.5-unit ripple), as on
+  // between two of them bent one way and back (a 2.7-unit ripple), as on
   // EGO's STATE→LOSS FOR PREDICTION in the PyTorch view, Layered.
-  const route: Pt[] = [
-    { x: 0, y: 0 }, { x: 0, y: -734 }, { x: 58, y: -852 }, { x: 116, y: -961 }, { x: 501, y: -1458 }, { x: 807, y: -1666 },
-  ];
+  const route: Pt[] = [{ x: 0, y: 0 }, { x: 0, y: -869 }, { x: 33, y: -1096 }, { x: 286, y: -1549 }, { x: 734, y: -2109 }];
 
   it("has no change of direction and no wiggle", () => {
     const s = smoothness(resample(samplePath(renderStyledPath(route, "spline")), 2));
