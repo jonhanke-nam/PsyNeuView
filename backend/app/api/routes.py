@@ -11,7 +11,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, Body, Depends, Form, HTTPException, Request, UploadFile, File
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -741,6 +741,21 @@ def pull_checkout_now(payload: CheckoutPathRequest):
     if not entry["is_checkout"]:
         raise HTTPException(status_code=400, detail="That folder isn't a git checkout.")
     return {"result": checkout_updates.pull(payload.path), "checkouts": checkout_updates.list_checkouts()}
+
+
+class ModelViewRequest(BaseModel):
+    """The view a model is opened in, for every request that opens one (#428).
+
+    The page opens models flattened by default while the backend's default is
+    nested, so an open that left these out came back nested under a view menu
+    reading "Flatten (all compositions)": EGO's EM showed folded, and Expand
+    could not open it. Every route that opens a model takes them.
+    """
+    # Flat view (#658): inline every nested composition into one graph.
+    flat: bool = False
+    # PyTorch view (#230): the autodiff-flattened graph (AutodiffComposition
+    # only). Takes precedence over `flat` when applicable.
+    pytorch: bool = False
 
 
 class LoadModelRequest(BaseModel):
@@ -2334,7 +2349,9 @@ def _bundle_model_name(name: object) -> str:
 
 
 @router.post("/model/import-project")
-async def import_project(file: UploadFile = File(...)):
+async def import_project(
+    file: UploadFile = File(...), flat: bool = Form(False), pytorch: bool = Form(False),
+):
     """Import a .pnlproject bundle.
 
     Extracts the model source and layout, saves to the models directory,
@@ -2393,7 +2410,7 @@ async def import_project(file: UploadFile = File(...)):
         save_layout(str(target), layout_data.get("positions", {}), layout_data.get("viewport"))
 
     # Introspect the saved file
-    model = load_and_introspect(str(target))
+    model = load_and_introspect(str(target), flat=flat, pytorch=pytorch)
     layout = load_layout(str(target))
 
     return {
@@ -2406,7 +2423,7 @@ async def import_project(file: UploadFile = File(...)):
     }
 
 
-class OpenProjectRequest(BaseModel):
+class OpenProjectRequest(ModelViewRequest):
     bundle_path: str
 
 
@@ -2438,7 +2455,7 @@ def open_project(request: OpenProjectRequest):
 
     working_py = extracted["working_py_path"]
     manifest = extracted["manifest"]
-    model = load_and_introspect(working_py)
+    model = load_and_introspect(working_py, flat=request.flat, pytorch=request.pytorch)
     layout = load_layout(working_py)
 
     return {
@@ -2514,7 +2531,9 @@ def save_project(request: SaveProjectRequest):
 
 
 @router.post("/model/import-mdf")
-async def import_mdf(file: UploadFile = File(...)):
+async def import_mdf(
+    file: UploadFile = File(...), flat: bool = Form(False), pytorch: bool = Form(False),
+):
     """Import an MDF (ModECI Model Description Format) file.
 
     Accepts ``.mdf.json`` / ``.mdf.yaml`` / ``.mdf.yml`` (canonical) or bare
@@ -2679,7 +2698,7 @@ async def import_mdf(file: UploadFile = File(...)):
     )
 
     try:
-        model = load_and_introspect(str(target))
+        model = load_and_introspect(str(target), flat=flat, pytorch=pytorch)
     except Exception as e:
         raise HTTPException(
             status_code=400,
@@ -2853,7 +2872,7 @@ async def list_demos():
     return {"demos": demos}
 
 
-class ResetDemoRequest(BaseModel):
+class ResetDemoRequest(ModelViewRequest):
     demo_name: str
     # #172: open it as this tutorial's own fresh copy, not the shared one.
     tutorial: Optional[str] = None
@@ -2879,7 +2898,7 @@ def reset_demo(request: ResetDemoRequest):
 
     source = working.read_text()
     t0 = time.time()
-    model = load_and_introspect(str(working))
+    model = load_and_introspect(str(working), flat=request.flat, pytorch=request.pytorch)
     introspect_ms = (time.time() - t0) * 1000
     layout = load_layout(str(working))
     return LoadModelResponse(
@@ -2950,7 +2969,7 @@ async def list_reference_models():
     return {"models": models}
 
 
-class LoadReferenceRequest(BaseModel):
+class LoadReferenceRequest(ModelViewRequest):
     name: str
     # #1010: opt in to discarding working-copy edits and reloading the bundled
     # source. Reopening never does this on its own — losing work has to be
@@ -3022,7 +3041,7 @@ def load_reference_model(request: LoadReferenceRequest):
 
     source = working.read_text()
     t0 = time.time()
-    model = load_and_introspect(str(working))
+    model = load_and_introspect(str(working), flat=request.flat, pytorch=request.pytorch)
     introspect_ms = (time.time() - t0) * 1000
     # Open in the active layout/settings variant the index designates (mirrors
     # /model/load); with no index the active names resolve to "Default".
@@ -3159,7 +3178,7 @@ def psyneulink_examples_status():
     return {"status": status, "available": True, "cached": False, "complete": complete}
 
 
-class LoadPnlExampleRequest(BaseModel):
+class LoadPnlExampleRequest(ModelViewRequest):
     name: str
 
 
@@ -3188,7 +3207,7 @@ def load_psyneulink_example(request: LoadPnlExampleRequest):
         shutil.copy2(src, working)
     source = working.read_text()
     t0 = time.time()
-    model = load_and_introspect(str(working))
+    model = load_and_introspect(str(working), flat=request.flat, pytorch=request.pytorch)
     introspect_ms = (time.time() - t0) * 1000
 
     # Synthesize lineage (#835/#843): a raw upstream file carries no vendored-
@@ -3489,7 +3508,7 @@ def set_project_folder(request: ProjectFolderRequest):
     return {"path": _catalog_call(catalogs.set_project_folder, request.path)}
 
 
-class SaveAsRequest(BaseModel):
+class SaveAsRequest(ModelViewRequest):
     source: str
     file_name: str
     directory: str | None = None  # defaults to first model dir
@@ -3576,7 +3595,9 @@ def save_as(request: SaveAsRequest):
     layout, labels, bundle, sidecars = _sidecar_payload(target)
 
     try:
-        model = load_and_introspect(str(target), developer_mode=request.developer_mode)
+        model = load_and_introspect(
+            str(target), developer_mode=request.developer_mode, flat=request.flat, pytorch=request.pytorch,
+        )
     except Exception as e:
         model = {"compositions": [], "lineMap": {}, "error": str(e)}
 
