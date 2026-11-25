@@ -136,17 +136,14 @@ only when absent, and with neither the auto-layout runs.
 
 ## Which model is open: the label and the file name (#422)
 
-> **Proposed — not yet decided.** Two title layouts are on trial for the
-> owner to choose between (A, one line; B, two lines). The rule for what is
-> dropped when space runs out is the same in both. This section becomes the
-> rule once one is chosen.
-
 Every model has two names:
 
 - the **label**, the name the Open menu shows: "Stroop — Bidirectional
   (Cohen & Huston 1994)". For a Reference Model it is `label` in
-  `REFERENCE_MODELS` (`backend/app/api/routes.py`); for a Library model,
-  example or demo it is made from the file name;
+  `REFERENCE_MODELS` (`backend/app/api/routes.py`). A Library model that a
+  Reference Model is declared as (`library` in `REFERENCE_MODELS`) has the
+  same label, so one model has one name everywhere. Any other Library model,
+  example or demo has a label made from its file name;
 - the **file name**: `Cohen_Huston1994.py`. For a Reference Model, `name` in
   `REFERENCE_MODELS` is the file name without `.py`.
 
@@ -158,7 +155,9 @@ with every open (`identity`: label, file, source, path) and from
 
 ### The toolbar title
 
-Shown, in priority order:
+Two lines, within the toolbar's usual height: the label on top, and below
+it in small text the file name (for the user's own file, its folder) and the
+source tag. The parts, in priority order:
 
 1. the label (for the user's own file, the file name);
 2. the file name;
@@ -173,15 +172,52 @@ is never hidden: it keeps at least 120 px, and the badges after it (format,
 read only, autosave) are cut off before it goes below that. The title never
 wraps and never changes the toolbar's height.
 
-- **Layout A** puts it all on one line.
-- **Layout B** stacks two lines in the same height: the label on top, and
-  below it in small text the file name (the folder, for the user's own
-  file) and the tag. Each line is shortened by the same rule.
+Each line is shortened by this rule: the label's line on its own, and the
+second line drops the tag before it shortens the file name (or folder).
 
 Everything is shown in full on hover, and in the **model card** a click on
 the title opens: label, file, full path, where it came from, the working
 copy and the file it was made from, and the PsyNeuLink in use, with Copy
 path. The window or tab title is the label.
+
+### One model, one file name
+
+A model is named by its file name, so two different models never share one,
+compared ignoring case (a Mac's file system does):
+
+- no two Reference Models, and no Reference Model and demo, share a file
+  name or a label;
+- a Reference Model shares a file name with a PsyNeuLink Library model only
+  when it is declared as that model (`library` in `REFERENCE_MODELS`; it is a
+  pinned copy of it). An undeclared match fails CI
+  (`backend/tests/test_model_names.py`);
+- when a PsyNeuLink source is cloned or switched to, model files in it that
+  share a name (in its Library and `Scripts/Examples`, or with a Reference
+  Model they are not) are named in the install log and in a one-time notice,
+  which also goes in the activity log. PsyNeuView never quietly picks one
+  (`backend/app/services/model_names.py`).
+
+### Working copies: a folder per source
+
+Opening an included model makes a working copy, the file that is edited and
+saved. Each source has its own folder inside the working-copies folder
+(`~/.psyneuview/working-copies`, or `PSYNEUVIEW_WORKING_DIR`), so two models
+with the same file name never share a working copy:
+
+| Opened from | Working copy |
+|---|---|
+| Reference Models | `reference-models/<file>` |
+| Demos | `demos/<file>` |
+| PsyNeuLink examples (from GitHub or PyPI) | `psyneulink-examples/<source>/<file>`, for example `PrincetonUniversity-PsyNeuLink@devel` |
+| A walkthrough | `tutorials/<id>/<file>` (fresh each time) |
+
+Reopening a Reference Model or an example keeps your edits; putting it back
+is asked for (Reset to Original). Copies an older version left directly in
+the working-copies folder move into their source's folder at start: copied,
+checked byte for byte, then removed. One is never overwritten: a copy that
+differs from one already there stays where it is, and the conflict is
+recorded (`working_copies_last_separation` in the preferences file). A Recent
+entry for the old place opens the moved copy.
 
 ## Detection algorithm
 
