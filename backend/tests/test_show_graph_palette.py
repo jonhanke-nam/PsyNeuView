@@ -11,9 +11,9 @@ from ``frontend/src/styles/palette.css``:
     argument                   show_graph  X11      palette token
     input_color                green       #00ff00  --pnv-role-input
     output_color               red         #ff0000  --pnv-role-output
-    control_color              blue        #0000ff  --pnv-role-control
-    controller_color           purple      #a020f0  --pnv-role-controller
-    learning_color             orange      #ffa500  --pnv-role-learning
+    control_color              blue        #0000ff  --pnv-role-control (+ projection-control, #425)
+    controller_color           purple      #a020f0  --pnv-role-controller (+ projection-controller)
+    learning_color             orange      #ffa500  --pnv-role-learning (+ projection-learning)
     probe_color                pink        #ffc0cb  --pnv-role-probe
     input_and_output_color     brown       #a52a2a  --pnv-role-singleton
     default_node_color         black       #000000  --pnv-role-internal (+ feedback-sender, cycle)
@@ -45,9 +45,11 @@ PALETTE = Path(__file__).resolve().parents[2] / "frontend" / "src" / "styles" / 
 MATCHED = {
     "input_color": ["--pnv-role-input"],
     "output_color": ["--pnv-role-output"],
-    "control_color": ["--pnv-role-control"],
-    "controller_color": ["--pnv-role-controller"],
-    "learning_color": ["--pnv-role-learning"],
+    # #425: a control, controller or learning projection is drawn in the same
+    # colour as the node role.
+    "control_color": ["--pnv-role-control", "--pnv-projection-control"],
+    "controller_color": ["--pnv-role-controller", "--pnv-projection-controller"],
+    "learning_color": ["--pnv-role-learning", "--pnv-projection-learning"],
     "probe_color": ["--pnv-role-probe"],
     "input_and_output_color": ["--pnv-role-singleton"],
     "default_node_color": ["--pnv-role-internal", "--pnv-role-feedback-sender", "--pnv-role-cycle"],
