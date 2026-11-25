@@ -155,13 +155,118 @@ button:hover {
   transform: scale(1.5);
 }
 
-/* Allotment sash styling */
-.sash {
-  background: var(--pnv-border-faint) !important;
+/* #418: the panel-edge handle (PanelHandle.tsx), design A. A line with a
+   small arrow tab: drag the line to resize, click the tab to collapse or
+   restore. The wrapper is an 8px band centred on the edge; the line draws
+   1px, and 3px primary on hover, focus or drag. It takes no layout space. */
+.pnv-handle {
+  position: absolute;
+  z-index: 35; /* where Allotment's sashes sat: menus open above it (#1391) */
+  touch-action: none;
 }
-.sash:hover {
-  background: var(--pnv-primary) !important;
+/* A handle that only folds (no resize): the line is drawn but inert; only the tab acts. */
+.pnv-handle:not(.pnv-handle--resizable) { pointer-events: none; }
+.pnv-handle:not(.pnv-handle--resizable) .pnv-handle__tab { pointer-events: auto; }
+.pnv-handle--v { top: 0; bottom: 0; width: 8px; margin-left: -4px; }
+.pnv-handle--h { left: 0; right: 0; height: 8px; margin-top: -4px; }
+.pnv-handle--resizable.pnv-handle--v { cursor: col-resize; }
+.pnv-handle--resizable.pnv-handle--h { cursor: row-resize; }
+.pnv-handle[data-expanded="false"] { cursor: default; }
+.pnv-handle__line {
+  position: absolute;
+  inset: 0;
+  outline: none;
 }
+.pnv-handle__line::before {
+  content: "";
+  position: absolute;
+  background: var(--pnv-border);
+  pointer-events: none;
+}
+.pnv-handle--v .pnv-handle__line::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+.pnv-handle--h .pnv-handle__line::before { top: 50%; left: 0; right: 0; height: 1px; }
+.pnv-handle--resizable[data-expanded="true"]:hover .pnv-handle__line::before,
+.pnv-handle--dragging .pnv-handle__line::before,
+.pnv-handle__line:focus-visible::before {
+  background: var(--pnv-primary);
+}
+.pnv-handle--v.pnv-handle--resizable[data-expanded="true"]:hover .pnv-handle__line::before,
+.pnv-handle--v.pnv-handle--dragging .pnv-handle__line::before,
+.pnv-handle--v .pnv-handle__line:focus-visible::before { width: 3px; margin-left: -1px; }
+.pnv-handle--h.pnv-handle--resizable[data-expanded="true"]:hover .pnv-handle__line::before,
+.pnv-handle--h.pnv-handle--dragging .pnv-handle__line::before,
+.pnv-handle--h .pnv-handle__line:focus-visible::before { height: 3px; margin-top: -1px; }
+/* The focused separator also rings its tab, so keyboard focus is easy to find. */
+.pnv-handle__line:focus-visible + .pnv-handle__tab {
+  outline: 2px solid var(--pnv-primary);
+  outline-offset: 1px;
+}
+.pnv-handle__tab {
+  all: unset;
+  box-sizing: border-box;
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pnv-text-hint);
+  background: var(--pnv-surface);
+  border: 1px solid var(--pnv-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.pnv-handle--v .pnv-handle__tab { left: 50%; width: 14px; height: 36px; margin-left: -7px; }
+.pnv-handle--h .pnv-handle__tab { top: 50%; width: 40px; height: 14px; margin-top: -7px; }
+/* On the window's edge (a pane hidden), the band and the tab stay inside it. */
+.pnv-handle--v[data-at="start"] { margin-left: 0; }
+.pnv-handle--v[data-at="end"] { margin-left: -8px; }
+.pnv-handle--h[data-at="start"] { margin-top: 0; }
+.pnv-handle--h[data-at="end"] { margin-top: -8px; }
+.pnv-handle--v[data-at="start"] .pnv-handle__tab { margin-left: -4px; }
+.pnv-handle--v[data-at="end"] .pnv-handle__tab { margin-left: -10px; }
+.pnv-handle--h[data-at="start"] .pnv-handle__tab { margin-top: -4px; }
+.pnv-handle--h[data-at="end"] .pnv-handle__tab { margin-top: -10px; }
+/* The hit area: at least 24×24, wide rather than tall (WCAG 2.5.8). */
+.pnv-handle__tab::before { content: ""; position: absolute; }
+.pnv-handle--v .pnv-handle__tab::before { inset: 0 -6px; }
+.pnv-handle--h .pnv-handle__tab::before { inset: -6px 0; }
+.pnv-handle:hover .pnv-handle__tab,
+.pnv-handle__tab:hover {
+  color: var(--pnv-primary);
+  background: var(--pnv-primary-tint);
+  border-color: var(--pnv-primary);
+}
+.pnv-handle__tab:focus-visible {
+  color: var(--pnv-primary);
+  outline: 2px solid var(--pnv-primary);
+  outline-offset: 1px;
+}
+
+/* #418: rows and sections share one arrow, turned: ▸ closed, ▾ open
+   (DisclosureArrow in Disclosure.tsx). A 16×16 box at the start of the row. */
+.pnv-disclosure-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--pnv-text-hint);
+  vertical-align: middle;
+}
+.pnv-disclosure-arrow > svg { transition: transform 0.12s; }
+.pnv-disclosure-arrow[data-open="true"] > svg { transform: rotate(90deg); }
+.pnv-disclosure-arrow--small { width: 12px; height: 12px; }
+/* Native <details>: our arrow replaces the browser's own marker. */
+.pnv-disclosure-summary { list-style: none; cursor: pointer; }
+.pnv-disclosure-summary::-webkit-details-marker { display: none; }
+.pnv-disclosure-summary::marker { content: ""; }
+.pnv-disclosure-summary:hover { background: var(--pnv-selection-hover); }
+.pnv-disclosure-summary:focus-visible,
+.pnv-disclosure-toggle:focus-visible {
+  outline: 2px solid var(--pnv-primary);
+  outline-offset: 0;
+}
+.pnv-disclosure-toggle:hover { background: var(--pnv-selection-hover); }
 
 /* #409: brief flash highlight on the labels.yaml line the Inspector
    just jumped to, in the amber of the YAML-cursor row (#1302). The fade-out is purely visual — the StateField
