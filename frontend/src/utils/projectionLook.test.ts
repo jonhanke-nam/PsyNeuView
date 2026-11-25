@@ -92,4 +92,9 @@ describe("a control node's colour (#425)", () => {
     expect(roleColorFor(["CONTROL", "INPUT"])).toBe("var(--pnv-role-input)");
     expect(roleColorFor(["CONTROLLER"])).toBe("var(--pnv-role-controller)");
   });
+
+  it("an input that is also a probe is green, and a probe output pink, as show_graph ranks them", () => {
+    expect(roleColorFor(["INPUT", "PROBE"])).toBe("var(--pnv-role-input)");
+    expect(roleColorFor(["OUTPUT", "PROBE"])).toBe("var(--pnv-role-probe)");
+  });
 });

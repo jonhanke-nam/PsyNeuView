@@ -403,13 +403,13 @@ export const ROLE_TOKENS: Record<string, `--pnv-${string}`> = Object.fromEntries
   Object.entries(ROLE_COLORS).map(([role, v]) => [role, v.slice(4, -1) as `--pnv-${string}`]),
 );
 
-// Role priority -- higher priority roles determine the color. CONTROL (a
-// ControlMechanism that is a node, not the controller) comes after the input,
-// output and probe roles, as in show_graph, which colours such a node blue
-// only when it is none of those (#425).
+// Role priority -- higher priority roles determine the color. Input, probe,
+// output, then control, in show_graph's order (#425): a node that is both
+// input and probe is green, and CONTROL (a ControlMechanism that is a node,
+// not the controller) is blue only when it is none of those.
 export const ROLE_PRIORITY: string[] = [
   "CONTROLLER", "CONTROLLER_OBJECTIVE", "LEARNING",
-  "PROBE", "OUTPUT", "INPUT", "CONTROL", "FEEDBACK_SENDER", "CYCLE", "INTERNAL",
+  "INPUT", "PROBE", "OUTPUT", "CONTROL", "FEEDBACK_SENDER", "CYCLE", "INTERNAL",
 ];
 
 /** A node's role colour, as the graph draws its outline: INPUT+OUTPUT is the
