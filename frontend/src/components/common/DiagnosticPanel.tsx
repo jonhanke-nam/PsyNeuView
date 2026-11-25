@@ -113,9 +113,9 @@ export function DiagnosticPanel() {
           </span>
         )}
         {hasIssues && (
-          <span style={{
+          <span data-testid="diagnostics-warning-count" style={{
             color: "var(--pnv-on-primary)",
-            background: "var(--pnv-warning)",
+            background: "var(--pnv-warning-badge)",
             fontSize: "var(--pnv-fs-10)",
             fontWeight: 700,
             padding: "0 5px",
