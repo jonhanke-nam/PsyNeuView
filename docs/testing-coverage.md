@@ -9,9 +9,9 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 
 | Layer | Files | Tests | Run by CI on every pull request |
 |---|---|---|---|
-| Browser (Playwright) | 178 | 475 | 465 tests in 173 files |
+| Browser (Playwright) | 179 | 477 | 467 tests in 174 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 149 | 1306 | 1306 tests in 149 files |
+| Frontend unit (vitest) | 150 | 1314 | 1314 tests in 150 files |
 | Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -30,11 +30,11 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Running, learning and debugging](#running) | 17 files, 41 tests | – | 11 files, 99 tests | 52 files, 262 tests | 402 of 402 |
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 6 files, 26 tests | – | 5 files, 59 tests | 7 files, 99 tests | 184 of 184 |
-| [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
+| [Settings, PsyNeuLink versions and sources](#settings) | 17 files, 57 tests | – | 29 files, 267 tests | 19 files, 322 tests | 646 of 646 |
 | [Look and style conventions](#style) | 15 files, 36 tests | – | 10 files, 59 tests | – | 95 of 95 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
-| [App shell, diagnostics and everything else](#shell) | 14 files, 30 tests | – | 21 files, 137 tests | 21 files, 206 tests | 370 of 373 |
+| [App shell, diagnostics and everything else](#shell) | 14 files, 30 tests | – | 22 files, 145 tests | 21 files, 206 tests | 378 of 381 |
 
 <a id="tutorials"></a>
 
@@ -866,6 +866,7 @@ No tests yet.
 | `components-panel-start-setting.spec.ts` | Browser | 3 | yes | #113 | How the Components panel opens is a setting: Settings ▸ Appearance (#113). |
 | `help-keyboard-shortcuts.spec.ts` | Browser | 4 | yes | #292 | Help ▸ Keyboard Shortcuts (#292). |
 | `keep-pnl-current.spec.ts` | Browser | 4 | yes | #1304 | Keep PsyNeuLink current and show it (#1304). |
+| `keyboard-add-component.spec.ts` | Browser | 2 | yes | #411 | Adding a component with the keyboard alone (#411). |
 | `local-checkout-empty-folder.spec.ts` | Browser | 3 | yes | #1342 | Another local checkout…: the folder is checked as soon as it is typed, and an empty one can have PsyNeuLink downloaded into it (#1342). |
 | `open-menu-follows-source-switch.spec.ts` | Browser | 1 | yes | #1395 | The Open menu describes the PsyNeuLink that is installed now (#1395). |
 | `own-checkout-editable.spec.ts` | Browser | 2 | yes | #1305 | Your own PsyNeuLink checkout is editable; a PsyNeuLink that PsyNeuView manages is not (#1305). |
@@ -952,6 +953,8 @@ No tests yet.
 | General: up to date, and a failed automatic update is shown with the version kept | `keep-pnl-current.spec.ts` | Browser | yes | #1304 |
 | General: an official release is told about a newer release, with no automatic-update switch | `keep-pnl-current.spec.ts` | Browser | yes | #1304 |
 | Developer: each checkout has its two switches, off by default, naming the remote branch; a refused pull is said | `keep-pnl-current.spec.ts` | Browser | yes | #1304 |
+| adding a component from the keyboard (#411) › a mechanism and a function go onto Stroop with the keyboard alone | `keyboard-add-component.spec.ts` | Browser | yes | #411 |
+| adding a component from the keyboard (#411) › Esc cancels a keyboard pick and gives focus back; the mouse still places by click | `keyboard-add-component.spec.ts` | Browser | yes | #411 |
 | an empty folder: the offer to download PsyNeuLink appears, and Apply downloads it | `local-checkout-empty-folder.spec.ts` | Browser | yes | #1342 |
 | a folder that doesn't exist yet is offered the download too | `local-checkout-empty-folder.spec.ts` | Browser | yes | #1342 |
 | a folder of other files: the reason under the field, and no Apply | `local-checkout-empty-folder.spec.ts` | Browser | yes | #1342 |
@@ -1282,6 +1285,7 @@ No tests yet.
 | `activityLog.test.ts` | Frontend unit | 17 | yes | #1287 | The activity log's rules (#1287): the cap, the order, `~` for the home folder, and no secrets — the value of a key that looks like a token or a password is never recorded, however it gets in. |
 | `diagnostics.test.ts` | Frontend unit | 16 | yes | #1287 | The diagnostics snapshot (#1287): its shape, what it reads from the stores, and that a server that can't be reached leaves `{error}` in its place rather than failing the whole call. |
 | `errorDetail.test.ts` | Frontend unit | 4 | yes |  |  |
+| `freeSpot.test.ts` | Frontend unit | 8 | yes | #411 | A node placed from the keyboard goes to the nearest spot that covers nothing (#411). |
 | `graphEditBlame.test.ts` | Frontend unit | 7 | yes | #353 | #353: a failing load is blamed on the last graph edit only when the line that failed is one the edit wrote. |
 | `joinNames.test.ts` | Frontend unit | 1 | yes |  | Mirrors the formatter in PresenceIndicator — kept as a pure function test so the phrasing is pinned without rendering the component. |
 | `nodeSelector.test.ts` | Frontend unit | 2 | yes | #1236 | #1236: a node name is any Python string, and must never make an invalid selector. |

@@ -3121,6 +3121,11 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - General: an official release is told about a newer release, with no automatic-update switch · CI · #1304
 - Developer: each checkout has its two switches, off by default, naming the remote branch; a refused pull is said · CI · #1304
 
+**`frontend/e2e/keyboard-add-component.spec.ts`** (Browser (Playwright))
+
+- adding a component from the keyboard (#411) › a mechanism and a function go onto Stroop with the keyboard alone · CI · #411
+- adding a component from the keyboard (#411) › Esc cancels a keyboard pick and gives focus back; the mouse still places by click · CI · #411
+
 **`frontend/e2e/local-checkout-empty-folder.spec.ts`** (Browser (Playwright))
 
 - an empty folder: the offer to download PsyNeuLink appears, and Apply downloads it · CI · #1342
@@ -4983,6 +4988,17 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - errorDetail (#1396) › shows a plain-text reply as it is, instead of a JSON parse error · CI · #1396
 - errorDetail (#1396) › writes out a detail that isn't a string (a validation error list) · CI · #1396
 - errorDetail (#1396) › falls back to the status when the body is empty or unreadable · CI · #1396
+
+**`frontend/src/utils/freeSpot.test.ts`** (Frontend unit (vitest))
+
+- the nearest free spot (#411) › is the point itself when nothing is there · CI · #411
+- the nearest free spot (#411) › moves clear of a node that covers the point, by the shortest way · CI · #411
+- the nearest free spot (#411) › never lands on any of several nodes, keeping the gap · CI · #411
+- the nearest free spot (#411) › finds the nearest free spot, not just any · CI · #411
+- beside the graph, with nothing selected (#411) › goes just right of the graph, centred on it, when that is showing · CI · #411
+- beside the graph, with nothing selected (#411) › goes below when the right is off-screen, then left · CI · #411
+- beside the graph, with nothing selected (#411) › falls back to the right (to be brought into view) when none is showing · CI · #411
+- beside the graph, with nothing selected (#411) › is the middle of the view with no graph · CI · #411
 
 **`frontend/src/utils/graphEditBlame.test.ts`** (Frontend unit (vitest))
 
