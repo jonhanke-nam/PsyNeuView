@@ -3359,7 +3359,7 @@ function ManagedSourceBadge({ from, title, style }: { from: string; title?: stri
             position: "absolute",
             top: "calc(100% + 4px)",
             left: 0,
-            // Above the panel dividers (Allotment sashes, z-index 35), like the Open menu (#1391).
+            // Above the panel dividers (panel-edge handles, z-index 35), like the Open menu (#1391).
             zIndex: Z_MENU,
             width: 320,
             display: "flex",
@@ -3556,7 +3556,7 @@ function WalkthroughMenu() {
             position: "absolute",
             top: "calc(100% + 4px)",
             left: 0,
-            // Above the panel dividers (Allotment sashes, z-index 35), like the Open menu (#1391).
+            // Above the panel dividers (panel-edge handles, z-index 35), like the Open menu (#1391).
             zIndex: Z_MENU,
             minWidth: 340,
             // The list outgrows a short window; scroll inside the window instead of off its bottom.
@@ -3768,7 +3768,7 @@ function LayoutMenu() {
             position: "absolute",
             top: "calc(100% + 4px)",
             left: 0,
-            // Above the panel dividers (Allotment sashes, z-index 35), like the Open menu (#1391).
+            // Above the panel dividers (panel-edge handles, z-index 35), like the Open menu (#1391).
             zIndex: Z_MENU,
             // Wide enough for "Components panel" and its key on one line (#191).
             minWidth: 240,

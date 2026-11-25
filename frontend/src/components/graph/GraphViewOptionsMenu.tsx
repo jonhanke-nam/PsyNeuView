@@ -162,7 +162,7 @@ export function GraphViewOptionsMenu({ reloadModel, flipVertical, flipHorizontal
               left: placement.left,
               width: placement.width,
               maxHeight: placement.maxHeight,
-              // Above the panel dividers (Allotment sashes, z-index 35), as the
+              // Above the panel dividers (panel-edge handles, z-index 35), as the
               // main toolbar's menus are (#1391).
               zIndex: Z_MENU,
               outline: "none",
