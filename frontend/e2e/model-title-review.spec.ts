@@ -7,11 +7,10 @@
  * a title layout. Skipped unless PNV_TITLE_REVIEW_DIR names where to save:
  *
  *   PNV_TITLE_REVIEW_DIR=~/psyneuview-meetings/review-2026-11-24/model-identity-422 \
- *   PNV_TITLE_REVIEW_PREFIX=03-A PNV_TITLE_REVIEW_VARIANT=A \
- *   npx playwright test e2e/model-title-review.spec.ts
+ *   PNV_TITLE_REVIEW_PREFIX=04-after npx playwright test e2e/model-title-review.spec.ts
  *
- * PNV_TITLE_REVIEW_VARIANT picks the layout on trial ("A" or "B"; leave it
- * out for a build from before #422).
+ * Against a build from before #422, set PNV_TITLE_REVIEW_BEFORE=1: it has no
+ * model card to photograph.
  */
 import { copyFileSync, mkdirSync, writeFileSync } from "fs";
 import path from "path";
@@ -21,7 +20,7 @@ import type { Page } from "@playwright/test";
 
 const OUT = process.env.PNV_TITLE_REVIEW_DIR;
 const PREFIX = process.env.PNV_TITLE_REVIEW_PREFIX ?? "shot";
-const VARIANT = process.env.PNV_TITLE_REVIEW_VARIANT;
+const BEFORE = !!process.env.PNV_TITLE_REVIEW_BEFORE;
 
 const WIDTHS = [
   { name: "narrow", width: 1024 },
@@ -54,7 +53,6 @@ test("toolbar title review shots (#422)", async ({ page }) => {
   test.setTimeout(600_000);
   const out = (OUT as string).replace(/^~/, process.env.HOME ?? "~");
   mkdirSync(out, { recursive: true });
-  if (VARIANT) await page.addInitScript((v) => localStorage.setItem("psyneuview.titleMock", v), VARIANT);
 
   const lib = (await (await page.request.get("/api/library-models")).json()).models as { label: string; path: string }[];
   const deep = path.join(process.env.PW_SESSION_TMP ?? "/tmp", "Documents", "research", "2026", "projects", "stroop-variants");
@@ -87,7 +85,7 @@ test("toolbar title review shots (#422)", async ({ page }) => {
       n += 1;
       await bar.screenshot({ path: path.join(out, `${PREFIX}-${String(n).padStart(2, "0")}-${scene.name}-${w.name}.png`) });
     }
-    if (VARIANT && (scene.name === "ref1" || scene.name === "user")) {
+    if (!BEFORE && (scene.name === "ref1" || scene.name === "user")) {
       await page.setViewportSize({ width: 1366, height: 800 });
       await page.getByTestId("model-title").click();
       await expect(page.getByTestId("model-card")).toBeVisible();
