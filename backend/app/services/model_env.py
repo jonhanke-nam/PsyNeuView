@@ -72,7 +72,6 @@ SECRET_PREFIXES = (
     "AWS_", "GITHUB_", "GH_", "GITLAB_", "AZURE_", "GOOGLE_", "GCLOUD_", "GCP_", "CLOUDSDK_",
     "ANTHROPIC_", "OPENAI_", "HF_", "HUGGING", "NPM_", "DOCKER_", "SSH_", "GPG_", "GNUPG",
     "KUBE", "VAULT_", "OP_", "SLACK_", "STRIPE_", "TWILIO_", "DATABASE_", "PGPASS",
-    "PSYNEWVIEW_",  # the page secret's old spelling, never a runner setting
 )
 
 _PARTS = re.compile(r"[^A-Z0-9]+")

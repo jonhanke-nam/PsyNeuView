@@ -138,7 +138,7 @@ MODELS = {"memory": HOG, "cpu": SPIN, "processes": FORKS}
 
 @pytest.fixture
 def low_limits(monkeypatch):
-    monkeypatch.setenv(run_limits.MEMORY_ENV, "512")
+    monkeypatch.setenv(run_limits.MEMORY_ENV, "1536")  # above a warm worker that has run many models
     monkeypatch.setenv(run_limits.CPU_ENV, "4")
     monkeypatch.setenv(run_limits.PROCESSES_ENV, "16")
     yield
