@@ -50,6 +50,19 @@ SETTLE_S = 1.5
 INTROSPECT_S = 60
 
 
+# A composition inside a composition, so the nested and flattened views differ.
+NESTED_SRC = """\
+import psyneulink as pnl
+leaf = pnl.TransferMechanism(name='leaf')
+inner = pnl.Composition(name='inner')
+inner.add_node(leaf)
+top = pnl.TransferMechanism(name='top')
+outer = pnl.Composition(name='outer')
+outer.add_node(top)
+outer.add_node(inner)
+"""
+
+
 @pytest.fixture
 def model_file(tmp_path):
     path = tmp_path / "model.py"
@@ -284,8 +297,43 @@ def test_end_to_end_external_edit_reaches_websocket_client(tmp_path):
     assert message["type"] == "file_changed"
     assert message["filePath"] == str(model)
     assert "name='b'" in message["source"]
-    node_names = [n.get("name") for n in message["model"]["compositions"][0]["nodes"]]
-    assert "b" in node_names, f"re-introspected graph should include the new node: {node_names}"
+    # #442: no graph rides along. Each window re-reads the model in its own
+    # view (nested, flattened, PyTorch); one built here came back nested.
+    assert "model" not in message
+
+
+def test_an_outside_edit_reads_back_in_each_view(tmp_path):
+    """#442: after file_changed, a window re-reads the model in the view it
+    shows. The load route builds the edited file in the view asked for, so a
+    flattened window gets the flattened graph and a nested one the nested."""
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    model = tmp_path / "model.py"
+    model.write_text(NESTED_SRC)
+
+    with TestClient(app) as client:
+        with client.websocket_connect("/ws") as socket:
+            socket.send_json({"type": "watch_file", "filePath": str(model)})
+            assert _await_message(socket, "watching")
+            time.sleep(0.3)
+            model.write_text(NESTED_SRC.replace("name='leaf'", "name='leaf_2'"))
+            message = _await_message(socket, "file_changed")
+        assert "name='leaf_2'" in message["source"]
+        assert "model" not in message
+
+        def outer_nodes(view):
+            body = client.post("/api/model/load", json={"file_path": str(model), **view}).json()
+            outer = next(c for c in body["model"]["compositions"] if c["name"] == "outer")
+            return {n.get("name") for n in outer["nodes"]}
+
+        nested_nodes = outer_nodes({})
+        flat_nodes = outer_nodes({"flat": True})
+    # Nested: the outer composition holds the inner one as a node.
+    assert "inner" in nested_nodes and "leaf_2" not in nested_nodes, nested_nodes
+    # Flattened: the inner composition's node is drawn in the outer graph.
+    assert "leaf_2" in flat_nodes and "inner" not in flat_nodes, flat_nodes
 
 
 def test_two_windows_on_two_models_in_one_folder_each_hear_their_own(tmp_path, monkeypatch):
