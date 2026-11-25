@@ -78,11 +78,8 @@ test("Save is what writes the file (#1029)", { tag: "@ci" }, async ({ page }) =>
   });
   expect(readFileSync(model, "utf8")).not.toContain("extra_mech");
 
-  // The toolbar Save button, not Cmd-S: headless Chromium reports
-  // `navigator.platform === "Win32"`, so CodeMirror resolves "Mod-s" to Ctrl-s
-  // while Playwright's ControlOrMeta sends Meta on a macOS host. The keybinding
-  // is fine for real users; it is the test browser that disagrees. Both routes
-  // land in the same saveAndRefresh.
+  // Saved with the toolbar Save button; ⌘S / Ctrl+S lands in the same
+  // saveAndRefresh, and the tutorial specs press it.
   await page.getByRole("button", { name: /^Save$/ }).first().click();
 
   await expect

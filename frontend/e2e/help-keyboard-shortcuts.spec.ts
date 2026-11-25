@@ -17,19 +17,6 @@ async function openApp(page: Page) {
   await expect(page.getByTestId("app-toolbar")).toBeVisible({ timeout: 30_000 });
 }
 
-/**
- * The key the page treats as ⌘/Ctrl. Playwright's ControlOrMeta follows the
- * machine running the test, but the page decides from what the browser
- * reports (shortcuts/binding.ts), and headless Chromium need not agree.
- */
-async function modKey(page: Page): Promise<"Meta" | "Control"> {
-  const mac = await page.evaluate(() => {
-    const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
-    return [nav.userAgentData?.platform, nav.platform, nav.userAgent].some((c) => !!c && /mac|iphone|ipad/i.test(c));
-  });
-  return mac ? "Meta" : "Control";
-}
-
 test.describe("Help ▸ Keyboard Shortcuts", { tag: "@ci" }, () => {
   test("the Help menu has its four items, and the reference lists every shortcut", async ({ page }) => {
     await openApp(page);
@@ -69,8 +56,7 @@ test.describe("Help ▸ Keyboard Shortcuts", { tag: "@ci" }, () => {
     await openApp(page);
     const reference = page.getByTestId("shortcuts-reference");
 
-    const mod = await modKey(page);
-    await page.keyboard.press(`${mod}+/`);
+    await page.keyboard.press("ControlOrMeta+/");
     await expect(reference).toBeVisible();
     await page.getByTestId("shortcuts-reference-close").click();
     await expect(reference).toHaveCount(0);
@@ -99,8 +85,7 @@ test.describe("Help ▸ Keyboard Shortcuts", { tag: "@ci" }, () => {
     const chip = page.getByTestId("shortcut-binding-inspector.focus");
     await chip.click();
     await expect(chip).toHaveText("press keys…");
-    const mod = await modKey(page);
-    await page.keyboard.press(`${mod}+Shift+KeyK`);
+    await page.keyboard.press("ControlOrMeta+Shift+KeyK");
     await expect(chip).toHaveText(/^(⇧⌘K|Ctrl\+Shift\+K)$/);
 
     // Settings links to the reference, which opens on top.
@@ -127,7 +112,7 @@ test.describe("Help ▸ Keyboard Shortcuts", { tag: "@ci" }, () => {
     await resetAll.click();
     await expect(resetAll).toBeDisabled();
     await expect(chip).toHaveText(/^(⌘I|Ctrl\+I)$/);
-    await page.keyboard.press(`${mod}+/`);
+    await page.keyboard.press("ControlOrMeta+/");
     await expect(reference).toBeVisible();
     await expect(reference.getByTestId("shortcuts-reference-summary")).toHaveText("Every shortcut is on its default.");
     await expect(reference.locator('[data-changed="true"]')).toHaveCount(0);

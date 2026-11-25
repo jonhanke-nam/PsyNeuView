@@ -433,6 +433,41 @@ body:has([data-pnv-customized="true"]) .pnv-inspector-legend {
   opacity: 1;
 }
 
+/* #387: in the Components panel, the active item is shaded as well as
+   outlined, so it is obvious which one is active: the strip icon whose menu
+   is open, and a component picked up for placing (in the word list, a strip
+   menu, or a strip shortcut), in the deeper selection shade. Pointing at any
+   other item tints it with the pale selection hover, so the levels are plain,
+   hover (pale) and active (deeper). Here rather than in inline styles so
+   hover can apply (#845). The outline is inset, so nothing changes size. */
+.pnv-palette-tile {
+  background: var(--pnv-surface);
+  border: 1px solid var(--pnv-border);
+}
+.pnv-palette-row {
+  background: transparent;
+}
+.pnv-palette-row:hover,
+.pnv-palette-tile:hover {
+  background: var(--pnv-selection-hover);
+  filter: none;
+}
+.pnv-palette-tile[data-active="true"],
+.pnv-palette-tile[data-armed="true"],
+.pnv-palette-row[data-armed="true"] {
+  background: var(--pnv-selection-fill-strong);
+  outline: 2px solid var(--pnv-selection-border);
+  outline-offset: -2px;
+}
+/* A tile already has a 1px border; in the selection blue, with a 1px outline
+   just inside it, it makes the same 2px ring a row has. */
+.pnv-palette-tile[data-active="true"],
+.pnv-palette-tile[data-armed="true"] {
+  border-color: var(--pnv-selection-border);
+  outline-width: 1px;
+  outline-offset: -2px;
+}
+
 /* #357: in the Run panel's inputs column, whatever is scrolled into view (a
    node's header, a focused trial input) stops below the sticky Run row. Set
    per element, not as the panel's scroll padding, so a trial card in the

@@ -19,7 +19,7 @@
  */
 import { useModelStore } from "./modelStore";
 import { useRunResults } from "./runResultsStore";
-import { cachedSourceHash } from "@/utils/sourceHash";
+import { cachedSourceHash, sourceForHash } from "@/utils/sourceHash";
 
 export const CHECK_DELAY_MS = 150;
 
@@ -80,4 +80,28 @@ export function watchRunStaleness(): void {
 /** Re-check soon, e.g. right after new results land. */
 export function recheckRunStaleness(): void {
   schedule();
+}
+
+/**
+ * For the e2e suite only (a browser under automation, as `__pnvUndoTest`):
+ * the two sides of the staleness check, so a test that finds results stale
+ * can attach what differs (#366).
+ */
+if (typeof window !== "undefined" && typeof navigator !== "undefined" && navigator.webdriver) {
+  (window as unknown as { __pnvStalenessTest?: unknown }).__pnvStalenessTest = {
+    state: () => {
+      const results = useRunResults.getState().results;
+      const { source, activeComposition } = useModelStore.getState();
+      const ranHash = results?.sourceHash ?? null;
+      return {
+        ranHash,
+        ranSource: ranHash ? sourceForHash(ranHash) ?? null : null,
+        ranComposition: results?.chosenComposition ?? null,
+        source,
+        sourceHash: cachedSourceHash(source),
+        activeComposition: activeComposition ?? null,
+        stale: useRunResults.getState().stale,
+      };
+    },
+  };
 }

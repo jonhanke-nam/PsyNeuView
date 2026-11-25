@@ -14,6 +14,7 @@ import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useHistoryStore, type Snapshot } from "@/stores/historyStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { record } from "@/utils/activityLog";
+import { recordAction } from "@/utils/history";
 import { applyView, captureView, rebuildGraph, sameView } from "@/utils/graphView";
 import { restoreRoutes } from "@/utils/arrowShapes";
 import {
@@ -27,6 +28,46 @@ import {
   type Burst,
   type HistoryMoveOrigin,
 } from "@/utils/historyNotice";
+
+/**
+ * Record the code in the editor as a step when History doesn't hold it yet
+ * (#366): an edit still waiting for its preview. Nothing is recorded when the
+ * current step already has this code, or when there is no history to add to.
+ * `keepRedo` keeps the redo steps after it (#391), for Redo: the edit goes in
+ * before them, so Undo after the Redo brings back what was typed.
+ *
+ * It records even in the 2 s after an Undo or Redo, while History holds
+ * recording off for the restored step's preview (#391): that pause is there
+ * for the app's own rebuild, not for what the user typed in it. A move puts
+ * its step's code in the editor before anything else can run, so code that
+ * differs from the current step here was typed.
+ */
+export function recordPendingCodeEdit(opts?: { keepRedo?: boolean }): void {
+  const history = useHistoryStore.getState();
+  const current = history.past[history.past.length - 1];
+  if (!current) return;
+  const { source, filePath } = useModelStore.getState();
+  if (current.filePath && filePath && current.filePath !== filePath) return;
+  if (current.source === source) return;
+  const holding = history.isRestoring;
+  if (holding) history.setRestoring(false);
+  try {
+    recordAction("Edited the code", opts?.keepRedo ? { keepRedo: true } : undefined);
+  } finally {
+    if (holding) history.setRestoring(true);
+  }
+}
+
+let historyMoves = 0;
+
+/**
+ * How many times Undo or Redo has put back a step (#366). A live preview
+ * sent before one describes code that is no longer in the editor, so the
+ * editor drops its answer when this has changed since it was sent.
+ */
+export function historyMoveCount(): number {
+  return historyMoves;
+}
 
 /** Apply one step of history. `redo` picks the direction. */
 export function applyHistoryStep(redo: boolean): Promise<void> {
@@ -85,6 +126,15 @@ export function moveInHistory(redo: boolean, steps: number, origin: HistoryMoveO
 }
 
 async function moveInHistoryNow(redo: boolean, steps: number, origin: HistoryMoveOrigin): Promise<void> {
+  // A code edit becomes a step only when its preview has rebuilt the model,
+  // after the live-preview pause (1.5 s) and the build. Until then it is in
+  // the editor but not in History, and ⌘Z there said "Nothing to undo" and
+  // left the edit, or went back a step past it (#366). Take it as a step
+  // first, so Undo takes back what was just typed. Redo would otherwise put
+  // the next step over the typed text and lose it (#391): the edit goes in
+  // before the redo steps, so Undo after the Redo brings it back.
+  if (origin === "step") recordPendingCodeEdit({ keepRedo: redo });
+
   const history = useHistoryStore.getState();
   const notifications = useNotificationStore.getState();
   const direction = redo ? "redo" : "undo";
@@ -132,6 +182,7 @@ async function moveInHistoryNow(redo: boolean, steps: number, origin: HistoryMov
 
   // Mark as restoring so pushSnapshot doesn't record this change
   history.setRestoring(true);
+  historyMoves++;
 
   try {
     // Restore state

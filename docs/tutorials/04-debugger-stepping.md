@@ -33,7 +33,12 @@ Use the TRACE controls to move through the run. Two step modes:
   (PASS / TIME_STEP). _(hook-backed)_
 
 As you step, each node shows a **value pill** with its current output, so you can
-watch values propagate through the graph.
+watch values propagate through the graph. The nodes that run at the current step
+are highlighted in the selection blue: on the graph they keep their role
+outline and get a pale-blue fill with a blue ring, and in the Run tab the
+current trial's card marks their rows in the same blue and dims the rows not
+reached yet. A collapsed composition shows the highlight when a node inside it
+runs.
 
 ![Node value pills on the canvas while stepping](assets/debugger/02-graph-values.png)
 

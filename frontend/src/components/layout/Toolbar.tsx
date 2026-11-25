@@ -96,6 +96,7 @@ import { SAVE_COPY_EVENT, requestSaveCopy } from "@/utils/saveRequest";
 import { stripProtectionLine } from "@/utils/protectionLine";
 import { AutosaveStatus } from "./AutosaveStatus";
 import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { beginModelOpen, isNewestModelOpen, reportFailedOpen } from "@/utils/modelOpenSequence";
 import { ioRowViolations } from "@/utils/ioRows";
 import { canvasTidyHandle } from "@/stores/ioRowsStore";
 
@@ -828,23 +829,28 @@ export function Toolbar() {
 
   // Open a local .pnlproject bundle in place (#348): the backend extracts it
   // to a working dir and reports the origin, so Save re-zips back into it.
-  const openBundle = async (bundlePath: string) => {
+  const openBundle = async (bundlePath: string, ticket = beginModelOpen()) => {
     setDropdownOpen(false);
     clearNotifications();
     const fileName = bundlePath.split("/").pop() || bundlePath;
     setStatus(`Opening bundle: ${fileName}…`);
+    // #401: nothing new opened; marked over the graph, with Try again.
+    const failedOpen = (why: unknown) => reportFailedOpen(fileName, why, () => void loadFromPath(bundlePath));
     try {
       const resp = await fetch("/api/model/open-project", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bundle_path: bundlePath }),
       });
+      // #386: a newer open was asked for while this one was out.
+      if (!isNewestModelOpen(ticket)) return;
       if (!resp.ok) {
         const detail = await errorDetail(resp);
-        addNotification("error", `Failed to open bundle: ${detail}`);
+        failedOpen(detail);
         return;
       }
       const data = await resp.json();
+      if (!isNewestModelOpen(ticket)) return;
       setFilePath(data.file_path);
       setSource(data.source);
       setBundleOrigin(bundlePath);
@@ -859,9 +865,9 @@ export function Toolbar() {
       }
       addNotification("success", `Opened ${fileName}`);
     } catch (e) {
-      addNotification("error", `Failed to open bundle: ${e}`);
+      if (isNewestModelOpen(ticket)) failedOpen(e);
     } finally {
-      clearStatus();
+      if (isNewestModelOpen(ticket)) clearStatus();
     }
   };
 
@@ -883,9 +889,11 @@ export function Toolbar() {
   const loadFromPath = async (path: string, { fresh = true }: { fresh?: boolean } = {}) => {
     if (fresh && !(await guardOpen({ kind: "path", path }))) return;
     if (!confirmDiscard()) return;
-    if (fresh) useModelStore.getState().markFreshOpen(); // #906
+    // #386: the newest open wins; an answer to an older one is dropped.
+    const ticket = beginModelOpen();
     if (path.endsWith(".pnlproject")) {
-      await openBundle(path);
+      if (fresh) useModelStore.getState().markFreshOpen(); // #906
+      await openBundle(path, ticket);
       return;
     }
     // #721: re-loading the already-open file (a view-mode or composition switch)
@@ -897,6 +905,8 @@ export function Toolbar() {
     const fileName = path.split("/").pop() || path;
     const t0 = performance.now();
     setStatus(`Loading model: ${fileName}…`);
+    // #401: nothing new opened; marked over the graph, with Try again.
+    const failedOpen = (why: unknown) => reportFailedOpen(fileName, why, () => void loadFromPath(path, { fresh }));
     try {
       const resp = await fetch("/api/model/load", {
         method: "POST",
@@ -910,13 +920,20 @@ export function Toolbar() {
         }),
       });
       const t1 = performance.now();
+      if (!isNewestModelOpen(ticket)) return;
       if (!resp.ok) {
+        // Nothing was opened, so the open model stays, and the error says so
+        // (#386). Not marked fresh yet: its layout mode and undo history stay.
         const detail = await errorDetail(resp);
-        addNotification("error", `Failed to load: ${detail}`);
+        failedOpen(detail);
         return;
       }
       const data = await resp.json();
       const t2 = performance.now();
+      if (!isNewestModelOpen(ticket)) return;
+      // #906: marked only once there is a model to open; a failed open leaves
+      // the one on screen as it was.
+      if (fresh) useModelStore.getState().markFreshOpen();
       setFilePath(path);
       setSource(data.source);
       setStatus(`Building graph for ${fileName}…`);
@@ -948,7 +965,7 @@ export function Toolbar() {
           const pr = await fetch(
             `/api/demos/pristine?name=${encodeURIComponent(origin)}`,
           );
-          if (pr.ok) {
+          if (pr.ok && isNewestModelOpen(ticket)) {
             const prData = await pr.json();
             setCurrentDemo(origin);
             setPristineSource(prData.source);
@@ -973,9 +990,9 @@ export function Toolbar() {
       // accommodate models (incl. verbatim PsyNeuLink examples) as-is. Conversion
       // stays available opt-in via the Inspector's "Convert to Standard Format".
     } catch (e) {
-      addNotification("error", `Failed to load model: ${e}`);
+      if (isNewestModelOpen(ticket)) failedOpen(e);
     } finally {
-      clearStatus();
+      if (isNewestModelOpen(ticket)) clearStatus();
     }
   };
 
@@ -989,7 +1006,10 @@ export function Toolbar() {
     setDropdownOpen(false);
     clearNotifications();
     setStatus(`Loading demo: ${demo.label}…`);
+    // #401: nothing new opened; marked over the graph, with Try again.
+    const failedOpen = (why: unknown) => reportFailedOpen(demo.label, why, () => void loadDemo(demo, { byTutorial }));
     const t0 = performance.now();
+    const ticket = beginModelOpen(); // #386
     try {
       const resp = await fetch("/api/demos/reset", {
         method: "POST",
@@ -997,13 +1017,15 @@ export function Toolbar() {
         body: JSON.stringify(tutorial ? { demo_name: demo.name, tutorial } : { demo_name: demo.name }),
       });
       const apiDoneAt = performance.now();
+      if (!isNewestModelOpen(ticket)) return;
       if (!resp.ok) {
         const detail = await errorDetail(resp);
-        addNotification("error", `Failed to load demo: ${detail}`);
+        failedOpen(detail);
         return;
       }
       const data = await resp.json();
       const parseDoneAt = performance.now();
+      if (!isNewestModelOpen(ticket)) return;
       // Use the working path the backend actually wrote to; fall back to the
       // pristine-derived guess only for older backends that don't return it.
       const workingPath =
@@ -1028,9 +1050,9 @@ export function Toolbar() {
       setRecentPaths(getRecentPaths());
       addNotification("success", `Loaded demo: ${demo.label}`);
     } catch (e) {
-      addNotification("error", `Failed to load demo: ${e}`);
+      if (isNewestModelOpen(ticket)) failedOpen(e);
     } finally {
-      clearStatus();
+      if (isNewestModelOpen(ticket)) clearStatus();
     }
   };
 
@@ -1091,6 +1113,7 @@ export function Toolbar() {
                     setPromptState(null);
                     const varName = name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "").toLowerCase();
                     if (!varName) return;
+                const ticket = beginModelOpen(); // #386
                 try {
                   // Fetch PNL version for the template header
                   let pnlVer = "unknown";
@@ -1113,6 +1136,7 @@ export function Toolbar() {
                     return;
                   }
                   const data = await resp.json();
+                  if (!isNewestModelOpen(ticket)) return; // #386: a newer open since
                   setFilePath(data.file_path);
                   // #172: the model a walkthrough step had the learner create is its model.
                   noteNewModel(data.file_path);
@@ -1170,7 +1194,10 @@ export function Toolbar() {
     setDropdownOpen(false);
     clearNotifications();
     setStatus(`Loading reference model: ${rm.label}…`);
+    // #401: nothing new opened; marked over the graph, with Try again.
+    const failedOpen = (why: unknown) => reportFailedOpen(rm.label, why, () => void loadReference(rm, { restore, byTutorial }));
     const t0 = performance.now();
+    const ticket = beginModelOpen(); // #386
     try {
       const resp = await fetch("/api/reference-models/load", {
         method: "POST",
@@ -1178,13 +1205,15 @@ export function Toolbar() {
         body: JSON.stringify(tutorial ? { name: rm.name, tutorial } : { name: rm.name, restore_pristine: restore }),
       });
       const apiDoneAt = performance.now();
+      if (!isNewestModelOpen(ticket)) return;
       if (!resp.ok) {
         const detail = await errorDetail(resp);
-        addNotification("error", `Failed to load reference model: ${detail}`);
+        failedOpen(detail);
         return;
       }
       const data = await resp.json();
       const parseDoneAt = performance.now();
+      if (!isNewestModelOpen(ticket)) return;
       // Use the working path the backend actually wrote to; fall back to the
       // pristine-derived guess only for older backends that don't return it
       // (the guess is wrong when the working dir is isolated, e.g. in CI).
@@ -1230,9 +1259,9 @@ export function Toolbar() {
       setRecentPaths(getRecentPaths());
       addNotification("success", `Loaded reference model: ${rm.label}`);
     } catch (e) {
-      addNotification("error", `Failed to load reference model: ${e}`);
+      if (isNewestModelOpen(ticket)) failedOpen(e);
     } finally {
-      clearStatus();
+      if (isNewestModelOpen(ticket)) clearStatus();
     }
   };
 
@@ -1245,7 +1274,10 @@ export function Toolbar() {
     setDropdownOpen(false);
     clearNotifications();
     setStatus(`Loading PsyNeuLink example: ${m.label}…`);
+    // #401: nothing new opened; marked over the graph, with Try again.
+    const failedOpen = (why: unknown) => reportFailedOpen(m.label, why, () => void loadPnlExample(m));
     const t0 = performance.now();
+    const ticket = beginModelOpen(); // #386
     try {
       const resp = await fetch("/api/psyneulink-examples/load", {
         method: "POST",
@@ -1253,13 +1285,15 @@ export function Toolbar() {
         body: JSON.stringify({ name: m.name }),
       });
       const apiDoneAt = performance.now();
+      if (!isNewestModelOpen(ticket)) return;
       if (!resp.ok) {
         const detail = await errorDetail(resp);
-        addNotification("error", `Failed to load example: ${detail}`);
+        failedOpen(detail);
         return;
       }
       const data = await resp.json();
       const parseDoneAt = performance.now();
+      if (!isNewestModelOpen(ticket)) return;
       noteModelOrigin(data.file_path ?? m.path, { kind: "example", section: "examples" });
       setFilePath(data.file_path ?? m.path);
       // setFilePath clears currentReference; re-arm it so the Open dropdown marks
@@ -1283,9 +1317,9 @@ export function Toolbar() {
       setRecentPaths(getRecentPaths());
       addNotification("success", `Loaded PsyNeuLink example: ${m.label}`);
     } catch (e) {
-      addNotification("error", `Failed to load example: ${e}`);
+      if (isNewestModelOpen(ticket)) failedOpen(e);
     } finally {
-      clearStatus();
+      if (isNewestModelOpen(ticket)) clearStatus();
     }
   };
 
@@ -1325,6 +1359,7 @@ export function Toolbar() {
     const basename = file.path.split("/").pop() || "github_file.py";
     const stem = basename.replace(/\.py$/, "") || "github_file";
     setStatus(`Loading ${basename} from ${file.repo}@${file.ref}…`);
+    const ticket = beginModelOpen(); // #386
     try {
       let attempt = 0;
       let saved: { file_path: string; source: string; model: any } | null = null;
@@ -1351,6 +1386,11 @@ export function Toolbar() {
         addNotification("error", `Couldn't find an unused filename for ${stem}.py`);
         return;
       }
+      // #386: saved, but a newer open was asked for since; it stays in the list.
+      if (!isNewestModelOpen(ticket)) {
+        refreshUserModels();
+        return;
+      }
       setCurrentDemo(null);
       setPristineSource(null);
       setFilePath(saved.file_path);
@@ -1369,7 +1409,7 @@ export function Toolbar() {
     } catch (e) {
       addNotification("error", `Failed to load GitHub file: ${e}`);
     } finally {
-      clearStatus();
+      if (isNewestModelOpen(ticket)) clearStatus();
     }
   };
 
@@ -1383,6 +1423,7 @@ export function Toolbar() {
     const baseName = extracted.suggested_filename;
     const stem = baseName.replace(/\.py$/, "") || "extracted_test";
     setStatus(`Extracting ${extracted.qualified_name}…`);
+    const ticket = beginModelOpen(); // #386
     try {
       let attempt = 0;
       let saved: { file_path: string; source: string; model: any } | null = null;
@@ -1417,6 +1458,11 @@ export function Toolbar() {
         addNotification("error", `Couldn't find an unused filename for ${stem}.py`);
         return;
       }
+      // #386: saved, but a newer open was asked for since; it stays in the list.
+      if (!isNewestModelOpen(ticket)) {
+        refreshUserModels();
+        return;
+      }
       setCurrentDemo(null);
       setPristineSource(null);
       setFilePath(saved.file_path);
@@ -1435,7 +1481,7 @@ export function Toolbar() {
     } catch (e) {
       addNotification("error", `Failed to load extracted test: ${e}`);
     } finally {
-      clearStatus();
+      if (isNewestModelOpen(ticket)) clearStatus();
     }
   };
 
@@ -1471,6 +1517,7 @@ export function Toolbar() {
 
     clearNotifications();
     setStatus(`Importing MDF: ${file.name}…`);
+    const ticket = beginModelOpen(); // #386
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -1484,6 +1531,11 @@ export function Toolbar() {
         return;
       }
       const data = await resp.json();
+      // Imported, but a newer open was asked for since: it is in the list, not on screen.
+      if (!isNewestModelOpen(ticket)) {
+        refreshUserModels();
+        return;
+      }
       setCurrentDemo(null);
       setPristineSource(null);
       setFilePath(data.file_path);
@@ -1502,7 +1554,7 @@ export function Toolbar() {
     } catch (err) {
       addNotification("error", `MDF import failed: ${err}`);
     } finally {
-      clearStatus();
+      if (isNewestModelOpen(ticket)) clearStatus();
     }
   };
 

@@ -914,7 +914,9 @@ def _add_projection(source: str, changes: dict) -> str:
     # Add to composition
     if comp_var:
         statement = f"{comp_var}.add_projection({var_name})"
-        source = _append_to_composition(source, comp_var, statement)
+        # After whatever adds the sender and receiver to the composition,
+        # pathway calls included: before it, the model fails to build (#404).
+        source = _append_to_composition(source, comp_var, statement, endpoints=[sender, receiver])
         source = _keep_after_declaration(source, var_name, statement)
 
     return source
@@ -1282,9 +1284,27 @@ def _set_scheduler_mode(source: str, changes: dict) -> str:
     return "\n".join(lines)
 
 
-def _append_to_composition(source: str, comp_var: str, statement: str) -> str:
+def _append_to_composition(
+    source: str, comp_var: str, statement: str, endpoints: list[str] | None = None,
+) -> str:
     """Append a statement (add_node or add_projection) after the last
-    existing add_node/add_projection call for the given composition."""
+    existing add_node/add_projection call for the given composition.
+
+    With ``endpoints`` (a new projection's sender and receiver), it also goes
+    after the last statement that adds either of them to the composition —
+    ``add_linear_processing_pathway``, a learning pathway, ``add_pathways``,
+    ``add_nodes`` — or the constructor's ``pathways=``/``nodes=``. Before that
+    statement the projection's ends are not yet in the composition and the
+    model fails to build (#404). When it can't tell which statement adds
+    them, it goes at the end of the composition's construction block.
+    """
+    if endpoints:
+        after = _after_endpoints_added(source, comp_var, endpoints)
+        if after is not None:
+            lines = source.splitlines()
+            lines.insert(after, statement)
+            return "\n".join(lines)
+
     lines = source.splitlines()
     last_add_idx = -1
 
@@ -1304,6 +1324,105 @@ def _append_to_composition(source: str, comp_var: str, statement: str) -> str:
                 break
 
     return "\n".join(lines)
+
+
+def _adds_nodes(method: str) -> bool:
+    """True for a Composition method that adds nodes to it: ``add_node``,
+    ``add_nodes``, ``add_controller``, ``add_pathways`` and every
+    ``add_*_pathway`` (linear processing, backpropagation and the other
+    learning pathways) (#404)."""
+    return method in ("add_node", "add_nodes", "add_controller") or (
+        method.startswith("add_") and "pathway" in method
+    )
+
+
+def _comp_call(stmt: ast.stmt, comp_var: str) -> tuple[str, ast.Call] | None:
+    """``(method, call)`` when ``stmt`` is ``comp_var.<method>(...)``, bare or
+    assigned (``pw = comp.add_backpropagation_learning_pathway(...)``)."""
+    value = stmt.value if isinstance(stmt, (ast.Expr, ast.Assign, ast.AnnAssign)) else None
+    if (
+        isinstance(value, ast.Call)
+        and isinstance(value.func, ast.Attribute)
+        and isinstance(value.func.value, ast.Name)
+        and value.func.value.id == comp_var
+    ):
+        return value.func.attr, value
+    return None
+
+
+def _after_endpoints_added(source: str, comp_var: str, endpoints: list[str]) -> int | None:
+    """Line index at which a new ``comp_var.add_projection(...)`` goes: after
+    the last top-level statement that adds any of ``endpoints`` to
+    ``comp_var``, and after its last existing ``add_node``/``add_projection``
+    (so new projections stay together). If an endpoint's adding statement
+    can't be found, after the composition's last node-adding statement — the
+    end of its construction block. None when the source doesn't parse or the
+    composition isn't built at the top level; the caller falls back (#404)."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return None
+
+    # A name bound at the top level to a list of nodes, such as
+    # `pathway = [a, b, c]`, stands for the names inside it.
+    bound: dict[str, set[str]] = {}
+    for stmt in tree.body:
+        if isinstance(stmt, ast.Assign):
+            names = {n.id for n in ast.walk(stmt.value) if isinstance(n, ast.Name)}
+            for target in stmt.targets:
+                if isinstance(target, ast.Name):
+                    bound[target.id] = names
+
+    def mentioned(node: ast.AST) -> set[str]:
+        seen: set[str] = set()
+        todo = [n.id for n in ast.walk(node) if isinstance(n, ast.Name)]
+        while todo:
+            name = todo.pop()
+            if name not in seen:
+                seen.add(name)
+                todo.extend(bound.get(name, ()))
+        return seen
+
+    built_end = None       # end of the composition's constructor
+    endpoint_end = {}      # endpoint -> end of the last statement adding it
+    last_adder_end = None  # end of the last node-adding statement
+    last_add_end = None    # end of the last add_node / add_projection
+    for stmt in tree.body:
+        end = stmt.end_lineno or stmt.lineno
+        if (
+            isinstance(stmt, ast.Assign)
+            and any(isinstance(t, ast.Name) and t.id == comp_var for t in stmt.targets)
+            and isinstance(stmt.value, ast.Call)
+        ):
+            built_end = end
+            ctor_names = set()
+            for kw in stmt.value.keywords:
+                if kw.arg in ("pathways", "nodes"):
+                    ctor_names |= mentioned(kw.value)
+            for name in endpoints:
+                if name in ctor_names:
+                    endpoint_end[name] = end
+            continue
+        call = _comp_call(stmt, comp_var)
+        if call is None:
+            continue
+        method, node = call
+        if method in ("add_node", "add_projection"):
+            last_add_end = end
+        if _adds_nodes(method):
+            last_adder_end = end
+            names = mentioned(node)
+            for name in endpoints:
+                if name in names:
+                    endpoint_end[name] = end
+
+    if built_end is None:
+        return None
+    if all(name in endpoint_end for name in endpoints):
+        anchor = max(endpoint_end.values())
+    else:
+        anchor = last_adder_end or built_end
+    return max(anchor, last_add_end or 0, built_end)
 
 
 # ============================================================

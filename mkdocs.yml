@@ -9,6 +9,11 @@ repo_name: jonhanke-nam/PsyNeuView
 docs_dir: docs
 site_dir: site
 
+# The What's tested pages (testing-coverage*.md) are built from the test files
+# on every build, not committed (#380).
+hooks:
+  - scripts/mkdocs_hooks.py
+
 theme:
   name: material
   features:

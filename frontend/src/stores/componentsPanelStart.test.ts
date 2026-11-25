@@ -52,7 +52,7 @@ describe("Components panel opening state (#113)", () => {
     expect(usePaletteStore.getState().isCompact).toBe(true);
   });
 
-  it("the ◀/▶ button switches the panel for the session without remembering it", async () => {
+  it("the ◀/› button switches the panel for the session without remembering it", async () => {
     const { COMPONENTS_START_KEY, usePaletteStore } = await load();
     usePaletteStore.getState().toggleCompact();
     expect(usePaletteStore.getState().isCompact).toBe(false);

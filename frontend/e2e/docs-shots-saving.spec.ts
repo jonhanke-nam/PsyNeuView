@@ -14,7 +14,7 @@
  *
  * The behaviour itself is tested by saves-in-history.spec.ts and
  * changes-since-save.spec.ts; this only takes pictures, so it is skipped
- * unless DOCS_SHOTS=1, and it is not in ci-specs.txt. Run:
+ * unless DOCS_SHOTS=1, and it is not tagged @ci. Run:
  *
  *   DOCS_SHOTS=1 npx playwright test e2e/docs-shots-saving.spec.ts
  *

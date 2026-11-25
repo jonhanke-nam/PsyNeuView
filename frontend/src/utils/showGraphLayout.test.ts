@@ -7,9 +7,11 @@ import {
   computeShowGraphPlacement,
   curveBends,
   curvePath,
+  getShowGraphPlacement,
   graphSignature,
   memberAtPort,
   placementFromGraphviz,
+  placementKey,
   scaleFor,
   simplify,
   trimToBoxes,
@@ -387,5 +389,36 @@ describe("Like show_graph edges into an open frame (#73)", () => {
     const aPos = at(laid.find((n) => n.id === "outer_a")!.position);
     expect(curveFits(curves.in, aPos, fPos, pos)).toBe(true);
     expect(curveFits(curves.in, aPos, fPos, () => ({ x: xAbs.x + 50, y: xAbs.y }))).toBe(false);
+  });
+});
+
+describe("a model switch and the show_graph layout (#386)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const opts = { show_controller: true, show_learning: false, show_cim: false, show_nested: "nested" as const };
+  const nodes = ["COLOR INPUT", "RESPONSE"].map((n) => mech(n));
+  const dot = (name: string) => `digraph ${name} { graph [rankdir=BT] "COLOR INPUT" [shape=oval] RESPONSE [shape=oval] "COLOR INPUT" -> RESPONSE }`;
+
+  it("keys a layout by its file, so models sharing node names don't share one", () => {
+    // Cohen & Huston 1994 and the conflict-monitoring model name every node alike.
+    const a = placementKey(nodes, { filePath: "/m/Cohen_Huston1994.py", compositionName: "c", options: opts });
+    const b = placementKey(nodes, { filePath: "/m/Botvinick.py", compositionName: "c", options: opts });
+    expect(a).not.toBe(b);
+  });
+
+  it("a slower answer for the model before a switch does not become the layout in use", async () => {
+    const answers: Record<string, (r: Response) => void> = {};
+    vi.stubGlobal("fetch", (_url: string, init: { body: string }) => {
+      const file = JSON.parse(init.body).file_path as string;
+      return new Promise<Response>((r) => { answers[file] = r; });
+    });
+    const before = computeShowGraphPlacement({ filePath: "/m/old.py", compositionName: "c", options: opts }, nodes);
+    const after = computeShowGraphPlacement({ filePath: "/m/new.py", compositionName: "c", options: opts }, nodes);
+    await vi.waitFor(() => expect(Object.keys(answers)).toHaveLength(2));
+    answers["/m/new.py"](new Response(JSON.stringify({ dot: dot("new") })));
+    const placed = await after;
+    answers["/m/old.py"](new Response(JSON.stringify({ dot: dot("old") })));
+    await before;
+    expect(getShowGraphPlacement()).toBe(placed);
+    expect(placed.signature).toContain("/m/new.py");
   });
 });

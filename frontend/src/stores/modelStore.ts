@@ -128,21 +128,27 @@ function compositionInterfacePorts(nodeData: any): {
 }
 
 // Annotate each edge with how many edges share its source port, its target
-// port, and — most importantly — its exact source+target pair. The custom
-// edge component fans only TRUE duplicate projections (same pair) into bowed
-// curves: those overlap along their whole length, so straight lines would
-// collapse onto each other. Edges that merely share one endpoint (fan-in /
-// fan-out from different nodes) stay straight — they already render as
-// distinct tree branches that only meet at the shared port pixel.
+// port, and — most importantly — the two NODES it joins. The custom edge
+// component draws apart every arrow between the same two nodes, whichever
+// ports they use and whichever way they point (#278, #388): those overlap
+// along their whole length otherwise. Edges that merely share one endpoint
+// (fan-in / fan-out from different nodes) stay straight — they already render
+// as distinct tree branches that only meet at the shared port pixel.
+//
+// `pairBundleSign` says which way the edge runs between the pair: +1 from the
+// alphabetically first node, -1 the other way. The edge component offsets
+// each arrow by its slot times this sign, in its own sideways direction, so
+// an arrow and its reverse land on opposite sides rather than on one line.
 function annotateEdgeBundles(edges: Edge[]) {
   const key = (n: string, h: string | null | undefined) => `${n}|${h ?? ""}`;
+  const pairKey = (a: string, b: string) => (a <= b ? `${a}\u0000${b}` : `${b}\u0000${a}`);
   const targetBuckets = new Map<string, string[]>();
   const sourceBuckets = new Map<string, string[]>();
   const pairBuckets = new Map<string, string[]>();
   for (const e of edges) {
     const tk = key(e.target, e.targetHandle);
     const sk = key(e.source, e.sourceHandle);
-    const pk = `${sk}->${tk}`;
+    const pk = pairKey(e.source, e.target);
     if (!targetBuckets.has(tk)) targetBuckets.set(tk, []);
     if (!sourceBuckets.has(sk)) sourceBuckets.set(sk, []);
     if (!pairBuckets.has(pk)) pairBuckets.set(pk, []);
@@ -155,7 +161,7 @@ function annotateEdgeBundles(edges: Edge[]) {
     const sk = key(e.source, e.sourceHandle);
     const tBucket = targetBuckets.get(tk)!;
     const sBucket = sourceBuckets.get(sk)!;
-    const pBucket = pairBuckets.get(`${sk}->${tk}`)!;
+    const pBucket = pairBuckets.get(pairKey(e.source, e.target))!;
     const data = (e.data || {}) as Record<string, unknown>;
     data.targetBundleIndex = tBucket.indexOf(e.id);
     data.targetBundleSize = tBucket.length;
@@ -163,6 +169,7 @@ function annotateEdgeBundles(edges: Edge[]) {
     data.sourceBundleSize = sBucket.length;
     data.pairBundleIndex = pBucket.indexOf(e.id);
     data.pairBundleSize = pBucket.length;
+    data.pairBundleSign = e.source <= e.target ? 1 : -1;
     e.data = data;
   }
 }
@@ -692,6 +699,9 @@ let pendingFreshOpenLayout = false;
 let lastPositionsView: "nested" | "flat" | null = null;
 // #346: the file the last load fitted, so a model opened by any route fits.
 let lastFittedFile: string | null | undefined = undefined;
+// #386: the file the graph on screen was built from. A model that fails to
+// build holds the last good graph only when that graph is the same file's.
+let graphBuiltFor: string | null | undefined = undefined;
 // #323: set while a fold in the flattened or PyTorch view rebuilds the graph.
 // That fold shows the model nested, so the build reads the nested view's
 // positions, but it is a fold, not a switch of view: an automatic layout stays
@@ -874,6 +884,9 @@ export const useModelStore = create<ModelState>((set, get) => ({
       }
       const data = await resp.json();
       record("model", `Saved ${filePath}`, { path: filePath, ...(bundleOrigin ? { bundle: bundleOrigin } : {}) });
+      // Another model opened while this save was out (#386): the save landed,
+      // but its graph is the old model's and must not replace the new one.
+      if (get().filePath !== filePath) return true;
       // Authoritative: reconciles savedSource and drops the preview.
       get().loadModelFromServer(data.model, data.layout);
       return true;
@@ -1080,7 +1093,13 @@ export const useModelStore = create<ModelState>((set, get) => ({
     }
     const builtNothing = !modelData?.compositions?.length;
     const haveAGraph = get().nodes.length > 0;
-    if (brokenModel && builtNothing && haveAGraph) {
+    // #386: hold only for the same file being edited or reloaded. A different
+    // model that fails to build must not leave the previous model's graph, title
+    // and Inspector up looking current: that model is no longer the one open.
+    // The build below then shows an empty canvas with the error, as for a broken
+    // file opened cold.
+    const switchedModel = pendingFreshOpenLayout || graphBuiltFor !== get().filePath;
+    if (brokenModel && builtNothing && haveAGraph && !switchedModel) {
       set({
         modelError: modelData.error,
         modelErrorLine: modelData.errorLine || null,
@@ -2189,6 +2208,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     // ProjectionEdge can fan curves apart at shared endpoints (#278).
     annotateEdgeBundles(edges);
 
+    graphBuiltFor = get().filePath;
     set({
       ...(markSaved ? { savedSource: get().source, previewPath: null } : {}),
       nodes: layoutNodes, edges, lineMap,
@@ -2209,7 +2229,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
       // with no previous graph to hold, and recording that as "the last
       // version that built" would be exactly backwards.
       ...(modelData.error
-        ? {}
+        ? // A different model's last good version is not this one's (#386).
+          switchedModel ? { lastGoodSource: null, lastGoodAt: null } : {}
         : { lastGoodSource: get().source, lastGoodAt: Date.now() }),
       shownSkippedErrors: ((modelData.skippedStatements || []) as SkippedStatement[]).map((st) => st.error),
       partialExecution: modelData.partialExecution || false,

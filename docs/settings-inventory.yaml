@@ -205,6 +205,22 @@ settings:
     control: setting-mac-launch-at-login
     bridge_key: launchAtLogin
 
+  - id: mac-check-for-updates
+    label: General ▸ Updates ▸ Check for updates automatically
+    keywords: ["update", "automatic", "check", "hourly", "sparkle"]
+    home: settings:mac-app
+    section: general
+    storage: Mac app UserDefaults (checkForUpdates, the app's own record; Sparkle's SUEnableAutomaticChecks stays off)
+    control: setting-mac-check-for-updates
+    bridge_key: checkForUpdates
+    notes: >-
+      On by default (PsyNeuView-MacApp#81, #83). The app is the only update
+      scheduler: on, it checks at launch and every hour; off, there are no
+      automatic checks at all, and Check for App Updates… in the app menu still
+      works. The change takes effect at once. While it is off, "Install
+      updates automatically" is disabled with a short note. Apps that can't
+      update themselves send no value, and the switch is hidden.
+
   - id: mac-auto-install-updates
     label: General ▸ Updates ▸ Install updates automatically (when you quit)
     keywords: ["update", "automatic", "auto-update", "upgrade", "sparkle"]
@@ -668,7 +684,7 @@ settings:
     notes: >-
       Starts as the icon strip (default since #345, listed first) or Starts
       open, as the word list (#113). A stored choice is kept.
-      Decides how the Components panel opens. The panel's own ◀/▶ button
+      Decides how the Components panel opens. The panel's own ◀ button (› in the strip)
       collapses or opens it for the current session without changing this
       setting; it is no longer remembered, and the old remembered value
       (psyneuview_palette_compact) is not read, so nobody stays stuck on the
@@ -682,11 +698,26 @@ settings:
     control: setting-components-strip-shortcuts
     notes: >-
       Off by default (#372): the icon strip shows just the four category
-      menus, under a small "All" heading. On, your favourite and
-      recently used components sit at the bottom of the strip, under a small
-      "Recent" heading, favourites first and each once. The word
-      list's Favorites and Recently Used sections are not affected. A stored
-      choice is kept.
+      menus. On, your favourite and recently used components sit at the
+      bottom of the strip, favourites first and each once, set apart by a
+      thin divider (or a small "Recent" heading when the strip's headings
+      are on, #395). The word list's Favorites and Recently Used sections
+      are not affected. A stored choice is kept.
+
+  - id: components-strip-headings
+    label: Appearance ▸ Components panel ▸ Show headings in the icon strip
+    home: settings
+    section: appearance
+    storage: browser localStorage (psyneuview.components.stripHeadings); inside the Mac app, the app keeps it (PagePreferences, #218)
+    control: setting-components-strip-headings
+    notes: >-
+      Off by default (#395): the icon strip shows no words. On, a tiny
+      "Components" heading sits over the category menus and "Recent" over
+      the favourite and recent shortcuts (when those are shown). Each
+      heading stays on one line within the strip's icon column at every
+      Text size: it starts at the smallest text size and shrinks to fit if
+      still too wide (to no less than 5 px). The strip's width and icon sizes do not
+      change. A stored choice is kept.
 
   - id: allow-blank-screen
     label: Appearance ▸ Panels ▸ Allow a blank screen

@@ -16,7 +16,8 @@ import { recordSettingChanged } from "@/utils/activityLog";
 
 /**
  * #372: whether the icon strip shows your favourite and recently used
- * components, at the bottom under a small "Favourites & recent" heading.
+ * components, at the bottom of the strip (under a thin divider, or a small
+ * "Recent" heading when the strip's headings are on, #395).
  * Settings ▸ Appearance ▸ Components panel. Off by default: unlabelled
  * shortcuts above the category menus read as more categories. A stored
  * choice is kept; the `psyneuview.` key lets the Mac app keep it.
@@ -30,6 +31,25 @@ export function loadStripShortcuts(): boolean {
     return stored === "true" ? true : stored === "false" ? false : DEFAULT_STRIP_SHORTCUTS;
   } catch {
     return DEFAULT_STRIP_SHORTCUTS;
+  }
+}
+
+/**
+ * #395: whether the icon strip shows its tiny headings ("Components" over
+ * the category menus, "Recent" over the shortcuts). Settings ▸ Appearance ▸
+ * Components panel. Off by default: the icons speak for themselves, and when
+ * the shortcuts are shown a thin divider keeps the two groups apart. A stored
+ * choice is kept; the `psyneuview.` key lets the Mac app keep it.
+ */
+export const STRIP_HEADINGS_KEY = "psyneuview.components.stripHeadings";
+export const DEFAULT_STRIP_HEADINGS = false;
+
+export function loadStripHeadings(): boolean {
+  try {
+    const stored = localStorage.getItem(STRIP_HEADINGS_KEY);
+    return stored === "true" ? true : stored === "false" ? false : DEFAULT_STRIP_HEADINGS;
+  } catch {
+    return DEFAULT_STRIP_HEADINGS;
   }
 }
 
@@ -78,6 +98,9 @@ interface PaletteState {
   /** #372: favourites and recents shown in the icon strip (a setting). */
   showStripShortcuts: boolean;
   setShowStripShortcuts: (show: boolean) => void;
+  /** #395: the strip's "Components" and "Recent" headings (a setting). */
+  showStripHeadings: boolean;
+  setShowStripHeadings: (show: boolean) => void;
   /**
    * #252: a component picked up, waiting for a click on the graph to say
    * where it goes. Clicking a component used to add it at once, wherever the
@@ -124,6 +147,16 @@ export const usePaletteStore = create<PaletteState>((set, get) => ({
     }
     recordSettingChanged("components-strip-shortcuts", String(show));
     set({ showStripShortcuts: show });
+  },
+  showStripHeadings: loadStripHeadings(),
+  setShowStripHeadings: (show) => {
+    try {
+      localStorage.setItem(STRIP_HEADINGS_KEY, String(show));
+    } catch {
+      // Storage blocked: the choice holds for this page.
+    }
+    recordSettingChanged("components-strip-headings", String(show));
+    set({ showStripHeadings: show });
   },
   armed: null,
   setArmed: (armed) => set({ armed }),

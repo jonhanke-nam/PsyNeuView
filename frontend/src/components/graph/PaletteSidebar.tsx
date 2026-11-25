@@ -5,7 +5,7 @@
  */
 
 import { isFunctionType, isProjectionType } from "@/constants/pnlTypes";
-import { type DragEvent, useEffect, useMemo, useRef } from "react";
+import { type DragEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useModelStore } from "@/stores/modelStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { usePaletteStore } from "@/stores/paletteStore";
@@ -63,6 +63,7 @@ export function PaletteSidebar() {
   const recentlyUsed = usePaletteStore((s) => s.recentlyUsed);
   const compactFlyoutNodeId = usePaletteStore((s) => s.compactFlyoutNodeId);
   const showStripShortcuts = usePaletteStore((s) => s.showStripShortcuts);
+  const showStripHeadings = usePaletteStore((s) => s.showStripHeadings);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return null;
@@ -279,7 +280,9 @@ export function PaletteSidebar() {
             <div style={{ padding: isCompact ? 0 : "4px 0" }}>
               {isCompact ? (
                 <>
-                  <StripHeading testId="palette-strip-heading-components" label="All components">{"All"}</StripHeading>
+                  {showStripHeadings && (
+                    <StripHeading testId="palette-strip-heading-components" label="All components" text="Components" />
+                  )}
                   {taxonomy.map((node) => (
                     <CompactCategoryIcon
                       key={node.id}
@@ -291,7 +294,11 @@ export function PaletteSidebar() {
                   ))}
                   {showStripShortcuts && stripShortcuts.length > 0 && (
                     <div data-testid="palette-strip-shortcuts" style={{ marginTop: 6 }}>
-                      <StripHeading testId="palette-strip-heading-shortcuts" label="Recent and favourite components">{"Recent"}</StripHeading>
+                      {showStripHeadings ? (
+                        <StripHeading testId="palette-strip-heading-shortcuts" label="Recent and favourite components" text="Recent" />
+                      ) : (
+                        <StripDivider />
+                      )}
                       {stripShortcuts.map(({ item, kind }) => (
                         <PaletteLeaf
                           key={`strip-${item.type}`}
@@ -507,8 +514,9 @@ function PaletteLeaf({
   onToggleFavorite: () => void;
 }) {
   // #252: picked up and waiting to be put on the graph.
+  // #387: shaded and outlined in the selection colours (index.css, keyed
+  // on data-armed), like the open category's strip icon.
   const armed = usePaletteStore((s) => s.armed?.type === item.type);
-  const armedStyle = armed ? { background: "var(--pnv-primary-tint)", outline: "2px solid var(--pnv-primary)", outlineOffset: -2 } : {};
   // #283: the component's icon, in its type colour. The text glyph is only a
   // fallback; componentIcons.test.ts checks every item has an icon.
   const icon = iconForType(item.type);
@@ -532,14 +540,12 @@ function PaletteLeaf({
         data-armed={armed ? "true" : undefined}
         aria-pressed={armed}
         title={title}
+        className="pnv-palette-tile"
         style={{
-          ...armedStyle,
           width: 32,
           height: 32,
           margin: "2px auto",
           borderRadius: 4,
-          border: "1px solid var(--pnv-border)",
-          background: "var(--pnv-surface)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -567,7 +573,6 @@ function PaletteLeaf({
       aria-pressed={armed}
       className="pnv-palette-row"
       style={{
-        ...armedStyle,
         display: "flex",
         alignItems: "center",
         gap: 8,
@@ -577,12 +582,6 @@ function PaletteLeaf({
         userSelect: "none",
         borderRadius: 4,
         fontSize: "var(--pnv-fs-12)",
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.background = "var(--pnv-primary-tint)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.background = armed ? "var(--pnv-primary-tint)" : "transparent";
       }}
       title={`${item.type} \u2014 drag onto the graph, or click it and then click where it goes`}
     >
@@ -662,29 +661,124 @@ function SectionHeader({ label, icon }: { label: string; icon?: string }) {
   );
 }
 
-/** #372: the icon strip's tiny group headings, in the smallest text. */
-function StripHeading({ children, testId, label }: { children: React.ReactNode; testId: string; label: string }) {
+/** Smallest size a strip heading shrinks to, so it stays legible. */
+const STRIP_HEADING_MIN_PX = 5;
+
+/**
+ * Every word the icon strip uses as a heading (#395). Each heading is sized to
+ * fit the widest of these on one line, so "Components" and "Recent" come out
+ * the same tiny size rather than "Recent" looking larger.
+ */
+const STRIP_HEADING_WORDS = ["Components", "Recent"] as const;
+type StripHeadingWord = (typeof STRIP_HEADING_WORDS)[number];
+
+/**
+ * A tiny heading in the icon strip (#372), shown only when the strip's
+ * headings are on (#395). The word always sits on one line within the strip.
+ * It starts at the smallest text size; if the widest heading word
+ * ("Components") is still too wide at that size, the font shrinks until that
+ * word fits, and every heading takes that same size so they match. Hidden
+ * copies of each word are measured, so a change of Text size or font refits
+ * them.
+ */
+function StripHeading({ text, testId, label }: { text: StripHeadingWord; testId: string; label: string }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  // Each heading word at the full smallest-text size, and at the fitted size.
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const probeRef = useRef<HTMLSpanElement>(null);
+  const [fitPx, setFitPx] = useState<number | null>(null);
+
+  const widest = (holder: HTMLElement | null) =>
+    holder ? Math.max(0, ...Array.from(holder.children, (c) => c.getBoundingClientRect().width)) : 0;
+
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const measure = measureRef.current;
+    if (!box || !measure) return;
+    const fit = () => {
+      const natural = widest(measure);
+      const fullPx = parseFloat(getComputedStyle(measure).fontSize);
+      // The strip's width inside its padding, less a pixel of air.
+      const room = box.clientWidth - 1;
+      if (!natural || !fullPx || room <= 0 || natural <= room) {
+        setFitPx(null);
+        return;
+      }
+      // Round down to a tenth of a pixel so it never lands a hair too wide.
+      setFitPx(Math.max(STRIP_HEADING_MIN_PX, Math.floor(((fullPx * room) / natural) * 10) / 10));
+    };
+    fit();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(fit);
+    // The word copies, not their zero-size holder, change size with the text.
+    for (const word of Array.from(measure.children)) ro.observe(word);
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, []);
+
+  // Small text doesn't scale exactly (glyphs snap to pixels), so check the
+  // widest word as drawn at the fitted size and step down a tenth of a pixel
+  // while it is too wide. Every heading checks the same words, so they all
+  // settle on the same size.
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    if (fitPx === null || !box || fitPx <= STRIP_HEADING_MIN_PX) return;
+    if (widest(probeRef.current) > box.clientWidth - 1) {
+      setFitPx(Math.max(STRIP_HEADING_MIN_PX, Math.round((fitPx - 0.1) * 10) / 10));
+    }
+  }, [fitPx]);
+
+  const font = { fontWeight: 600, whiteSpace: "nowrap" } as const;
+  const size = fitPx === null ? "var(--pnv-fs-9)" : `${fitPx}px`;
+  const hidden = { position: "absolute", left: 0, top: 0, visibility: "hidden", pointerEvents: "none" } as const;
   return (
     <div
+      ref={boxRef}
       data-testid={testId}
       role="heading"
       aria-level={3}
       aria-label={label}
       style={{
-        fontSize: "var(--pnv-fs-9)",
-        fontWeight: 600,
+        position: "relative",
         color: "var(--pnv-text-hint)",
         textAlign: "center",
         lineHeight: 1.15,
-        // The strip's full width (its 4px padding given back). The headings
-        // are one short word each ("All", "Recent"), so they never wrap.
-        margin: "0 -4px",
+        // Inside the strip's 4px padding, as the icons are: the panel's
+        // resize handle lies over the strip's left 4px and would hide the
+        // first letter of a word that ran into it.
         padding: "4px 0 2px",
-        whiteSpace: "nowrap",
+        overflow: "hidden",
       }}
     >
-      {children}
+      <span data-testid={`${testId}-text`} style={{ ...font, fontSize: size }}>
+        {text}
+      </span>
+      <span ref={measureRef} aria-hidden style={{ ...hidden, fontSize: "var(--pnv-fs-9)" }}>
+        {STRIP_HEADING_WORDS.map((w) => (
+          <span key={w} style={{ ...font, position: "absolute", left: 0, top: 0 }}>{w}</span>
+        ))}
+      </span>
+      <span ref={probeRef} aria-hidden style={{ ...hidden, fontSize: size }}>
+        {STRIP_HEADING_WORDS.map((w) => (
+          <span key={w} style={{ ...font, position: "absolute", left: 0, top: 0 }}>{w}</span>
+        ))}
+      </span>
     </div>
+  );
+}
+
+/**
+ * With the strip's headings off (#395), a thin line keeps the shortcuts apart
+ * from the category menus, in the room a heading would take.
+ */
+function StripDivider() {
+  return (
+    <div
+      data-testid="palette-strip-divider"
+      role="separator"
+      aria-label="Recent and favourite components"
+      style={{ margin: "2px 4px 4px", borderTop: "1px solid var(--pnv-border)" }}
+    />
   );
 }
 
@@ -748,13 +842,14 @@ function CompactCategoryIcon({
       title={node.label}
       data-testid="palette-category"
       data-category={node.id}
+      // #387: the open category is shaded as well as outlined (index.css).
+      data-active={isActive ? "true" : undefined}
+      className="pnv-palette-tile"
       style={{
         width: 32,
         height: 32,
         margin: "2px auto",
         borderRadius: 4,
-        border: `1px solid ${isActive ? "var(--pnv-primary)" : "var(--pnv-border)"}`,
-        background: isActive ? "var(--pnv-primary-tint)" : "var(--pnv-surface)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -945,6 +1040,10 @@ function CompactFlyout({
             <button
               key={child.id}
               onClick={() => usePaletteStore.getState().openCompactFlyout(child.id)}
+              // #387: hover tints like a component row, lighter than the
+              // picked-up one (index.css).
+              className="pnv-palette-row"
+              data-testid="palette-flyout-branch"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -952,17 +1051,10 @@ function CompactFlyout({
                 width: "100%",
                 padding: "6px 12px",
                 border: "none",
-                background: "none",
                 cursor: "pointer",
                 fontSize: "var(--pnv-fs-12)",
                 color: "var(--pnv-text-body)",
                 textAlign: "left",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "var(--pnv-primary-tint)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "transparent";
               }}
             >
               <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

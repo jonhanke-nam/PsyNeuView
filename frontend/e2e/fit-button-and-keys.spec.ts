@@ -19,6 +19,7 @@ import { mutatingTest as test, expect } from "./test-base";
 import { mkdtempSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
+import { modLabel } from "./hostPlatform";
 
 type Page = import("@playwright/test").Page;
 
@@ -140,10 +141,10 @@ test("Fit: the labelled button, ⌘9 and ⇧1 bring the graph back; ⌘0 gives 1
   await fit.click();
   await expectAllInView(page);
 
-  // ⌘9. The test browser reports a Windows platform (Desktop Chrome), so the
-  // app reads Mod as Ctrl there, as blank-screen-setting.spec.ts relies on.
+  // ⌘9 (Ctrl+9 off the Mac): the test browser reports the platform it runs
+  // on (#402), so ControlOrMeta is the key the app expects.
   await panAway(page);
-  await page.keyboard.press("Control+9");
+  await page.keyboard.press("ControlOrMeta+9");
   await expectAllInView(page);
 
   // ⇧1.
@@ -152,14 +153,14 @@ test("Fit: the labelled button, ⌘9 and ⇧1 bring the graph back; ⌘0 gives 1
   await expectAllInView(page);
 
   // ⌘0: actual size.
-  await page.keyboard.press("Control+0");
+  await page.keyboard.press("ControlOrMeta+0");
   await expect.poll(() => zoom(page)).toBe(1);
 
   // The Layout menu lists them, with their keys.
   await page.getByTestId("layout-menu-button").click();
-  await expect(page.getByTestId("layout-menu-fit")).toContainText(/⌘9|Ctrl\+9/);
+  await expect(page.getByTestId("layout-menu-fit")).toContainText(modLabel("9"));
   await expect(page.getByTestId("layout-menu-fit")).toContainText(/⇧1|Shift\+1/);
-  await expect(page.getByTestId("layout-menu-actual-size")).toContainText(/⌘0|Ctrl\+0/);
+  await expect(page.getByTestId("layout-menu-actual-size")).toContainText(modLabel("0"));
 });
 
 test("⇧1 does not fire while typing in a text field (#289)", { tag: "@ci" }, async ({ page }) => {

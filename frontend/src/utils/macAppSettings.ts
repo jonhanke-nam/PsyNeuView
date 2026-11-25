@@ -19,6 +19,7 @@
 //   postMessage({ op: "installUpdate" })               -> MacAppSettings
 //     (opens the app's own update window; PsyNeuView-MacApp#6)
 //   postMessage({ op: "set", key: "autoInstallUpdates", value }) -> MacAppSettings
+//   postMessage({ op: "set", key: "checkForUpdates", value }) -> MacAppSettings
 //     (install updates automatically when you quit; PsyNeuView-MacApp#79)
 //   postMessage({ op: "answerAutoInstallOffer", value }) -> MacAppSettings
 //     (the one-time "Install updates automatically?" question; #79)
@@ -98,6 +99,13 @@ export interface MacAppSettings {
    * can't update themselves or are from before it; the switch is then hidden.
    */
   autoInstallUpdates?: boolean;
+  /**
+   * Check for updates automatically (PsyNeuView-MacApp#83): the app's own
+   * launch and hourly checks, on by default. Off, nothing checks on its own;
+   * the app menu's Check for App Updates… still works. Absent from apps that
+   * can't update themselves or are from before it; the switch is then hidden.
+   */
+  checkForUpdates?: boolean;
   /** Ask, once, whether to install updates automatically (#79). */
   autoInstallOffer?: boolean;
   /** When the app last checked for an update, an ISO time, or null (#79). */
@@ -121,7 +129,12 @@ export interface MacAppUpdate {
 
 export type ReportSendWith = "ask" | "mail" | "outlook" | "gmail";
 
-export type MacAppSwitchKey = "autoRestart" | "launchAtLogin" | "receiveReleaseCandidates" | "autoInstallUpdates";
+export type MacAppSwitchKey =
+  | "autoRestart"
+  | "launchAtLogin"
+  | "receiveReleaseCandidates"
+  | "autoInstallUpdates"
+  | "checkForUpdates";
 
 export interface InstallChoice {
   choice: "bundled" | "checkout";
@@ -156,6 +169,7 @@ const MAC_SETTING_IDS: Record<MacAppSwitchKey, string> = {
   launchAtLogin: "mac-launch-at-login",
   receiveReleaseCandidates: "mac-release-candidates",
   autoInstallUpdates: "mac-auto-install-updates",
+  checkForUpdates: "mac-check-for-updates",
 };
 
 export const setMacAppSetting = (key: MacAppSwitchKey | "developerMode", value: boolean) => {

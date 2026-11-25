@@ -54,6 +54,13 @@ describe("selection colours", () => {
     for (const t of SELECTION) expect(dark!.get(t), t).not.toBe(light.get(t));
   });
 
+  it("the deeper active shade (#387) is built from the selection fill and border, so it follows them in both sets", () => {
+    const m = css.match(/--pnv-selection-fill-strong:\s*([^;]+);/);
+    expect(m, "--pnv-selection-fill-strong is not defined").not.toBeNull();
+    expect(m![1]).toMatch(/var\(--pnv-selection-border\)/);
+    expect(m![1]).toMatch(/var\(--pnv-selection-fill\)/);
+  });
+
   for (const [name, values] of [["light", light], ["dark", dark]] as const) {
     it(`each is at least ${MIN_DISTANCE} from every role colour (${name})`, () => {
       const close: string[] = [];

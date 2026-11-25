@@ -3,8 +3,9 @@
  * Windows/Linux counterparts. Each row of the table in
  * docs/ui-interaction-conventions.md ("Clicks on the graph") is a test here.
  *
- * Playwright's desktop Chrome reports Windows, so the Mac rows run with a
- * Macintosh user agent: the graph library picks Command or Ctrl from it.
+ * The test browser reports the platform it runs on (#402); here each set of
+ * rows sets its own user agent, Macintosh or Linux, so both run on any host:
+ * the graph library picks Command or Ctrl from it.
  */
 import { readOnlyTest as test, expect, closePalette, fitGraph } from "./test-base";
 
@@ -13,6 +14,8 @@ type Mod = "Meta" | "Control" | "Shift";
 
 const MAC_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+const LINUX_UA =
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
 
 async function openStroop(page: Page) {
   await page.goto("/");
@@ -35,7 +38,7 @@ async function clear(page: Page) {
 
 function conventions(platform: "mac" | "other", primary: Mod) {
   test.describe(`clicks on the graph, ${platform === "mac" ? "as a Mac" : "as Windows/Linux"} (#261)`, { tag: "@ci" }, () => {
-    if (platform === "mac") test.use({ userAgent: MAC_UA });
+    test.use({ userAgent: platform === "mac" ? MAC_UA : LINUX_UA });
 
     test("click selects one; Command/Ctrl-click and Shift-click add and take away", async ({ page }) => {
       await openStroop(page);

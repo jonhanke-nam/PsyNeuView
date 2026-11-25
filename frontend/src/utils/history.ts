@@ -39,6 +39,11 @@ export interface RecordActionOptions {
    * drag on the canvas, so a step taken there passes the canvas's own.
    */
   nodes?: Node[];
+  /**
+   * Keep the redo steps (#391): the step goes in before them. For an edit
+   * still waiting for its preview when Redo is pressed.
+   */
+  keepRedo?: boolean;
 }
 
 /**
@@ -84,7 +89,7 @@ export function recordAction(description: string, opts?: RecordActionOptions) {
     ...(opts?.fromAuto ? { fromAuto: true } : {}),
   };
 
-  useHistoryStore.getState().pushSnapshot(snapshot);
+  useHistoryStore.getState().pushSnapshot(snapshot, opts?.keepRedo ? { keepRedo: true } : undefined);
 }
 
 /**

@@ -10,7 +10,7 @@ Two modes — **production** is the default, **dev** is for tight iteration.
 | --- | --- | --- | --- |
 | `npm run test:e2e` | production | `npm run build` then backend on a free port serving `frontend/dist/` | default; matches what ships |
 | `npm run test:e2e:smoke` | production | same, but only `@smoke`-tagged tests | PR gating, fast feedback |
-| `npm run test:e2e:ci` | production | same, but only `@ci`-tagged tests (listed by file in `e2e/ci-specs.txt`) | what the `e2e` check runs on PRs |
+| `npm run test:e2e:ci` | production | same, but only `@ci`-tagged tests (a spec without the tag says why in a `Not in CI:` line) | what the `e2e` check runs on PRs |
 | `npm run test:e2e:headed` | production | same, with a visible browser window | watching what the test does |
 | `npm run test:e2e:ui` | production | Playwright's interactive UI runner | debugging a single test |
 | `npm run test:e2e:dev` | dev | backend on `:8000` + Vite on `:5173` (HMR); tests hit `:5173` | iterating on UI + tests at the same time |
