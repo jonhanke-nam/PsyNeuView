@@ -198,33 +198,48 @@ export function PanelHandle({
   const rootRef = useRef<HTMLDivElement>(null);
   const canResize = !!resize && expanded && !resize.disabled;
 
+  // The latest resize callbacks, for the window listeners a press installs.
+  const resizeRef = useRef(resize);
+  resizeRef.current = resize;
+
+  // A press listens on the window, not on the handle: the pointer leaves the
+  // 8px band at once, and capturing it up front would turn a click on the
+  // tab into a click on the band. Until the press moves DRAG_THRESHOLD_PX it
+  // is a click, and the tab's own click handler toggles.
   const onPointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
     suppressClick.current = false;
     if (!canResize) return;
-    press.current.down(e.clientX, e.clientY, e.pointerId);
-  };
-  const onPointerMove = (e: PointerEvent) => {
-    if (!resize) return;
-    const m = press.current.move(e.clientX, e.clientY, e.pointerId);
-    if (!m) return;
-    if (m.began) {
-      suppressClick.current = true;
-      // Capture only once it is a drag: until then a release on the tab is a click on it.
-      rootRef.current?.setPointerCapture(e.pointerId);
-      rootRef.current?.classList.add("pnv-handle--dragging");
-      resize.onDragStart();
-    }
-    e.preventDefault();
-    resize.onDragMove(m.delta);
-  };
-  const endPress = (e: PointerEvent) => {
-    const ended = press.current.up(e.pointerId);
-    if (ended?.wasDrag) {
-      rootRef.current?.classList.remove("pnv-handle--dragging");
-      if (rootRef.current?.hasPointerCapture(e.pointerId)) rootRef.current.releasePointerCapture(e.pointerId);
-      resize?.onDragEnd();
-    }
+    const tracker = press.current;
+    tracker.down(e.clientX, e.clientY, e.pointerId);
+    const body = document.body;
+    const onMove = (ev: globalThis.PointerEvent) => {
+      const m = tracker.move(ev.clientX, ev.clientY, ev.pointerId);
+      if (!m) return;
+      if (m.began) {
+        suppressClick.current = true;
+        rootRef.current?.classList.add("pnv-handle--dragging");
+        body.classList.add(vertical ? "pnv-resizing-col" : "pnv-resizing-row");
+        resizeRef.current?.onDragStart();
+      }
+      ev.preventDefault();
+      resizeRef.current?.onDragMove(m.delta);
+    };
+    const onUp = (ev: globalThis.PointerEvent) => {
+      const ended = tracker.up(ev.pointerId);
+      if (!ended) return;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      if (ended.wasDrag) {
+        rootRef.current?.classList.remove("pnv-handle--dragging");
+        body.classList.remove("pnv-resizing-col", "pnv-resizing-row");
+        resizeRef.current?.onDragEnd();
+      }
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
   };
 
   const onSeparatorKeyDown = (e: KeyboardEvent) => {
@@ -256,9 +271,6 @@ export function PanelHandle({
       className={`pnv-handle pnv-handle--${vertical ? "v" : "h"} pnv-handle--tab-${placement}${canResize ? " pnv-handle--resizable" : ""}${className ? ` ${className}` : ""}`}
       style={rootStyle}
       onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={endPress}
-      onPointerCancel={endPress}
     >
       {resize ? (
         <div

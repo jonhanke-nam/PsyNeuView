@@ -172,6 +172,9 @@ button:hover {
 .pnv-handle--resizable.pnv-handle--v { cursor: col-resize; }
 .pnv-handle--resizable.pnv-handle--h { cursor: row-resize; }
 .pnv-handle[data-expanded="false"] { cursor: default; }
+/* While a handle is dragged: no text selection, and the resize cursor everywhere. */
+body.pnv-resizing-col, body.pnv-resizing-col * { cursor: col-resize !important; user-select: none; }
+body.pnv-resizing-row, body.pnv-resizing-row * { cursor: row-resize !important; user-select: none; }
 .pnv-handle__line {
   position: absolute;
   inset: 0;
