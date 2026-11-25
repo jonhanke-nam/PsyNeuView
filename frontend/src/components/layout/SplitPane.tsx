@@ -5,8 +5,8 @@
  * Sizes work as Allotment's did, so a stored layout keeps its shape: the
  * stored pair is a proportion (pixels from a drag, or the defaults' 25/75),
  * each pane grows in that proportion, and a window resize scales both. Each
- * pane has a minimum. A hidden pane stays mounted (its state is kept) but
- * takes no space; the other fills the split.
+ * pane has a minimum. A hidden pane stays mounted at zero size (its state is
+ * kept); the other fills the split.
  *
  * One pane is the collapsible one, and the handle on its edge (PanelHandle)
  * collapses and restores it. The handle stays on the edge while that pane is
@@ -134,14 +134,22 @@ export function SplitPane({
   const foldToward: Direction =
     collapsible === "first" ? (row ? "left" : "up") : row ? "right" : "down";
 
-  const paneStyle = (grow: number, min: number, visible: boolean): React.CSSProperties => ({
-    display: visible ? "block" : "none",
-    flex: both ? `${grow} 1 0px` : "1 1 0px",
-    [row ? "minWidth" : "minHeight"]: visible && both ? min : 0,
-    [row ? "minHeight" : "minWidth"]: 0,
-    position: "relative",
-    overflow: "hidden",
-  });
+  // A hidden pane stays laid out at zero size and invisible, as Allotment
+  // kept it, so what is inside it keeps its state and measures itself. With
+  // both hidden (a blank screen, #215), the first keeps the space, still
+  // invisible: the graph inside it must have a size to start a walkthrough
+  // opened by its link.
+  const paneStyle = (grow: number, min: number, visible: boolean, isFirst: boolean): React.CSSProperties => {
+    const keepsSpace = visible || (isFirst && !firstVisible && !secondVisible);
+    return {
+      flex: !keepsSpace ? "0 0 0px" : both ? `${grow} 1 0px` : "1 1 0px",
+      visibility: visible ? undefined : "hidden",
+      [row ? "minWidth" : "minHeight"]: visible && both ? min : 0,
+      [row ? "minHeight" : "minWidth"]: 0,
+      position: "relative",
+      overflow: "hidden",
+    };
+  };
 
   const label = paneName;
   return (
@@ -157,7 +165,7 @@ export function SplitPane({
         overflow: "hidden",
       }}
     >
-      <div ref={firstRef} id={collapsible === "first" ? paneId : undefined} style={paneStyle(live[0], firstMin, firstVisible)}>
+      <div ref={firstRef} id={collapsible === "first" ? paneId : undefined} style={paneStyle(live[0], firstMin, firstVisible, true)}>
         {first}
       </div>
       {/* A zero-size slot on the edge: the handle sits across it and takes no space. */}
@@ -177,7 +185,7 @@ export function SplitPane({
           at={edgeAt(firstVisible, secondVisible)}
         />
       </div>
-      <div id={collapsible === "second" ? paneId : undefined} style={paneStyle(live[1], secondMin, secondVisible)}>
+      <div id={collapsible === "second" ? paneId : undefined} style={paneStyle(live[1], secondMin, secondVisible, false)}>
         {second}
       </div>
     </div>

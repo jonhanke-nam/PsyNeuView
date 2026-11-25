@@ -92,6 +92,8 @@ export function DiagnosticPanel() {
       <div
         className="diagnostics-collapsed-bar"
         data-tone={hasIssues ? "attention" : "neutral"}
+        // #109: the bar says it expands on hover, not in a line of text.
+        title="Model Diagnostics: click to expand"
         style={{
           padding: "3px 12px",
           ...barColours,
@@ -103,7 +105,7 @@ export function DiagnosticPanel() {
       >
         {/* #418: a real button, so the keyboard reaches it and it says it is
             folded. It fills the bar up to the file-watch status, which is a
-            control of its own. #109: the bar says it expands on hover. */}
+            control of its own. */}
         <button
           type="button"
           className="diagnostics-toggle"
