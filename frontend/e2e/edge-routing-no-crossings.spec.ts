@@ -188,3 +188,56 @@ test("an edge routes around a node moved onto it", { tag: "@ci" }, async ({ page
   const { left, right, top, bottom } = await reading();
   expect(middle.x > left && middle.x < right && middle.y > top && middle.y < bottom, "the node stayed where it was dropped").toBe(true);
 });
+
+// #444: the test above failed about 1 run in 10. Switching Layout: Auto to
+// Custom reloads the model (half a second here, seconds for a big one), and
+// its drags landed before the reload did, which put the nodes back. A user
+// dragging straight after the switch lost the drag the same way. Here the
+// reload is held until a node has been dragged, then let through: the node
+// stays where it was dropped.
+test("a node dragged while the layout switch reloads stays where it was dropped (#444)", { tag: "@ci" }, async ({ page }) => {
+  const model = test.info().outputPath("feedforward_network.py");
+  copyFileSync(path.resolve(__dirname, "..", "..", "backend", "demos", "feedforward_network.py"), model);
+  await page.goto("/");
+  await closePalette(page);
+  await page.getByRole("button", { name: /Open/ }).first().click();
+  await page.getByRole("button", { name: "Open from path…" }).click();
+  const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
+  await prompt.fill(model);
+  await prompt.press("Enter");
+  const node = canvasNode(page, "output_layer").first();
+  await expect(node).toBeVisible({ timeout: 60_000 });
+
+  // Hold the switch's reload until the drag is done.
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  let reloads = 0;
+  await page.route("**/api/model/load", async (route) => {
+    reloads++;
+    await held;
+    await route.continue();
+  });
+  const reloaded = page.waitForResponse((r) => r.url().endsWith("/api/model/load"));
+  await page.getByRole("button", { name: /^Layout: Auto$/ }).click();
+  await expect(page.getByRole("button", { name: /^Layout: Custom$/ })).toBeVisible();
+  await expect.poll(() => reloads).toBe(1);
+
+  const box = (await node.boundingBox())!;
+  const grab = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.mouse.move(grab.x, grab.y);
+  await page.mouse.down();
+  await page.mouse.move(grab.x + 100, grab.y + 30, { steps: 4 });
+  await page.mouse.move(grab.x + 200, grab.y + 60, { steps: 4 });
+  await page.mouse.up();
+  const dropped = (await node.boundingBox())!;
+  expect(dropped.x - box.x, "the drag moved the node").toBeGreaterThan(150);
+
+  release();
+  await reloaded;
+  // Give the reply time to be applied, if it were going to be.
+  await page.waitForTimeout(500);
+  const after = (await node.boundingBox())!;
+  expect(Math.abs(after.x - dropped.x), "the node stayed where it was dropped").toBeLessThan(2);
+  expect(Math.abs(after.y - dropped.y), "the node stayed where it was dropped").toBeLessThan(2);
+  await page.unroute("**/api/model/load");
+});
