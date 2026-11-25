@@ -21,6 +21,7 @@ import { useReactFlow, useStore } from "@xyflow/react";
 import { useModelStore } from "@/stores/modelStore";
 import { DialogCloseButton } from "@/components/common/dialog/DialogHeader";
 import { isCircle, nodeShapeFor, polygonPoints, shapeTooltip, SHAPE_INFO, SHAPE_ORDER, type NodeShape } from "@/utils/nodeShape";
+import { PROJECTION_KIND_INFO, PROJECTION_KIND_ORDER, projectionKindsPresent, type ProjectionKind } from "@/utils/projectionLook";
 
 const STORAGE_KEY = "psyneuview-gsc-legend";
 const LEGEND_MARGIN = 12;
@@ -122,6 +123,14 @@ export function GSCLegend() {
     }
     return present;
   }, [modelNodes]);
+  // The kinds of projection other than the plain arrow that the open model
+  // draws (#425): show_graph's box-ended control projections, self-loops.
+  const modelEdges = useModelStore((s) => s.edges);
+  const kindsPresent = useMemo(() => {
+    const kinds = projectionKindsPresent(modelEdges as any);
+    kinds.delete("mapping");
+    return kinds;
+  }, [modelEdges]);
 
   // Pick the viewport corner with the most empty space outside the
   // current screen-space node bounding box. Skip when the user has
@@ -208,7 +217,7 @@ export function GSCLegend() {
   // arrows are hidden (#53). With no arrows to explain and no node shape to
   // name, there is nothing to show.
   const showConditions = gscConditions.length > 0 && schedulingArrows !== "hidden";
-  if (!hasModel || (!showConditions && shapesPresent.size === 0)) return null;
+  if (!hasModel || (!showConditions && shapesPresent.size === 0 && kindsPresent.size === 0)) return null;
 
   // Toggle button (always visible)
   if (!pos.visible) {
@@ -321,12 +330,25 @@ export function GSCLegend() {
           );
         })}
 
+        {/* Projection kinds (#425): the plain arrow for comparison, then each
+            other kind the model draws, as show_graph draws it. */}
+        {kindsPresent.size > 0 && (
+          <div
+            data-testid="legend-projection-kinds"
+            style={showConditions ? { marginTop: 6, paddingTop: 6, borderTop: "1px solid var(--pnv-border-faint)" } : undefined}
+          >
+            {PROJECTION_KIND_ORDER.filter((k) => k === "mapping" || kindsPresent.has(k)).map((k) => (
+              <ProjectionKindRow key={k} kind={k} />
+            ))}
+          </div>
+        )}
+
         {/* Node shapes (#192, #193): the oval for comparison, then each other
             shape the model draws, with what it means on hover. */}
         {shapesPresent.size > 0 && (
           <div
             data-testid="legend-node-shapes"
-            style={showConditions ? { marginTop: 6, paddingTop: 6, borderTop: "1px solid var(--pnv-border-faint)" } : undefined}
+            style={showConditions || kindsPresent.size > 0 ? { marginTop: 6, paddingTop: 6, borderTop: "1px solid var(--pnv-border-faint)" } : undefined}
           >
             {SHAPE_ORDER.filter((shape) => shape === "oval" || shapesPresent.has(shape)).map((shape) => (
               <ShapeRow key={shape} shape={shape} />
@@ -334,6 +356,41 @@ export function GSCLegend() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** A small drawing of the projection kind beside its name; the tooltip says what it means (#425). */
+function ProjectionKindRow({ kind }: { kind: ProjectionKind }) {
+  const info = PROJECTION_KIND_INFO[kind];
+  const w = 28, h = 14;
+  const stroke = { stroke: info.color, fill: "none" } as const;
+  const head = info.arrowhead === "box"
+    ? <rect x={w - 5} y={h / 2 - 2.5} width={5} height={5} style={{ fill: info.color }} />
+    : <polygon points={`${w},${h / 2} ${w - 7},${h / 2 - 3} ${w - 7},${h / 2 + 3}`} style={{ fill: info.color }} />;
+  return (
+    <div
+      data-testid={`legend-projection-${kind}`}
+      title={info.meaning}
+      style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 0" }}
+    >
+      <svg width={w} height={h} style={{ flexShrink: 0 }}>
+        {kind === "selfloop" ? (
+          <>
+            <ellipse cx={9} cy={h / 2} rx={8} ry={6} style={{ stroke: "var(--pnv-node-text-detail)", fill: "none" }} strokeWidth={1} />
+            <path d={`M 16 ${h / 2 - 3} C 27 ${h / 2 - 9} 27 ${h / 2 + 9} 16.5 ${h / 2 + 3}`} style={stroke} strokeWidth={1.5} />
+            <polygon points={`16,${h / 2 + 3} 21,${h / 2 + 1} 20,${h / 2 + 6}`} style={{ fill: info.color }} />
+          </>
+        ) : (
+          <>
+            <line x1={0} y1={h / 2} x2={w - 2} y2={h / 2} style={stroke} strokeWidth={1.5} />
+            {head}
+          </>
+        )}
+      </svg>
+      <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-node-text-detail)", whiteSpace: "nowrap" }}>
+        {info.label}
+      </span>
     </div>
   );
 }
