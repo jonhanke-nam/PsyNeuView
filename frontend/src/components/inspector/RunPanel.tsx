@@ -3,6 +3,7 @@
  * Shows input fields for each input node, a Run button, and Plotly charts.
  */
 
+import { DisclosureArrow, DisclosureDetails } from "@/components/common/Disclosure";
 import { useState, useCallback, useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import { preloadable, setsFor, textsFromSet } from "@/utils/inputSets";
 import {
@@ -1176,19 +1177,17 @@ export function RunPanel() {
                 #465 per-node trajectories) land, the line charts remain
                 reachable behind this collapsed section so existing users
                 aren't cut off. */}
-            <details style={{ marginTop: 12 }}>
-              <summary
-                style={{
+            <DisclosureDetails style={{ marginTop: 12 }} summaryStyle={{
                   fontSize: "var(--pnv-fs-12)",
                   color: "var(--pnv-text-muted)",
                   cursor: "pointer",
                   fontWeight: 500,
                 }}
-              >
+              summary={<>
                 Trial-by-trial line charts
-              </summary>
+              </>}>
               <ResultsChart results={results} />
-            </details>
+            </DisclosureDetails>
 
             {/* Live debugger snapshots (Phase 2B of #247). Visible only when
                 the run actually captured any — keeps the UI clean for older
@@ -1196,13 +1195,11 @@ export function RunPanel() {
             <DebuggerSnapshotTable />
 
             {/* Collapsible table of the results (#335: was "Raw data", then "Results") */}
-            <details style={{ marginTop: 12 }}>
-              <summary
-                data-testid="run-results-table-toggle"
-                style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}
-              >
+            <DisclosureDetails style={{ marginTop: 12 }} summaryTestId="run-results-table-toggle"
+                summaryStyle={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}
+              summary={<>
                 Results table
-              </summary>
+              </>}>
               <table
                 style={{
                   fontSize: "var(--pnv-fs-11)",
@@ -1249,7 +1246,7 @@ export function RunPanel() {
                   ))}
                 </tbody>
               </table>
-            </details>
+            </DisclosureDetails>
             </div>
           </div>
         )}
@@ -1814,10 +1811,11 @@ function InputNodeEditor({
           </Button>
         </div>
       ))}
-      <details style={{ marginTop: 2 }}>
-        <summary style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-hint)", cursor: "pointer" }}>
+      <DisclosureDetails style={{ marginTop: 2 }}
+        summaryStyle={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-hint)", cursor: "pointer" }}
+        summary={<>
           Paste CSV
-        </summary>
+        </>}>
         <textarea
           value={csvText}
           onChange={(e) => setCsvText(e.target.value)}
@@ -1850,7 +1848,7 @@ function InputNodeEditor({
         >
           Apply to cells
         </Button>
-      </details>
+      </DisclosureDetails>
     </div>
   );
 }
@@ -2674,7 +2672,7 @@ function WithinTrialSteps({
           fontFamily: "var(--pnv-font-mono)",
         }}
       >
-        {open ? "▾" : "▸"} ×{series.length} steps
+        <DisclosureArrow open={open} small />×{series.length} steps
       </button>
       {scalars && <Sparkline values={scalars} />}
       {open && (
@@ -2964,14 +2962,15 @@ function DebuggerSnapshotTable() {
   }, [traceStep, snapshotToStep]);
 
   return (
-    <details style={{ marginTop: 12 }}>
-      <summary style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}>
+    <DisclosureDetails style={{ marginTop: 12 }}
+      summaryStyle={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}
+      summary={<>
         Debugger snapshots {snapshots.length > 0 && (
           <span style={{ color: "var(--pnv-text-faint)" }}>
             ({filterActive ? `${visibleCount} of ${snapshots.length} shown` : snapshots.length})
           </span>
         )}
-      </summary>
+      </>}>
       {snapshots.length === 0 ? (
         <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", padding: "6px 0" }}>
           No snapshots captured. The PsyNeuLink build in use does not include
@@ -3143,7 +3142,7 @@ function DebuggerSnapshotTable() {
         </div>
         </>
       )}
-    </details>
+    </DisclosureDetails>
   );
 }
 

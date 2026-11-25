@@ -11,6 +11,7 @@
  * "Custom — chosen in Developer" with the source, its path and a link.
  */
 
+import { DisclosureDetails } from "@/components/common/Disclosure";
 import { useEffect, useState } from "react";
 import {
   RECOMMENDED_PNL_CHOICE,
@@ -245,12 +246,13 @@ export function PnlVersionChoice({
             <div style={{ ...errorStyle, marginTop: 4 }}>Install failed. Developer ▸ Which PsyNeuLink is installed has the full log.</div>
           )}
           {job.log.length > 0 && (
-            <details style={{ marginTop: 4 }}>
-              <summary style={{ cursor: "pointer", color: "var(--pnv-text-hint)" }}>Log</summary>
+            <DisclosureDetails style={{ marginTop: 4 }}
+              summaryStyle={{ cursor: "pointer", color: "var(--pnv-text-hint)" }}
+              summary={<>Log</>}>
               <pre style={{ background: "var(--pnv-code-bg)", color: "var(--pnv-code-text)", fontSize: "var(--pnv-fs-11)", padding: 8, borderRadius: 4, maxHeight: 140, overflowY: "auto", margin: "4px 0 0", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
                 {job.log.join("\n")}
               </pre>
-            </details>
+            </DisclosureDetails>
           )}
         </div>
       )}
