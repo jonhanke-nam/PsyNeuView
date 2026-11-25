@@ -22,6 +22,7 @@ import { useDismiss } from "@/components/common/dialog/useDismiss";
 import { iconForCategory, iconForType } from "@/utils/componentIcons";
 import { ComponentIcon } from "./ComponentIcon";
 import { Button } from "@/components/common/Button";
+import { PanelHandle } from "@/components/common/PanelHandle";
 
 /** #354: the drag is over, dropped or not. */
 const endDrag = () => usePaletteStore.getState().setDraggingFunction(null);
@@ -150,42 +151,50 @@ export function PaletteSidebar() {
         transition: "width 0.15s ease",
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          // #372: in the strip, a small chevron at the top edge, not a
-          // component-sized box.
-          padding: isCompact ? "2px 4px" : "8px 12px",
-          borderBottom: "1px solid var(--pnv-border-faint)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: isCompact ? "flex-end" : "space-between",
-          gap: 4,
-          flexShrink: 0,
-        }}
-      >
-        {!isCompact && (
+      {/* #418: the fold between the full panel and the icon strip is the
+          panel-edge handle on the right edge, its tab at the top: › in the
+          strip shows the full panel, ‹ folds it back. It replaced the strip's
+          small bordered chevron (#414), which sat in the palette buttons'
+          column and read as one of them. The panel is not resizable, so only
+          the tab acts. */}
+      <PanelHandle
+        orientation="vertical"
+        foldToward="left"
+        expanded={!isCompact}
+        onToggle={() => usePaletteStore.getState().toggleCompact()}
+        controls="pnv-palette-body"
+        collapseLabel="Fold the Components panel to the icon strip"
+        expandLabel="Show the full Components panel"
+        testId="palette-handle"
+        tabTestId={isCompact ? "palette-strip-expand" : "palette-fold"}
+        tabOffset={6}
+        // Over the panel's own border, so the line and the border are one.
+        style={{ left: "calc(100% - 1px)" }}
+      />
+      {/* Header: the full panel only; the strip has none (#418). */}
+      {!isCompact && (
+        <div
+          style={{
+            padding: "8px 12px",
+            borderBottom: "1px solid var(--pnv-border-faint)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 4,
+            flexShrink: 0,
+          }}
+        >
           <span style={{ fontSize: "var(--pnv-fs-12)", fontWeight: 600, color: "var(--pnv-text-body)" }}>Components</span>
-        )}
-        <div style={{ display: "flex", gap: 2 }}>
-          <IconButton
-            title={isCompact ? "Show the full Components panel" : "Compact mode"}
-            testId={isCompact ? "palette-strip-expand" : undefined}
-            small={isCompact}
-            onClick={() => usePaletteStore.getState().toggleCompact()}
-          >
-            {isCompact ? "\u203A" : "\u25C0"}
-          </IconButton>
-          {!isCompact && (
+          <div style={{ display: "flex", gap: 2 }}>
             <IconButton
               title="Close palette"
               onClick={() => usePaletteStore.getState().setOpen(false)}
             >
               {"\u2715"}
             </IconButton>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Search bar */}
       {!isCompact && (
@@ -210,7 +219,7 @@ export function PaletteSidebar() {
       )}
 
       {/* Scrollable content */}
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: isCompact ? 4 : 0 }}>
+      <div id="pnv-palette-body" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: isCompact ? 4 : 0 }}>
         {/* Search results mode */}
         {filteredItems !== null ? (
           <div style={{ padding: isCompact ? 0 : 8 }}>
@@ -786,25 +795,19 @@ function IconButton({
   children,
   title,
   onClick,
-  small = false,
-  testId,
 }: {
   children: React.ReactNode;
   title: string;
   onClick: () => void;
-  /** #372: the strip's fold-out chevron, well under a component icon's size. */
-  small?: boolean;
-  testId?: string;
 }) {
   return (
     <button
       onClick={onClick}
       title={title}
       aria-label={title}
-      data-testid={testId}
       style={{
-        width: small ? 14 : 22,
-        height: small ? 14 : 22,
+        width: 22,
+        height: 22,
         border: "1px solid var(--pnv-border)",
         borderRadius: 3,
         background: "var(--pnv-surface)",
@@ -812,7 +815,7 @@ function IconButton({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: small ? "var(--pnv-fs-11)" : "var(--pnv-fs-10)",
+        fontSize: "var(--pnv-fs-10)",
         color: "var(--pnv-text-muted)",
         padding: 0,
         lineHeight: 1,
