@@ -11,7 +11,7 @@ PsyNeuView's automated tests, feature by feature: what each area's tests check, 
 |---|---|---|---|
 | Browser (Playwright) | 178 | 475 | 465 tests in 173 files |
 | Tutorial walkthrough | 35 | 80 | 80 tests in 35 files |
-| Frontend unit (vitest) | 149 | 1306 | 1306 tests in 149 files |
+| Frontend unit (vitest) | 149 | 1312 | 1312 tests in 149 files |
 | Backend (pytest) | 192 | 1769 | 1769 tests in 192 files |
 
 A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt` and the test (or the `describe` around it) is tagged `@ci`; every tutorial walkthrough runs in the tutorials job; every unit and backend test runs, bar those marked skip or expected-to-fail.
@@ -31,7 +31,7 @@ A browser test runs in CI when its file is listed in `frontend/e2e/ci-specs.txt`
 | [Saving, history and undo](#saving) | 12 files, 29 tests | – | 10 files, 86 tests | 10 files, 189 tests | 303 of 304 |
 | [Mac app bridges and what's running](#macapp) | 6 files, 26 tests | – | 5 files, 59 tests | 7 files, 99 tests | 184 of 184 |
 | [Settings, PsyNeuLink versions and sources](#settings) | 16 files, 55 tests | – | 29 files, 267 tests | 19 files, 322 tests | 644 of 644 |
-| [Look and style conventions](#style) | 15 files, 36 tests | – | 10 files, 59 tests | – | 95 of 95 |
+| [Look and style conventions](#style) | 15 files, 36 tests | – | 10 files, 65 tests | – | 101 of 101 |
 | [Layout, views and compositions](#layout) | 22 files, 48 tests | – | 21 files, 151 tests | 5 files, 56 tests | 254 of 255 |
 | [Opening models, catalogs and the library](#opening) | 14 files, 26 tests | – | 4 files, 36 tests | 15 files, 121 tests | 182 of 183 |
 | [App shell, diagnostics and everything else](#shell) | 14 files, 30 tests | – | 21 files, 137 tests | 21 files, 206 tests | 370 of 373 |
@@ -1015,7 +1015,7 @@ No tests yet.
 | `useNodeBoxes.test.ts` | Frontend unit | 3 | yes |  |  |
 | `styleConventions.test.ts` | Frontend unit | 11 | yes | #1302 | The palette and the button kinds, held across the whole frontend. |
 | `selectionColours.test.ts` | Frontend unit | 4 | yes | #335 | The selection blue never looks like a role colour. |
-| `textContrast.test.ts` | Frontend unit | 6 | yes | #412 | The faintest text tokens still read at WCAG AA. |
+| `textContrast.test.ts` | Frontend unit | 12 | yes | #412 | The faintest text tokens still read at WCAG AA. |
 | `typeColourContrast.test.ts` | Frontend unit | 2 | yes | #283, #109 | Every component type's colour can be seen. |
 | `arrowShapes.test.ts` | Frontend unit | 8 | yes | #164 | Shaping an arrow by hand, as a step of its own (#164). |
 | `nodeBox.test.ts` | Frontend unit | 5 | yes |  | Whether the corners of a name's box lie inside an oval this size, inset by the outline. |

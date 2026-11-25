@@ -4060,6 +4060,12 @@ Every automated test, by feature area and file: **CI** means it runs on every pu
 - text contrast (#412) › faint and hint are as light as AA allows (one shade fainter fails) · CI · #412
 - text contrast (#412) › not-yet-reached rows read at AA on the current trial card (light) · CI · #412
 - text contrast (#412) › not-yet-reached rows use a colour, not an opacity · CI · #412
+- coloured text contrast (#421) › the primary blue as text reads at AA on the panel, a card, the selection fill and the active row · CI · #421
+- coloured text contrast (#421) › amber text reads at AA on its tint and on every surface in the Run panel · CI · #421
+- coloured text contrast (#421) › white reads at AA on the amber badge · CI · #421
+- coloured text contrast (#421) › each is the lightest that passes (one shade lighter fails) · CI · #421
+- coloured text contrast (#421) › the colours they stand in for are unchanged: the primary blue, the amber, the selection fill · CI · #421
+- coloured text contrast (#421) › the text shades keep their colour's hue · CI · #421
 
 **`frontend/src/styles/typeColourContrast.test.ts`** (Frontend unit (vitest))
 
