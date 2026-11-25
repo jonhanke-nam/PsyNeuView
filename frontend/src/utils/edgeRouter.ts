@@ -23,7 +23,7 @@
  * holds exactly.
  */
 
-import { SOFT_TENSION } from "@/utils/curveHandles";
+import { SOFT_TENSION, capHandle, oneWay } from "@/utils/curveHandles";
 
 export interface Pt { x: number; y: number }
 /** Axis-aligned box, top-left origin. */
@@ -399,7 +399,8 @@ function bezierClear(p0: Pt, c1: Pt, c2: Pt, p1: Pt, vis: Rect[]): boolean {
 const RELAX_STEPS = [1, 0.6, 0.35, 0.15];
 
 /**
- * Catmull-Rom spline through the waypoints, emitted as cubic Béziers. The curve
+ * Catmull-Rom spline through the waypoints, emitted as cubic Béziers, each
+ * handle capped at a third of its own segment (#416). The curve
  * interpolates every waypoint (each sits on the clearance boundary), so it only
  * ever bows *outward* of the taut string at the corners.
  *
@@ -422,18 +423,18 @@ function smooth(path: Pt[], tension: number, vis: Rect[]): string {
     const p2 = path[i + 1];
     const p3 = path[i + 2] ?? p2;
 
+    // #416: no handle longer than a third of its own segment. A Catmull-Rom
+    // handle is set by the corner's two neighbours, so a short segment next
+    // to a long run would otherwise get a handle many times its own length
+    // and overshoot into a loop.
+    const cap = dist(p1, p2) / 3;
     let drawn = false;
     for (const frac of RELAX_STEPS) {
       const t = tension * frac;
       if (t <= 0) break; // tension 0 (straight mode) ⇒ hard chord below
-      const c1 = {
-        x: p1.x + ((p2.x - p0.x) / 6) * t,
-        y: p1.y + ((p2.y - p0.y) / 6) * t,
-      };
-      const c2 = {
-        x: p2.x - ((p3.x - p1.x) / 6) * t,
-        y: p2.y - ((p3.y - p1.y) / 6) * t,
-      };
+      const out = capHandle({ x: (p2.x - p0.x) / 6 * t, y: (p2.y - p0.y) / 6 * t }, cap);
+      const inn = capHandle({ x: -(p3.x - p1.x) / 6 * t, y: -(p3.y - p1.y) / 6 * t }, cap);
+      const [c1, c2] = oneWay(p1, { x: p1.x + out.x, y: p1.y + out.y }, { x: p2.x + inn.x, y: p2.y + inn.y }, p2);
       if (bezierClear(p1, c1, c2, p2, vis)) {
         d += ` C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${p2.x} ${p2.y}`;
         drawn = true;

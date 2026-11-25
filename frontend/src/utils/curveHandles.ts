@@ -54,20 +54,71 @@ export interface AnchorHandles { in: Pt | null; out: Pt | null }
 export function anchorHandles(points: Anchor[], tension: number, ends?: EndHandles): AnchorHandles[] {
   const n = points.length;
   const out: AnchorHandles[] = [];
+  // Which handles are automatic, so a segment with both ends automatic can be
+  // kept from wiggling (#416).
+  const autoOut: boolean[] = [];
+  const autoIn: boolean[] = [];
+  const third = (a: Pt, b: Pt) => Math.hypot(b.x - a.x, b.y - a.y) / 3;
   for (let i = 0; i < n; i++) {
     const prev = points[i - 1] ?? points[i]; // clamped at the ends, as smooth() is
     const next = points[i + 1] ?? points[i];
     const auto = { x: ((next.x - prev.x) / 6) * tension, y: ((next.y - prev.y) / 6) * tension };
+    // #416: an automatic handle reaches at most a third of its own segment.
+    const autoOutH = capHandle(auto, third(points[i], next));
+    const autoInH = capHandle({ x: -auto.x, y: -auto.y }, third(prev, points[i]));
     if (i === 0) {
-      out.push({ in: null, out: ends?.s ? { ...ends.s } : auto });
+      out.push({ in: null, out: ends?.s ? { ...ends.s } : autoOutH });
+      autoOut.push(!ends?.s);
+      autoIn.push(false);
     } else if (i === n - 1) {
-      out.push({ in: ends?.t ? { ...ends.t } : { x: -auto.x, y: -auto.y }, out: null });
+      out.push({ in: ends?.t ? { ...ends.t } : autoInH, out: null });
+      autoOut.push(false);
+      autoIn.push(!ends?.t);
     } else {
-      const h = points[i].h ?? auto;
-      out.push({ in: { x: -h.x, y: -h.y }, out: { x: h.x, y: h.y } });
+      const h = points[i].h;
+      out.push(h ? { in: { x: -h.x, y: -h.y }, out: { x: h.x, y: h.y } } : { in: autoInH, out: autoOutH });
+      autoOut.push(!h);
+      autoIn.push(!h);
     }
   }
+  for (let i = 0; i + 1 < n; i++) {
+    if (!autoOut[i] || !autoIn[i + 1]) continue;
+    const a = points[i], b = points[i + 1];
+    const o = out[i].out!, m = out[i + 1].in!;
+    const [c1, c2] = oneWay(a, { x: a.x + o.x, y: a.y + o.y }, { x: b.x + m.x, y: b.y + m.y }, b);
+    out[i].out = { x: c1.x - a.x, y: c1.y - a.y };
+    out[i + 1].in = { x: c2.x - b.x, y: c2.y - b.y };
+  }
   return out;
+}
+
+/** The handle (dx, dy), shortened to at most `cap` long, same direction (#416). */
+export function capHandle(h: Pt, cap: number): Pt {
+  const len = Math.hypot(h.x, h.y);
+  const k = len > cap ? cap / len : 1;
+  return { x: h.x * k, y: h.y * k };
+}
+
+const cross = (a: Pt, b: Pt, c: Pt, d: Pt) => (b.x - a.x) * (d.y - c.y) - (b.y - a.y) * (d.x - c.x);
+
+/**
+ * #416: keep a segment that should bend one way from wiggling. Its end
+ * directions on opposite sides of the straight line between its ends mean
+ * one bend; while its control polygon still turns one way and then the
+ * other, both handles are shortened. Short enough, the middle leg runs along
+ * the straight line, which lies between the two end directions, so this
+ * ends. A real S (both end directions on one side) is left as it is.
+ */
+export function oneWay(p1: Pt, c1: Pt, c2: Pt, p2: Pt): [Pt, Pt] {
+  if (cross(p1, p2, p1, c1) * cross(p1, p2, c2, p2) >= 0) return [c1, c2];
+  let k = 1;
+  let a = c1, b = c2;
+  for (let i = 0; i < 12 && cross(p1, a, a, b) * cross(a, b, b, p2) < 0; i++) {
+    k *= 0.8;
+    a = { x: p1.x + (c1.x - p1.x) * k, y: p1.y + (c1.y - p1.y) * k };
+    b = { x: p2.x + (c2.x - p2.x) * k, y: p2.y + (c2.y - p2.y) * k };
+  }
+  return [a, b];
 }
 
 /** Whether an arrow has any pinned handle. */
