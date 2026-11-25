@@ -3765,7 +3765,11 @@ def _flatten_graph(comp, line_map, proj_name_lookup, name_to_var):
             # show_graph draws both; the same projection reached twice
             # through the interfaces is still one edge.
             edge_key = (id(start.sender), id(proj.receiver))
-            if edge_key in seen_edges or id(sender) == id(receiver):
+            if edge_key in seen_edges:
+                continue
+            # A node's own recurrent projection is a self-loop show_graph
+            # draws (#425); one that only comes back through an interface is not.
+            if id(sender) == id(receiver) and len(chain) > 1:
                 continue
             seen_edges.add(edge_key)
             flat_projections.append(
@@ -3986,8 +3990,11 @@ def serialize_composition(var_name, comp, line_map, proj_name_lookup=None, name_
         if sender_name not in visible_names or receiver_name not in visible_names:
             continue
 
-        # Skip self-loops (can happen with CIM resolution)
-        if sender_name == receiver_name:
+        # A projection from a node to itself (a RecurrentTransferMechanism's
+        # or an LCA's recurrent projection) is a self-loop show_graph draws
+        # (#425). Two different ends that resolve to one name (a nested
+        # composition's own interfaces) are not, and are skipped.
+        if sender_name == receiver_name and sender_mech is not receiver_mech:
             continue
 
         # Deduplicate (multiple CIM projections can resolve to the same edge),
