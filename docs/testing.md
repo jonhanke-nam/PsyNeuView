@@ -41,14 +41,30 @@ learning gap (#363) closes. EGO's `.learn()` tests are
 currently `xfail`, blocked on the upstream **PsyNeuLink#30** bug (standalone
 repro in `upstream_repros/psyneulink-30-em-pytorch-learn/`; watcher #793).
 
-### show_graph is the gold standard (colours and shapes)
+### show_graph is the gold standard (colours, shapes and projections)
 
-PsyNeuLink's `show_graph()` decides how a node looks; PsyNeuView matches it,
-and CI holds it to that:
+PsyNeuLink's `show_graph()` decides how a node and a projection look;
+PsyNeuView matches it, and CI holds it to that:
 
 - **Colours:** `backend/tests/test_show_graph_palette.py` (pytest). The role
   colours in `palette.css` are show_graph's, read from PsyNeuLink and resolved
-  as Graphviz draws them (#190).
+  as Graphviz draws them (#190), and so are the control, controller and
+  learning projection colours (#425).
+- **Colours, projections, self-loops and line weight:**
+  `frontend/e2e/show-graph-edges.spec.ts` (`@ci`, about a minute). Opens every
+  reference model, and Gilzenrat from PsyNeuLink's Library, in every view but
+  the PyTorch one, asks show_graph for its own description, and checks the
+  canvas as drawn: each node's outline colour is show_graph's (a control
+  mechanism node, such as Gilzenrat's LC, in show_graph's control blue); each
+  projection ends as show_graph's does (a box for a control projection, an
+  arrow otherwise), solid where show_graph's is, in show_graph's colour (its
+  black is the canvas's mapping grey); every self-loop show_graph draws is
+  there, with two attachment points, and a click selects it; and an ordinary
+  line's weight against an input or output node's outline is show_graph's
+  1 pt against 3 pt, within 0.08 (#425). On a mismatch it attaches a table
+  (`show-graph-edge-mismatches.md`). The backend side, that self-loops, the
+  CONTROL role and show_graph's edges reach the page, is
+  `backend/tests/test_show_graph_edges.py`.
 - **Shapes:** `frontend/e2e/show-graph-shapes.spec.ts` (`@ci`, about 3 minutes).
   Opens every reference model in every view it has (each composition,
   flattened, PyTorch) and with CIMs shown, asks show_graph for its own picture,

@@ -29,12 +29,13 @@ export const REFERENCE_MODELS = [
 export const viewSelect = (page: Page) =>
   page.locator("select").filter({ has: page.locator("option", { hasText: "Flatten (all compositions)" }) }).first();
 
+/** Open a model by its path relative to backend/, or by an absolute path (a Library model's, #425). */
 export async function openModel(page: Page, model: string) {
   const file = path.basename(model);
   await page.getByRole("button", { name: /Open/ }).first().click();
   await page.getByRole("button", { name: "Open from path…" }).click();
   const prompt = page.locator('input[placeholder*="/path/to/model.py"]');
-  await prompt.fill(path.join(BACKEND_DIR, model));
+  await prompt.fill(path.isAbsolute(model) ? model : path.join(BACKEND_DIR, model));
   // The previous model stays drawn until this one's load returns.
   await Promise.all([
     page.waitForResponse(
