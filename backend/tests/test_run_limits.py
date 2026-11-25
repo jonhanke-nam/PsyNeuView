@@ -117,10 +117,12 @@ def test_forking_over_and_over_is_refused_by_the_process_limit():
 # ── through the real runner, every way a task can run ───────────────────
 
 HOG = (
-    "import time\n"
+    "import os, time\n"
     "blocks = []\n"
     "for _ in range(64):  # at most 4 GB, if nothing stopped it\n"
-    "    blocks.append(bytearray(b'x' * (64 << 20)))\n"
+    "    # Random bytes: macOS compresses memory, and a run of one byte would\n"
+    "    # hardly count.\n"
+    "    blocks.append(os.urandom(64 << 20))\n"
     "    time.sleep(0.05)\n"
 )
 SPIN = "while True:\n    pass\n"
@@ -141,7 +143,14 @@ def low_limits(monkeypatch):
     monkeypatch.setenv(run_limits.MEMORY_ENV, "1536")  # above a warm worker that has run many models
     monkeypatch.setenv(run_limits.CPU_ENV, "4")
     monkeypatch.setenv(run_limits.PROCESSES_ENV, "16")
-    yield
+    yield monkeypatch
+
+
+def _only(low_limits, what: str) -> None:
+    """Making 4 GB of random bytes takes processor time: the memory test
+    gets more of it, so memory is the limit that stops it."""
+    if what == "memory":
+        low_limits.setenv(run_limits.CPU_ENV, "120")
 
 
 def _hostile(folder: Path, what: str) -> Path:
@@ -161,6 +170,7 @@ def _stopped_for(r, what: str) -> None:
 
 @pytest.mark.parametrize("what", sorted(MODELS))
 def test_the_warm_worker_stops_a_model_over_a_limit(low_limits, tmp_path, what):
+    _only(low_limits, what)
     t0 = time.time()
     r = load(_hostile(tmp_path / "Own", what))
     _stopped_for(r, what)
@@ -175,6 +185,7 @@ def test_the_warm_worker_stops_a_model_over_a_limit(low_limits, tmp_path, what):
 @pytest.mark.parametrize("what", sorted(MODELS))
 def test_a_fresh_process_per_task_stops_a_model_over_a_limit(low_limits, st, mode, what):
     st["monkeypatch"].setenv("PSYNEUVIEW_WORKER_ISOLATION", mode)
+    _only(low_limits, what)
     t0 = time.time()
     r = load(_hostile(st["tmp"] / "Own", what))
     _stopped_for(r, what)
