@@ -232,6 +232,7 @@ async function sendParamUpdate(
       is_default: isDefault,
       skip_introspect: skipIntrospect,
       function_class: functionClass,
+      ...modelViewOptions(), // #431: the model sent back is in the view shown
     }),
     signal,
   });
@@ -259,6 +260,7 @@ async function sendFunctionTypeUpdate(
       file_path: filePath,
       var_name: varName,
       new_function_class: newFunctionClass,
+      ...modelViewOptions(), // #431
     }),
     signal,
   });
@@ -294,6 +296,7 @@ async function sendPortRename(
       current_names: currentNames,
       old_name: oldName,
       new_name: newName,
+      ...modelViewOptions(), // #431
     }),
     signal,
   });
@@ -325,6 +328,7 @@ async function sendPortAdd(
       port_kind: portKind,
       current_names: currentNames,
       new_name: newName,
+      ...modelViewOptions(), // #431
     }),
     signal,
   });
@@ -356,6 +360,7 @@ async function sendPortRemove(
       port_kind: portKind,
       current_names: currentNames,
       port_name: portName,
+      ...modelViewOptions(), // #431
     }),
     signal,
   });

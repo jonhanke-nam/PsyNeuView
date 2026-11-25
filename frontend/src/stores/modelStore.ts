@@ -858,11 +858,14 @@ export const useModelStore = create<ModelState>((set, get) => ({
         // write over a change made elsewhere since (#1). Inspector and canvas
         // edits flush typed code first; without it, an outside edit was
         // overwritten with no prompt.
-        body: JSON.stringify(
-          bundleOrigin
+        // The view shown (#431): the model sent back is re-read in it.
+        body: JSON.stringify({
+          ...(bundleOrigin
             ? { file_path: filePath, source, bundle_path: bundleOrigin }
-            : { file_path: filePath, source, base_source: savedSource },
-        ),
+            : { file_path: filePath, source, base_source: savedSource }),
+          flat: useGraphSettings.getState().flat,
+          pytorch: useGraphSettings.getState().pytorch,
+        }),
       });
       if (resp.status === 409) {
         // Changed on disk: ask, exactly as Save does, instead of writing.
