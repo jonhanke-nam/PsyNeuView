@@ -2557,11 +2557,11 @@ function ParamSection({
       )}
 
       {inherited.length > 0 && (
-        <DisclosureDetails style={{ marginTop: 6 }}
+        <DisclosureDetails
+          style={{ marginTop: 6 }}
           summaryStyle={{ fontSize: s(11), color: "var(--pnv-text-faint)", cursor: "pointer", userSelect: "none", padding: "2px 0" }}
-          summary={<>
-            Inherited ({inherited.length})
-          </>}>
+          summary={<>Inherited ({inherited.length})</>}
+        >
           <div style={{ marginTop: 4 }}>
             {inherited.map(([key, meta]) => (
               <div

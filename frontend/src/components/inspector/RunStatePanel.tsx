@@ -327,10 +327,13 @@ export function RunStatePanel() {
           onToggle={setQueueOpen}
           style={{ marginBottom: 12 }}
           summaryStyle={{ cursor: "pointer", color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-11)", textTransform: "uppercase", letterSpacing: 0.3 }}
-          summary={<>
-            Consideration queue ({considerationQueue.length} phase{considerationQueue.length === 1 ? "" : "s"}
-            {activePhaseIdx !== -1 ? ` — phase ${activePhaseIdx + 1} firing now` : ""})
-          </>}>
+          summary={
+            <>
+              Consideration queue ({considerationQueue.length} phase{considerationQueue.length === 1 ? "" : "s"}
+              {activePhaseIdx !== -1 ? ` — phase ${activePhaseIdx + 1} firing now` : ""})
+            </>
+          }
+        >
           <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 4 }}>
             {considerationQueue.map((phase, phaseIdx) => (
               <div key={phaseIdx} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
@@ -401,11 +404,11 @@ export function RunStatePanel() {
 
       {/* Raw snapshot rows — fallback for everything not yet labeled */}
       {snapshotsAtStep.length > 0 && (
-        <DisclosureDetails style={{ marginTop: 8 }}
+        <DisclosureDetails
+          style={{ marginTop: 8 }}
           summaryStyle={{ cursor: "pointer", color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-11)", textTransform: "uppercase", letterSpacing: 0.3 }}
-          summary={<>
-            Raw snapshots at this step ({snapshotsAtStep.length})
-          </>}>
+          summary={<>Raw snapshots at this step ({snapshotsAtStep.length})</>}
+        >
           <pre
             style={{
               fontSize: "var(--pnv-fs-11)",
