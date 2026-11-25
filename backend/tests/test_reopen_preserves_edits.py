@@ -26,7 +26,7 @@ def _load(**body):
 def working(tmp_path, monkeypatch):
     """Point the working dir at a tmp path so tests never touch backend/."""
     monkeypatch.setenv("PSYNEUVIEW_WORKING_DIR", str(tmp_path))
-    return tmp_path / f"{MODEL}.py"
+    return tmp_path / "reference-models" / f"{MODEL}.py"  # its source's folder (#422)
 
 
 def test_fresh_load_reports_no_divergence(working):

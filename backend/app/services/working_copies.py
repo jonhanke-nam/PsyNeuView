@@ -430,3 +430,213 @@ def adopt_renamed_working_copy(new_stem: str, folder: Path | None = None) -> lis
     if moved:
         logger.info("working copies: adopted %d renamed file(s) as %s", len(moved), new_stem)
     return moved
+
+
+# ── One folder per source (#422) ──────────────────────────────────────
+#
+# Working copies used to share one folder, named by the model's file name
+# alone, so two models with the same file name from different places — a
+# Reference Model and a PsyNeuLink example, or the same example from two
+# PsyNeuLink sources — would have written the same file. Each source now has
+# its own folder:
+#
+#   <working copies>/reference-models/<stem>.py
+#   <working copies>/demos/<stem>.py
+#   <working copies>/psyneulink-examples/<source>/<stem>.py
+#   <working copies>/tutorials/<id>/<stem>.py   (#172, unchanged)
+#
+# :func:`separate_by_source` moves copies left in the shared folder by an
+# older version into their source's folder, by the same rules as the move
+# above: copy, check byte for byte, then remove; never overwrite; a copy that
+# differs from one already there is left where it is and recorded.
+
+REFERENCE_SUBDIR = "reference-models"
+DEMO_SUBDIR = "demos"
+EXAMPLES_SUBDIR = "psyneulink-examples"
+SEPARATION_KEY = "working_copies_last_separation"
+
+#: A model file or sidecar; the name may have spaces (PsyNeuLink's examples do).
+_ANY_TAIL = re.compile(
+    r"^(?P<stem>[^/]+?)(?P<tail>\.py|\.pnlview\.json|\.labels\.yaml|\.psyneuview\.json"
+    r"|\.[^/]+\.(?:pnlview\.json|labels\.yaml))$"
+)
+
+
+def _sub(name: str, *, create: bool = True) -> Path:
+    d = working_copies_dir(create=create) / name
+    if create:
+        d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def reference_copies_dir(*, create: bool = True) -> Path:
+    """Where a Reference Model's working copy goes."""
+    return _sub(REFERENCE_SUBDIR, create=create)
+
+
+def demo_copies_dir(*, create: bool = True) -> Path:
+    """Where a demo's working copy goes."""
+    return _sub(DEMO_SUBDIR, create=create)
+
+
+def source_folder_name(info: dict | None) -> str:
+    """A folder name for the active PsyNeuLink: ``PrincetonUniversity-PsyNeuLink@devel``,
+    ``pypi-0.19.1.0``. Examples from two sources then never share a file."""
+    info = info or {}
+    kind = info.get("source")
+    if kind == "github" and info.get("repo"):
+        name = f"{info['repo'].replace('/', '-')}@{info.get('branch') or 'default'}"
+    elif kind == "pypi":
+        name = f"pypi-{info.get('version') or 'unknown'}"
+    elif kind == "editable":
+        name = f"checkout-{Path(info.get('path') or 'unknown').name}"
+    else:
+        name = "unknown"
+    return re.sub(r"[^A-Za-z0-9._@-]+", "-", name)
+
+
+def active_source_folder_name() -> str:
+    try:
+        from app.services.settings_info import get_psyneulink_info
+
+        return source_folder_name(get_psyneulink_info())
+    except Exception:  # noqa: BLE001
+        return "unknown"
+
+
+def example_copies_dir(source: str | None = None, *, create: bool = True) -> Path:
+    """Where a PsyNeuLink example's working copy goes, for ``source`` (the
+    active PsyNeuLink when None)."""
+    return _sub(f"{EXAMPLES_SUBDIR}/{source or active_source_folder_name()}", create=create)
+
+
+def _reference_stems() -> set[str]:
+    return _stems_in(_BACKEND_DIR / "reference_models")
+
+
+def _demo_stems() -> set[str]:
+    return _stems_in(_BACKEND_DIR / "demos")
+
+
+def _category(stem: str, references: set[str], demos: set[str], examples: set[str]) -> str | None:
+    if stem in references or any(p.match(stem) for p in RENAMED_REFERENCE_STEMS.values()):
+        return "reference"
+    if stem in demos:
+        return "demo"
+    if stem in examples:
+        return "example"
+    return None
+
+
+def separate_by_source(
+    folder: Path | None = None,
+    *,
+    references: set[str] | None = None,
+    demos: set[str] | None = None,
+    examples: set[str] | None = None,
+    example_source: str | None = None,
+) -> dict | None:
+    """Move working copies in the shared folder into their source's folder.
+    Returns the record, or None when there was nothing to move. Never raises.
+
+    Only files whose names are a known model's (with its sidecars, lateral or
+    in ``.psyneuview/``) move; anything else in the folder is left alone.
+    """
+    try:
+        folder = folder or working_copies_dir()
+        references = _reference_stems() if references is None else references
+        demos = _demo_stems() if demos is None else demos
+        examples = _example_stems() if examples is None else examples
+        targets = {
+            "reference": folder / REFERENCE_SUBDIR,
+            "demo": folder / DEMO_SUBDIR,
+            "example": folder / EXAMPLES_SUBDIR / (example_source or active_source_folder_name()),
+        }
+        moved = duplicates = 0
+        conflicts: list[str] = []
+        failures: list[dict] = []
+        for parent in (folder, folder / _DOT_DIRNAME):
+            try:
+                entries = sorted(parent.iterdir(), key=lambda p: p.name)
+            except OSError:
+                continue
+            for src in entries:
+                if src.is_symlink() or not src.is_file():
+                    continue
+                m = _ANY_TAIL.match(src.name)
+                if not m:
+                    continue
+                kind = _category(m.group("stem"), references, demos, examples)
+                if kind is None:
+                    continue
+                dst = targets[kind] / src.relative_to(folder)
+                try:
+                    if dst.exists() or dst.is_symlink():
+                        if not dst.is_symlink() and dst.is_file() and _same_content(src, dst):
+                            src.unlink()
+                            duplicates += 1
+                        else:
+                            conflicts.append(str(src))
+                        continue
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    try:
+                        _copy_file(src, dst)
+                        if not _same_content(src, dst):
+                            raise OSError("didn't copy correctly")
+                    except Exception:
+                        try:
+                            dst.unlink()
+                        except OSError:
+                            pass
+                        raise
+                    src.unlink()
+                    moved += 1
+                except Exception as e:  # noqa: BLE001 — one failure must not stop the rest
+                    failures.append({"file": str(src), "error": f"{e}"})
+                    logger.warning("working copies: couldn't move %s: %s", src, e)
+        if not (moved or duplicates or conflicts or failures):
+            return None
+        record = {
+            "at": time.time(), "folder": str(folder), "moved": moved, "duplicates_removed": duplicates,
+            "conflicts": conflicts, "failures": failures, "ok": not failures,
+        }
+        try:
+            with app_settings._lock:
+                config = app_settings._read_config(app_config_path())
+                config[SEPARATION_KEY] = record
+                app_settings._write_config_atomic(app_config_path(), config)
+        except Exception:  # noqa: BLE001
+            pass
+        logger.info(
+            "working copies: %d moved into per-source folders (%d already there, %d conflicts, %d failures)",
+            moved, duplicates, len(conflicts), len(failures),
+        )
+        return record
+    except Exception as e:  # noqa: BLE001 — startup must go on
+        logger.warning("working copies: separation didn't run: %s", e)
+        return None
+
+
+def relocated(path: str | Path) -> Path | None:
+    """Where a working copy that was in the shared folder is now (#422), for a
+    Recent entry made before the move. None when ``path`` isn't such a file or
+    no copy of it is found."""
+    p = Path(path)
+    try:
+        root = working_copies_dir(create=False).resolve()
+        if p.parent.resolve() != root:
+            return None
+    except OSError:
+        return None
+    for candidate in (root / REFERENCE_SUBDIR / p.name, root / DEMO_SUBDIR / p.name):
+        if candidate.is_file():
+            return candidate
+    examples = root / EXAMPLES_SUBDIR
+    active = examples / active_source_folder_name() / p.name
+    if active.is_file():
+        return active
+    if examples.is_dir():
+        for candidate in sorted(examples.glob(f"*/{p.name}")):
+            if candidate.is_file():
+                return candidate
+    return None

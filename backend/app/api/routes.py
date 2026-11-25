@@ -1148,6 +1148,10 @@ def load_model(request: LoadModelRequest):
     t0 = time.time()
     path = Path(request.file_path)
     if not path.exists():
+        # #422: a Recent entry for a working copy from before working copies
+        # had a folder per source opens the copy where it is now.
+        path = working_copies.relocated(path) or path
+    if not path.exists():
         raise HTTPException(status_code=404, detail=f"File not found: {path}")
 
     classification = classify_file(path)
@@ -1208,6 +1212,7 @@ def load_model(request: LoadModelRequest):
         formatIssues=issues,
         starImportConverted=star_converted,
         timings=_load_timings((t2 - t1) * 1000, t0, misc_ms=(t3 - t2) * 1000),
+        file_path=str(path),
         identity=model_identity(path).model_dump(),
     )
 
@@ -2815,6 +2820,10 @@ def _demo_working_dir() -> Path:
     — a per-user folder outside every install, so edits survive an app
     update. It used to be ``backend/`` itself; working copies left there are
     moved on startup (``working_copies.migrate_legacy_working_copies``).
+
+    Since #422 each source has its own folder inside it (reference-models/,
+    demos/, psyneulink-examples/<source>/, tutorials/<id>/); this is the
+    folder that holds them.
     """
     return working_copies.working_copies_dir()
 
@@ -2872,7 +2881,7 @@ def reset_demo(request: ResetDemoRequest):
 
     # Working copy lives in the configured working dir (default: backend/),
     # or a tutorial's own folder (#172).
-    folder = _tutorial_working_dir(request.tutorial) if request.tutorial else _demo_working_dir()
+    folder = _tutorial_working_dir(request.tutorial) if request.tutorial else working_copies.demo_copies_dir()
     working = folder / f"{request.demo_name}.py"
     shutil.copy2(pristine, working)
 
@@ -3002,8 +3011,11 @@ def load_reference_model(request: LoadReferenceRequest):
     if request.tutorial:
         working = _tutorial_working_dir(request.tutorial) / f"{request.name}.py"
     else:
-        working_copies.adopt_renamed_working_copy(request.name, _demo_working_dir())
-        working = _demo_working_dir() / f"{request.name}.py"
+        # #422: each source has its own folder; a copy an older version left in
+        # the shared folder moves there first, edits and all.
+        working_copies.separate_by_source()
+        working_copies.adopt_renamed_working_copy(request.name, working_copies.reference_copies_dir())
+        working = working_copies.reference_copies_dir() / f"{request.name}.py"
     pristine_text = pristine.read_text()
     had_edits = working.exists() and working.read_text() != pristine_text
     restored = bool(had_edits and request.restore_pristine)
@@ -3208,7 +3220,9 @@ def load_psyneulink_example(request: LoadPnlExampleRequest):
     if pnl_source_guard.active_kind() == "local":
         working = src
     else:
-        working = _demo_working_dir() / src.name
+        # #422: in the active source's own folder, so the same example from
+        # two PsyNeuLink sources never shares a file.
+        working = working_copies.example_copies_dir() / src.name
         # #1010 applies here too: reopening is a re-read. Copy only when there
         # is nothing to lose; otherwise keep the edits and say so, and copy
         # afresh only when asked (restore_pristine).
@@ -3308,13 +3322,14 @@ def model_identity(file_path: str | Path) -> ModelIdentity:
     stem, name = path.stem, path.name
     references = {e["name"]: e["label"] for e in REFERENCE_MODELS}
     working = _within(path, _demo_working_dir())
+    in_examples = _within(path, _demo_working_dir() / working_copies.EXAMPLES_SUBDIR)
 
-    if stem in references and (working or _within(path, REFERENCE_DIR)):
+    if stem in references and not in_examples and (working or _within(path, REFERENCE_DIR)):
         return ModelIdentity(
             source="reference", label=references[stem], file=name, path=str(path),
             original=str(REFERENCE_DIR / name), workingCopy=working,
         )
-    if (working or _within(path, DEMOS_DIR)) and (DEMOS_DIR / name).exists():
+    if not in_examples and (working or _within(path, DEMOS_DIR)) and (DEMOS_DIR / name).exists():
         return ModelIdentity(
             source="demo", label=_format_label(stem), file=name, path=str(path),
             original=str(DEMOS_DIR / name), workingCopy=working,
