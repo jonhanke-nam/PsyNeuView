@@ -3911,8 +3911,10 @@ def _pytorch_flatten(comp, line_map, proj_name_lookup, name_to_var):
             if mech is not None:
                 rank[id(mech)] = i
 
-    # Provenance: the nested-composition path each mechanism was inlined from.
+    # Provenance: the nested-composition path each mechanism was inlined from,
+    # and where it is declared, walking the compositions in their node order.
     comp_path = {}
+    declared = {}
 
     def walk_paths(c, path):
         for node in c.nodes:
@@ -3920,12 +3922,21 @@ def _pytorch_flatten(comp, line_map, proj_name_lookup, name_to_var):
                 walk_paths(node, path + [node.name])
             elif not is_cim(node):
                 comp_path[id(node)] = path
+                declared.setdefault(id(node), len(declared))
 
     walk_paths(comp, [])
 
+    # #432: the wrapper fills nodes_map from a set of the composition's nodes,
+    # so its order follows memory addresses and changes from one run to the
+    # next. The layered layout places nodes by the order it is given them, so
+    # the same model came out laid out differently each time it was opened.
+    # Give the nodes, and the edges below, in the order the model declares them.
+    def node_order(mech):
+        return (declared.get(id(mech), len(declared)), getattr(mech, "name", ""))
+
     node_ids = set(id(m) for m in nodes_map.keys())
     nodes = []
-    for mech, wrapper in nodes_map.items():
+    for mech, wrapper in sorted(nodes_map.items(), key=lambda kv: node_order(kv[0])):
         node_data = serialize_mechanism(mech)
         node_data["kind"] = "mechanism"
         node_data["roles"] = _get_node_roles(comp, mech)
@@ -3991,11 +4002,16 @@ def _pytorch_flatten(comp, line_map, proj_name_lookup, name_to_var):
         if edge_key in seen_edges or id(sender) == id(receiver):
             continue
         seen_edges.add(edge_key)
-        projections.append(
-            _serialize_flat_projection(sender, receiver, [proj], proj_name_lookup, via_cim=via_cim)
-        )
+        projections.append((
+            (node_order(sender), node_order(receiver),
+             getattr(s_port, "name", ""), getattr(r_port, "name", "")),
+            _serialize_flat_projection(sender, receiver, [proj], proj_name_lookup, via_cim=via_cim),
+        ))
 
-    return nodes, projections
+    # In declared order too (#432): nested projections are added in the
+    # wrapper's set order.
+    projections.sort(key=lambda kp: kp[0])
+    return nodes, [p for _, p in projections]
 
 
 def serialize_composition(var_name, comp, line_map, proj_name_lookup=None, name_to_var=None, flat=False, pytorch=False):
