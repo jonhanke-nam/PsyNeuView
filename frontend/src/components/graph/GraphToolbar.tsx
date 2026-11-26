@@ -20,6 +20,7 @@ import { applyShowGraphLayoutNow } from "@/hooks/useShowGraphLayout";
 import { LAYOUT_STYLES } from "@/stores/graphLayoutDefaultStore";
 import { toggleColours } from "@/components/common/toolbarStyles";
 import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { layoutMoveCount } from "@/utils/layoutMoves";
 import { GraphViewOptionsMenu } from "./GraphViewOptionsMenu";
 
 export function GraphToolbar() {
@@ -34,8 +35,14 @@ export function GraphToolbar() {
 
   const paletteOpen = usePaletteStore((s) => s.isOpen);
 
-  const reloadModel = useCallback(() => {
+  // `yieldToMoves`: drop the reply if the user moved something on the canvas
+  // while it was out. The Layout: Auto / Custom switch reloads only to pick
+  // up the saved layout, and a node dragged in the meantime used to be put
+  // back when the reply landed (#444). Its drag is already saved as the
+  // custom layout, so what is on screen is right.
+  const reloadModel = useCallback((opts: { yieldToMoves?: boolean } = {}) => {
     if (!filePath) return;
+    const movesBefore = layoutMoveCount();
     fetch("/api/model/load", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -50,6 +57,9 @@ export function GraphToolbar() {
     })
       .then((r) => r.json())
       .then((data) => {
+        // Another model opened since: this reply is for the old one.
+        if (useModelStore.getState().filePath !== filePath) return;
+        if (opts.yieldToMoves && layoutMoveCount() !== movesBefore) return;
         if (data.source) setSource(data.source);
         // Pass the sidecar labels/bundle/variants the reload just fetched —
         // omitting them makes loadModelFromServer clear modelLabels, which
@@ -163,7 +173,7 @@ export function GraphToolbar() {
         onClick={() => {
           const next = !autoLayout;
           setAutoLayout(next);
-          reloadModel();
+          reloadModel({ yieldToMoves: true });
         }}
         style={{
           fontSize: "var(--pnv-fs-11)",
