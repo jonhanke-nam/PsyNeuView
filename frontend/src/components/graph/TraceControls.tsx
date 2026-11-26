@@ -253,6 +253,7 @@ export function TraceControls() {
           disabled={currentTrial === null || currentTrial <= 0}
           style={{ fontSize: "var(--pnv-fs-14)", padding: "2px 8px", border: "1px solid var(--pnv-border)", borderRadius: 4, background: "var(--pnv-surface-muted)", cursor: "pointer", color: "var(--pnv-text-body)" }}
           title="Previous trial at the same step offset"
+          aria-label="Previous trial"
         >⏮</button>
       )}
 
@@ -260,6 +261,7 @@ export function TraceControls() {
         data-testid="trace-prev-step"
         style={{ fontSize: "var(--pnv-fs-14)", padding: "2px 8px", border: "1px solid var(--pnv-border)", borderRadius: 4, background: "var(--pnv-surface-muted)", cursor: "pointer", color: "var(--pnv-text-body)" }}
         title="Previous step"
+        aria-label="Previous step"
       >◀</button>
 
       {/* Fixed width (not minWidth) so the bar doesn't reflow when the step
@@ -284,6 +286,7 @@ export function TraceControls() {
           <input
             type="number"
             value={editValue}
+            aria-label={`Jump to step (1 to ${displayTotal})`}
             autoFocus
             onChange={(e) => setEditValue(e.target.value)}
             onKeyDown={(e) => {
@@ -311,6 +314,19 @@ export function TraceControls() {
         ) : (
           <span
             onClick={startEdit}
+            // Keyboard: Tab reaches the step number, Enter or Space edits it.
+            role={displayStep !== null ? "button" : undefined}
+            tabIndex={displayStep !== null ? 0 : undefined}
+            aria-label={
+              displayStep !== null
+                ? `Step ${displayStep + 1} of ${displayTotal}. Press Enter to jump to a step`
+                : undefined
+            }
+            onKeyDown={(e) => {
+              if (displayStep === null || (e.key !== "Enter" && e.key !== " ")) return;
+              e.preventDefault();
+              startEdit();
+            }}
             style={{
               cursor: displayStep !== null ? "pointer" : "default",
               textDecoration: displayStep !== null ? "underline dotted var(--pnv-node-text-dim)" : "none",
@@ -334,6 +350,7 @@ export function TraceControls() {
         data-testid="trace-next-step"
         style={{ fontSize: "var(--pnv-fs-14)", padding: "2px 8px", border: "1px solid var(--pnv-border)", borderRadius: 4, background: "var(--pnv-surface-muted)", cursor: "pointer", color: "var(--pnv-text-body)" }}
         title="Next step"
+        aria-label="Next step"
       >▶</button>
 
       {hasTrialNav && (
@@ -341,6 +358,7 @@ export function TraceControls() {
           disabled={currentTrial === null || currentTrial >= trialBoundaries.length - 1}
           style={{ fontSize: "var(--pnv-fs-14)", padding: "2px 8px", border: "1px solid var(--pnv-border)", borderRadius: 4, background: "var(--pnv-surface-muted)", cursor: "pointer", color: "var(--pnv-text-body)" }}
           title="Next trial at the same step offset"
+          aria-label="Next trial"
         >⏭</button>
       )}
 
@@ -359,6 +377,7 @@ export function TraceControls() {
         <span style={{ display: "inline-flex", border: "1px solid var(--pnv-border)", borderRadius: 4, overflow: "hidden", fontSize: "var(--pnv-fs-10)", fontFamily: "var(--pnv-font-mono)" }}>
           <button
             onClick={() => setViewMode("run")}
+            aria-pressed={effectiveMode === "run"}
             style={{
               padding: "2px 6px",
               border: "none",
@@ -373,6 +392,7 @@ export function TraceControls() {
           </button>
           <button
             onClick={() => setViewMode("trial")}
+            aria-pressed={effectiveMode === "trial"}
             style={{
               padding: "2px 6px",
               border: "none",
@@ -394,7 +414,8 @@ export function TraceControls() {
           bar from shifting when the word changes. */}
       <button onClick={toggleAutoPlay}
         data-testid="trace-autoplay"
-        aria-pressed={isPlaying}
+        // No aria-pressed: the label itself changes (Auto-play / Pause), and
+        // a pressed "Pause" would read as the opposite of what it does.
         style={{
           fontSize: "var(--pnv-fs-11)",
           padding: "2px 8px",
@@ -453,6 +474,7 @@ export function TraceControls() {
       <button onClick={() => { record("step", "Trace cleared"); clearTrace(); }}
         style={{ fontSize: "var(--pnv-fs-11)", padding: "2px 6px", border: "1px solid var(--pnv-border-light)", borderRadius: 4, background: "var(--pnv-surface)", cursor: "pointer", color: "var(--pnv-text-faint)" }}
         title="Clear trace"
+        aria-label="Clear trace"
       >✕</button>
     </div>
   );

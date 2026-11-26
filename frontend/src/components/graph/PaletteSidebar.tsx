@@ -5,7 +5,7 @@
  */
 
 import { isFunctionType, isProjectionType } from "@/constants/pnlTypes";
-import { type DragEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type DragEvent, type KeyboardEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useModelStore } from "@/stores/modelStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { usePaletteStore } from "@/stores/paletteStore";
@@ -534,6 +534,12 @@ function PaletteLeaf({
         onDragStart={(e) => onDragStart(e, item)}
         onDragEnd={endDrag}
         onClick={() => onAdd(item)}
+        // A strip icon is a button to the keyboard too: Tab reaches it, and
+        // Enter or Space picks it up as a click does.
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => activateOnKey(e, () => onAdd(item))}
+        aria-label={title}
         data-testid="palette-item"
         data-type={item.type}
         data-shortcut={shortcut}
@@ -740,7 +746,9 @@ function StripHeading({ text, testId, label }: { text: StripHeadingWord; testId:
       aria-label={label}
       style={{
         position: "relative",
-        color: "var(--pnv-text-hint)",
+        // The secondary text, not the hint grey: words this small need the
+        // stronger contrast (the hint grey was 3.4:1, under WCAG AA).
+        color: "var(--pnv-text-secondary)",
         textAlign: "center",
         lineHeight: 1.15,
         // Inside the strip's 4px padding, as the icons are: the panel's
@@ -823,6 +831,14 @@ function IconButton({
   );
 }
 
+/** Enter or Space on a strip icon does what a click does. */
+function activateOnKey(e: KeyboardEvent, act: () => void) {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  e.preventDefault();
+  e.stopPropagation();
+  act();
+}
+
 function CompactCategoryIcon({
   node,
   isActive,
@@ -831,14 +847,23 @@ function CompactCategoryIcon({
   isActive: boolean;
 }) {
   const icon = iconForCategory(node.id);
+  const toggle = () => {
+    const store = usePaletteStore.getState();
+    if (store.compactFlyoutNodeId === node.id) store.closeCompactFlyout();
+    else store.openCompactFlyout(node.id);
+  };
   return (
     <div
       onClick={(e) => {
         e.stopPropagation();
-        const store = usePaletteStore.getState();
-        if (store.compactFlyoutNodeId === node.id) store.closeCompactFlyout();
-        else store.openCompactFlyout(node.id);
+        toggle();
       }}
+      // Keyboard: Tab reaches it, Enter or Space opens or closes its menu.
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => activateOnKey(e, toggle)}
+      aria-label={node.label}
+      aria-expanded={isActive}
       title={node.label}
       data-testid="palette-category"
       data-category={node.id}

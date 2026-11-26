@@ -123,6 +123,7 @@ export function AppUpdateNotice() {
             <Button
               kind="link"
               data-testid="app-update-dismiss"
+              style={ON_TINT}
               onClick={() => {
                 setShown((prev) => (prev ? { ...prev, justUpdated: null } : prev));
                 void dismissJustUpdated();
@@ -134,6 +135,7 @@ export function AppUpdateNotice() {
             <Button
               kind="link"
               data-testid="app-update-later"
+              style={ON_TINT}
               title="Hide this for a day"
               onClick={() => setDismissal(saveDismissal(update!.version!, Date.now()))}
             >
@@ -160,4 +162,7 @@ const noticeStyle: React.CSSProperties = {
   whiteSpace: "nowrap",
 };
 
-const linkStyle: React.CSSProperties = { color: "var(--pnv-primary)", fontSize: "var(--pnv-fs-12)" };
+// On the notice's blue tint the primary blue reads below WCAG AA (3.9:1);
+// the deeper blue made for text on a tint passes.
+const ON_TINT: React.CSSProperties = { color: "var(--pnv-primary-deep)" };
+const linkStyle: React.CSSProperties = { ...ON_TINT, fontSize: "var(--pnv-fs-12)" };
