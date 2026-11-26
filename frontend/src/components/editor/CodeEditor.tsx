@@ -7,7 +7,7 @@
 
 import { useLivePreviewStore } from "@/stores/livePreviewStore";
 import { BACKGROUND_HEADER } from "@/stores/busyStore";
-import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
+import { modelLoadOptions, modelViewOptions } from "@/utils/showGraphLoadRequest";
 import { useEffect, useRef, useCallback, useMemo, useState, type CSSProperties } from "react";
 import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { python } from "@codemirror/lang-python";
@@ -522,9 +522,10 @@ export function CodeEditor() {
     // change that landed after we loaded (#926). savedSource is exactly that:
     // the text we last loaded or wrote.
     const baseSource = useModelStore.getState().savedSource;
+    // The view shown goes too (#431): the model sent back is re-read in it.
     const body = bundleOrigin
-      ? { file_path: filePath, source: currentSource, bundle_path: bundleOrigin }
-      : { file_path: filePath, source: currentSource, base_source: baseSource };
+      ? { file_path: filePath, source: currentSource, bundle_path: bundleOrigin, ...modelViewOptions() }
+      : { file_path: filePath, source: currentSource, base_source: baseSource, ...modelViewOptions() };
     // Counted so autosave never starts a second save over this one (#1347).
     const endSave = useAutosaveStore.getState().beginSave();
     try {
