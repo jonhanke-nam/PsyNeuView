@@ -91,10 +91,7 @@ test.describe("Guided walkthroughs are discoverable", () => {
     await expect(page.getByTestId("tour-bar")).toHaveCount(0);
     await expect(page.getByTestId("tour-overlay")).toHaveCount(0);
 
-    // ...the space comes back… The walkthrough drew its model nested, the
-    // view it was written for (#428), so ending it redraws the learner's
-    // flattened view: let that finish, so its status line isn't measured.
-    await expect(page.getByTestId("status-bar")).toHaveCount(0, { timeout: 60_000 });
+    // ...the space comes back…
     await page.waitForTimeout(300);
     expect((await canvas.boundingBox())!.height).toBeCloseTo(heightBefore, 0);
 

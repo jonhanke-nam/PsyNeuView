@@ -48,6 +48,50 @@ export function viewModesFor(spec: TutorialViewSpec): { flat: boolean; pytorch: 
   }
 }
 
+/** The server-drawn view settings that decide between the nested, flattened and PyTorch graphs. */
+export interface DrawnModes {
+  flat: boolean;
+  pytorch: boolean;
+  showCIMs: boolean;
+}
+
+/** What of the model on screen decides whether two views draw it differently. */
+export interface ModelShape {
+  compositionOptions: { nested: boolean }[];
+  compositionMeta: Record<string, { isAutodiff: boolean }>;
+  /**
+   * The graph drawn now. The flattened view lists no nested compositions in
+   * the view menu, so a composition's frame or folded node is what shows one.
+   */
+  nodes: { type?: string; data?: unknown }[];
+}
+
+/**
+ * Whether two views draw this model as the same graph, so switching between
+ * them needs no redraw (#428; performance is a requirement). Flattened and
+ * nested differ only with a nested composition, more than one composition, or
+ * the interface mechanisms shown (the flattened view has none). PyTorch
+ * differs only for an AutodiffComposition; elsewhere the server ignores it.
+ */
+export function viewsDrawAlike(a: DrawnModes, b: DrawnModes, model: ModelShape): boolean {
+  if (a.showCIMs !== b.showCIMs) return false;
+  const compositionDrawn = model.nodes.some(
+    (n) => n.type === "compositionNode" || (n.data as { type?: string } | undefined)?.type === "Composition",
+  );
+  const nestedMatters =
+    compositionDrawn ||
+    model.compositionOptions.some((o) => o.nested) ||
+    model.compositionOptions.length > 1 ||
+    a.showCIMs;
+  const autodiff = Object.values(model.compositionMeta).some((m) => m.isAutodiff);
+  const drawn = (m: DrawnModes) => (m.pytorch && autodiff ? "pytorch" : m.flat && nestedMatters ? "flat" : "nested");
+  return drawn(a) === drawn(b);
+}
+
+function drawnModes(from: Record<string, unknown>): DrawnModes {
+  return { flat: !!from.flat, pytorch: !!from.pytorch, showCIMs: !!from.showCIMs };
+}
+
 /** Fold or open the compositions the walkthrough names, before its model draws (#428). */
 function applyFolds(spec: TutorialViewSpec): void {
   const wanted = Object.entries(spec?.compositions ?? {});
@@ -133,7 +177,15 @@ export function applyTutorialView(spec?: TutorialViewSpec, { opensOnStart = fals
   if (!modes || opensOnStart) return;
   const g = useGraphSettings.getState();
   if (g.flat === modes.flat && g.pytorch === modes.pytorch) return;
-  const { filePath, source, savedSource } = useModelStore.getState();
+  const model = useModelStore.getState();
+  const { filePath, source, savedSource } = model;
+  // The same graph either way: the setting changes, and nothing is redrawn.
+  const alike = viewsDrawAlike(drawnModes(now()), { ...drawnModes(now()), ...modes }, model);
+  if (alike) {
+    if (!(MODE_VIEW_KEYS[0] in before)) Object.assign(before, pick(MODE_VIEW_KEYS, now()));
+    useGraphSettings.setState(modes);
+    return;
+  }
   // Drawn again only without unsaved changes, as on the way back: the view
   // menu must say how the model on screen is drawn.
   if (filePath && source !== savedSource) return;
@@ -174,7 +226,14 @@ export function restoreTutorialView({ anotherStarting = false }: { anotherStarti
 
   const modes = MODE_VIEW_KEYS.filter((k) => k in saved && saved[k] !== now()[k]);
   if (modes.length === 0 || anotherStarting) return;
-  const { filePath, source, savedSource } = useModelStore.getState();
+  const model = useModelStore.getState();
+  const { filePath, source, savedSource } = model;
+  // Only the view changes back, and it draws this model the same: no redraw (#428).
+  const onlyView = modes.every((k) => k === "flat" || k === "pytorch");
+  if (onlyView && viewsDrawAlike(drawnModes(now()), drawnModes({ ...now(), ...pick(modes, saved) }), model)) {
+    useGraphSettings.setState(pick(modes, saved) as never);
+    return;
+  }
   const reload = useCatalogOpener.getState().reloadView;
   if (filePath && source !== savedSource) return;
   useGraphSettings.setState(pick(modes, saved) as never);

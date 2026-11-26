@@ -152,7 +152,11 @@ through the same view options every open sends. One that opens none on start
 (it builds its model, or a step teaches opening it) redraws the model on
 screen in that view as it starts, unless that model has unsaved changes, so
 the view menu always says how the graph is drawn. The learner's own view
-comes back when it ends.
+comes back when it ends. When the two views draw the model the same (no
+nested composition, one composition, interface mechanisms hidden, and no
+AutodiffComposition for PyTorch), only the setting changes, at start and at
+the end: nothing is loaded again (`viewsDrawAlike`; performance is a
+requirement).
 
 **Ways back.** The code as each step began is kept (`stepStart`), taken when the
 step starts on the walkthrough's model or when that model opens during it, so
