@@ -37,7 +37,6 @@ export function NodeContextMenu({ nodeId, nodeLabel, nodeType, x, y, selection, 
   const { left, top } = useMenuInWindow(ref, x, y);
   const expanded = useGraphSettings((s) => s.expandedNodes.has(nodeLabel));
   const isComposition = nodeType === "compositionNode";
-  const isCollapsedComp = useGraphSettings((s) => s.collapsedCompositions.has(nodeLabel));
   // A mechanism with type "Composition" is a collapsed composition
   const isCollapsedMechComp = !isComposition && (useModelStore.getState().nodes.find(n => n.id === nodeId)?.data as any)?.type === "Composition";
 
@@ -80,9 +79,10 @@ export function NodeContextMenu({ nodeId, nodeLabel, nodeType, x, y, selection, 
   }, [nodeId, nodeLabel, onClose]);
 
   const handleToggleComposition = useCallback(() => {
-    void toggleCompositionCollapse(nodeLabel);
+    // A frame folds, a folded node opens: what is drawn decides (#428).
+    void toggleCompositionCollapse(nodeLabel, isComposition ? "fold" : "open");
     onClose();
-  }, [nodeLabel, onClose]);
+  }, [nodeLabel, isComposition, onClose]);
 
   // In-graph rename (#737), routing to the shared rename action used by the
   // Inspector. Offered for nodes backed by a source declaration (have a varName
@@ -157,7 +157,7 @@ export function NodeContextMenu({ nodeId, nodeLabel, nodeType, x, y, selection, 
           )}
           {(isComposition || isCollapsedMechComp) && (
             <MenuItem onClick={handleToggleComposition}>
-              {isComposition && !isCollapsedComp ? "Collapse Composition" : "Expand Composition"}
+              {isComposition ? "Collapse Composition" : "Expand Composition"}
             </MenuItem>
           )}
           <MenuItem onClick={handleInspect}>Inspect</MenuItem>

@@ -282,7 +282,7 @@ export const MechanismNode = memo(function MechanismNode({
   const onDoubleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (isCollapsedComposition) {
-      void toggleCompositionCollapse(d.label || "");
+      void toggleCompositionCollapse(d.label || "", "open");
     } else {
       useGraphSettings.getState().toggleExpandedNode(d.label || "");
     }
@@ -290,7 +290,7 @@ export const MechanismNode = memo(function MechanismNode({
 
   const onExpandComposition = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    void toggleCompositionCollapse(d.label || "");
+    void toggleCompositionCollapse(d.label || "", "open");
   }, [d.label]);
 
   // Check if this node is view-only (not in lineMap, so params can't be edited)
