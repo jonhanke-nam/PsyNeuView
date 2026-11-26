@@ -34,7 +34,8 @@ test.describe("Tutorial: Viewing options & the flat view", () => {
 
     await page.goto("/");
     await page.getByRole("button", { name: /Open/ }).first().click();
-    await page.getByText("EGO — Giallanza et al. 2024 (Study 2)").click();
+    // The Library's EGO has the same name (#422); the Reference Models entry comes first.
+    await page.getByText("EGO — Giallanza et al. 2024 (Study 2)").first().click();
     await expect(canvasNode(page, "EM").first()).toBeVisible({ timeout: 45000 });
     await page.waitForTimeout(800);
 
