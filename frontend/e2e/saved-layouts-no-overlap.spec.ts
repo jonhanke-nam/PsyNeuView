@@ -134,7 +134,9 @@ test("a saved layout with two nodes on top of each other opens with them nudged 
   await page.goto("/");
   await openSaved(page, model);
   expect(await overlappingPairs(page)).toEqual([]);
-  await expect(page.getByText(/Two nodes overlapped in the saved layout; moved BIAS slightly/)).toHaveCount(1);
+  // Moving BIAS clear can push it onto a neighbour, which moves on in turn:
+  // the notice names BIAS first, whatever else it moved (#420, with #423's sizes).
+  await expect(page.getByText(/nodes overlapped in the saved layout; moved BIAS[ ,]/)).toHaveCount(1);
   // WORDS_INPUT stays where it was saved; only BIAS moved.
   const canvas = page.getByTestId("graph-canvas");
   const words = layout.positions.words_input_layer;
