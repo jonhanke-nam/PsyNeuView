@@ -23,6 +23,8 @@ docs:
 # of association per output unit. The answers quoted below are the outputs
 # of the training's last pass, which the walkthrough's test reads.
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: open-semantic
     anchor:

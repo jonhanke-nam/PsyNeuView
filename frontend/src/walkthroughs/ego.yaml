@@ -31,6 +31,12 @@ docs:
 # was measured in the app, and backend/tests/test_demo_ego_coffee_shop.py
 # pins them.
 
+# Written for the nested view, with EM folded to one node: the steps select
+# EM itself (#428). Flattened, EM is a frame and the step has no node.
+view: nested
+compositions:
+  EM: folded
+
 steps:
   - id: open-ego
     anchor:

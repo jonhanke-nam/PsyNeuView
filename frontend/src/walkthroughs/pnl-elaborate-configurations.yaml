@@ -40,6 +40,8 @@ docs:
 # termination arguments in the script, and the fuller Stroop model in the
 # PsyNeuLink Library. The last step says so.
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: open-the-demo
     anchor:

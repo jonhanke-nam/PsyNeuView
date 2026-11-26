@@ -31,6 +31,8 @@ docs:
 # ControlMechanism, and its Conclusion's pointers to the Tutorial and the
 # User's Guide. The last step says so.
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: open-the-demo
     anchor:

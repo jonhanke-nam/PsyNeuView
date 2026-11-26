@@ -17,6 +17,8 @@ docs:
   - what-you-can-edit.md
   - where-things-live.md
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: start-a-model
     anchor:

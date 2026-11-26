@@ -38,6 +38,8 @@ docs:
 # play. Renaming in the Inspector changes a node's name=, not the Python
 # variable it is assigned to. The last step says so.
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: start-a-new-model
     anchor:

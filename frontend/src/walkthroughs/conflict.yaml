@@ -24,6 +24,8 @@ docs:
 # task-demand sweep and the reaction-time plots, is numpy over many runs and
 # isn't here; the last two steps make its point with one edit instead.
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: open-conflict
     anchor:

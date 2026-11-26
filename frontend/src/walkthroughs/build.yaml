@@ -15,6 +15,8 @@ id: build
 title: Adding a component
 model: Stroop — Basic
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: add-transfer-mechanism
     # Not a canvas node — the Components palette, by its test id. The node

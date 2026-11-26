@@ -26,6 +26,8 @@ docs:
 # steps say what that leaves out. Every number below was measured in the
 # app, and backend/tests/test_demo_iscci_model.py pins them.
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: open-iscci
     anchor:

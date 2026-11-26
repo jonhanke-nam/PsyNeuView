@@ -29,6 +29,8 @@ docs:
 # measured in the app, and backend/tests/test_demo_hebbian_learning.py pins
 # them.
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: open-hebbian
     anchor:
