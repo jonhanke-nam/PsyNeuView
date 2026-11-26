@@ -20,6 +20,7 @@ import type { Page } from "@playwright/test";
 import path from "path";
 import { copyFileSync, mkdirSync } from "fs";
 import { fileURLToPath } from "url";
+import { modLabel, modShiftLabel } from "./hostPlatform";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REFERENCE_MODELS = path.resolve(__dirname, "..", "..", "backend", "reference_models");
@@ -179,7 +180,7 @@ async function drag(
  */
 async function step(page: Page, which: "undo" | "redo", name: string, rebuilds: boolean) {
   const button = page.getByTestId(`${which}-button`);
-  await expect(button).toHaveAttribute("title", `${which === "undo" ? "Undo" : "Redo"}: ${name} (${which === "undo" ? "⌘Z" : "⌘⇧Z"})`);
+  await expect(button).toHaveAttribute("title", `${which === "undo" ? "Undo" : "Redo"}: ${name} (${which === "undo" ? modLabel("z") : modShiftLabel("z")})`);
   if (rebuilds) await Promise.all([loaded(page), button.click()]);
   else await button.click();
   // The step has been taken once the tooltip names the next one.
