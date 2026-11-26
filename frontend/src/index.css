@@ -234,8 +234,8 @@ body.pnv-resizing-row, body.pnv-resizing-row * { cursor: row-resize !important; 
 .pnv-handle--h[data-at="end"] .pnv-handle__tab { margin-top: -10px; }
 /* The hit area: at least 24×24, wide rather than tall (WCAG 2.5.8). */
 .pnv-handle__tab::before { content: ""; position: absolute; }
-.pnv-handle--v .pnv-handle__tab::before { inset: 0 -6px; }
-.pnv-handle--h .pnv-handle__tab::before { inset: -6px 0; }
+.pnv-handle--v .pnv-handle__tab::before { inset: 0 -5px; }
+.pnv-handle--h .pnv-handle__tab::before { inset: -5px 0; }
 .pnv-handle:hover .pnv-handle__tab,
 .pnv-handle__tab:hover {
   color: var(--pnv-primary);

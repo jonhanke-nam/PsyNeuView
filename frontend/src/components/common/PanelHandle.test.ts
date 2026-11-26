@@ -14,6 +14,7 @@ import {
   PanelHandle,
   PressTracker,
   arrowDirection,
+  clearTabOffset,
   separatorKeyAction,
   type PanelHandleProps,
 } from "./PanelHandle";
@@ -165,5 +166,25 @@ describe("row arrows", () => {
     );
     expect(html).toMatch(/<details open=""/);
     expect(html).toMatch(/<summary aria-expanded="true" class="pnv-disclosure-summary"/);
+  });
+});
+
+describe("clearTabOffset moves a collapsed tab clear of the controls beside it", () => {
+  // A toolbar button from y 4 to 30 and a strip icon from y 36 to 68, both reaching x 12.
+  const controls = [
+    { x0: 12, x1: 40, y0: 4, y1: 30 },
+    { x0: 8, x1: 40, y0: 36, y1: 68 },
+  ];
+  const at = (x: number, y: number) => controls.some((c) => x >= c.x0 && x <= c.x1 && y >= c.y0 && y <= c.y1);
+  it("goes below them when its hit area would cover one", () => {
+    const o = clearTabOffset(0, 600, -5, 19, 36, 8, at)!;
+    expect(o).toBeGreaterThan(68);
+    for (let y = o; y <= o + 36; y++) for (const x of [-4, 7, 18]) expect(at(x, y)).toBe(false);
+  });
+  it("stays where it is when nothing is there", () => {
+    expect(clearTabOffset(0, 600, -5, 19, 36, 8, () => false)).toBe(8);
+  });
+  it("gives up when the whole edge is covered", () => {
+    expect(clearTabOffset(0, 200, -5, 19, 36, 8, () => true)).toBeNull();
   });
 });

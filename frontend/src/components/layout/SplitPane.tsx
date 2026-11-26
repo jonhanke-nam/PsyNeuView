@@ -37,6 +37,10 @@ export interface SplitPaneProps {
   onToggle: () => void;
   /** e.g. "the code editor": the tab says "Collapse the code editor" / "Show the code editor". */
   paneName: string;
+  /** Collapsed, the tab moves down clear of the controls beside it (PanelHandle). */
+  collapsedAvoidsControls?: boolean;
+  /** What, when it changes, may have moved those controls. */
+  recheckKey?: string;
   testId?: string;
   handleTestId?: string;
   tabTestId?: string;
@@ -56,6 +60,8 @@ export function SplitPane({
   paneId,
   onToggle,
   paneName,
+  collapsedAvoidsControls,
+  recheckKey,
   testId,
   handleTestId,
   tabTestId,
@@ -182,6 +188,8 @@ export function SplitPane({
           resize={resize}
           testId={handleTestId}
           tabTestId={tabTestId}
+          collapsedAvoidsControls={collapsedAvoidsControls}
+          recheckKey={recheckKey}
           at={edgeAt(firstVisible, secondVisible)}
         />
       </div>

@@ -38,6 +38,7 @@ import { setPanelVisibleOrExplain } from "./shortcuts/lastPanel";
 import { useAppShortcuts } from "./shortcuts/useAppShortcuts";
 import { useModelStore } from "./stores/modelStore";
 import { useNotificationStore } from "./stores/notificationStore";
+import { usePaletteStore } from "./stores/paletteStore";
 import { DEFAULT_INNER_SIZES, DEFAULT_OUTER_SIZES, useLayoutStore } from "./stores/layoutStore";
 import { importModelFiles } from "./utils/importModelFiles";
 import { installDiagnostics, noteUiFact } from "./utils/diagnostics";
@@ -56,6 +57,10 @@ export default function App() {
   const innerSizes = useLayoutStore((s) => s.innerSizes);
   const setOuterSizes = useLayoutStore((s) => s.setOuterSizes);
   const setInnerSizes = useLayoutStore((s) => s.setInnerSizes);
+  // What changes the controls along the window's left edge (#418).
+  const edgeRecheckKey = usePaletteStore(
+    (s) => `${s.isOpen}:${s.isCompact}:${s.showStripShortcuts}:${s.showStripHeadings}:${s.favorites.length}:${s.recentlyUsed.length}`,
+  ) + `:${graphVisible}:${bottomVisible}:${useModelStore((s) => s.filePath) ?? ""}`;
   const { pendingChange, acceptPendingChange, dismissPendingChange } = useFileWatcher();
   useShowGraphLayout();
   useLayeredLayoutFit();
@@ -180,6 +185,10 @@ export default function App() {
             paneName="the code editor"
             onToggle={() => setPanelVisibleOrExplain("code", !codeVisible)}
             handleTestId="code-pane-handle"
+            // Collapsed, its tab lies over the graph toolbar and the Components
+            // strip; it moves down clear of their buttons (#418).
+            collapsedAvoidsControls
+            recheckKey={edgeRecheckKey}
             tabTestId="code-pane-toggle"
             first={
               /* Stable handle for the editor pane: the guided walkthroughs point at it (#1310). */
