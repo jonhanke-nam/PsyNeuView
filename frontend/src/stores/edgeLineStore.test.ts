@@ -26,18 +26,18 @@ const width = (m: Awaited<ReturnType<typeof freshStore>>) => {
 describe("line width between nodes", () => {
   beforeEach(() => localStorage.clear());
 
-  it("defaults to 3 px, the width lines were already drawn at", async () => {
+  it("defaults to 2 px, show_graph's weight against the node outlines (#425)", async () => {
     const m = await freshStore();
-    expect(width(m)).toBe(3);
+    expect(width(m)).toBe(2);
     expect(m.EDGE_LINE_WIDTHS).toEqual([1, 2, 3, 4]);
     expect(m.EDGE_LINE_KEY.startsWith("psyneuview.")).toBe(true);
   });
 
   it("scales the arrowhead with the line, unchanged at the default", async () => {
     const { edgeArrowheadScale } = await freshStore();
-    expect(edgeArrowheadScale(3)).toBe(1);
-    expect(edgeArrowheadScale(4)).toBeCloseTo(4 / 3);
-    expect(edgeArrowheadScale(1)).toBeCloseTo(1 / 3);
+    expect(edgeArrowheadScale(2)).toBe(1);
+    expect(edgeArrowheadScale(4)).toBeCloseTo(2);
+    expect(edgeArrowheadScale(1)).toBeCloseTo(1 / 2);
   });
 
   it("remembers a chosen width across page loads", async () => {

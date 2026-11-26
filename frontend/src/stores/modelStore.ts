@@ -41,6 +41,7 @@ import { record } from "@/utils/activityLog";
 import { useNotificationStore } from "./notificationStore";
 import { blameGraphEdit, GRAPH_EDIT_BROKE_KEY, type GraphEdit, type GraphEditKind } from "@/utils/graphEditBlame";
 import { paletteColor } from "@/utils/paletteColor";
+import { LINE_DASH, lookFromShowGraph, projectionLookFor, showGraphEdgesByPair, type ShowGraphEdge } from "@/utils/projectionLook";
 
 // #407: shape of an entry in the model's sidecar bundle list. Kind is a
 // well-known identifier the backend understands for /api/model/sidecar
@@ -63,13 +64,40 @@ const PROJECTION_TOKENS: Record<string, `--pnv-${string}`> = {
 
 const EDGE_STYLES: Record<string, React.CSSProperties> = {
   MappingProjection: { stroke: "var(--pnv-projection-mapping)", strokeWidth: 2 },
-  ControlProjection: { stroke: "var(--pnv-projection-control)", strokeWidth: 2, strokeDasharray: "6 3" },
+  // #425: solid, as show_graph draws it; a box at the end says it controls.
+  ControlProjection: { stroke: "var(--pnv-projection-control)", strokeWidth: 2 },
   LearningProjection: { stroke: "var(--pnv-projection-learning)", strokeWidth: 2 },
   AutoAssociativeProjection: { stroke: "var(--pnv-projection-autoassociative)", strokeWidth: 2 },
   InactiveProjection: { stroke: "var(--pnv-projection-inactive)", strokeWidth: 1.5, strokeDasharray: "4 4" },
   CIMProjection: { stroke: "var(--pnv-projection-cim)", strokeWidth: 1.5, strokeDasharray: "3 3" },
   DanglingProjection: { stroke: "var(--pnv-projection-dangling)", strokeWidth: 2.5, strokeDasharray: "8 4" },
 };
+
+/** Projections PsyNeuView draws that show_graph doesn't: they keep their own look. */
+const OWN_LOOK_TYPES = new Set(["InactiveProjection", "CIMProjection", "DanglingProjection", "BrokenProjection"]);
+
+/**
+ * Set each projection's arrowhead, line and colour as show_graph draws them
+ * (#425): from show_graph's own edges (`showGraphEdges`) between the same two
+ * nodes, handed out in order, else by show_graph's rule (projectionLookFor).
+ */
+export function applyProjectionLooks(nodes: Node[], edges: Edge[], showGraphEdges?: ShowGraphEdge[] | null): void {
+  const byPair = showGraphEdgesByPair(showGraphEdges);
+  const roles = new Map(nodes.map((n) => [n.id, ((n.data as { roles?: string[] } | undefined)?.roles) ?? []]));
+  for (const e of edges) {
+    if (e.type !== "projectionEdge") continue;
+    const d = (e.data ?? {}) as { type?: string; fromController?: boolean };
+    if (OWN_LOOK_TYPES.has(d.type ?? "")) continue;
+    const base = projectionLookFor(d.type, {
+      fromController: d.fromController,
+      fromControl: (roles.get(e.source) ?? []).includes("CONTROL"),
+    });
+    const look = lookFromShowGraph(base, byPair.get(`${e.source}\u0000${e.target}`)?.shift());
+    e.data = { ...e.data, arrowhead: look.arrowhead, lineStyle: look.line };
+    const { strokeDasharray: _old, ...style } = (e.style ?? {}) as React.CSSProperties;
+    e.style = { ...style, stroke: look.color, ...(LINE_DASH[look.line] ? { strokeDasharray: LINE_DASH[look.line] } : {}) };
+  }
+}
 
 /** Arrowhead size by projection type; the colour comes from the type's token. */
 const EDGE_MARKER_SIZES: Record<string, number> = {
@@ -337,6 +365,9 @@ export interface MechanismData {
   // #365: a collapsed composition only — the names of every node inside it
   // (at any depth), so it shows the step highlight when one of them runs.
   memberNames?: string[];
+  // #385: the Graphviz shape show_graph draws this node in (doublecircle,
+  // octagon, ...), where the backend could ask show_graph.
+  showGraphShape?: string;
 }
 
 interface ModelState {
@@ -1565,14 +1596,16 @@ export const useModelStore = create<ModelState>((set, get) => ({
           target: targetId,
           sourceHandle: proj.sender?.port || undefined,
           targetHandle: proj.receiver?.port || undefined,
-          type: "smoothstep",
+          // #425: drawn like any projection, in show_graph's controller colour.
+          type: "projectionEdge",
           animated: false,
-          style: { strokeWidth: 2 },
+          style: getEdgeStyle("ControlProjection"),
           data: {
             label: cleanName(proj.name),
             type: proj.type || "ControlProjection",
             sender: proj.sender,
             receiver: proj.receiver,
+            fromController: true,
           },
         });
       }
@@ -1588,14 +1621,16 @@ export const useModelStore = create<ModelState>((set, get) => ({
             target: ctrl.objectiveMechanism.name,
             sourceHandle: proj.sender?.port || undefined,
             targetHandle: proj.receiver?.port || undefined,
-            type: "smoothstep",
+            type: "projectionEdge",
             animated: false,
-            style: { strokeWidth: 2 },
+            style: getEdgeStyle("MappingProjection"),
             data: {
               label: cleanName(proj.name),
               type: proj.type || "MappingProjection",
               sender: proj.sender,
               receiver: proj.receiver,
+              // show_graph draws the controller's inputs in its colour too.
+              fromController: true,
             },
           });
         }
@@ -1605,12 +1640,15 @@ export const useModelStore = create<ModelState>((set, get) => ({
           id: `${ctrl.objectiveMechanism.name}_to_${ctrlMech.name}`,
           source: ctrl.objectiveMechanism.name,
           target: ctrlMech.name,
-          type: "smoothstep",
+          type: "projectionEdge",
           animated: false,
-          style: { strokeWidth: 2 },
+          style: getEdgeStyle("MappingProjection"),
           data: {
             label: "objective → controller",
-            type: "ControlProjection",
+            // A MappingProjection in PsyNeuLink; show_graph draws it as an
+            // arrow in the controller's colour (#425).
+            type: "MappingProjection",
+            fromController: true,
           },
         });
       }
@@ -1660,7 +1698,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
           target: targetId,
           sourceHandle: proj.sender?.port || undefined,
           targetHandle: proj.receiver?.port || undefined,
-          type: "smoothstep",
+          type: "projectionEdge",
           animated: false,
           style: getEdgeStyle(proj.type || "LearningProjection"),
           markerEnd: getEdgeMarker(proj.type || "LearningProjection"),
@@ -2002,6 +2040,22 @@ export const useModelStore = create<ModelState>((set, get) => ({
         }
       : savedPositions;
     const hasPlaced = Object.keys(placed).length > 0;
+
+    // #385: the shape show_graph draws each node in, as the backend read it
+    // from show_graph's own description; nodeShapeFor prefers it to the role
+    // rule. Set before the layout, which sizes an undrawn circle as a circle.
+    const showGraphShapes: Record<string, string> = modelData.showGraphShapes || {};
+    for (const n of nodes) {
+      if (n.type !== "mechanismNode") continue;
+      const sgShape = showGraphShapes[n.id];
+      if (sgShape) n.data = { ...n.data, showGraphShape: sgShape };
+    }
+
+    // #425: each projection drawn as show_graph draws it: its arrowhead (a
+    // box for a control projection), line and colour, from show_graph's own
+    // edges where the backend read them, else by show_graph's rule for its
+    // type and sender.
+    applyProjectionLooks(nodes, edges, modelData.showGraphEdges);
 
     let layoutNodes: Node[];
     if (autoLayout) {

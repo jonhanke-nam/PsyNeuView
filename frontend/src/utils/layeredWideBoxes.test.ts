@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { Edge, Node } from "@xyflow/react";
 import { applyDagreLayout, layoutInsetInternals } from "./layout";
 import { autoSizeGroups } from "@/stores/modelStore";
-import { ovalBoxFor } from "./nodeBox";
+import { shapedBoxFor } from "./nodeBox";
 
 // One node feeding three in a row, as EGO's STATE feeds its EM fields. The
 // boxes are drawn wider than the 180px Layered assumes when `width` is given.
@@ -38,7 +38,7 @@ describe("Layered with boxes wider than it assumes (#72)", () => {
   it("keeps the layout of boxes no wider than it assumes, each centred in its slot", () => {
     const centres = (nodes: Node[], box: (n: Node) => { width: number; height: number }) =>
       nodes.map((n) => ({ x: n.position.x + box(n).width / 2, y: n.position.y + box(n).height / 2 }));
-    const unsized = centres(applyDagreLayout(row(), EDGES), (n) => ovalBoxFor(n.id));
+    const unsized = centres(applyDagreLayout(row(), EDGES), (n) => shapedBoxFor(n.id, "oval"));
     const narrow = centres(applyDagreLayout(row(150), EDGES), () => ({ width: 150, height: 73 }));
     expect(narrow).toEqual(unsized);
   });

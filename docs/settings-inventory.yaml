@@ -539,8 +539,9 @@ settings:
     storage: browser localStorage (psyneuview.graph.edgeLineWidth)
     control: setting-edge-line-width
     notes: >-
-      An ordinary (Mapping) projection line, 1–4 px in whole pixels; 3 px by
-      default, the width lines were already drawn at (#107). Other projection
+      An ordinary (Mapping) projection line, 1–4 px in whole pixels; 2 px by
+      default, show_graph's weight against the node outlines (#425; 3 px
+      before). Other projection
       types keep their weight relative to it, arrowheads scale with it, and a
       hovered line stays 1 px heavier (0.5 px under the stepping cursor).
       Replaces the Style tab's Line thickness slider, which now links here.
