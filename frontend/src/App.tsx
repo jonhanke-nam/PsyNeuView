@@ -355,7 +355,7 @@ function TabButton({
         padding: "6px 16px",
         fontSize: "var(--pnv-fs-12)",
         fontWeight: active ? 600 : 400,
-        color: active ? "var(--pnv-primary)" : "var(--pnv-text-muted)",
+        color: active ? "var(--pnv-primary-text)" : "var(--pnv-text-muted)",
         background: "none",
         border: "none",
         borderBottom: active ? "2px solid var(--pnv-primary)" : "2px solid transparent",

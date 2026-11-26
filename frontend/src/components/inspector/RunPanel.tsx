@@ -968,7 +968,7 @@ export function RunPanel() {
                     border: "1px solid var(--pnv-warning-border)",
                     borderRadius: 3,
                     background: "var(--pnv-warning-tint)",
-                    color: "var(--pnv-warning)",
+                    color: "var(--pnv-warning-text)",
                     cursor: "pointer",
                   }}
                 >
@@ -984,7 +984,7 @@ export function RunPanel() {
                       border: "1px solid var(--pnv-warning-border)",
                       borderRadius: 4,
                       fontSize: "var(--pnv-fs-11)",
-                      color: "var(--pnv-warning)",
+                      color: "var(--pnv-warning-text)",
                       maxHeight: 220,
                       overflow: "auto",
                       whiteSpace: "pre-wrap",
@@ -1008,7 +1008,7 @@ export function RunPanel() {
                       border: "1px solid var(--pnv-warning-border)",
                       borderRadius: 3,
                       fontSize: "var(--pnv-fs-11)",
-                      color: "var(--pnv-warning)",
+                      color: "var(--pnv-warning-text)",
                       lineHeight: 1.45,
                     }}
                   >
@@ -1341,7 +1341,7 @@ function CaptureNote({ capture }: { capture: CaptureInfo }) {
         padding: "6px 9px",
         fontSize: "var(--pnv-fs-11)",
         lineHeight: 1.4,
-        color: "var(--pnv-warning)",
+        color: "var(--pnv-warning-text)",
         background: "var(--pnv-warning-tint)",
         border: "1px solid var(--pnv-warning-border)",
         borderRadius: 4,
@@ -1391,7 +1391,7 @@ function SteppingSupportNote({ level, reason }: { level: string; reason: string 
         padding: "6px 9px",
         fontSize: "var(--pnv-fs-11)",
         lineHeight: 1.4,
-        color: degraded ? "var(--pnv-warning)" : "var(--pnv-primary-text-on-tint)",
+        color: degraded ? "var(--pnv-warning-text)" : "var(--pnv-primary-text-on-tint)",
         background: degraded ? "var(--pnv-warning-tint)" : "var(--pnv-primary-tint)",
         border: `1px solid ${degraded ? "var(--pnv-warning-border)" : "var(--pnv-primary-tint-border)"}`,
         borderRadius: 4,
@@ -1411,7 +1411,7 @@ function HookSupportNote() {
         padding: "6px 9px",
         fontSize: "var(--pnv-fs-11)",
         lineHeight: 1.4,
-        color: "var(--pnv-warning)",
+        color: "var(--pnv-warning-text)",
         background: "var(--pnv-warning-tint)",
         border: "1px solid var(--pnv-warning-border)",
         borderRadius: 4,
@@ -1536,7 +1536,7 @@ function RecordVersionNote({
       title={title}
       style={{
         fontSize: "var(--pnv-fs-10)",
-        color: v === "matches" ? "var(--pnv-text-faint)" : "var(--pnv-warning)",
+        color: v === "matches" ? "var(--pnv-text-faint)" : "var(--pnv-warning-text)",
       }}
     >
       {text}
@@ -2862,7 +2862,7 @@ function ValueRow({
       <div style={{ display: "flex", gap: 6, lineHeight: 1.5 }}>
         <span
           style={{
-            color: kind === "in" ? "var(--pnv-primary)" : "var(--pnv-trace-value)",
+            color: kind === "in" ? "var(--pnv-primary-text)" : "var(--pnv-trace-value)",
             fontFamily: "var(--pnv-font-mono)",
             flexShrink: 0,
           }}
@@ -2874,7 +2874,7 @@ function ValueRow({
       {delta && (
         <div
           style={{
-            color: "var(--pnv-warning)",
+            color: "var(--pnv-warning-text)",
             fontFamily: "var(--pnv-font-mono)",
             fontSize: "var(--pnv-fs-10)",
             lineHeight: 1.4,

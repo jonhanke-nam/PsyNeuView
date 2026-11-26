@@ -16,9 +16,13 @@
  * colour alone), and the trace bar's arrow buttons and step number have
  * names and work from the keyboard.
  *
- * Contrast (#412): no text in the faint or hint grey on the icon strip, the
- * Run panel or the trace bar, and no row of the current trial card not
- * reached yet at the trace step, reads below WCAG AA (4.5:1).
+ * Contrast (#412, #421): no text on the icon strip, the Run panel or the
+ * trace bar reads below WCAG AA (4.5:1; 3:1 for large text): not the faint
+ * or hint grey, not a row of the current trial card not reached yet at the
+ * trace step, and not the primary blue or amber text (an input's name on the
+ * selection fill or the panel, "Trace truncated" on its tint, the run/trial
+ * switch). The open inspector tab and the white warning count on its amber
+ * badge read at AA too.
  *
  * Updates: the automatic-install question takes focus on its safe answer; the
  * update notice's Later reads at WCAG AA. (pnvSettings bridge stubbed.)
@@ -61,20 +65,13 @@ async function contrast(el: Locator): Promise<number> {
 }
 
 /**
- * Text drawn in the faint or hint grey (or a not-yet-reached row's grey)
- * inside `scope` that reads below WCAG AA on what is behind it (#412).
- * Returns "text: ratio" for each, so an empty list is a pass.
+ * Text inside `scope`, in any colour, that reads below WCAG AA on what is
+ * behind it (#412 for the greys, #421 for the primary blue and the amber).
+ * Large text (24px, or 18.66px bold) needs 3:1. Returns "text: ratio" for
+ * each, so an empty list is a pass.
  */
-async function faintTextBelowAA(scope: Locator): Promise<string[]> {
+async function textBelowAA(scope: Locator): Promise<string[]> {
   return scope.evaluate((root) => {
-    const probe = document.createElement("span");
-    document.body.appendChild(probe);
-    const resolve = (v: string) => {
-      probe.style.color = `var(${v})`;
-      return getComputedStyle(probe).color;
-    };
-    const greys = new Set(["--pnv-text-faint", "--pnv-text-hint", "--pnv-step-pending-text"].map(resolve));
-    probe.remove();
     const parse = (c: string) => {
       const m = c.match(/rgba?\(([^)]+)\)/);
       if (!m) return null;
@@ -91,7 +88,6 @@ async function faintTextBelowAA(scope: Locator): Promise<string[]> {
     const low: string[] = [];
     for (const el of Array.from(root.querySelectorAll<HTMLElement>("*"))) {
       const cs = getComputedStyle(el);
-      if (!greys.has(cs.color)) continue;
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
       if (!Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent!.trim())) continue;
@@ -111,7 +107,9 @@ async function faintTextBelowAA(scope: Locator): Promise<string[]> {
       const text = fg.slice(0, 3).map((v, i) => v * a + bg[i] * (1 - a));
       const [x, y] = [lum(text), lum(bg)];
       const ratio = (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
-      if (ratio < 4.5) low.push(`${el.textContent!.trim().slice(0, 40)}: ${ratio.toFixed(2)}`);
+      const px = parseFloat(cs.fontSize);
+      const large = px >= 24 || (px >= 18.66 && Number(cs.fontWeight) >= 700);
+      if (ratio < (large ? 3 : 4.5)) low.push(`${el.textContent!.trim().slice(0, 40)}: ${ratio.toFixed(2)}`);
     }
     return low;
   });
@@ -182,8 +180,8 @@ test.describe("accessibility: Run panel, trace bar, icon strip, notices (#410)",
       expect(await contrast(palette.getByTestId(id)), id).toBeGreaterThanOrEqual(4.5);
     }
 
-    // No faint or hint grey text on the strip reads below AA (#412).
-    expect(await faintTextBelowAA(palette), "icon strip").toEqual([]);
+    // No text on the strip reads below AA (#412, #421).
+    expect(await textBelowAA(palette), "icon strip").toEqual([]);
 
     // In the full list, keyboard focus shows a row's hidden ☆.
     await palette.getByTestId("palette-strip-expand").click();
@@ -241,11 +239,17 @@ test.describe("accessibility: Run panel, trace bar, icon strip, notices (#410)",
     await expect(card).toHaveCount(1);
     await expect(card.locator('[data-testid="run-trial-node-band"][aria-current="step"]').first()).toBeVisible();
 
-    // Faint and hint grey text, and the rows not reached yet in the current
-    // trial card, read at AA in the Run panel and the trace bar (#412).
+    // All text in the Run panel and the trace bar reads at AA: the greys and
+    // the rows not reached yet (#412), and the primary-blue input names on
+    // the current card's selection fill and on the panel, "Trace truncated"
+    // on its amber tint, and the run/trial switch (#421).
     await expect(card.locator('[data-testid="run-trial-node-band"][data-step="pending"]').first()).toBeVisible();
-    expect(await faintTextBelowAA(page.getByTestId("run-panel")), "Run panel").toEqual([]);
-    expect(await faintTextBelowAA(next.locator("..")), "trace bar").toEqual([]);
+    await expect(page.getByText("Trace truncated")).toBeVisible();
+    expect(await textBelowAA(page.getByTestId("run-panel")), "Run panel").toEqual([]);
+    expect(await textBelowAA(next.locator("..")), "trace bar").toEqual([]);
+    expect(await contrast(page.getByText("Trace truncated")), "Trace truncated").toBeGreaterThanOrEqual(4.5);
+    expect(await contrast(page.getByTestId("tab-run")), "the open Run tab").toBeGreaterThanOrEqual(4.5);
+    expect(await contrast(page.getByTestId("diagnostics-warning-count")), "white count on the amber badge").toBeGreaterThanOrEqual(4.5);
     const pendingName = card.locator('[data-testid="run-trial-node-band"][data-step="pending"] span').first();
     expect(await contrast(pendingName), "a row not reached yet").toBeGreaterThanOrEqual(4.5);
     await expect(page.locator('[data-testid="run-trial-node-band"][aria-current="step"]')).toHaveCount(
