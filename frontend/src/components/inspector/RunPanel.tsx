@@ -2304,9 +2304,21 @@ function TrialOutputs({
   // #497: keep the live card in view as the trace steps across trial
   // boundaries (the column can run taller than the panel on long runs).
   const activeCardRef = useRef<HTMLDivElement | null>(null);
+  // A card that is already wholly in view stays put; otherwise its top comes
+  // to the top of the panel, so the card's header is what shows (#418: with
+  // the panes now resizing in the same frame, "nearest" could leave a card
+  // bottom-aligned a few px under the tab bar instead).
   useEffect(() => {
     if (activeTrialIdx === null) return;
-    activeCardRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    const card = activeCardRef.current;
+    if (!card) return;
+    const panel = card.closest('[data-testid="run-panel"]');
+    if (panel) {
+      const c = card.getBoundingClientRect();
+      const p = panel.getBoundingClientRect();
+      if (c.top >= p.top && c.bottom <= p.bottom) return;
+    }
+    card.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [activeTrialIdx]);
 
   // Input nodes already get a labeled IN row from the frozen `submitted`
