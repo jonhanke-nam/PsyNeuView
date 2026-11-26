@@ -933,10 +933,19 @@ export function RunPanel() {
                     {formatRunProgress(runProgress)}
                   </span>
                 )}
+                {/* Screen readers hear the trial count as it changes (the
+                    visible text above is not a live region: it comes and
+                    goes, and its seconds change too often to read out). */}
+                <span role="status" data-testid="run-trial-progress-live" className="pnv-sr-only">
+                  {running && runProgress && runProgress.trial > 0
+                    ? `Trial ${runProgress.trial} of ${runProgress.total} finished`
+                    : ""}
+                </span>
               </div>
             </div>
             {error && (
               <div
+                role="alert"
                 style={{
                   padding: 8,
                   background: "var(--pnv-danger-tint)",
@@ -1809,6 +1818,7 @@ function InputNodeEditor({
             onClick={() => onRemoveTrial(t)}
             disabled={cells.length <= 1}
             title="Remove this trial"
+            aria-label={`Remove trial ${t + 1}`}
           >
             ✕
           </Button>
@@ -1909,6 +1919,8 @@ function TrialPorts({
         const error = check && !check.ok ? check.error : null;
         const id = multi ? `${node.name}-${trial + 1}-${portName(p)}` : `${node.name}-${trial + 1}`;
         const what = multi ? `${node.name} ${portName(p)}` : node.name;
+        // The error message's element id: no spaces, so aria-describedby reads it as one id.
+        const errorId = `run-trial-input-error-${id}`.replace(/\s+/g, "_");
         // The grid edits one element per box, so it serves a 1-D port; a
         // deeper one keeps its bracket field even with the setting on.
         if (cellGrid && portShape(shape).length === 1) {
@@ -1941,6 +1953,7 @@ function TrialPorts({
               data-testid={`run-trial-input-${id}`}
               aria-label={`${what}, trial ${trial + 1}`}
               aria-invalid={error ? true : undefined}
+              aria-describedby={error ? errorId : undefined}
               placeholder={placeholder}
               spellCheck={false}
               autoComplete="off"
@@ -1962,6 +1975,7 @@ function TrialPorts({
             {error && (
               <span
                 data-testid={`run-trial-input-error-${id}`}
+                id={errorId}
                 style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-danger)", whiteSpace: "nowrap" }}
               >
                 {error}
@@ -2029,6 +2043,7 @@ function InputCell({
       <input
         value={value}
         inputMode="decimal"
+        aria-invalid={invalid ? true : undefined}
         onChange={(ev) => onChange(ev.target.value)}
         title={extra ? "More elements than the node takes" : invalid ? "Not a number" : undefined}
         style={{
@@ -2089,6 +2104,8 @@ function GroupingToggle({
         "Only the view changes; the run is the same."
       }
       data-testid="run-grouping"
+      role="group"
+      aria-label="Arrange inputs"
       style={{
         display: "inline-flex",
         // #109: as tall as Reset and Run Model beside it; the segments
@@ -2176,6 +2193,7 @@ function TrialGroupedEditor({
               onClick={() => onRemoveTrial(t)}
               disabled={trialCount <= 1}
               title="Remove this trial"
+              aria-label={`Remove trial ${t + 1}`}
             >
               ✕
             </Button>
@@ -2405,7 +2423,9 @@ function TrialOutputs({
             borderRadius: 4,
             border: showTrialDeltas ? "1px solid var(--pnv-selection-border)" : "1px solid var(--pnv-border-light)",
             background: showTrialDeltas ? "var(--pnv-selection-fill)" : "var(--pnv-surface)",
-            color: showTrialDeltas ? "var(--pnv-selection-text)" : "var(--pnv-text-hint)",
+            // Off: the secondary text, which reads at WCAG AA on white (the
+            // hint grey did not).
+            color: showTrialDeltas ? "var(--pnv-selection-text)" : "var(--pnv-text-secondary)",
           }}
           aria-pressed={showTrialDeltas}
         >
@@ -2450,6 +2470,7 @@ function TrialOutputs({
               ref={active ? activeCardRef : undefined}
               data-testid={`run-trial-card-${trialPos + 1}`}
               data-active={active ? "true" : "false"}
+              aria-current={active ? "true" : undefined}
               onClick={clickable ? () => setTraceStep(stepTarget) : undefined}
               title={
                 clickable
@@ -2771,7 +2792,8 @@ function ValueText({ text }: { text: string }) {
 // in the card's padding (negative margin), so the rows don't move.
 // #365: in the current trial card, `step` says where the node stands at the
 // trace step: "active" rows get the selection-blue highlight the graph's step
-// ring uses, "pending" rows (not reached yet this trial) are dimmed, "done"
+// ring uses, "pending" rows (not reached yet this trial) are in a grey that still
+// reads at AA (.pnv-step-pending, #412), "done"
 // rows read normally. The highlight is a background and an inset ring, so the
 // rows don't move. The band itself stays the role colour, and says so.
 function NodeBand({
@@ -2794,7 +2816,10 @@ function NodeBand({
       data-testid="run-trial-node-band"
       data-node={node.replace(/-\d+$/, "")}
       data-step={step}
-      className={step === "active" ? "pnv-step-active" : undefined}
+      // The active row is told apart by more than its blue: the inset ring
+      // marks it on screen, and aria-current names it to assistive tech.
+      aria-current={step === "active" ? "step" : undefined}
+      className={step === "active" ? "pnv-step-active" : step === "pending" ? "pnv-step-pending" : undefined}
       title={`Band: role colour (${role}), as on the graph. The current step is shown in blue.`}
       style={{
         ...style,
@@ -2807,9 +2832,7 @@ function NodeBand({
               boxShadow: "inset 0 0 0 1px var(--pnv-step-active-ring)",
               borderRadius: "0 3px 3px 0",
             }
-          : step === "pending"
-            ? { opacity: "var(--pnv-step-pending-opacity)" }
-            : {}),
+          : {}),
       }}
     >
       {children}

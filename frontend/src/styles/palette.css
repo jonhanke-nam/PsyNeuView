@@ -22,8 +22,15 @@
   --pnv-text-body: #333;       /* running text */
   --pnv-text-secondary: #555;  /* labels, a secondary button's text */
   --pnv-text-muted: #666;      /* help text under a setting, the × */
-  --pnv-text-hint: #888;       /* hints, counts, a disabled button's text */
-  --pnv-text-faint: #999;      /* placeholders, line numbers, "No history" */
+  /* Hint and faint are the lightest greys that still read at WCAG AA
+     (4.5:1) where they are drawn (#412). Faint: on the panel
+     (--pnv-surface-muted), a card or toolbar (--pnv-surface-sunken), the
+     canvas and a dialog (--pnv-surface), and the warning and trace tints.
+     Hint, one step darker so the order holds: also on a selected row
+     (--pnv-selection-fill) and a menu's heading band (--pnv-surface-band).
+     textContrast.test.ts checks both. */
+  --pnv-text-hint: #6b6b6b;    /* hints, counts, a disabled button's text */
+  --pnv-text-faint: #707070;   /* placeholders, line numbers, "No history" */
   --pnv-on-primary: #fff;      /* text on a filled primary button, or on a filled badge */
 
   /* Surfaces and borders. */
@@ -118,8 +125,12 @@
   /* An active node's rows in the current trial card, a shade deeper than the
      card's own selection fill so they read on it. */
   --pnv-step-active-row: var(--pnv-selection-fill-strong);
-  /* A row in the current trial card for a node not reached yet this trial. */
-  --pnv-step-pending-opacity: 0.5;
+  /* A row in the current trial card for a node not reached yet this trial
+     (#412): all its text in one grey, so it reads as secondary beside the
+     coloured names and dark values of the rows already reached, yet still
+     clears WCAG AA (4.5:1) on the card's selection fill. A colour, not an
+     opacity: half opacity left the text at 1.7-2.7:1. */
+  --pnv-step-pending-text: #6b6b6b;
 
   /* A layer's values drawn as a grid of shaded cells (#1387): in the Run
      panel's results, Run State and the value pill. Low is light, high is
@@ -487,5 +498,7 @@
     --pnv-selection-fill: #1c2b45;
     --pnv-selection-border: #6ea8fe;
     --pnv-selection-text: #c6dafc;
+    /* The dimmest grey that reads at 4.5:1 on the dark selection fill. */
+    --pnv-step-pending-text: #929292;
   }
 }
