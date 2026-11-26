@@ -296,6 +296,12 @@ def test_an_edit_elsewhere_in_the_checkout_is_still_reported(local_checkout, spi
     assert any(Path(f).resolve() == other.resolve() for f in message["changedFiles"])
     assert len(spies["restarts"]) == 1
     assert "file_changed" not in [m.get("type") for m in seen]
+    # The message names the open model but carries no graph (#451): one built
+    # here would be in the backend's default view, nested, whatever the
+    # window shows. Each window reads the model again in its own view.
+    assert Path(message["filePath"]).resolve() == library_file.resolve()
+    assert message["source"] == library_file.read_text()
+    assert "model" not in message
 
 
 # --- B. Reference Models (developer mode / walkthroughs) --------------------
@@ -326,20 +332,27 @@ def test_an_edit_to_the_psyneulink_original_does_not_reach_the_reference_copy(lo
         before = working.read_text()
         before_nodes = _node_names(body["model"])
         assert "PREDICTION" in before_nodes
+        # As a window showing the flattened view reads it.
+        before_flat = _node_names(client.post("/api/model/load", json={"file_path": str(working), "flat": True}).json()["model"])
 
         with client.websocket_connect("/ws") as socket:
             _open_and_watch(socket, str(working), seen)
             _safe_write(library_file, _rename_prediction(library_file.read_text(), "PREDICTION_1242"))
             message = _await(socket, "psyneulink_changed", seen)
+            # What the window does next (#451): read the model again in its view.
+            reread = client.post("/api/model/load", json={"file_path": str(working), "flat": True})
             _drain_quietly(socket, seen, QUIET_WINDOW_S)
 
     # Today's behaviour: the change is announced as a PsyNeuLink code change...
     assert any(Path(f).resolve() == library_file.resolve() for f in message["changedFiles"])
     assert len(spies["restarts"]) == 1
-    # ...about the open model, re-read, but that model is the unchanged copy.
+    # ...about the open model, which the window re-reads: the unchanged copy.
     assert Path(message["filePath"]).resolve() == working.resolve()
     assert message["source"] == before
-    assert _node_names(message["model"]) == before_nodes
+    assert "model" not in message
+    assert reread.status_code == 200, reread.text
+    assert reread.json()["source"] == before
+    assert _node_names(reread.json()["model"]) == before_flat
     # The working copy on disk is untouched, and no file_changed for it.
     assert working.read_text() == before
     types = [m.get("type") for m in seen]
