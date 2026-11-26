@@ -44,7 +44,9 @@ for (const m of MODELS) {
     test.setTimeout(180_000);
     await page.goto("/");
     await page.getByRole("button", { name: /Open/ }).first().click();
-    await page.getByText(m.label, { exact: true }).click();
+    // A model in both Reference Models and the Library has one name in both
+    // (#422); the Reference Models entry comes first.
+    await page.getByText(m.label, { exact: true }).first().click();
     await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 60_000 });
     await closePalette(page);
     await page.waitForTimeout(700);
