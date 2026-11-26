@@ -94,11 +94,13 @@ test.describe("@smoke developer tests loader", { tag: "@ci" }, () => {
 
     await emRow.dblclick();
 
-    await expect(
-      page
-        .locator('[data-testid="app-toolbar"]')
-        .getByText(/test_emcomposition__TestExecution__test_simple_execution_without_learning(_\d+)?\.py/),
-    ).toBeVisible({ timeout: 15000 });
+    // The toolbar title names the open file (#422). A long name may be
+    // shortened on screen, so its full name is read from the title's file attribute.
+    await expect(page.getByTestId("model-title")).toHaveAttribute(
+      "data-model-file",
+      /test_emcomposition__TestExecution__test_simple_execution_without_learning(_\d+)?\.py/,
+      { timeout: 15000 },
+    );
   });
 
   test("422 unextractable greys the row inline (no global toast)", async ({

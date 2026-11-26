@@ -37,7 +37,8 @@ test.describe("GSC scheduler-edge id uniqueness (#651/#699)", { tag: "@ci" }, ()
       .getByRole("button", { name: /^Skip$/ })
       .click({ timeout: 5000 })
       .catch(() => {});
-    await expect(page.getByText("gsc_afternodes.py").first()).toBeVisible({
+    // The toolbar title names the open file (#422).
+    await expect(page.getByTestId("model-title")).toHaveAttribute("data-model-file", "gsc_afternodes.py", {
       timeout: 30000,
     });
     // Gate on the shared-target node so we don't snapshot a mid-reload state.
