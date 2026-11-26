@@ -197,14 +197,16 @@ jobs:
       # #59: the packages install-deps downloads are kept between runs, so a
       # slow Ubuntu mirror costs nothing on a cache hit. apt writes them to a
       # folder the cache action can read (the default is root-only).
+      # Graphviz's packages are kept with them (#433), hence "-graphviz" in
+      # the key: a cache saved before had none.
       - name: Restore apt package cache
         id: apt-cache
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/apt-archives
-          key: apt-archives-${{ runner.os }}-${{ steps.pw.outputs.version }}
+          key: apt-archives-${{ runner.os }}-${{ steps.pw.outputs.version }}-graphviz
 
-      - name: Install Playwright system deps (bounded, retried)
+      - name: Install Playwright system deps and Graphviz (bounded, retried)
         working-directory: frontend
         timeout-minutes: 12
         run: |
@@ -214,8 +216,13 @@ jobs:
           printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nDPkg::Lock::Timeout "60";\nDir::Cache::Archives "%s/.cache/apt-archives/";\n' "$HOME" \
             | sudo tee /etc/apt/apt.conf.d/99-ci-network-timeouts
           for attempt in 1 2; do
-            timeout --kill-after=15 300 npx playwright install-deps chromium && exit 0
-            echo "::warning::Playwright install-deps attempt $attempt failed or timed out"
+            # #433: Graphviz's `dot` too, so the backend can draw the show_graph
+            # tab's picture; tests that need it skip without it. install-deps
+            # has just refreshed apt's package lists.
+            timeout --kill-after=15 300 npx playwright install-deps chromium \
+              && timeout --kill-after=15 180 sudo apt-get install -y --no-install-recommends graphviz \
+              && exit 0
+            echo "::warning::Playwright install-deps or Graphviz attempt $attempt failed or timed out"
             # #59: timeout stops npx, but the apt-get it started under sudo
             # keeps running and holds the dpkg lock, so the retry could never
             # install. Stop it before retrying.
@@ -237,7 +244,7 @@ jobs:
         uses: actions/cache/save@v5
         with:
           path: ~/.cache/apt-archives
-          key: apt-archives-${{ runner.os }}-${{ steps.pw.outputs.version }}
+          key: apt-archives-${{ runner.os }}-${{ steps.pw.outputs.version }}-graphviz
 
       - name: Download Playwright browsers (bounded, retried)
         if: steps.pw-cache.outputs.cache-hit != 'true'
