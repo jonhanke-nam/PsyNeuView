@@ -6,6 +6,10 @@
  * in the toolbar row is now kept on one line; when the row runs out of room,
  * whole controls move to a second row instead.
  *
+ * The model title is the one control with two lines by design (#422): the
+ * label, then the file name and source tag. It may have two, never more, and
+ * stays within the row's height.
+ *
  * "One line" is measured, not assumed: the text inside each control is laid
  * out as line boxes, and all of them must share one top.
  */
@@ -34,7 +38,7 @@ async function openScratchModel(page: Page) {
 /** Each visible toolbar control's label, height and number of text lines. */
 async function measure(page: Page) {
   return page.getByTestId("app-toolbar").evaluate((bar) => {
-    const out: { label: string; height: number; lines: number }[] = [];
+    const out: { label: string; height: number; lines: number; maxLines: number }[] = [];
     for (const el of Array.from(bar.querySelectorAll("button, select, strong"))) {
       const box = el.getBoundingClientRect();
       if (box.width === 0 || box.height === 0) continue;
@@ -42,11 +46,26 @@ async function measure(page: Page) {
       if (el.closest('[role="menu"], [role="dialog"], [role="listbox"]')) continue;
       const range = document.createRange();
       range.selectNodeContents(el);
-      const tops = new Set<number>();
-      for (const r of Array.from(range.getClientRects())) {
-        if (r.width > 0 && r.height > 0) tops.add(Math.round(r.top / 4));
+      // Text lines: boxes whose tops are within 4 px are one line. (Rounding
+      // each top to a 4 px step split one line in two when its parts sat
+      // 1 px apart across a step.)
+      const tops = Array.from(range.getClientRects())
+        .filter((r) => r.width > 0 && r.height > 0)
+        .map((r) => r.top)
+        .sort((a, b) => a - b);
+      let lines = 0;
+      let last = -Infinity;
+      for (const t of tops) {
+        if (t - last > 4) lines += 1;
+        last = t;
       }
-      out.push({ label: (el.textContent || "").trim().slice(0, 30), height: Math.round(box.height), lines: tops.size });
+      out.push({
+        label: (el.textContent || "").trim().slice(0, 30),
+        height: Math.round(box.height),
+        lines,
+        // The model title is two lines by design (#422): label, then file and tag.
+        maxLines: el.getAttribute("data-testid") === "model-title" ? 2 : 1,
+      });
     }
     return out;
   });
@@ -60,8 +79,12 @@ test.describe("Toolbar buttons stay on one line", { tag: "@ci" }, () => {
       const controls = await measure(page);
       console.log(`toolbar @${width}: ${JSON.stringify(controls)}`);
       expect(controls.length).toBeGreaterThan(5);
-      const split = controls.filter((c) => c.lines > 1);
+      const split = controls.filter((c) => c.lines > c.maxLines);
       expect(split, `split controls: ${JSON.stringify(split)}`).toEqual([]);
+      // And the two-line title fits the toolbar's row: no taller than the buttons.
+      const title = await page.getByTestId("model-title").boundingBox();
+      const open = await page.getByTestId("open-menu").boundingBox();
+      expect(title!.height).toBeLessThanOrEqual(Math.max(open!.height, 28));
     });
   }
 });

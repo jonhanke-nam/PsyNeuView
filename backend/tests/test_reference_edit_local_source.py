@@ -318,7 +318,7 @@ def test_an_edit_to_the_psyneulink_original_does_not_reach_the_reference_copy(lo
         assert loaded.status_code == 200, loaded.text
         body = loaded.json()
         working = Path(body["file_path"])
-        assert working.parent == (local_checkout.parent / "working").resolve()
+        assert working.parent == (local_checkout.parent / "working" / "reference-models").resolve()
         before = working.read_text()
         before_nodes = _node_names(body["model"])
         assert "PREDICTION" in before_nodes

@@ -124,7 +124,8 @@ test("opening a Reference Model writes its working copy in the working-copies fo
   const resp = await request.post("/api/reference-models/load", { data: { name: "GilzenratModel" } });
   expect(resp.ok()).toBeTruthy();
   const { file_path } = await resp.json();
-  expect(path.dirname(file_path)).toBe(sessionWorkingDir());
+  // In the Reference Models' own folder there (#422).
+  expect(path.dirname(file_path)).toBe(path.join(sessionWorkingDir(), "reference-models"));
   expect(path.basename(file_path)).toBe("GilzenratModel.py");
   expect(existsSync(file_path)).toBe(true);
 });
