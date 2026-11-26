@@ -452,6 +452,11 @@ body:has([data-pnv-customized="true"]) .pnv-inspector-legend {
   background: var(--pnv-selection-hover);
   filter: none;
 }
+/* #411: a row whose name has keyboard focus tints as a pointed-at row does.
+   :focus-visible, so a click (which also focuses the name) changes nothing. */
+.pnv-palette-row:has(> [data-testid="palette-item-pick"]:focus-visible) {
+  background: var(--pnv-selection-hover);
+}
 .pnv-palette-tile[data-active="true"],
 .pnv-palette-tile[data-armed="true"],
 .pnv-palette-row[data-armed="true"] {
