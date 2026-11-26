@@ -34,7 +34,8 @@ test.describe("Tutorial: Viewing options & the flat view", () => {
 
     await page.goto("/");
     await page.getByRole("button", { name: /Open/ }).first().click();
-    await page.getByText("EGO — Giallanza et al. 2024 (Study 2)").click();
+    // The Library's EGO has the same name (#422); the Reference Models entry comes first.
+    await page.getByText("EGO — Giallanza et al. 2024 (Study 2)").first().click();
     // It opens in the view the menu shows, flattened by default (#428), so
     // show it nested first: EGO, the top composition, with EM folded (#395).
     const viewSelect = page
