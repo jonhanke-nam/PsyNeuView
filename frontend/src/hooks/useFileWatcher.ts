@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
-import { useGraphSettings } from "@/stores/graphSettingsStore";
+import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
 import { useModelStore } from "@/stores/modelStore";
 import { usePresenceStore } from "@/stores/presenceStore";
 import { useExternalChangeStore } from "@/stores/externalChangeStore";
@@ -16,19 +16,21 @@ import { record } from "@/utils/activityLog";
 const RETRY_DELAYS = [1000, 2000, 4000, 8000]; // backoff in ms
 
 /**
- * The model's file as it is on disk now, with its graph: what "Load from disk"
- * takes (#1). Null when it can't be read, so the caller can fall back.
+ * The model's file as it is on disk now, with its graph in the view this
+ * window shows: what "Load from disk" takes (#1), and how an outside edit is
+ * read (#442). Null when it can't be read, so the caller can fall back.
  */
 export async function readDiskVersion(
   filePath: string,
   doFetch: typeof fetch = fetch,
 ): Promise<{ source: string; model: unknown } | null> {
   try {
-    const { flat, pytorch } = useGraphSettings.getState();
     const resp = await doFetch("/api/model/load", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath, flat, pytorch }),
+      // The flattened or PyTorch view and show_graph's layout options, as
+      // every load sends them (#257): not the backend's default, nested.
+      body: JSON.stringify({ file_path: filePath, ...modelLoadOptions() }),
     });
     if (!resp.ok) return null;
     const data = await resp.json();
@@ -48,6 +50,9 @@ export function useFileWatcher() {
   const filePathRef = useRef(filePath);
   filePathRef.current = filePath;
   const retryCount = useRef(0);
+  // Each outside change is read in this window's view; only the newest
+  // read is applied, however the replies come back (#442).
+  const changeSeq = useRef(0);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Set only when an external change arrives on top of unsaved in-app edits.
   const pendingChange = useExternalChangeStore((s) => s.pending);
@@ -205,31 +210,44 @@ export function useFileWatcher() {
 
         useSyncStore.getState().noteChange(message.filePath);
 
-        // Read live state: this handler is created once and would otherwise
-        // see the source from the first render.
-        const { source, savedSource } = useModelStore.getState();
-        const hasUnsavedEdits = source !== savedSource;
-        record("file", `Model changed on disk: ${message.filePath}`, {
-          path: message.filePath,
-          applied: !hasUnsavedEdits,
-          ...(hasUnsavedEdits ? { askedFirst: true } : {}),
-        });
+        // The message says the file changed and carries its text, not a
+        // graph (#442): the watcher serves every window following the file,
+        // and each shows it in its own view (nested, flattened, PyTorch). So
+        // each window reads the graph itself, in the view it shows now.
+        const changed: string = message.filePath;
+        const seq = ++changeSeq.current;
+        void readDiskVersion(changed).then((disk) => {
+          // A newer change is being read, or another model was opened.
+          if (seq !== changeSeq.current) return;
+          if (useModelStore.getState().filePath !== changed) return;
+          // Can't be read now (gone, or not a model any more): what was
+          // pushed is all there is, and a backend from before #442 pushed a
+          // graph with it.
+          const fresh = disk ?? (message.model ? { source: message.source, model: message.model } : null);
+          if (!fresh) return;
 
-        if (hasUnsavedEdits) {
-          // Both sides changed. Applying now would silently discard the edits
-          // in this window, so ask instead (#926). A newer change supersedes
-          // an older unanswered one — the question is always about the file as
-          // it stands on disk right now.
-          setPendingChange({
-            filePath: message.filePath,
-            source: message.source,
-            model: message.model,
+          // Read live state: this handler is created once and would otherwise
+          // see the source from the first render.
+          const { source, savedSource } = useModelStore.getState();
+          const hasUnsavedEdits = source !== savedSource;
+          record("file", `Model changed on disk: ${changed}`, {
+            path: changed,
+            applied: !hasUnsavedEdits,
+            ...(hasUnsavedEdits ? { askedFirst: true } : {}),
           });
-          return;
-        }
 
-        applyChange(message.source, message.model);
-        useSyncStore.getState().noteApplied();
+          if (hasUnsavedEdits) {
+            // Both sides changed. Applying now would silently discard the edits
+            // in this window, so ask instead (#926). A newer change supersedes
+            // an older unanswered one — the question is always about the file as
+            // it stands on disk right now.
+            setPendingChange({ filePath: changed, source: fresh.source, model: fresh.model });
+            return;
+          }
+
+          applyChange(fresh.source, fresh.model);
+          useSyncStore.getState().noteApplied();
+        });
       };
 
       ws.onclose = () => {

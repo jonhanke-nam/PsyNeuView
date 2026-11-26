@@ -51,15 +51,21 @@ async def send_to(clients, message: dict) -> None:
 
 
 def _on_file_changed(file_path: str) -> None:
-    """Called by the file watcher (from a watchdog thread) when the .py file changes externally."""
+    """Called by the file watcher (from a watchdog thread) when the .py file changes externally.
+
+    Sends the new source, not a graph (#442). Each window shows the model in
+    its own view (nested, flattened, PyTorch, show_graph's layout) and keeps
+    that view in the page, so each re-reads the model through /api/model/load
+    with its own options. One graph built here for every window came back
+    nested in a window showing the flattened view; and building it here as
+    well would run the model twice per outside save.
+    """
     try:
         source = Path(file_path).read_text()
-        model = load_and_introspect(file_path)
         message = {
             "type": "file_changed",
             "filePath": file_path,
             "source": source,
-            "model": model,
         }
         # We are on a watchdog thread, so there is no running loop here to
         # schedule on. Hand the send to the loop captured when the client
