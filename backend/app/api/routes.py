@@ -31,6 +31,7 @@ from app.services.file_writer import (
     apply_structural_change,
     guard_edit,
     save_source,
+    write_model_source,
 )
 
 
@@ -1178,7 +1179,9 @@ def load_model(request: LoadModelRequest):
         backup_path = artifact_path(path.with_suffix(".star_import_original.py"))
         if not backup_path.exists():
             shutil.copy2(path, backup_path)
-        path.write_text(converted_source)
+        # Through write_model_source, so a window already watching this file
+        # doesn't hear the app's own rewrite as an outside change (#450).
+        write_model_source(path, converted_source)
         source = converted_source
         logger.info(f"[star-import] Converted 'from psyneulink import *' in {path.name} (backup: {backup_path.name})")
 
@@ -2032,7 +2035,7 @@ def undo_star_convert(request: LoadModelRequest):
     backup = artifact_path(path.with_suffix(".star_import_original.py"))
     if not backup.exists():
         raise HTTPException(status_code=404, detail="No star import backup found")
-    shutil.copy2(backup, path)
+    write_model_source(path, backup.read_text())
     backup.unlink()
     source = path.read_text()
     model = load_and_introspect(str(path))
@@ -2302,7 +2305,7 @@ def save_copy(request: SaveCopyRequest):
             raise HTTPException(status_code=400, detail="Saving .py requires `source`.")
         # A copy starts unprotected (#1346): a "# PsyNeuView: protected" line
         # is about the original, not a copy made to work on.
-        target.write_text(protection_line.strip_from_source(request.source))
+        write_model_source(target, protection_line.strip_from_source(request.source))
         sidecar_copy.apply(copies, path, target)
     elif request.fmt == "pnlproject":
         mdf_text, _ = _try_mdf_mirror(str(path))
@@ -2386,7 +2389,7 @@ async def import_project(file: UploadFile = File(...)):
         target = save_dir / f"{model_name}_{counter}.py"
         counter += 1
 
-    target.write_text(source)
+    write_model_source(target, source)
 
     # Save layout if present
     if layout_data:
@@ -2646,7 +2649,7 @@ async def import_mdf(file: UploadFile = File(...)):
     while target.exists():
         target = save_dir / f"{model_name}_{counter}.py"
         counter += 1
-    target.write_text(script_source)
+    write_model_source(target, script_source)
 
     # Auto-apply Standard format on MDF import (#94 task 1). The Python that
     # ``generate_script_from_mdf`` produces is functionally correct but
@@ -2870,7 +2873,7 @@ def reset_demo(request: ResetDemoRequest):
     # or a tutorial's own folder (#172).
     folder = _tutorial_working_dir(request.tutorial) if request.tutorial else _demo_working_dir()
     working = folder / f"{request.demo_name}.py"
-    shutil.copy2(pristine, working)
+    write_model_source(working, pristine.read_text())
 
     # Stamp the sidecar with demo_origin so the "Reset to Demo" affordance
     # survives close-and-reopen of the working file (issue #40). This also
@@ -2989,7 +2992,7 @@ def load_reference_model(request: LoadReferenceRequest):
     had_edits = working.exists() and working.read_text() != pristine_text
     restored = bool(had_edits and request.restore_pristine)
     if not had_edits or restored:
-        shutil.copy2(pristine, working)
+        write_model_source(working, pristine_text)
 
     # Seed the sidecar bundle — labels/layout plus any named variants and the
     # layout index (.psyneuview.json) — so the working copy reproduces the
@@ -3185,7 +3188,7 @@ def load_psyneulink_example(request: LoadPnlExampleRequest):
         working = src
     else:
         working = _demo_working_dir() / src.name
-        shutil.copy2(src, working)
+        write_model_source(working, src.read_text())
     source = working.read_text()
     t0 = time.time()
     model = load_and_introspect(str(working))
@@ -3571,7 +3574,7 @@ def save_as(request: SaveAsRequest):
     # "# PsyNeuView: protected" line is about the original. A brand-new file
     # (no source_path) is written exactly as given.
     source = protection_line.strip_from_source(request.source) if request.source_path else request.source
-    target.write_text(source)
+    write_model_source(target, source)
     sidecar_copy.apply(copies, request.source_path or target, target)
     layout, labels, bundle, sidecars = _sidecar_payload(target)
 
