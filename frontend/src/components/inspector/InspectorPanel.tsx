@@ -413,7 +413,7 @@ export function SchedulerModeToggle({ mode, fontPx }: { mode: string; fontPx: nu
       title={`Scheduling mode: ${mode}. Click to switch to ${next}.`}
       style={{
         fontSize: fontPx, fontWeight: 600, fontFamily: "var(--pnv-font-mono)",
-        color: "var(--pnv-on-primary)", background: mode === "STANDARD" ? "var(--pnv-primary)" : "var(--pnv-warning)",
+        color: "var(--pnv-on-primary)", background: mode === "STANDARD" ? "var(--pnv-primary)" : "var(--pnv-warning-badge)",
         padding: "1px 8px", borderRadius: 8, border: "none", cursor: "pointer",
       }}
     >
