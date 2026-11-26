@@ -113,13 +113,21 @@ describe("nudging overlapping nodes apart (#389)", () => {
   });
 
   it("is fast on a graph the size of EGO's and well beyond", () => {
-    // EGO draws 21 mechanisms; a 200-node grid packed too tight is the stress case.
+    // EGO draws 21 mechanisms: the real case, a fraction of a millisecond locally.
+    const ego = Array.from({ length: 21 }, (_, i) => mech(`E${i}`, (i % 7) * 150, Math.floor(i / 7) * 35));
+    let t0 = performance.now();
+    separateOverlappingNodes(ego, sizeOf);
+    expect(noOverlaps(ego)).toBe(true);
+    expect(performance.now() - t0).toBeLessThan(20);
+    // A 200-node grid packed too tight is the stress case. It takes ~45 ms on a
+    // laptop and ~90 ms on CI's runner, so the bound only catches a blow-up in
+    // the algorithm (#438 CI, 2026-11-26), not runner speed.
     const grid = Array.from({ length: 200 }, (_, i) => mech(`G${i}`, (i % 20) * 150, Math.floor(i / 20) * 35));
-    const t0 = performance.now();
+    t0 = performance.now();
     separateOverlappingNodes(grid, sizeOf);
     const ms = performance.now() - t0;
     expect(noOverlaps(grid)).toBe(true);
-    expect(ms).toBeLessThan(50);
+    expect(ms).toBeLessThan(500);
   });
 
   it("says once, in plain words, which nodes moved", () => {
