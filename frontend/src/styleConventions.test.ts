@@ -41,7 +41,7 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
   "components/common/settings/ShortcutsSection.tsx": { count: 1, what: "a shortcut's key chip, which records when pressed" },
   "components/common/settings/SwitchListbox.tsx": { count: 3, what: "a group heading, an option row, Show older" },
   "components/common/FileBrowserModal.tsx": { count: 2, what: "a root folder chip, ↑ Up" },
-  "components/common/HistoryPanel.tsx": { count: 2, what: "the History toggle in the toolbar, a menu trigger drawn like Layout ▾ (#109); a save marker row (#1349)" },
+  "components/common/HistoryPanel.tsx": { count: 3, what: "the History toggle in the toolbar, a menu trigger drawn like Layout ▾ (#109); a save marker row (#1349); a step row, which folds open (#418)" },
   "components/common/ValueGrid.tsx": { count: 1, what: "the list / grid segments beside a layer's values (#1387)" },
   "components/common/dialog/DialogHeader.tsx": { count: 2, what: "the × at its full/compact size, and inline" },
   "components/common/SyncIndicator.tsx": { count: 1, what: "the file-watch status in the diagnostics bar, which opens its popover (#103)" },
@@ -91,13 +91,14 @@ const REMAINING_RAW_BUTTONS: Record<string, { count: number; what: string }> = {
     count: 8,
     what: "the trace bar's ⏮ ◀ ▶ ⏭ (4), its run / trial segments (2), ▶ Auto-play / ⏸ Pause (1, #338) and ✕ clear (1), at the bar's size",
   },
-  "App.tsx": { count: 2, what: "a bottom-panel tab, and the ⌄ that collapses the panel" },
+  "App.tsx": { count: 1, what: "a bottom-panel tab (the panel's collapse is its edge handle now, #418)" },
   "components/graph/PaletteSidebar.tsx": {
     count: 5,
     what:
-      "a category's fold heading; the header's ◀ / ✕ icon squares; the compact flyout's breadcrumb segments, " +
+      "a category's fold heading; the header's ✕ icon square (the ◀ / › fold is the edge handle, #418); the compact flyout's breadcrumb segments, " +
       "its ✕ and a sub-category row",
   },
+  "components/common/DeveloperTestsModal.tsx": { count: 1, what: "a test file's fold heading, sticky above its tests (#418)" },
   "components/common/DiagnosticPanel.tsx": { count: 2, what: "the quiet collapse; the auto-conversion's Undo chip, 10px in a line of 11px text" },
   "components/common/TourBar.tsx": {
     count: 13,

@@ -268,6 +268,23 @@ checks), give it a file under `component-icons/`, and add its line to
 
 ---
 
+## Expand and collapse marks (#418)
+
+Not component icons, but the app's one other family of marks, so they are
+listed here. The standard is in
+[`ui-interaction-conventions.md`](ui-interaction-conventions.md#expand-and-collapse-418).
+
+| Mark | Drawn by | Means | Where |
+|---|---|---|---|
+| chevron `‹ › ˄ ˅` on a tab on a line | `PanelHandle` (`Chevron`, an SVG polyline) | collapse or restore the pane; it points the way the content will move | the code pane, the bottom panel, the Components panel's right edge |
+| chevron `▸` / `▾`, the same SVG turned 90° | `DisclosureArrow` | a row or section that folds: `▸` closed, `▾` open | Inspector, Run, Run State, Settings, Components tree, Open and Tutorials menus, Validation, Diagnostics, Developer tests, History |
+| trailing text `▾` after a label | the label itself | opens a menu (not a fold) | Layout ▾, Help ▾, Open ▾, pickers |
+| `−` / `+` in a square on a composition | `CompositionNode`, `MechanismNode` | collapse the composition to a node / expand it again (graph operations) | the graph |
+
+Retired by #418 as fold marks: `▶`/`▼` swapped, a rotated `▶`, the browser's
+own `<details>` triangle, `⌄`, `◀` and the bordered `›` square. A guard test
+(`disclosureConventions.test.ts`) fails if one comes back.
+
 ## show_graph Visual Conventions (for reference)
 
 PsyNeuLink's `show_graph()` uses these shapes and colors in GraphViz. The

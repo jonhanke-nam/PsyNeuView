@@ -164,6 +164,8 @@ export function Combobox({
         onClick={() => setOpen((o) => !o)}
         disabled={disabled}
         aria-label="Toggle dropdown"
+        aria-haspopup="listbox"
+        aria-expanded={open}
         style={{
           position: "absolute",
           right: 1,

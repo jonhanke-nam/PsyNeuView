@@ -13,6 +13,7 @@
  * lands — the per-node values table is the primary consumer.
  */
 
+import { DisclosureDetails } from "@/components/common/Disclosure";
 import { useMemo, useState, type CSSProperties } from "react";
 import { useModelStore, type MechanismData } from "@/stores/modelStore";
 import { formatTraceValue } from "@/utils/traceValues";
@@ -316,20 +317,23 @@ export function RunStatePanel() {
           The hover ties a node back to the condition that gates it.
           #533: foldable — defaults to open so the section keeps the same
           first-use feel, but lets the user collapse it on busy compositions
-          where it dominates the panel. Matches the <details> pattern used
+          where it dominates the panel. Matches the fold pattern used
           by the Raw snapshots section below.
           Rendered below the values table so the per-step values stay near
           the top of the panel where vertical space is scarce. */}
       {considerationQueue && considerationQueue.length > 0 && (
-        <details
+        <DisclosureDetails
           open={queueOpen}
-          onToggle={(e) => setQueueOpen((e.currentTarget as HTMLDetailsElement).open)}
+          onToggle={setQueueOpen}
           style={{ marginBottom: 12 }}
+          summaryStyle={{ cursor: "pointer", color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-11)", textTransform: "uppercase", letterSpacing: 0.3 }}
+          summary={
+            <>
+              Consideration queue ({considerationQueue.length} phase{considerationQueue.length === 1 ? "" : "s"}
+              {activePhaseIdx !== -1 ? ` — phase ${activePhaseIdx + 1} firing now` : ""})
+            </>
+          }
         >
-          <summary style={{ cursor: "pointer", color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-11)", textTransform: "uppercase", letterSpacing: 0.3 }}>
-            Consideration queue ({considerationQueue.length} phase{considerationQueue.length === 1 ? "" : "s"}
-            {activePhaseIdx !== -1 ? ` — phase ${activePhaseIdx + 1} firing now` : ""})
-          </summary>
           <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 4 }}>
             {considerationQueue.map((phase, phaseIdx) => (
               <div key={phaseIdx} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
@@ -395,15 +399,16 @@ export function RunStatePanel() {
             <span><span style={{ display: "inline-block", width: 8, height: 8, background: "var(--pnv-surface-sunken)", border: "1px solid var(--pnv-border-light)", borderRadius: 2, marginRight: 4 }} />fired</span>
             <span><span style={{ display: "inline-block", width: 8, height: 8, border: "1px solid var(--pnv-border)", borderRadius: 2, marginRight: 4 }} />pending</span>
           </div>
-        </details>
+        </DisclosureDetails>
       )}
 
       {/* Raw snapshot rows — fallback for everything not yet labeled */}
       {snapshotsAtStep.length > 0 && (
-        <details style={{ marginTop: 8 }}>
-          <summary style={{ cursor: "pointer", color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-11)", textTransform: "uppercase", letterSpacing: 0.3 }}>
-            Raw snapshots at this step ({snapshotsAtStep.length})
-          </summary>
+        <DisclosureDetails
+          style={{ marginTop: 8 }}
+          summaryStyle={{ cursor: "pointer", color: "var(--pnv-text-muted)", fontSize: "var(--pnv-fs-11)", textTransform: "uppercase", letterSpacing: 0.3 }}
+          summary={<>Raw snapshots at this step ({snapshotsAtStep.length})</>}
+        >
           <pre
             style={{
               fontSize: "var(--pnv-fs-11)",
@@ -419,7 +424,7 @@ export function RunStatePanel() {
           >
             {JSON.stringify(snapshotsAtStep, null, 2)}
           </pre>
-        </details>
+        </DisclosureDetails>
       )}
     </div>
   );

@@ -155,13 +155,149 @@ button:hover {
   transform: scale(1.5);
 }
 
-/* Allotment sash styling */
-.sash {
-  background: var(--pnv-border-faint) !important;
+/* #418: the panel-edge handle (PanelHandle.tsx), design A. A line with a
+   small arrow tab: drag the line to resize, click the tab to collapse or
+   restore. The wrapper is an 8px band centred on the edge; the line draws
+   1px, and 3px primary on hover, focus or drag. It takes no layout space. */
+.pnv-handle {
+  position: absolute;
+  z-index: 35; /* where Allotment's sashes sat: menus open above it (#1391) */
+  touch-action: none;
 }
-.sash:hover {
-  background: var(--pnv-primary) !important;
+/* A handle that only folds (no resize): the line is drawn but inert; only the tab acts. */
+.pnv-handle:not(.pnv-handle--resizable) { pointer-events: none; }
+.pnv-handle:not(.pnv-handle--resizable) .pnv-handle__tab { pointer-events: auto; }
+.pnv-handle--v { top: 0; bottom: 0; width: 8px; margin-left: -4px; }
+.pnv-handle--h { left: 0; right: 0; height: 8px; margin-top: -4px; }
+.pnv-handle--resizable.pnv-handle--v { cursor: col-resize; }
+.pnv-handle--resizable.pnv-handle--h { cursor: row-resize; }
+.pnv-handle[data-expanded="false"] { cursor: default; }
+/* While a handle is dragged: no text selection, and the resize cursor everywhere. */
+body.pnv-resizing-col, body.pnv-resizing-col * { cursor: col-resize !important; user-select: none; }
+body.pnv-resizing-row, body.pnv-resizing-row * { cursor: row-resize !important; user-select: none; }
+.pnv-handle__line {
+  position: absolute;
+  inset: 0;
+  outline: none;
 }
+.pnv-handle__line::before {
+  content: "";
+  position: absolute;
+  background: var(--pnv-border);
+  pointer-events: none;
+}
+.pnv-handle--v .pnv-handle__line::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+.pnv-handle--h .pnv-handle__line::before { top: 50%; left: 0; right: 0; height: 1px; }
+.pnv-handle--resizable[data-expanded="true"]:hover .pnv-handle__line::before,
+.pnv-handle--dragging .pnv-handle__line::before,
+.pnv-handle__line:focus-visible::before {
+  background: var(--pnv-primary);
+}
+.pnv-handle--v.pnv-handle--resizable[data-expanded="true"]:hover .pnv-handle__line::before,
+.pnv-handle--v.pnv-handle--dragging .pnv-handle__line::before,
+.pnv-handle--v .pnv-handle__line:focus-visible::before { width: 3px; margin-left: -1px; }
+.pnv-handle--h.pnv-handle--resizable[data-expanded="true"]:hover .pnv-handle__line::before,
+.pnv-handle--h.pnv-handle--dragging .pnv-handle__line::before,
+.pnv-handle--h .pnv-handle__line:focus-visible::before { height: 3px; margin-top: -1px; }
+/* The focused separator also rings its tab, so keyboard focus is easy to find. */
+.pnv-handle__line:focus-visible + .pnv-handle__tab {
+  outline: 2px solid var(--pnv-primary);
+  outline-offset: 1px;
+}
+.pnv-handle__tab {
+  all: unset;
+  box-sizing: border-box;
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pnv-text-hint);
+  background: var(--pnv-surface);
+  border: 1px solid var(--pnv-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.pnv-handle--v .pnv-handle__tab { left: 50%; width: var(--tab-cross, 14px); height: var(--tab-along, 36px); margin-left: calc(var(--tab-cross, 14px) / -2); }
+.pnv-handle--h .pnv-handle__tab { top: 50%; width: var(--tab-along, 40px); height: var(--tab-cross, 14px); margin-top: calc(var(--tab-cross, 14px) / -2); }
+.pnv-handle--v.pnv-handle--tab-start .pnv-handle__tab { top: var(--handle-tab-offset, 8px); }
+.pnv-handle--v.pnv-handle--tab-end .pnv-handle__tab { bottom: var(--handle-tab-offset, 8px); }
+.pnv-handle--h.pnv-handle--tab-start .pnv-handle__tab { left: var(--handle-tab-offset, 8px); }
+.pnv-handle--h.pnv-handle--tab-end .pnv-handle__tab { right: var(--handle-tab-offset, 8px); }
+/* On the window's edge (a pane hidden), the band and the tab stay inside it. */
+.pnv-handle--v[data-at="start"] { margin-left: 0; }
+.pnv-handle--v[data-at="end"] { margin-left: -8px; }
+.pnv-handle--h[data-at="start"] { margin-top: 0; }
+.pnv-handle--h[data-at="end"] { margin-top: -8px; }
+.pnv-handle--v[data-at="start"] .pnv-handle__tab { margin-left: -4px; }
+.pnv-handle--v[data-at="end"] .pnv-handle__tab { margin-left: -10px; }
+.pnv-handle--h[data-at="start"] .pnv-handle__tab { margin-top: -4px; }
+.pnv-handle--h[data-at="end"] .pnv-handle__tab { margin-top: -10px; }
+/* The hit area: at least 24×24, wide rather than tall (WCAG 2.5.8). */
+.pnv-handle__tab::before { content: ""; position: absolute; }
+.pnv-handle--v .pnv-handle__tab::before { inset: 0 -5px; }
+.pnv-handle--h .pnv-handle__tab::before { inset: -5px 0; }
+/* A tab on one side of its line (#418) lies wholly over that side, never over
+   the pane beyond it (the graph canvas): the code pane's tab in the graph
+   toolbar's left margin, the bottom panel's in its tab bar, the Components
+   panel's inside the panel. Its target is the tab itself, 24px or more
+   along the line and as thick as the room on its side allows. */
+.pnv-handle.pnv-handle--v.pnv-handle--side-after .pnv-handle__tab { left: 50%; right: auto; margin-left: 0; }
+.pnv-handle.pnv-handle--v.pnv-handle--side-before .pnv-handle__tab { left: auto; right: 50%; margin-left: 0; }
+.pnv-handle.pnv-handle--h.pnv-handle--side-after .pnv-handle__tab { top: 50%; bottom: auto; margin-top: 0; }
+.pnv-handle.pnv-handle--h.pnv-handle--side-before .pnv-handle__tab { top: auto; bottom: 50%; margin-top: 0; }
+.pnv-handle.pnv-handle--v.pnv-handle--side-after[data-at="start"] .pnv-handle__tab { left: 0; }
+.pnv-handle.pnv-handle--h.pnv-handle--side-after[data-at="start"] .pnv-handle__tab { top: 0; }
+.pnv-handle--side-before .pnv-handle__tab::before,
+.pnv-handle--side-after .pnv-handle__tab::before { inset: 0; }
+/* A collapsed bottom panel leaves a slim gutter at the window's foot for its tab (SplitPane). */
+.pnv-split-gutter {
+  background: var(--pnv-surface-muted);
+}
+.pnv-handle:hover .pnv-handle__tab,
+.pnv-handle__tab:hover {
+  color: var(--pnv-primary);
+  background: var(--pnv-primary-tint);
+  border-color: var(--pnv-primary);
+}
+.pnv-handle__tab:focus-visible {
+  color: var(--pnv-primary);
+  outline: 2px solid var(--pnv-primary);
+  outline-offset: 1px;
+}
+
+/* #418: rows and sections share one arrow, turned: ▸ closed, ▾ open
+   (DisclosureArrow in Disclosure.tsx). A 16×16 box at the start of the row. */
+.pnv-disclosure-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  /* No height of its own: the arrow is centred on the text's middle and
+     overflows its box, so it never changes the height of the row it sits in
+     (restyles keep layout, #418). A row that used to be as tall as the old
+     glyph's line keeps that with --disclosure-line. */
+  height: var(--disclosure-line, 0);
+  overflow: visible;
+  flex-shrink: 0;
+  color: var(--pnv-text-hint);
+  vertical-align: middle;
+}
+.pnv-disclosure-arrow > svg { transition: transform 0.12s; }
+.pnv-disclosure-arrow[data-open="true"] > svg { transform: rotate(90deg); }
+.pnv-disclosure-arrow--small { width: 12px; }
+/* Native <details>: our arrow replaces the browser's own marker. */
+.pnv-disclosure-summary { list-style: none; cursor: pointer; }
+.pnv-disclosure-summary::-webkit-details-marker { display: none; }
+.pnv-disclosure-summary::marker { content: ""; }
+.pnv-disclosure-summary:hover { background: var(--pnv-selection-hover); }
+.pnv-disclosure-summary:focus-visible,
+.pnv-disclosure-toggle:focus-visible,
+.pnv-history-step:focus-visible {
+  outline: 2px solid var(--pnv-primary);
+  outline-offset: 0;
+}
+/* !important: these rows draw their own resting background inline. */
+.pnv-disclosure-toggle:hover { background: var(--pnv-selection-hover) !important; }
 
 /* #409: brief flash highlight on the labels.yaml line the Inspector
    just jumped to, in the amber of the YAML-cursor row (#1302). The fade-out is purely visual — the StateField
@@ -191,6 +327,23 @@ button:hover {
    context, which would draw the popover underneath the panes below. */
 .diagnostics-collapsed-bar:hover:not(:has(.sync-indicator-zone:hover)):not(:has([data-testid="sync-popover"])) {
   filter: brightness(0.97);
+}
+
+/* #418: the folded bar's toggle is a real button that fills the bar up to the
+   file-watch status; it draws nothing of its own, so the bar looks as before. */
+.diagnostics-toggle {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+.diagnostics-toggle:focus-visible {
+  outline: 2px solid var(--pnv-primary);
+  outline-offset: 1px;
 }
 
 /* A small × that removes something from a row (a port, a condition) is grey

@@ -23,6 +23,7 @@
  * control that opens this.
  */
 
+import { DisclosureArrow } from "@/components/common/Disclosure";
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { groupsOpenAtFirst, splitOlderReleases, type SwitchGroup, type SwitchOption } from "@/utils/pnlSources";
 import { useDismiss } from "../dialog/useDismiss";
@@ -181,9 +182,7 @@ export function SwitchListbox({
                   overflowWrap: "anywhere",
                 }}
               >
-                <span aria-hidden="true" style={{ fontSize: "var(--pnv-fs-9)", width: 10, color: "var(--pnv-text-hint)", flexShrink: 0 }}>
-                  {isOpen ? "▼" : "▶"}
-                </span>
+                <DisclosureArrow open={isOpen} small />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontWeight: 600 }}><BreakAfterSlashes text={g.label} /></span>
                   <span style={{ color: "var(--pnv-text-muted)" }}> ({g.options.length})</span>

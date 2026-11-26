@@ -3,6 +3,7 @@
  * Shows input fields for each input node, a Run button, and Plotly charts.
  */
 
+import { DisclosureArrow, DisclosureDetails } from "@/components/common/Disclosure";
 import { useState, useCallback, useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import { preloadable, setsFor, textsFromSet } from "@/utils/inputSets";
 import {
@@ -1185,19 +1186,18 @@ export function RunPanel() {
                 #465 per-node trajectories) land, the line charts remain
                 reachable behind this collapsed section so existing users
                 aren't cut off. */}
-            <details style={{ marginTop: 12 }}>
-              <summary
-                style={{
-                  fontSize: "var(--pnv-fs-12)",
-                  color: "var(--pnv-text-muted)",
-                  cursor: "pointer",
-                  fontWeight: 500,
-                }}
-              >
-                Trial-by-trial line charts
-              </summary>
+            <DisclosureDetails
+              style={{ marginTop: 12 }}
+              summaryStyle={{
+                fontSize: "var(--pnv-fs-12)",
+                color: "var(--pnv-text-muted)",
+                cursor: "pointer",
+                fontWeight: 500,
+              }}
+              summary="Trial-by-trial line charts"
+            >
               <ResultsChart results={results} />
-            </details>
+            </DisclosureDetails>
 
             {/* Live debugger snapshots (Phase 2B of #247). Visible only when
                 the run actually captured any — keeps the UI clean for older
@@ -1205,13 +1205,12 @@ export function RunPanel() {
             <DebuggerSnapshotTable />
 
             {/* Collapsible table of the results (#335: was "Raw data", then "Results") */}
-            <details style={{ marginTop: 12 }}>
-              <summary
-                data-testid="run-results-table-toggle"
-                style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}
-              >
-                Results table
-              </summary>
+            <DisclosureDetails
+              style={{ marginTop: 12 }}
+              summaryTestId="run-results-table-toggle"
+              summaryStyle={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}
+              summary="Results table"
+            >
               <table
                 style={{
                   fontSize: "var(--pnv-fs-11)",
@@ -1258,7 +1257,7 @@ export function RunPanel() {
                   ))}
                 </tbody>
               </table>
-            </details>
+            </DisclosureDetails>
             </div>
           </div>
         )}
@@ -1824,10 +1823,11 @@ function InputNodeEditor({
           </Button>
         </div>
       ))}
-      <details style={{ marginTop: 2 }}>
-        <summary style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-hint)", cursor: "pointer" }}>
-          Paste CSV
-        </summary>
+      <DisclosureDetails
+        style={{ marginTop: 2 }}
+        summaryStyle={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-hint)", cursor: "pointer" }}
+        summary="Paste CSV"
+      >
         <textarea
           value={csvText}
           onChange={(e) => setCsvText(e.target.value)}
@@ -1860,7 +1860,7 @@ function InputNodeEditor({
         >
           Apply to cells
         </Button>
-      </details>
+      </DisclosureDetails>
     </div>
   );
 }
@@ -2322,9 +2322,21 @@ function TrialOutputs({
   // #497: keep the live card in view as the trace steps across trial
   // boundaries (the column can run taller than the panel on long runs).
   const activeCardRef = useRef<HTMLDivElement | null>(null);
+  // A card that is already wholly in view stays put; otherwise its top comes
+  // to the top of the panel, so the card's header is what shows (#418: with
+  // the panes now resizing in the same frame, "nearest" could leave a card
+  // bottom-aligned a few px under the tab bar instead).
   useEffect(() => {
     if (activeTrialIdx === null) return;
-    activeCardRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    const card = activeCardRef.current;
+    if (!card) return;
+    const panel = card.closest('[data-testid="run-panel"]');
+    if (panel) {
+      const c = card.getBoundingClientRect();
+      const p = panel.getBoundingClientRect();
+      if (c.top >= p.top && c.bottom <= p.bottom) return;
+    }
+    card.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [activeTrialIdx]);
 
   // Input nodes already get a labeled IN row from the frozen `submitted`
@@ -2695,7 +2707,7 @@ function WithinTrialSteps({
           fontFamily: "var(--pnv-font-mono)",
         }}
       >
-        {open ? "▾" : "▸"} ×{series.length} steps
+        <DisclosureArrow open={open} small />×{series.length} steps
       </button>
       {scalars && <Sparkline values={scalars} />}
       {open && (
@@ -2987,14 +2999,19 @@ function DebuggerSnapshotTable() {
   }, [traceStep, snapshotToStep]);
 
   return (
-    <details style={{ marginTop: 12 }}>
-      <summary style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}>
-        Debugger snapshots {snapshots.length > 0 && (
-          <span style={{ color: "var(--pnv-text-faint)" }}>
-            ({filterActive ? `${visibleCount} of ${snapshots.length} shown` : snapshots.length})
-          </span>
-        )}
-      </summary>
+    <DisclosureDetails
+      style={{ marginTop: 12 }}
+      summaryStyle={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}
+      summary={
+        <>
+          Debugger snapshots {snapshots.length > 0 && (
+            <span style={{ color: "var(--pnv-text-faint)" }}>
+              ({filterActive ? `${visibleCount} of ${snapshots.length} shown` : snapshots.length})
+            </span>
+          )}
+        </>
+      }
+    >
       {snapshots.length === 0 ? (
         <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", padding: "6px 0" }}>
           No snapshots captured. The PsyNeuLink build in use does not include
@@ -3166,7 +3183,7 @@ function DebuggerSnapshotTable() {
         </div>
         </>
       )}
-    </details>
+    </DisclosureDetails>
   );
 }
 

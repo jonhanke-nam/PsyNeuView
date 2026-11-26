@@ -27,9 +27,9 @@ one.
 
 ![The Components palette](assets/building/02-palette.png)
 
-The **◀** at the top of the panel folds it to the **icon strip**, a narrow
-column with one menu per category under a small **All** heading; the small
-**›** at the strip's top opens the full panel again. To keep your favourite and
+The small arrow tab at the top of the panel's right edge (**‹**) folds it to
+the **icon strip**, a narrow column with one menu per category under a small
+**All** heading; the same tab, now **›**, opens the full panel again. To keep your favourite and
 recently used components in the strip too, turn on **Show favourite and
 recently used components in the icon strip** in ⚙ Settings ▸ Appearance ▸
 Components panel: they sit at the bottom under a **Recent** heading. To make a

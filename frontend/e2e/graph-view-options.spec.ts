@@ -187,7 +187,7 @@ test.describe("Advanced Graph View Options (#123)", { tag: "@ci" }, () => {
     // Wherever a vertical divider crosses the panel, the panel is on top.
     const onTop = await page.evaluate(
       ({ b }) => {
-        const sashes = [...document.querySelectorAll('[class*="sash-module_sash"]')]
+        const sashes = [...document.querySelectorAll('[data-pnv-panel-handle="vertical"]')]
           .map((e) => e.getBoundingClientRect())
           .filter((r) => r.height > r.width);
         return sashes
