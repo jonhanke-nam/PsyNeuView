@@ -15,7 +15,12 @@ export interface Point {
 }
 
 export interface ShowGraphCurve {
-  /** The course, from the source box's edge to the target box's edge. */
+  /**
+   * The course as drawn: show_graph's own cubic Bézier pieces (start, two
+   * control points, end), cut at the source's and target's outlines (#416).
+   */
+  pieces: [Point, Point, Point, Point][];
+  /** The same course sampled as a polyline, for placing labels and bends. */
   points: Point[];
   /** Where the source and target nodes were (absolute top-left) when it was made. */
   source: Point;
