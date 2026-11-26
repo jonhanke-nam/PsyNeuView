@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useModelStore } from "./modelStore";
 import { useExternalChangeStore } from "./externalChangeStore";
+import { useGraphSettings } from "./graphSettingsStore";
 
 function json(status: number, body: unknown) {
   return Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }));
@@ -20,7 +21,11 @@ describe("flushBuffer (#1)", () => {
     vi.stubGlobal("fetch", fetchMock);
     await useModelStore.getState().flushBuffer();
     const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
-    expect(body).toEqual({ file_path: "/m/model.py", source: "typed", base_source: "as loaded" });
+    expect(body).toEqual({
+      file_path: "/m/model.py", source: "typed", base_source: "as loaded",
+      // The view shown, so the model sent back is in it (#431).
+      flat: useGraphSettings.getState().flat, pytorch: useGraphSettings.getState().pytorch,
+    });
   });
 
   it("on a conflict, asks instead of writing, and tells the caller not to go on", async () => {

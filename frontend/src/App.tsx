@@ -1,7 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
-import { Allotment } from "allotment";
-import "allotment/dist/style.css";
 import "@xyflow/react/dist/style.css";
 
 import { useGraphSettings } from "./stores/graphSettingsStore";
@@ -19,6 +17,7 @@ import { GraphStylePanel } from "./components/graph/GraphStylePanel";
 import { SchedulerPanel } from "./components/scheduler/SchedulerPanel";
 import { Toolbar } from "./components/layout/Toolbar";
 import { BlankScreen } from "./components/layout/BlankScreen";
+import { SplitPane } from "./components/layout/SplitPane";
 import { BusyIndicator, BusyStatus } from "./components/common/BusyIndicator";
 import { NotificationBar } from "./components/common/NotificationBar";
 import { StatusBar } from "./components/common/StatusBar";
@@ -39,7 +38,7 @@ import { setPanelVisibleOrExplain } from "./shortcuts/lastPanel";
 import { useAppShortcuts } from "./shortcuts/useAppShortcuts";
 import { useModelStore } from "./stores/modelStore";
 import { useNotificationStore } from "./stores/notificationStore";
-import { useLayoutStore } from "./stores/layoutStore";
+import { DEFAULT_INNER_SIZES, DEFAULT_OUTER_SIZES, useLayoutStore } from "./stores/layoutStore";
 import { importModelFiles } from "./utils/importModelFiles";
 import { installDiagnostics, noteUiFact } from "./utils/diagnostics";
 // #111: loading the store puts the remembered text size on <html> at startup.
@@ -163,148 +162,143 @@ export default function App() {
           {/* #215: with every panel hidden (a choice in Settings), the hint
               covers the pane area; the panels below stay mounted. */}
           <BlankScreen />
-          <Allotment
-            defaultSizes={outerSizes}
-            onChange={(sizes) => {
-              // Only persist proportions when both top-level panes are present;
-              // a hidden pane reports size 0 and would clobber the saved split.
-              if (codeVisible) setOuterSizes(sizes);
-            }}
-          >
-            <Allotment.Pane minSize={200} visible={codeVisible}>
-              {/* Stable handle for the editor pane: the guided walkthroughs point at it (#1310). */}
+          {/* #418: the splitters are PanelHandles: drag the line to resize, click
+              its arrow tab (or Enter on the focused line) to collapse or restore.
+              A collapsed pane keeps its handle on the edge. Hiding is refused for
+              the last visible pane, and the shared notice says why (#213). */}
+          <SplitPane
+            direction="row"
+            testId="split-outer"
+            sizes={outerSizes ?? DEFAULT_OUTER_SIZES}
+            onSizesChange={setOuterSizes}
+            firstVisible={codeVisible}
+            secondVisible
+            firstMin={200}
+            secondMin={300}
+            collapsible="first"
+            paneId="pnv-pane-code"
+            paneName="the code editor"
+            onToggle={() => setPanelVisibleOrExplain("code", !codeVisible)}
+            handleTestId="code-pane-handle"
+            tabTestId="code-pane-toggle"
+            first={
+              /* Stable handle for the editor pane: the guided walkthroughs point at it (#1310). */
               <div data-testid="code-editor-pane" style={{ height: "100%" }}>
                 <CodeEditor />
               </div>
-            </Allotment.Pane>
-            <Allotment.Pane minSize={300}>
-              <Allotment
-                vertical
-                defaultSizes={innerSizes}
-                onChange={(sizes) => {
-                  if (graphVisible && bottomVisible) setInnerSizes(sizes);
-                }}
-              >
-                <Allotment.Pane minSize={200} visible={graphVisible}>
-                  <GraphCanvas />
-                  {/* #38: the wheel where the result will appear. */}
-                </Allotment.Pane>
-                <Allotment.Pane minSize={100} preferredSize={250} visible={bottomVisible}>
-                  <div
-                    style={{
-                      height: "100%",
-                      display: "flex",
-                      flexDirection: "column",
-                    }}
-                  >
-                    {/* Tab bar */}
-                    <div
-                      data-pnv-where="Bottom tabs"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        borderBottom: "1px solid var(--pnv-border-faint)",
-                        background: "var(--pnv-surface-muted)",
-                      }}
-                    >
-                      <TabButton
-                        label="Inspector"
-                        active={bottomTab === "inspector"}
-                        onClick={() => setBottomTab("inspector")}
-                      />
-                      {/* Composition-wide scheduler workspace (#380): mode,
-                          derived execution order, condition roster, termination. */}
-                      <TabButton
-                        label="Scheduler"
-                        active={bottomTab === "scheduler"}
-                        onClick={() => setBottomTab("scheduler")}
-                      />
-                      <TabButton
-                        label="Run"
-                        active={bottomTab === "run"}
-                        onClick={() => setBottomTab("run")}
-                      />
-                      {/* Async training jobs (#534/#536): kept as its own tab
-                          until the Run|Learn mode merge into RunPanel (#534
-                          follow-up) can land without colliding with in-flight
-                          RunPanel work. */}
-                      <TabButton
-                        label="Learn"
-                        active={bottomTab === "learn"}
-                        onClick={() => setBottomTab("learn")}
-                      />
-                      {/* Run State tab — the unified "what's happening at
-                          the active step" view (#355). Picks up traceStep
-                          + snapshot data + per-node values so the user has
-                          one place to look during stepping. */}
-                      <TabButton
-                        label="Run State"
-                        active={bottomTab === "runstate"}
-                        onClick={() => setBottomTab("runstate")}
-                      />
-                      {/* TODO: show_graph tab is slated for future deprecation.
-                          Keeping for now as a comparison view against the main graph. */}
-                      <TabButton
-                        label="show_graph"
-                        active={bottomTab === "showgraph"}
-                        onClick={() => setBottomTab("showgraph")}
-                      />
-                      <TabButton
-                        label="Style"
-                        active={bottomTab === "style"}
-                        onClick={() => setBottomTab("style")}
-                      />
-                      {/* Collapse the bottom panel (#226). Blocked by the store
-                          when it's the last visible pane, and the shared notice
-                          says why (#213). */}
-                      <button
-                        onClick={() => setPanelVisibleOrExplain("bottom", false)}
-                        data-testid="bottom-panel-collapse"
-                        title="Collapse this panel"
-                        style={{
-                          marginLeft: "auto",
-                          marginRight: 6,
-                          padding: "2px 8px",
-                          fontSize: "var(--pnv-fs-13)",
-                          lineHeight: 1,
-                          color: "var(--pnv-text-hint)",
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                        }}
-                      >
-                        {"⌄"}
-                      </button>
-                    </div>
-                    {/* Tab content — both panels stay mounted to preserve state */}
-                    <div style={{ flex: 1, overflow: "auto", position: "relative" }}>
-                      <div data-testid="panel-inspector" style={{ display: bottomTab === "inspector" ? "block" : "none", height: "100%" }}>
-                        <InspectorPanel />
-                      </div>
-                      <div data-testid="panel-scheduler" style={{ display: bottomTab === "scheduler" ? "block" : "none", height: "100%" }}>
-                        <SchedulerPanel />
-                      </div>
-                      <div data-testid="panel-run" style={{ display: bottomTab === "run" ? "block" : "none", height: "100%" }}>
-                        <RunPanel />
-                      </div>
-                      <div data-testid="panel-learn" style={{ display: bottomTab === "learn" ? "block" : "none", height: "100%" }}>
-                        <LearnPanel />
-                      </div>
-                      <div data-testid="panel-run-state" style={{ display: bottomTab === "runstate" ? "block" : "none", height: "100%" }}>
-                        <RunStatePanel />
-                      </div>
-                      <div style={{ display: bottomTab === "showgraph" ? "block" : "none", height: "100%" }}>
-                        <ShowGraphPanel active={bottomTab === "showgraph"} />
-                      </div>
-                      <div style={{ display: bottomTab === "style" ? "block" : "none", height: "100%" }}>
-                        <GraphStylePanel />
-                      </div>
-                    </div>
-                  </div>
-                </Allotment.Pane>
-              </Allotment>
-            </Allotment.Pane>
-          </Allotment>
+            }
+            second={
+              <SplitPane
+                direction="column"
+                testId="split-inner"
+                sizes={innerSizes ?? DEFAULT_INNER_SIZES}
+                onSizesChange={setInnerSizes}
+                firstVisible={graphVisible}
+                secondVisible={bottomVisible}
+                firstMin={200}
+                secondMin={100}
+                collapsible="second"
+                paneId="pnv-pane-bottom"
+                paneName="the Inspector panel"
+                onToggle={() => setPanelVisibleOrExplain("bottom", !bottomVisible)}
+                handleTestId="bottom-panel-handle"
+                tabTestId="bottom-panel-collapse"
+                first={<GraphCanvas />}
+                second={
+                        <div
+                          style={{
+                            height: "100%",
+                            display: "flex",
+                            flexDirection: "column",
+                          }}
+                        >
+                          {/* Tab bar */}
+                          <div
+                            data-pnv-where="Bottom tabs"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              borderBottom: "1px solid var(--pnv-border-faint)",
+                              background: "var(--pnv-surface-muted)",
+                            }}
+                          >
+                            <TabButton
+                              label="Inspector"
+                              active={bottomTab === "inspector"}
+                              onClick={() => setBottomTab("inspector")}
+                            />
+                            {/* Composition-wide scheduler workspace (#380): mode,
+                                derived execution order, condition roster, termination. */}
+                            <TabButton
+                              label="Scheduler"
+                              active={bottomTab === "scheduler"}
+                              onClick={() => setBottomTab("scheduler")}
+                            />
+                            <TabButton
+                              label="Run"
+                              active={bottomTab === "run"}
+                              onClick={() => setBottomTab("run")}
+                            />
+                            {/* Async training jobs (#534/#536): kept as its own tab
+                                until the Run|Learn mode merge into RunPanel (#534
+                                follow-up) can land without colliding with in-flight
+                                RunPanel work. */}
+                            <TabButton
+                              label="Learn"
+                              active={bottomTab === "learn"}
+                              onClick={() => setBottomTab("learn")}
+                            />
+                            {/* Run State tab — the unified "what's happening at
+                                the active step" view (#355). Picks up traceStep
+                                + snapshot data + per-node values so the user has
+                                one place to look during stepping. */}
+                            <TabButton
+                              label="Run State"
+                              active={bottomTab === "runstate"}
+                              onClick={() => setBottomTab("runstate")}
+                            />
+                            {/* TODO: show_graph tab is slated for future deprecation.
+                                Keeping for now as a comparison view against the main graph. */}
+                            <TabButton
+                              label="show_graph"
+                              active={bottomTab === "showgraph"}
+                              onClick={() => setBottomTab("showgraph")}
+                            />
+                            <TabButton
+                              label="Style"
+                              active={bottomTab === "style"}
+                              onClick={() => setBottomTab("style")}
+                            />
+                          </div>
+                          {/* Tab content — both panels stay mounted to preserve state */}
+                          <div style={{ flex: 1, overflow: "auto", position: "relative" }}>
+                            <div data-testid="panel-inspector" style={{ display: bottomTab === "inspector" ? "block" : "none", height: "100%" }}>
+                              <InspectorPanel />
+                            </div>
+                            <div data-testid="panel-scheduler" style={{ display: bottomTab === "scheduler" ? "block" : "none", height: "100%" }}>
+                              <SchedulerPanel />
+                            </div>
+                            <div data-testid="panel-run" style={{ display: bottomTab === "run" ? "block" : "none", height: "100%" }}>
+                              <RunPanel />
+                            </div>
+                            <div data-testid="panel-learn" style={{ display: bottomTab === "learn" ? "block" : "none", height: "100%" }}>
+                              <LearnPanel />
+                            </div>
+                            <div data-testid="panel-run-state" style={{ display: bottomTab === "runstate" ? "block" : "none", height: "100%" }}>
+                              <RunStatePanel />
+                            </div>
+                            <div style={{ display: bottomTab === "showgraph" ? "block" : "none", height: "100%" }}>
+                              <ShowGraphPanel active={bottomTab === "showgraph"} />
+                            </div>
+                            <div style={{ display: bottomTab === "style" ? "block" : "none", height: "100%" }}>
+                              <GraphStylePanel />
+                            </div>
+                          </div>
+                        </div>
+                }
+              />
+            }
+          />
           {/* #220: the one wheel, centred over the whole workspace. */}
           <BusyIndicator />
         </div>
@@ -355,7 +349,7 @@ function TabButton({
         padding: "6px 16px",
         fontSize: "var(--pnv-fs-12)",
         fontWeight: active ? 600 : 400,
-        color: active ? "var(--pnv-primary)" : "var(--pnv-text-muted)",
+        color: active ? "var(--pnv-primary-text)" : "var(--pnv-text-muted)",
         background: "none",
         border: "none",
         borderBottom: active ? "2px solid var(--pnv-primary)" : "2px solid transparent",

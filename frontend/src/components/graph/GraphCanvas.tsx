@@ -26,12 +26,14 @@ import {
   type OnNodeDrag,
   type Connection,
   type NodeChange,
+  type Node,
   addEdge,
 } from "@xyflow/react";
 import { useFitGraph } from "@/hooks/useFitGraph";
 import { computeShiftTable, shiftPosition, unshiftPosition } from "@/utils/viewTransform";
 
-import { useModelStore, type MechanismData, autoSizeGroups, fitFramesAndMakeRoom, usesFlatPositions } from "@/stores/modelStore";
+import { useModelStore, type MechanismData, autoSizeGroups, fitFramesAndMakeRoom, usesFlatPositions, NODE_WIDTH, NODE_HEIGHT } from "@/stores/modelStore";
+import { overlapNotice, separateOverlappingNodes } from "@/utils/nodeOverlap";
 import { recordAction } from "@/utils/history";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useStatusStore } from "@/stores/statusStore";
@@ -55,12 +57,14 @@ import { PaletteSidebar } from "./PaletteSidebar";
 import { NodeContextMenu } from "./NodeContextMenu";
 import { OffscreenNodesIndicator } from "./OffscreenNodesIndicator";
 import { TourOverlay } from "./TourOverlay";
+import { KeyboardPlacer } from "./KeyboardPlacer";
 import { addNodeToModel, deleteProjection, deleteSchedulingCondition, FUNCTION_NEEDS_MECHANISM, functionRefusal, renameProjection, setMechanismFunction } from "@/utils/nodeActions";
 import { isFunctionType } from "@/constants/pnlTypes";
 import { isProjectionType, findDefByType } from "@/constants/pnlTypes";
 import { inNodeLayer } from "./canvasLayers";
 import { registerCommand } from "@/shortcuts/commands";
 import { useShortcutKeys } from "@/shortcuts/useAppShortcuts";
+import { optionKeyName } from "@/shortcuts/keyLabels";
 import { useFitButtonStyleStore } from "@/stores/fitButtonStyleStore";
 import { LastGoodDiff } from "./LastGoodDiff";
 import { serializeRoutes, type RoutableEdge } from "@/utils/edgeRoutes";
@@ -73,6 +77,7 @@ import { graphCursorVars, graphPointerClass } from "@/utils/graphCursor";
 import { modelLoadOptions, modelViewOptions } from "@/utils/showGraphLoadRequest";
 import { clampIoDrag, tidyIoRows } from "@/utils/ioRows";
 import { ioRowsNotApplying, registerCanvasTidy, useIoRowsStore } from "@/stores/ioRowsStore";
+import { noteLayoutMove } from "@/utils/layoutMoves";
 
 /** How long after a model opens (or the view switches) the graph may still settle and be re-fitted (#346). */
 const FIT_SETTLE_MS = 1500;
@@ -105,7 +110,13 @@ const edgeTypes = {
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
+/** #420: the overlap nudges already reported this session, by model and nodes moved. */
+const overlapNoticesShown = new Set<string>();
+
 function saveLayoutDebounced(filePath: string, nodes: any[]) {
+  // Every move the user makes is saved through here: count it, so a layout
+  // reload already on its way doesn't put the nodes back (#444).
+  noteLayoutMove();
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     // #697/#713: cluster frames are never saved; CIMs by a stable key.
@@ -392,7 +403,7 @@ export function GraphCanvas() {
       return;
     }
     if (!graphVisible) return;
-    // Wait for the Allotment reflow to settle before measuring.
+    // Wait for the panel layout reflow to settle before measuring.
     const t = setTimeout(fitGraph, 120);
     return () => clearTimeout(t);
   }, [codeVisible, graphVisible, bottomVisible, failedOpenShowing, fitGraph]);
@@ -475,6 +486,57 @@ export function GraphCanvas() {
     });
     setEdges(displayEdges);
   }, [storeNodes, storeEdges, setNodes, setEdges, showProjectionLabels, showDimensions, schedulingArrows]);
+
+  // #420: nodes never overlap (#389, principle 3). When saved positions have
+  // just been applied, wait until the nodes are drawn (their sizes depend on
+  // the name, the tags shown and the outline), then nudge apart any two the
+  // saved positions put on top of each other. Only the store's nodes change:
+  // the layout file keeps what it says until the next layout change saves
+  // the positions on screen, as a drag does. Said once per nudge.
+  const savedLayoutSeq = useModelStore((s) => s.savedLayoutSeq);
+  useEffect(() => {
+    if (!savedLayoutSeq) return;
+    let frame = 0;
+    let frames = 0;
+    const settle = () => {
+      const onScreen = nodesRef.current;
+      const sized = (n: Node) => {
+        const m = getInternalNode(n.id)?.measured;
+        return m?.width && m?.height ? { w: m.width, h: m.height } : null;
+      };
+      const unsized = onScreen.some(
+        (n) => !n.hidden && (n.type === "mechanismNode" || n.type === "compositionNode") && !sized(n),
+      );
+      // Two frames for React Flow to measure what was just drawn; more only
+      // while some node still has no size.
+      if (++frames < 2 || (unsized && frames < 30)) {
+        frame = requestAnimationFrame(settle);
+        return;
+      }
+      const copies = onScreen.map((n) => ({ ...n }));
+      const moved = separateOverlappingNodes(copies, (n) => sized(n) ?? { w: NODE_WIDTH, h: NODE_HEIGHT });
+      if (moved.length === 0) return;
+      const at = new Map(copies.filter((n) => moved.includes(n.id)).map((n) => [n.id, n.position]));
+      const store = useModelStore.getState();
+      useModelStore.setState({
+        nodes: store.nodes.map((n) => (at.has(n.id) ? { ...n, position: at.get(n.id)! } : n)),
+      });
+      const labels = moved.map((id) => {
+        const n = copies.find((c) => c.id === id);
+        return String((n?.data as { label?: string } | undefined)?.label || id);
+      });
+      const key = `${store.filePath}|${moved.join(",")}`;
+      if (!overlapNoticesShown.has(key)) {
+        overlapNoticesShown.add(key);
+        useNotificationStore.getState().addNotification("info", overlapNotice(labels), {
+          key: "node-overlap-nudge",
+          durationMs: 8000,
+        });
+      }
+    };
+    frame = requestAnimationFrame(settle);
+    return () => cancelAnimationFrame(frame);
+  }, [savedLayoutSeq, getInternalNode]);
 
   // #346: fit the graph in view only when what is shown changes: a model
   // opened, a switch of view (nested or not, the composition shown or
@@ -711,6 +773,23 @@ export function GraphCanvas() {
     if (!e.altKey) usePaletteStore.getState().setArmed(null);
     return true;
   }, [filePath, setSource, loadModelFromServer, addNotification, screenToFlowPosition, getInternalNode, putFunctionOn]);
+  // #411: picked up from the keyboard, KeyboardPlacer puts it down: at a
+  // point it chose (a component, top level), or on the mechanism it chose (a
+  // function). The same changes a click makes.
+  const placeFromKeyboard = useCallback((at: { x: number; y: number }, keep: boolean) => {
+    const pick = usePaletteStore.getState().armed;
+    if (!pick || !filePath) return;
+    addNodeToModel(filePath, pick.type, pick.defaults, setSource, loadModelFromServer, addNotification, at);
+    usePaletteStore.getState().addRecentlyUsed(pick.type);
+    if (!keep) usePaletteStore.getState().setArmed(null);
+  }, [filePath, setSource, loadModelFromServer, addNotification]);
+  const giveFunctionFromKeyboard = useCallback((node: { id: string; type?: string; data?: any }, keep: boolean) => {
+    const pick = usePaletteStore.getState().armed;
+    if (!pick) return;
+    if (putFunctionOn(pick.type, node) && !keep) usePaletteStore.getState().setArmed(null);
+  }, [putFunctionOn]);
+  // What the placing hint says while placing from the keyboard.
+  const [keyboardNote, setKeyboardNote] = useState("");
   useEffect(() => {
     if (!armed) return;
     const onKey = (e: KeyboardEvent) => {
@@ -917,8 +996,10 @@ export function GraphCanvas() {
     setPendingProjectionGesture(null);
   }, [placeArmed, setSelectedNodeId, setSelectedEdgeId, setPendingConditionGesture, setPendingProjectionGesture]);
 
-  // Resize group nodes after drag completes (not during — that blocks dragging)
-  const onNodeDrag: OnNodeDrag = useCallback(() => {}, []);
+  // Resize group nodes after drag completes (not during — that blocks dragging).
+  // Counted while it moves, not only when dropped: a layout reload landing
+  // mid-drag would otherwise snap the node back under the pointer (#444).
+  const onNodeDrag: OnNodeDrag = useCallback(() => noteLayoutMove(), []);
 
   const onNodeDragStop: OnNodeDrag = useCallback(
     (_, node, dragged) => {
@@ -1119,7 +1200,7 @@ export function GraphCanvas() {
   );
 
   // Defer rendering ReactFlow until the container has non-zero dimensions.
-  // Allotment assigns dimensions asynchronously, so on first render the
+  // The panes settle their dimensions after mount, so on first render the
   // container is 0×0, which triggers React Flow's "parent needs width/height" warning.
   const containerRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
@@ -1205,6 +1286,8 @@ export function GraphCanvas() {
           {armed && (
             <div
               data-testid="place-component-hint"
+              id="place-component-hint"
+              role="status"
               style={{
                 position: "absolute",
                 top: 12,
@@ -1220,15 +1303,19 @@ export function GraphCanvas() {
                 pointerEvents: "none",
               }}
             >
-              {isFunctionType(armed.type) ? (
+              {armed.viaKeyboard && keyboardNote ? (
+                // #411: placing from the keyboard: each step, said as it happens.
+                keyboardNote
+              ) : isFunctionType(armed.type) ? (
                 <>
                   Click a mechanism to give it this function (<b>{armed.label}</b>).{" "}
-                  <span style={{ opacity: 0.8 }}>Esc to cancel.</span>
+                  {/* Full white: at 0.8 it fell below WCAG AA on the blue. */}
+                  <span>Esc to cancel.</span>
                 </>
               ) : (
                 <>
                   Click where the new <b>{armed.label}</b> should go.{" "}
-                  <span style={{ opacity: 0.8 }}>Option-click to put down several. Esc to cancel.</span>
+                  <span>{optionKeyName()}-click to put down several. Esc to cancel.</span>
                 </>
               )}
             </div>
@@ -1306,6 +1393,17 @@ export function GraphCanvas() {
               proOptions={{ hideAttribution: true }}
             >
               <Background />
+              {armed?.viaKeyboard && (
+                <KeyboardPlacer
+                  // A new pick starts afresh.
+                  key={armed.type}
+                  pick={armed}
+                  nodes={nodes}
+                  place={placeFromKeyboard}
+                  giveFunction={giveFunctionFromKeyboard}
+                  announce={setKeyboardNote}
+                />
+              )}
               {/* #52: our own Fit, framing edges too. The built-in one queues a
                   node-only fit that would land after ours, so it is hidden;
                   CSS keeps this button in its place above the lock. */}

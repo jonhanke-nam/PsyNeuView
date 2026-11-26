@@ -1,14 +1,14 @@
 /**
  * Toolbar menus draw above the panel dividers, and the Tutorials menu fits the window (#1391).
  *
- * The dividers between panels are Allotment sashes at z-index 35. A menu below
+ * The dividers between panels are panel-edge handles at z-index 35 (#418). A menu below
  * that had the divider drawn through it, hiding part of every row wherever
  * the two crossed.
  */
 import { readOnlyTest as test, expect } from "./test-base";
 import type { Page } from "@playwright/test";
 
-const SASH = '[class*="sash-module_sash"]';
+const SASH = '[data-pnv-panel-handle="vertical"]';
 
 /** Opens a menu at each width until a vertical divider crosses it; returns whether the menu is on top there. */
 async function menuOnTopWhereDividerCrosses(page: Page, open: () => Promise<void>, listTestId: string) {

@@ -22,8 +22,15 @@
   --pnv-text-body: #333;       /* running text */
   --pnv-text-secondary: #555;  /* labels, a secondary button's text */
   --pnv-text-muted: #666;      /* help text under a setting, the × */
-  --pnv-text-hint: #888;       /* hints, counts, a disabled button's text */
-  --pnv-text-faint: #999;      /* placeholders, line numbers, "No history" */
+  /* Hint and faint are the lightest greys that still read at WCAG AA
+     (4.5:1) where they are drawn (#412). Faint: on the panel
+     (--pnv-surface-muted), a card or toolbar (--pnv-surface-sunken), the
+     canvas and a dialog (--pnv-surface), and the warning and trace tints.
+     Hint, one step darker so the order holds: also on a selected row
+     (--pnv-selection-fill) and a menu's heading band (--pnv-surface-band).
+     textContrast.test.ts checks both. */
+  --pnv-text-hint: #6b6b6b;    /* hints, counts, a disabled button's text */
+  --pnv-text-faint: #707070;   /* placeholders, line numbers, "No history" */
   --pnv-on-primary: #fff;      /* text on a filled primary button, or on a filled badge */
 
   /* Surfaces and borders. */
@@ -43,6 +50,15 @@
   --pnv-primary-tint: #e8f0fe; /* the selected sidebar item, the chosen option, a numbered badge */
   --pnv-primary-tint-border: #c9ddf3;
   --pnv-primary-text-on-tint: #1c4f8a; /* a note in a blue box */
+  /* The primary blue as text (#421): an input's name in the Run panel's
+     trial cards, the chosen half of the trace bar's run/trial switch, the
+     open inspector tab. The primary blue itself is 3.9:1 on the selection
+     fill and 4.3:1 on the panel; this is the lightest shade of the same hue
+     that reads at WCAG AA (4.5:1) on the panel (--pnv-surface-muted), a card
+     or toolbar (--pnv-surface-sunken), the selection fill and the active
+     step's row (--pnv-step-active-row). Text only: the buttons, rings and
+     selection stay the primary blue. textContrast.test.ts checks it. */
+  --pnv-primary-text: #165fc1;
   --pnv-primary-ring: rgba(26, 115, 232, 0.2); /* the glow round a focused field */
 
   /* Selection (#335): one pale blue for whatever is selected or current: a
@@ -77,6 +93,16 @@
   --pnv-warning-tint: #fff8e1;
   --pnv-warning-border: #ffe082;
   --pnv-warning-text-on-tint: #5a3e00; /* a note in an amber box, where the amber is too light to read */
+  /* The amber as text (#421): "Trace truncated" and the other amber notes
+     and Δ lines in the Run panel. The amber itself is 4.0:1 on its tint and
+     4.2:1 on white; this is the lightest shade of the same hue that reads at
+     WCAG AA (4.5:1) on the amber tint, the canvas or a dialog, the panel, a
+     card, the selection fill and the active step's row. */
+  --pnv-warning-text: #8e5400;
+  /* The amber behind white text (#421): the warning count badge beside the
+     model's summary, the scheduling-mode button when not STANDARD. The
+     lightest shade of the amber that white reads on at AA (it was 4.2:1). */
+  --pnv-warning-badge: #ac6600;
   /* An amber tag: "view only", "protected", "read only" beside the model
      name, and Reset to Original. Darker than the box's border, so a tag a
      few pixels high still has an edge. */
@@ -118,8 +144,12 @@
   /* An active node's rows in the current trial card, a shade deeper than the
      card's own selection fill so they read on it. */
   --pnv-step-active-row: var(--pnv-selection-fill-strong);
-  /* A row in the current trial card for a node not reached yet this trial. */
-  --pnv-step-pending-opacity: 0.5;
+  /* A row in the current trial card for a node not reached yet this trial
+     (#412): all its text in one grey, so it reads as secondary beside the
+     coloured names and dark values of the rows already reached, yet still
+     clears WCAG AA (4.5:1) on the card's selection fill. A colour, not an
+     opacity: half opacity left the text at 1.7-2.7:1. */
+  --pnv-step-pending-text: #6b6b6b;
 
   /* A layer's values drawn as a grid of shaded cells (#1387): in the Run
      panel's results, Run State and the value pill. Low is light, high is
@@ -276,10 +306,17 @@
      writing var(). Inactive is a projection the composition does not use
      (shown under More ▸ Inactive); dangling is one whose sender or receiver
      is missing from the file. */
-  --pnv-projection-mapping: #555;
-  --pnv-projection-control: #1565c0;
-  --pnv-projection-learning: #e65100;
-  --pnv-projection-autoassociative: #7b1fa2;
+  /* #425: show_graph's own colours, exactly, as for the node roles: an
+     ordinary (mapping) projection in default_node_color black, a control
+     projection in control_color blue, the controller's in controller_color
+     purple, a learning projection in learning_color orange. A node's
+     projection to itself (an AutoAssociativeProjection) is an ordinary
+     projection to show_graph, drawn like a mapping one. */
+  --pnv-projection-mapping: #000000;     /* default_node_color black */
+  --pnv-projection-control: #0000ff;     /* control_color blue */
+  --pnv-projection-controller: #a020f0;  /* controller_color purple */
+  --pnv-projection-learning: #ffa500;    /* learning_color orange */
+  --pnv-projection-autoassociative: #000000;
   --pnv-projection-inactive: #ff0000; /* show_graph's inactive_projection_color red, exactly (#306) */
   --pnv-projection-cim: #888;
   --pnv-projection-dangling: #c62828;
@@ -480,5 +517,7 @@
     --pnv-selection-fill: #1c2b45;
     --pnv-selection-border: #6ea8fe;
     --pnv-selection-text: #c6dafc;
+    /* The dimmest grey that reads at 4.5:1 on the dark selection fill. */
+    --pnv-step-pending-text: #929292;
   }
 }

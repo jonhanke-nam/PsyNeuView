@@ -95,7 +95,7 @@ steps:
     anchor:
       testid: undo-button
     instruct: >-
-      Press Undo (or ⌘Z). The gain goes back to 1, in the Inspector and in the
+      Press Undo (or {key:history.undo}). The gain goes back to 1, in the Inspector and in the
       code. Every edit, from either side, can be undone.
     say: >-
       Undo takes the last change back, wherever you made it.
@@ -110,7 +110,7 @@ steps:
   - id: redo
     anchor:
       testid: redo-button
-    instruct: Press Redo (or ⌘⇧Z) to put the change back.
+    instruct: Press Redo (or {key:history.redo}) to put the change back.
     say: >-
       Redo puts it back.
     done:

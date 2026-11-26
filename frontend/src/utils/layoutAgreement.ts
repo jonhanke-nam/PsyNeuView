@@ -93,3 +93,61 @@ export function measureAgreement(drawn: Map<string, Box>, reference: Map<string,
 
 /** A fraction as a share, 1 when there was nothing to compare. */
 export const share = ({ agree, pairs }: { agree: number; pairs: number }) => (pairs === 0 ? 1 : agree / pairs);
+
+/** A node's shape and drawn size: its shape kind (NodeShape) and its box. */
+export interface ShapedBox {
+  shape: string;
+  w: number;
+  h: number;
+}
+
+/** A node whose shape isn't show_graph's: what show_graph draws, and what the canvas does. */
+export interface ShapeMismatch {
+  node: string;
+  /** show_graph's Graphviz shape, the canvas kind that stands for it, and width over height. */
+  expected: { shape: string; kind: string | null; aspect: number };
+  actual: { shape: string; aspect: number };
+}
+
+/** How far a node's proportions may stray from show_graph's (#385). */
+export const ASPECT_TOLERANCE = 0.05;
+
+/**
+ * Does each node have show_graph's shape (#385)? For every canvas node show_graph
+ * also draws, its shape kind must be the kind show_graph's Graphviz `shape`
+ * names (`kindOf` maps one to the other), and its width-to-height ratio
+ * within ASPECT_TOLERANCE of show_graph's. Sizes differ (PsyNeuView's text
+ * is bigger), proportions shouldn't. `reference` sizes are show_graph's, in
+ * any unit; `drawn` sizes are the canvas's.
+ */
+export function measureShapes(
+  drawn: Map<string, ShapedBox>,
+  reference: Map<string, { shape?: string; w: number; h: number }>,
+  kindOf: (graphvizShape: string) => string | null,
+): { agree: number; nodes: number; off: string[]; mismatches: ShapeMismatch[] } {
+  let agree = 0;
+  let nodes = 0;
+  const off: string[] = [];
+  const mismatches: ShapeMismatch[] = [];
+  for (const [name, d] of drawn) {
+    const r = reference.get(name);
+    if (!r || !r.shape || !(r.h > 0) || !(d.h > 0)) continue;
+    nodes++;
+    const want = kindOf(r.shape);
+    const ratio = d.w / d.h / (r.w / r.h);
+    const problems: string[] = [];
+    if (want !== d.shape) problems.push(`${d.shape}, show_graph ${r.shape}`);
+    if (Math.abs(ratio - 1) > ASPECT_TOLERANCE) {
+      problems.push(`aspect ${(d.w / d.h).toFixed(2)}, show_graph ${(r.w / r.h).toFixed(2)}`);
+    }
+    if (problems.length) {
+      off.push(`${name}: ${problems.join("; ")}`);
+      mismatches.push({
+        node: name,
+        expected: { shape: r.shape, kind: want, aspect: r.w / r.h },
+        actual: { shape: d.shape, aspect: d.w / d.h },
+      });
+    } else agree++;
+  }
+  return { agree, nodes, off, mismatches };
+}

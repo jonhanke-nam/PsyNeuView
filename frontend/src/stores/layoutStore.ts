@@ -34,7 +34,7 @@
  * layout from before is kept in storage, so a reload mid-walkthrough can't
  * leave the tutorial layout behind as if it were a choice.
  *
- * Pane *sizes* (the Allotment split proportions) are persisted too, so a
+ * Pane *sizes* (the split proportions, SplitPane.tsx) are persisted too, so a
  * restored layout keeps its shape, not just which panes are on.
  *
  * Drag-to-rearrange and user-savable *named* layouts remain the stretch goal
@@ -84,7 +84,7 @@ function loadSizes(key: string): number[] | undefined {
 // #110: the graph gets the window by default. With nothing stored, the code
 // editor starts at about a quarter of the width (still on screen, so "the
 // code is here" stays obvious and walkthroughs that point at it still work)
-// and the inspector tabs at about a fifth of the height. Allotment scales
+// and the inspector tabs at about a fifth of the height. SplitPane scales
 // these to the real window. A split the person has dragged is stored and
 // always wins over these.
 export const DEFAULT_OUTER_SIZES = [25, 75];

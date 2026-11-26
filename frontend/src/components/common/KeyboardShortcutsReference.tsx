@@ -196,7 +196,7 @@ function Reference({ onClose }: { onClose: () => void }) {
           )}
 
           <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", marginTop: 8, lineHeight: 1.5 }}>
-            Keys are shown for {mac ? "macOS" : "Windows and Linux"}. A shortcut with no ⌘ or Ctrl never fires
+            Keys are shown for {mac ? "macOS" : "Windows and Linux"}. A shortcut with no {mac ? "⌘" : "Ctrl"} never fires
             while you are typing in a field.{unreachable.size > 0 && " A key a browser keeps works in the Mac app, or can be changed."}
           </div>
         </div>

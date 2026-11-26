@@ -38,7 +38,7 @@ def _demo(**body):
 def test_reference_goes_in_the_tutorials_own_folder(working):
     body = _reference(tutorial="stroop")
     assert body["file_path"] == str(working / "tutorials" / "stroop" / f"{REFERENCE}.py")
-    assert not (working / f"{REFERENCE}.py").exists(), "the shared copy was touched"
+    assert not (working / "reference-models" / f"{REFERENCE}.py").exists(), "the shared copy was touched"
 
 
 def test_reference_tutorial_copy_is_fresh_every_time(working):
@@ -53,7 +53,7 @@ def test_reference_tutorial_copy_is_fresh_every_time(working):
 
 def test_learners_own_copy_is_left_alone(working):
     _reference()
-    own = working / f"{REFERENCE}.py"
+    own = working / "reference-models" / f"{REFERENCE}.py"
     own.write_text(own.read_text() + "\n# my own work\n")
     _reference(tutorial="stroop")
     assert "# my own work" in own.read_text()

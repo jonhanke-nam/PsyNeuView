@@ -5,7 +5,7 @@
 
 import { visibleCentre } from "@/utils/graphViewport";
 import { keepAutoLayoutAcrossFold, NODE_HEIGHT, NODE_WIDTH, useModelStore, usesFlatPositions } from "@/stores/modelStore";
-import { ovalBoxFor } from "@/utils/nodeBox";
+import { shapedBoxFor } from "@/utils/nodeBox";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useStatusStore } from "@/stores/statusStore";
 import { recordAction } from "@/utils/history";
@@ -66,13 +66,17 @@ function leaveFlattenedViews() {
 /**
  * Fold a composition to a single node, or open a folded one (#395).
  *
- * In a flattened view the frame is open whatever the setting says (the nested
- * view folds compositions on first sight, #395, and that can already be on
- * record), so a press there always folds.
+ * `want` is what the pressed control does, read from what is drawn: Collapse
+ * on a frame folds, Expand on a folded node opens (#428). Without it, the
+ * settings decide: in a flattened view the frame is open whatever the setting
+ * says (the nested view folds compositions on first sight, #395, and that can
+ * already be on record), so a press there folds. Deciding from the settings
+ * alone turned Expand into a second fold whenever a folded node was drawn
+ * under a flattened view.
  */
-export async function toggleCompositionCollapse(label: string) {
+export async function toggleCompositionCollapse(label: string, want?: "fold" | "open") {
   const gs = useGraphSettings.getState();
-  const folding = gs.flat || gs.pytorch || !gs.collapsedCompositions.has(label);
+  const folding = want ? want === "fold" : gs.flat || gs.pytorch || !gs.collapsedCompositions.has(label);
   try {
     await changeCompositionView(
       folding ? `Collapsing ${label}` : `Expanding ${label}`,
@@ -218,6 +222,7 @@ async function renameDeclaration(
         new_name: trimmed,
         existing_names: existing,
         current_name: currentName,
+        ...modelViewOptions(), // #431: the model sent back is in the view shown
       }),
     });
     const text = await resp.text();
@@ -374,7 +379,7 @@ export async function addNodeToModel(
  */
 export function expectedNodeSize(varName: string): { width: number; height: number } {
   if (useGraphSettings.getState().showNodeElements) return { width: NODE_WIDTH, height: NODE_HEIGHT };
-  return ovalBoxFor(varName);
+  return shapedBoxFor(varName, "oval");
 }
 
 /** How many frames to wait for a new node to be drawn. */
@@ -494,7 +499,7 @@ export async function setMechanismFunction(
     const resp = await fetch("/api/model/update-function-type", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath, var_name: varName, new_function_class: fnType }),
+      body: JSON.stringify({ file_path: filePath, var_name: varName, new_function_class: fnType, ...modelViewOptions() }), // #431
     });
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) throw new Error(data.detail || "Function change failed");

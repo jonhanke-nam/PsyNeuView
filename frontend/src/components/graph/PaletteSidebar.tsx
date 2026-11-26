@@ -5,7 +5,7 @@
  */
 
 import { isFunctionType, isProjectionType } from "@/constants/pnlTypes";
-import { type DragEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type DragEvent, type KeyboardEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useModelStore } from "@/stores/modelStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { usePaletteStore } from "@/stores/paletteStore";
@@ -22,6 +22,8 @@ import { useDismiss } from "@/components/common/dialog/useDismiss";
 import { iconForCategory, iconForType } from "@/utils/componentIcons";
 import { ComponentIcon } from "./ComponentIcon";
 import { Button } from "@/components/common/Button";
+import { PanelHandle } from "@/components/common/PanelHandle";
+import { DisclosureArrow } from "@/components/common/Disclosure";
 
 /** #354: the drag is over, dropped or not. */
 const endDrag = () => usePaletteStore.getState().setDraggingFunction(null);
@@ -106,7 +108,7 @@ export function PaletteSidebar() {
 
   if (!isOpen) return null;
 
-  const handleAdd = (item: PnlObjectDef) => {
+  const handleAdd = (item: PnlObjectDef, viaKeyboard = false) => {
     if (!filePath) return;
     // A projection connects two nodes, so it has no place to be put: it
     // keeps its own route (drop it on the receiver, then click the sender).
@@ -118,7 +120,26 @@ export function PaletteSidebar() {
     // #252: pick it up; the next click on the graph says where it goes.
     // Clicking it again puts it back; another component swaps.
     const { armed, setArmed } = usePaletteStore.getState();
-    setArmed(armed?.type === item.type ? null : { type: item.type, defaults: item.defaults, label: item.label || item.type });
+    if (armed?.type === item.type) {
+      setArmed(null);
+      return;
+    }
+    const pick = { type: item.type, defaults: item.defaults, label: item.label || item.type };
+    if (!viaKeyboard) {
+      setArmed(pick);
+      return;
+    }
+    // #411: picked up from the keyboard, the graph takes focus to place it.
+    // Focus comes back afterwards to the row, or, for a row in a strip menu
+    // (which closes now, as a click on the graph closes it), to the menu's
+    // category icon.
+    const active = document.activeElement as HTMLElement | null;
+    const inMenu = active?.closest('[data-testid="palette-compact-flyout"]');
+    const returnFocus = inMenu
+      ? document.querySelector<HTMLElement>('[data-testid="palette-category"][aria-expanded="true"]')
+      : active;
+    usePaletteStore.getState().closeCompactFlyout();
+    setArmed({ ...pick, viaKeyboard: true, returnFocus });
   };
 
   const handleDragStart = (e: DragEvent, item: PnlObjectDef) => {
@@ -150,42 +171,50 @@ export function PaletteSidebar() {
         transition: "width 0.15s ease",
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          // #372: in the strip, a small chevron at the top edge, not a
-          // component-sized box.
-          padding: isCompact ? "2px 4px" : "8px 12px",
-          borderBottom: "1px solid var(--pnv-border-faint)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: isCompact ? "flex-end" : "space-between",
-          gap: 4,
-          flexShrink: 0,
-        }}
-      >
-        {!isCompact && (
+      {/* #418: the fold between the full panel and the icon strip is the
+          panel-edge handle on the right edge, its tab at the top: › in the
+          strip shows the full panel, ‹ folds it back. It replaced the strip's
+          small bordered chevron (#414), which sat in the palette buttons'
+          column and read as one of them. The panel is not resizable, so only
+          the tab acts. */}
+      <PanelHandle
+        orientation="vertical"
+        foldToward="left"
+        expanded={!isCompact}
+        onToggle={() => usePaletteStore.getState().toggleCompact()}
+        controls="pnv-palette-body"
+        collapseLabel="Fold the Components panel to the icon strip"
+        expandLabel="Show the full Components panel"
+        testId="palette-handle"
+        tabTestId={isCompact ? "palette-strip-expand" : "palette-fold"}
+        tabOffset={6}
+        // Over the panel's own border, so the line and the border are one.
+        style={{ left: "calc(100% - 1px)" }}
+      />
+      {/* Header: the full panel only; the strip has none (#418). */}
+      {!isCompact && (
+        <div
+          style={{
+            padding: "8px 12px",
+            borderBottom: "1px solid var(--pnv-border-faint)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 4,
+            flexShrink: 0,
+          }}
+        >
           <span style={{ fontSize: "var(--pnv-fs-12)", fontWeight: 600, color: "var(--pnv-text-body)" }}>Components</span>
-        )}
-        <div style={{ display: "flex", gap: 2 }}>
-          <IconButton
-            title={isCompact ? "Show the full Components panel" : "Compact mode"}
-            testId={isCompact ? "palette-strip-expand" : undefined}
-            small={isCompact}
-            onClick={() => usePaletteStore.getState().toggleCompact()}
-          >
-            {isCompact ? "\u203A" : "\u25C0"}
-          </IconButton>
-          {!isCompact && (
+          <div style={{ display: "flex", gap: 2 }}>
             <IconButton
               title="Close palette"
               onClick={() => usePaletteStore.getState().setOpen(false)}
             >
               {"\u2715"}
             </IconButton>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Search bar */}
       {!isCompact && (
@@ -210,7 +239,7 @@ export function PaletteSidebar() {
       )}
 
       {/* Scrollable content */}
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: isCompact ? 4 : 0 }}>
+      <div id="pnv-palette-body" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: isCompact ? 4 : 0 }}>
         {/* Search results mode */}
         {filteredItems !== null ? (
           <div style={{ padding: isCompact ? 0 : 8 }}>
@@ -354,7 +383,7 @@ function TreeNode({
   node: TaxonomyNode;
   depth: number;
   favorites: string[];
-  onAdd: (item: PnlObjectDef) => void;
+  onAdd: (item: PnlObjectDef, viaKeyboard?: boolean) => void;
   onDragStart: (e: DragEvent, item: PnlObjectDef) => void;
 }) {
   const expandedNodes = usePaletteStore((s) => s.expandedNodes);
@@ -440,6 +469,8 @@ function TreeNode({
     <div>
       <button
         onClick={() => usePaletteStore.getState().toggleNode(node.id)}
+        aria-expanded={isExpanded}
+        className="pnv-disclosure-toggle"
         style={{
           display: "flex",
           alignItems: "center",
@@ -458,19 +489,8 @@ function TreeNode({
           letterSpacing: isTopLevel ? "0.05em" : "normal",
         }}
       >
-        <span
-          style={{
-            display: "inline-block",
-            transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-            transition: "transform 0.15s ease",
-            // 8px read as a speck rather than a control, which matters more now
-            // that it is the thing you click to open every category.
-            fontSize: "var(--pnv-fs-11)",
-            flexShrink: 0,
-          }}
-        >
-          {"\u25B6"}
-        </span>
+        {/* #418: the standard row arrow, turned; the row says whether it is open. */}
+        <DisclosureArrow open={isExpanded} small />
         {node.label}
         {!isTopLevel && node.children && (
           <span style={{ fontSize: "var(--pnv-fs-9)", color: "var(--pnv-text-faint)", marginLeft: 4 }}>
@@ -509,7 +529,7 @@ function PaletteLeaf({
   isDefault?: boolean;
   /** #372: a shortcut in the icon strip, which the tooltip names. */
   shortcut?: "favourite" | "recent";
-  onAdd: (item: PnlObjectDef) => void;
+  onAdd: (item: PnlObjectDef, viaKeyboard?: boolean) => void;
   onDragStart: (e: DragEvent, item: PnlObjectDef) => void;
   onToggleFavorite: () => void;
 }) {
@@ -534,6 +554,12 @@ function PaletteLeaf({
         onDragStart={(e) => onDragStart(e, item)}
         onDragEnd={endDrag}
         onClick={() => onAdd(item)}
+        // A strip icon is a button to the keyboard too: Tab reaches it, and
+        // Enter or Space picks it up as a click does.
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => activateOnKey(e, () => onAdd(item, true))}
+        aria-label={title}
         data-testid="palette-item"
         data-type={item.type}
         data-shortcut={shortcut}
@@ -570,7 +596,6 @@ function PaletteLeaf({
       data-testid="palette-item"
       data-type={item.type}
       data-armed={armed ? "true" : undefined}
-      aria-pressed={armed}
       className="pnv-palette-row"
       style={{
         display: "flex",
@@ -600,8 +625,20 @@ function PaletteLeaf({
           }}
         />
       )}
-      {/* Label */}
-      <span style={{ flex: 1, color: "var(--pnv-text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      {/* Label. #411: the name is what the keyboard picks up: Tab reaches it,
+          Enter or Space picks it up (as a click on the row does), and the
+          arrows move between the names in a strip menu. Not a <button>: the
+          star beside it is one, and a button can't hold a button; a span
+          also leaves the row's drag and hover exactly as they were. */}
+      <span
+        role="button"
+        tabIndex={0}
+        aria-pressed={armed}
+        data-testid="palette-item-pick"
+        data-flyout-item=""
+        onKeyDown={(e) => activateOnKey(e, () => onAdd(item, true))}
+        style={{ flex: 1, color: "var(--pnv-text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+      >
         {isDefault ? item.type : item.label}
         {isDefault && (
           <span style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", marginLeft: 6, fontWeight: 400 }}>
@@ -740,7 +777,9 @@ function StripHeading({ text, testId, label }: { text: StripHeadingWord; testId:
       aria-label={label}
       style={{
         position: "relative",
-        color: "var(--pnv-text-hint)",
+        // The secondary text, not the hint grey: words this small need the
+        // stronger contrast (the hint grey was 3.4:1, under WCAG AA).
+        color: "var(--pnv-text-secondary)",
         textAlign: "center",
         lineHeight: 1.15,
         // Inside the strip's 4px padding, as the icons are: the panel's
@@ -786,25 +825,19 @@ function IconButton({
   children,
   title,
   onClick,
-  small = false,
-  testId,
 }: {
   children: React.ReactNode;
   title: string;
   onClick: () => void;
-  /** #372: the strip's fold-out chevron, well under a component icon's size. */
-  small?: boolean;
-  testId?: string;
 }) {
   return (
     <button
       onClick={onClick}
       title={title}
       aria-label={title}
-      data-testid={testId}
       style={{
-        width: small ? 14 : 22,
-        height: small ? 14 : 22,
+        width: 22,
+        height: 22,
         border: "1px solid var(--pnv-border)",
         borderRadius: 3,
         background: "var(--pnv-surface)",
@@ -812,7 +845,7 @@ function IconButton({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: small ? "var(--pnv-fs-11)" : "var(--pnv-fs-10)",
+        fontSize: "var(--pnv-fs-10)",
         color: "var(--pnv-text-muted)",
         padding: 0,
         lineHeight: 1,
@@ -823,6 +856,14 @@ function IconButton({
   );
 }
 
+/** Enter or Space on a strip icon or a component's name does what a click does. */
+function activateOnKey(e: KeyboardEvent, act: () => void) {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  e.preventDefault();
+  e.stopPropagation();
+  act();
+}
+
 function CompactCategoryIcon({
   node,
   isActive,
@@ -831,14 +872,24 @@ function CompactCategoryIcon({
   isActive: boolean;
 }) {
   const icon = iconForCategory(node.id);
+  const toggle = (fromKeyboard = false) => {
+    const store = usePaletteStore.getState();
+    if (store.compactFlyoutNodeId === node.id) store.closeCompactFlyout();
+    else store.openCompactFlyout(node.id, fromKeyboard);
+  };
   return (
     <div
       onClick={(e) => {
         e.stopPropagation();
-        const store = usePaletteStore.getState();
-        if (store.compactFlyoutNodeId === node.id) store.closeCompactFlyout();
-        else store.openCompactFlyout(node.id);
+        toggle(false);
       }}
+      // Keyboard: Tab reaches it, Enter or Space opens or closes its menu.
+      role="button"
+      tabIndex={0}
+      // #411: opened from the keyboard, the menu takes focus.
+      onKeyDown={(e) => activateOnKey(e, () => toggle(true))}
+      aria-label={node.label}
+      aria-expanded={isActive}
       title={node.label}
       data-testid="palette-category"
       data-category={node.id}
@@ -877,7 +928,7 @@ function CompactFlyout({
 }: {
   nodeId: string;
   favorites: string[];
-  onAdd: (item: PnlObjectDef) => void;
+  onAdd: (item: PnlObjectDef, viaKeyboard?: boolean) => void;
   onDragStart: (e: DragEvent, item: PnlObjectDef) => void;
 }) {
   const node = findNode(nodeId);
@@ -896,8 +947,38 @@ function CompactFlyout({
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
-  // Escape closes the flyout through the shared stack (#1289).
-  useDismiss(true, () => usePaletteStore.getState().closeCompactFlyout());
+  // #411: opened from the keyboard (or a sub-menu entered with Enter), focus
+  // goes to the menu's first row, so Tab and the arrows start there rather
+  // than after the graph's controls. Opened with the mouse, focus stays put.
+  const fromKeyboard = usePaletteStore((s) => s.compactFlyoutFromKeyboard);
+  useEffect(() => {
+    if (!fromKeyboard) return;
+    ref.current?.querySelector<HTMLElement>("[data-flyout-item]")?.focus();
+  }, [nodeId, fromKeyboard]);
+  // The menu's category icon in the strip, where focus goes back to.
+  const categoryIcon = () =>
+    ref.current?.parentElement?.querySelector<HTMLElement>('[data-testid="palette-category"][aria-expanded="true"]') ?? null;
+  // Escape closes the flyout through the shared stack (#1289); from inside
+  // it, focus goes back to its icon in the strip (#411).
+  useDismiss(true, () => {
+    const back = ref.current?.contains(document.activeElement) ? categoryIcon() : null;
+    usePaletteStore.getState().closeCompactFlyout();
+    back?.focus();
+  });
+  // #411: the arrows move between the menu's rows; Home and End go to the ends.
+  const onMenuKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+    const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>("[data-flyout-item]"));
+    if (items.length === 0) return;
+    e.preventDefault();
+    const at = items.indexOf(document.activeElement as HTMLElement);
+    const next =
+      e.key === "Home" ? 0
+      : e.key === "End" ? items.length - 1
+      : e.key === "ArrowDown" ? (at + 1) % items.length
+      : (at <= 0 ? items.length : at) - 1;
+    items[next].focus();
+  };
 
   if (!node) return null;
 
@@ -946,7 +1027,7 @@ function CompactFlyout({
             <span key={seg.id}>
               {i > 0 && <span style={{ color: "var(--pnv-text-faint)", margin: "0 4px" }}>{"▸"}</span>}
               <button
-                onClick={() => usePaletteStore.getState().openCompactFlyout(seg.id)}
+                onClick={(e) => usePaletteStore.getState().openCompactFlyout(seg.id, e.detail === 0)}
                 disabled={i === path.length - 1}
                 style={{
                   border: "none",
@@ -981,7 +1062,13 @@ function CompactFlyout({
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
+      <div
+        role="group"
+        aria-label={node.label}
+        data-testid="palette-flyout-body"
+        onKeyDown={onMenuKey}
+        style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}
+      >
         {orderedChildren.map((child) => {
           // Default base leaf — render with isDefault, like in expanded mode.
           if (defaultChild && child.id === defaultChild.id && child.def) {
@@ -1039,7 +1126,10 @@ function CompactFlyout({
           return (
             <button
               key={child.id}
-              onClick={() => usePaletteStore.getState().openCompactFlyout(child.id)}
+              // A click from the keyboard (Enter, Space) has no click count:
+              // the sub-menu then takes focus too (#411).
+              onClick={(e) => usePaletteStore.getState().openCompactFlyout(child.id, e.detail === 0)}
+              data-flyout-item=""
               // #387: hover tints like a component row, lighter than the
               // picked-up one (index.css).
               className="pnv-palette-row"

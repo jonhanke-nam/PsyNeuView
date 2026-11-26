@@ -18,6 +18,7 @@ import { copyFileSync, existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
 import { fixturePath } from "./fixtures";
+import { literal, modLabel } from "./hostPlatform";
 
 type Page = import("@playwright/test").Page;
 
@@ -122,7 +123,7 @@ test("a drag on an arrow in Auto makes the layout Custom and bends it; saved, an
   expect(await settled(page)).toEqual(start);
 
   // One History step, named for the arrow.
-  await expect(page.getByTestId("undo-button")).toHaveAttribute("title", /^Undo: Reshaped arrow .+ \(⌘Z\)$/);
+  await expect(page.getByTestId("undo-button")).toHaveAttribute("title", new RegExp(`^Undo: Reshaped arrow .+ \\(${literal(modLabel("z"))}\\)$`));
 
   // Saved on its own, under the nested view's key, with the nodes where they
   // are, so the model opens in this custom layout next time.

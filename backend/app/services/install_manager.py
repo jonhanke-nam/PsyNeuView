@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Literal, Optional
 
-from app.services import clone_manager, github_auth
+from app.services import clone_manager, github_auth, model_names
 from app.services.source_history import is_placeholder_repo
 
 logger = logging.getLogger(__name__)
@@ -803,6 +803,7 @@ class InstallManager:
                 _remove_staging_folder(staging, on_line)
                 raise
             on_line(f"Downloaded {repo} @ {ref} → {sha[:10]} into {target}")
+            model_names.report(target, on_line)  # #422
             exit_code = self._install(
                 job, timer, "install -e", _build_pip_args("local", None, str(target))
             )
@@ -848,6 +849,8 @@ class InstallManager:
             with timer.step(f"checkout {ref}"):
                 sha = clone_manager.checkout(clone_path, ref, on_line)
             on_line(f"Resolved {repo}@{ref} → {sha[:10]}")
+            # #422: model files that share a name in this source, named, not picked between.
+            model_names.report(clone_path, on_line)
 
             with timer.step("editable-state probe"):
                 state = clone_manager.editable_state(clone_path)

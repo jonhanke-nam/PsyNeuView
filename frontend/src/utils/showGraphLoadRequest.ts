@@ -63,6 +63,14 @@ export function modelViewOptions(): { flat: boolean; pytorch: boolean } {
   return { flat, pytorch };
 }
 
+/** The same view for an upload that opens a model (an MDF file, a project bundle; #428). */
+export function appendModelView(form: FormData): FormData {
+  const { flat, pytorch } = modelViewOptions();
+  form.append("flat", String(flat));
+  form.append("pytorch", String(pytorch));
+  return form;
+}
+
 export function modelLoadOptions(): ShowGraphLoadRequest & { flat: boolean; pytorch: boolean } {
   const { flat, pytorch } = useGraphSettings.getState();
   return { flat, pytorch, ...showGraphLoadRequest() };

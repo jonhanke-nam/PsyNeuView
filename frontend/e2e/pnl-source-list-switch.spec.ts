@@ -171,9 +171,14 @@ test("Settings shows the local checkout in use, and switches to another one from
   await expect(page.getByTestId("pnl-switch-group-other").getByRole("option")).toHaveText([/^\+\s*Another local checkout…$/, /^\+\s*Another GitHub repo or branch…$/]);
   await expect(page.getByTestId("pnl-switch-group-checkouts").getByRole("option")).toHaveText([/~\/code\/PsyNeuLink/, /~\/checkouts\/PsyNeuLink-experiments/]);
   await expect(page.getByTestId("pnl-switch-group-checkouts").getByRole("option").first()).toContainText("in use");
+  // The fold arrow is a drawn mark now (#418); aria-expanded says open or folded.
   await expect(listbox.getByTestId("pnl-switch-group-heading")).toHaveText([
-    /^▼ ?Your checkouts \(2\)$/, /^▶ ?PrincetonUniversity\/PsyNeuLink \(3\)$/, /^▶ ?jonhanke-nam\/PsyNeuLink \(1\)$/, /^▶ ?Official releases on PyPI \(2\) · newest 0\.21\.0\.0$/,
+    /^Your checkouts \(2\)$/, /^PrincetonUniversity\/PsyNeuLink \(3\)$/, /^jonhanke-nam\/PsyNeuLink \(1\)$/, /^Official releases on PyPI \(2\) · newest 0\.21\.0\.0$/,
   ]);
+  const headings = listbox.getByTestId("pnl-switch-group-heading");
+  for (const [i, open] of ["true", "false", "false", "false"].entries()) {
+    await expect(headings.nth(i)).toHaveAttribute("aria-expanded", open);
+  }
   await expect(page.getByTestId("pnl-switch-group-repo:princetonuniversity/psyneulink").getByRole("option")).toHaveCount(0);
   await expect(page.getByTestId("pnl-switch-group-releases").getByRole("option")).toHaveCount(0);
   await expect(listbox.getByRole("option", { name: /owner\/repo/ })).toHaveCount(0);

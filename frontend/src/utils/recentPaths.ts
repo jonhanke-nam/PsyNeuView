@@ -29,6 +29,15 @@ export function addRecentPath(path: string): void {
   }
 }
 
+/** Drop `path` from the list (a working copy that moved, #422). */
+export function removeRecentPath(path: string): void {
+  try {
+    localStorage.setItem(RECENT_PATHS_KEY, JSON.stringify(getRecentPaths().filter((p) => p !== path)));
+  } catch {
+    // Storage blocked: nothing to remove.
+  }
+}
+
 /** `path` with `from` swapped for `to` when it is `from` or inside it. */
 export function rewriteUnder(path: string, from: string, to: string): string {
   const base = from.replace(/\/+$/, "");

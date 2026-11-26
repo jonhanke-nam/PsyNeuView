@@ -34,7 +34,17 @@ test.describe("Tutorial: Viewing options & the flat view", () => {
 
     await page.goto("/");
     await page.getByRole("button", { name: /Open/ }).first().click();
-    await page.getByText("EGO — Giallanza et al. 2024 (Study 2)").click();
+    // The Library's EGO has the same name (#422); the Reference Models entry comes first.
+    await page.getByText("EGO — Giallanza et al. 2024 (Study 2)").first().click();
+    // EGO opens in the view the view menu names (#428): flattened, by default.
+    // Start this tutorial from the nested view, where EM is one node.
+    const viewSelect = page
+      .locator("select")
+      .filter({ has: page.locator("option", { hasText: "Flatten (all compositions)" }) })
+      .first();
+    await expect(viewSelect).toHaveValue("__flat__", { timeout: 45000 });
+    const nested = await viewSelect.locator("option").filter({ hasText: /^EGO$/ }).first().getAttribute("value");
+    await viewSelect.selectOption(nested!);
     await expect(canvasNode(page, "EM").first()).toBeVisible({ timeout: 45000 });
     await page.waitForTimeout(800);
 
@@ -45,10 +55,6 @@ test.describe("Tutorial: Viewing options & the flat view", () => {
 
     // Flatten via the view selector (#717): the composition dropdown gained a
     // "Flatten (all compositions)" option (value __flat__).
-    const viewSelect = page
-      .locator("select")
-      .filter({ has: page.locator("option", { hasText: "Flatten (all compositions)" }) })
-      .first();
     await viewSelect.selectOption("__flat__");
 
     // Flattened: EM's internals are now top-level nodes. Wait for the flatten to

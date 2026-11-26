@@ -8,7 +8,8 @@
  *  - both use the selection token (the node's ring and the row's ring are
  *    --pnv-selection-border, their fills the selection family);
  *  - no role colour is used for the step highlight;
- *  - rows not reached yet this trial are dimmed; cards for other trials
+ *  - rows not reached yet this trial are in the pending grey (a colour at
+ *    AA, not an opacity: #412); cards for other trials
  *    have no step highlight.
  *
  * And steps EGO, whose EM composition is drawn collapsed: when the card's
@@ -123,11 +124,23 @@ test.describe("step highlight (#365)", { tag: "@ci" }, () => {
         for (const r of roles) expect(rowShadow, `${id}: no role colour in the row`).not.toContain(r);
       }
 
-      // Rows not reached yet this trial are dimmed; others read normally.
+      // Rows not reached yet this trial are all in the pending grey, a
+      // colour that reads at AA, not an opacity (#412); others read normally.
       const pending = card.locator('[data-testid="run-trial-node-band"][data-step="pending"]');
       if ((await pending.count()) > 0) {
         sawPending = true;
-        await expect(pending.first()).toHaveCSS("opacity", "0.5");
+        await expect(pending.first()).toHaveCSS("opacity", "1");
+        const grey = await page.evaluate(() => {
+          const probe = document.createElement("span");
+          probe.style.color = "var(--pnv-step-pending-text)";
+          document.body.appendChild(probe);
+          const c = getComputedStyle(probe).color;
+          probe.remove();
+          return c;
+        });
+        const colours = await pending.first().locator("span").evaluateAll((els) => els.map((e) => getComputedStyle(e).color));
+        expect(colours.length).toBeGreaterThan(0);
+        for (const c of colours) expect(c, "a pending row's text is the pending grey").toBe(grey);
       }
       const done = card.locator('[data-testid="run-trial-node-band"][data-step="done"]');
       if ((await done.count()) > 0) await expect(done.first()).toHaveCSS("opacity", "1");
@@ -151,6 +164,23 @@ test.describe("step highlight (#365)", { tag: "@ci" }, () => {
     await page.getByRole("button", { name: /Open/ }).first().click();
     await page.getByText("EGO").first().click();
     await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 90_000 });
+    // EGO opens in the view the view menu names, flattened, with EM open
+    // (#428). EM folds to one node in the nested view, so switch to it.
+    const viewMenu = page
+      .locator("select")
+      .filter({ has: page.locator("option", { hasText: "Flatten (all compositions)" }) })
+      .first();
+    const nested = await viewMenu.locator("option").filter({ hasText: /^EGO$/ }).first().getAttribute("value");
+    await Promise.all([
+      page.waitForResponse(
+        (r) => /\/api\/(model\/load|reference-models\/load)/.test(r.url()) && r.request().method() === "POST",
+        { timeout: 60_000 },
+      ),
+      viewMenu.selectOption(nested!),
+    ]);
+    await expect(page.locator('.react-flow__node[data-id="EM"] [data-testid="mechanism-node-body"]').first()).toBeVisible({
+      timeout: 60_000,
+    });
     await closePalette(page);
     await page.getByTestId("tab-run").click();
     await page.getByRole("button", { name: /Run Model/ }).click();

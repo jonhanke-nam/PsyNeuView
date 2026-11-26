@@ -12,6 +12,7 @@ import { copyFileSync, existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
 import { fixturePath } from "./fixtures";
+import { literal, modLabel } from "./hostPlatform";
 
 type Page = import("@playwright/test").Page;
 
@@ -93,7 +94,7 @@ test("a selected Smooth arrow shows handles; dragging one shapes the curve, save
   expect(cubics(shaped)).toBe(1);
 
   // One History step, named for the arrow.
-  await expect(page.getByTestId("undo-button")).toHaveAttribute("title", /^Undo: Reshaped arrow .+ \(⌘Z\)$/);
+  await expect(page.getByTestId("undo-button")).toHaveAttribute("title", new RegExp(`^Undo: Reshaped arrow .+ \\(${literal(modLabel("z"))}\\)$`));
 
   // Saved with the layout: the source's handle, and the tension it is drawn with.
   await expect

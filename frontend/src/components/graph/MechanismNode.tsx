@@ -12,7 +12,7 @@ import { usePortLayout } from "@/stores/portLayoutStore";
 import type { MechanismData } from "@/stores/modelStore";
 import { useGraphSettings, type GraphDirection } from "@/stores/graphSettingsStore";
 import { useModelStore, NODE_HEIGHT, NODE_WIDTH } from "@/stores/modelStore";
-import { expandedBoxFor, outlineThickness, ovalBoxFor } from "@/utils/nodeBox";
+import { expandedBoxFor, outlineThickness, shapedBoxFor } from "@/utils/nodeBox";
 import { TYPE_COLORS, ROLE_COLORS, ROLE_TEXT_COLORS, ROLE_PRIORITY, roleColorFor, isFunctionType } from "@/constants/pnlTypes";
 import { functionRefusal, toggleCompositionCollapse } from "@/utils/nodeActions";
 import { usePaletteStore } from "@/stores/paletteStore";
@@ -27,8 +27,12 @@ import {
   formatLabeledValue,
   labeledValueLines,
 } from "@/utils/labels";
-import { boundaryDir, boundaryInward, isDrawnOutline, nodeShapeFor, shapeTooltip, type NodeShape } from "@/utils/nodeShape";
+import { boundaryDir, boundaryInward, isCircle, isDrawnOutline, nodeShapeFor, shapeTooltip, type NodeShape } from "@/utils/nodeShape";
 import { NodeShapeOutline } from "./NodeShapeOutline";
+import { optionKeyName } from "@/shortcuts/keyLabels";
+
+/** #409: Option-drag on a Mac, Alt-drag elsewhere — the same key (`altKey`). */
+const PORT_DRAG_TIP = `${optionKeyName()}-drag to move this port around the node`;
 
 /** A collapsed composition's Expand button: the frame buttons' 28 px (#194), and its gap from the edge. */
 const EXPAND_BUTTON_WIDTH = 28;
@@ -264,10 +268,13 @@ export const MechanismNode = memo(function MechanismNode({
   );
   // show_graph's shape for this node (#192, #193): an oval, or an octagon
   // for a feedback sender, a double octagon for a controller, a double
-  // outline for a node on a cycle, a rectangle for a collapsed composition.
-  // The oval and the rectangle are CSS borders; the rest are drawn.
+  // outline for a node on a cycle, a rectangle for a collapsed composition;
+  // where the backend asked show_graph, the shape show_graph itself gives it
+  // (#385). The oval, circle and rectangle are CSS borders; the rest are drawn.
   const shape = nodeShapeFor(d);
   const drawnOutline = isDrawnOutline(shape);
+  // #385: show_graph's circles are circles, as wide as they are tall.
+  const circle = isCircle(shape);
 
   const portStyle = (arc: EllipseArc, pct: number, portKey: string): React.CSSProperties => {
     const ov = portOverrides?.[portKey];
@@ -279,7 +286,7 @@ export const MechanismNode = memo(function MechanismNode({
   const onDoubleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (isCollapsedComposition) {
-      void toggleCompositionCollapse(d.label || "");
+      void toggleCompositionCollapse(d.label || "", "open");
     } else {
       useGraphSettings.getState().toggleExpandedNode(d.label || "");
     }
@@ -287,7 +294,7 @@ export const MechanismNode = memo(function MechanismNode({
 
   const onExpandComposition = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    void toggleCompositionCollapse(d.label || "");
+    void toggleCompositionCollapse(d.label || "", "open");
   }, [d.label]);
 
   // Check if this node is view-only (not in lineMap, so params can't be edited)
@@ -449,33 +456,37 @@ export const MechanismNode = memo(function MechanismNode({
     : isCursorHighlighted
     ? "var(--pnv-cursor-highlight)"
     : undefined;
-  // #210: a node showing just its name is the size show_graph() draws it, by
-  // Graphviz's rule (utils/nodeBox.ts), so its text has show_graph's proportion
-  // and the Like show_graph layout needs hardly any enlarging. Its outline is
+  // #210, #385: a node showing just its name has show_graph's shape and
+  // proportions, by Graphviz's rule (utils/nodeBox.ts shapedBoxFor), at
+  // PsyNeuView's scale: the name fits inside the outline. Its outline is
   // inside the box, so the box allows for it at its heaviest, selected, and so
-  // doesn't change size when selected. With
-  // the type and role tags on, it is the roomier slot of #122.
+  // doesn't change size when selected. With the type and role tags on, it is
+  // the roomier slot of #122.
   const double = shape === "doublecircle" || shape === "doubleoctagon";
   const outline = outlineThickness(double, borderWidth + NODE_OUTLINE_SELECTED_EXTRA);
-  const nameBox = useMemo(
-    () => ovalBoxFor(d.label || "", shape === "oval" || shape === "doublecircle" ? outline : 0),
-    [d.label, shape, outline],
-  );
-  const minBox = showNodeElements ? { width: NODE_WIDTH, height: NODE_HEIGHT } : nameBox;
-  // An octagon's cut corners, and a heavy or double line, need room round the
-  // name that an oval's own rule has already given it.
-  const [padY, padX] =
-    shape === "doubleoctagon"
-      ? [Math.max(16, outline + 4), 37 + outline]
-      : shape === "octagon"
-      ? [Math.max(12, outline + 4), 36 + outline]
-      : showNodeElements
-      ? shape === "doublecircle" ? [14, 30] : [10, 24]
-      : [4, 8];
   // #211: a collapsed composition's Expand button sits at the node's right
   // edge, out of its middle, so a click on the node selects it rather than
   // opening it. The same room on the left keeps the name centred.
   const expandRoom = isCollapsedComposition ? EXPAND_BUTTON_ROOM : 0;
+  const nameBox = useMemo(
+    () => shapedBoxFor(d.label || "", shape, outline, 2 * expandRoom),
+    [d.label, shape, outline, expandRoom],
+  );
+  // A circle with the tags on is sized by its text, measured below (#385);
+  // the roomy slot is wider than tall.
+  const minBox = showNodeElements && !circle ? { width: NODE_WIDTH, height: NODE_HEIGHT } : nameBox;
+  // Just the name: the box already rings it with room. Otherwise an octagon's
+  // cut corners, and a heavy or double line, need room round the text.
+  const [padY, padX] =
+    circle || (!showNodeElements && !expanded)
+      ? [0, 0]
+      : shape === "doubleoctagon"
+      ? [Math.max(16, outline + 4), 37 + outline]
+      : shape === "octagon"
+      ? [Math.max(12, outline + 4), 36 + outline]
+      : showNodeElements
+      ? [10, 24]
+      : [4, 8];
   const padding = `${padY}px ${padX + expandRoom}px`;
 
   // #333: an expanded node is as big as its shape needs to be to hold its
@@ -494,18 +505,23 @@ export const MechanismNode = memo(function MechanismNode({
       was && box && Math.abs(was.width - box.width) < 1 && Math.abs(was.height - box.height) < 1 ? was : box,
     );
   }, [shape, outline]);
+  // #385: a circle is fitted to its text this way too, collapsed or not, so
+  // the tags (or a long function name) never stretch it into an oval.
+  const fitted = expanded || circle;
   useLayoutEffect(() => {
-    if (expanded) fitExpanded();
+    if (fitted) fitExpanded();
     else if (expandedFit) setExpandedFit(null);
   });
   useEffect(() => {
     const el = bodyRef.current;
-    if (!expanded || !el || typeof ResizeObserver === "undefined") return;
+    if (!fitted || !el || typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(() => fitExpanded());
     for (const child of Array.from(el.children)) if (inFlow(child)) ro.observe(child);
     return () => ro.disconnect();
-  }, [expanded, fitExpanded]);
-  const fit = expanded ? expandedFit : null;
+  }, [fitted, fitExpanded]);
+  const fit = fitted ? expandedFit : null;
+  // A circle's box is square: the larger of what its name and its text need.
+  const side = circle ? Math.max(minBox.width, minBox.height, fit?.width ?? 0, fit?.height ?? 0) : 0;
 
   return (
     <>
@@ -575,8 +591,8 @@ export const MechanismNode = memo(function MechanismNode({
           ? "0 0 0 2px var(--pnv-cursor-highlight), var(--pnv-cursor-glow)"
           : "var(--pnv-shadow-node)",
         boxSizing: "border-box",
-        minWidth: fit ? Math.max(minBox.width, fit.width) : minBox.width,
-        minHeight: fit ? Math.max(minBox.height, fit.height) : minBox.height,
+        minWidth: circle ? side : fit ? Math.max(minBox.width, fit.width) : minBox.width,
+        minHeight: circle ? side : fit ? Math.max(minBox.height, fit.height) : minBox.height,
         textAlign: "center" as const,
         display: "flex",
         flexDirection: "column" as const,
@@ -766,6 +782,9 @@ export const MechanismNode = memo(function MechanismNode({
           onClick={onExpandComposition}
           title="Expand this composition to show its contents"
           aria-label={`Expand composition ${d.label}`}
+          // #418: + stays its own symbol, but says the composition is collapsed.
+          aria-expanded={false}
+          data-testid="composition-expand"
           // The size of the frame's buttons (#194), so Expand is as easy
           // to find and press as the Collapse it undoes.
           style={{
@@ -1028,7 +1047,7 @@ export const MechanismNode = memo(function MechanismNode({
                   type="target"
                   position={inputPos}
                   id={port.name}
-                  title="Alt-drag to move this port around the node"
+                  title={PORT_DRAG_TIP}
                   onPointerDownCapture={startPortDrag(port.name)}
                   onMouseEnter={() => setHoveredPort({ name: port.name, role: "input", shape: port.shape })}
                   onMouseLeave={() => setHoveredPort(null)}
@@ -1060,7 +1079,7 @@ export const MechanismNode = memo(function MechanismNode({
                   type="source"
                   position={outputPos}
                   id={port.name}
-                  title="Alt-drag to move this port around the node"
+                  title={PORT_DRAG_TIP}
                   onPointerDownCapture={startPortDrag(port.name)}
                   onMouseEnter={() => setHoveredPort({ name: port.name, role: "output", shape: port.shape })}
                   onMouseLeave={() => setHoveredPort(null)}
@@ -1099,7 +1118,7 @@ export const MechanismNode = memo(function MechanismNode({
                   type="target"
                   position={paramPos}
                   id={port.name}
-                  title="Alt-drag to move this port around the node"
+                  title={PORT_DRAG_TIP}
                   onPointerDownCapture={startPortDrag(port.name)}
                   onMouseEnter={() => setHoveredPort({ name: port.name, role: "parameter", shape: port.shape })}
                   onMouseLeave={() => setHoveredPort(null)}

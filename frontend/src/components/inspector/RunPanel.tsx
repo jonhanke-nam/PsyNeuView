@@ -3,6 +3,7 @@
  * Shows input fields for each input node, a Run button, and Plotly charts.
  */
 
+import { DisclosureArrow, DisclosureDetails } from "@/components/common/Disclosure";
 import { useState, useCallback, useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import { preloadable, setsFor, textsFromSet } from "@/utils/inputSets";
 import {
@@ -933,10 +934,19 @@ export function RunPanel() {
                     {formatRunProgress(runProgress)}
                   </span>
                 )}
+                {/* Screen readers hear the trial count as it changes (the
+                    visible text above is not a live region: it comes and
+                    goes, and its seconds change too often to read out). */}
+                <span role="status" data-testid="run-trial-progress-live" className="pnv-sr-only">
+                  {running && runProgress && runProgress.trial > 0
+                    ? `Trial ${runProgress.trial} of ${runProgress.total} finished`
+                    : ""}
+                </span>
               </div>
             </div>
             {error && (
               <div
+                role="alert"
                 style={{
                   padding: 8,
                   background: "var(--pnv-danger-tint)",
@@ -959,7 +969,7 @@ export function RunPanel() {
                     border: "1px solid var(--pnv-warning-border)",
                     borderRadius: 3,
                     background: "var(--pnv-warning-tint)",
-                    color: "var(--pnv-warning)",
+                    color: "var(--pnv-warning-text)",
                     cursor: "pointer",
                   }}
                 >
@@ -975,7 +985,7 @@ export function RunPanel() {
                       border: "1px solid var(--pnv-warning-border)",
                       borderRadius: 4,
                       fontSize: "var(--pnv-fs-11)",
-                      color: "var(--pnv-warning)",
+                      color: "var(--pnv-warning-text)",
                       maxHeight: 220,
                       overflow: "auto",
                       whiteSpace: "pre-wrap",
@@ -999,7 +1009,7 @@ export function RunPanel() {
                       border: "1px solid var(--pnv-warning-border)",
                       borderRadius: 3,
                       fontSize: "var(--pnv-fs-11)",
-                      color: "var(--pnv-warning)",
+                      color: "var(--pnv-warning-text)",
                       lineHeight: 1.45,
                     }}
                   >
@@ -1176,19 +1186,18 @@ export function RunPanel() {
                 #465 per-node trajectories) land, the line charts remain
                 reachable behind this collapsed section so existing users
                 aren't cut off. */}
-            <details style={{ marginTop: 12 }}>
-              <summary
-                style={{
-                  fontSize: "var(--pnv-fs-12)",
-                  color: "var(--pnv-text-muted)",
-                  cursor: "pointer",
-                  fontWeight: 500,
-                }}
-              >
-                Trial-by-trial line charts
-              </summary>
+            <DisclosureDetails
+              style={{ marginTop: 12 }}
+              summaryStyle={{
+                fontSize: "var(--pnv-fs-12)",
+                color: "var(--pnv-text-muted)",
+                cursor: "pointer",
+                fontWeight: 500,
+              }}
+              summary="Trial-by-trial line charts"
+            >
               <ResultsChart results={results} />
-            </details>
+            </DisclosureDetails>
 
             {/* Live debugger snapshots (Phase 2B of #247). Visible only when
                 the run actually captured any — keeps the UI clean for older
@@ -1196,13 +1205,12 @@ export function RunPanel() {
             <DebuggerSnapshotTable />
 
             {/* Collapsible table of the results (#335: was "Raw data", then "Results") */}
-            <details style={{ marginTop: 12 }}>
-              <summary
-                data-testid="run-results-table-toggle"
-                style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}
-              >
-                Results table
-              </summary>
+            <DisclosureDetails
+              style={{ marginTop: 12 }}
+              summaryTestId="run-results-table-toggle"
+              summaryStyle={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}
+              summary="Results table"
+            >
               <table
                 style={{
                   fontSize: "var(--pnv-fs-11)",
@@ -1249,7 +1257,7 @@ export function RunPanel() {
                   ))}
                 </tbody>
               </table>
-            </details>
+            </DisclosureDetails>
             </div>
           </div>
         )}
@@ -1332,7 +1340,7 @@ function CaptureNote({ capture }: { capture: CaptureInfo }) {
         padding: "6px 9px",
         fontSize: "var(--pnv-fs-11)",
         lineHeight: 1.4,
-        color: "var(--pnv-warning)",
+        color: "var(--pnv-warning-text)",
         background: "var(--pnv-warning-tint)",
         border: "1px solid var(--pnv-warning-border)",
         borderRadius: 4,
@@ -1382,7 +1390,7 @@ function SteppingSupportNote({ level, reason }: { level: string; reason: string 
         padding: "6px 9px",
         fontSize: "var(--pnv-fs-11)",
         lineHeight: 1.4,
-        color: degraded ? "var(--pnv-warning)" : "var(--pnv-primary-text-on-tint)",
+        color: degraded ? "var(--pnv-warning-text)" : "var(--pnv-primary-text-on-tint)",
         background: degraded ? "var(--pnv-warning-tint)" : "var(--pnv-primary-tint)",
         border: `1px solid ${degraded ? "var(--pnv-warning-border)" : "var(--pnv-primary-tint-border)"}`,
         borderRadius: 4,
@@ -1402,7 +1410,7 @@ function HookSupportNote() {
         padding: "6px 9px",
         fontSize: "var(--pnv-fs-11)",
         lineHeight: 1.4,
-        color: "var(--pnv-warning)",
+        color: "var(--pnv-warning-text)",
         background: "var(--pnv-warning-tint)",
         border: "1px solid var(--pnv-warning-border)",
         borderRadius: 4,
@@ -1527,7 +1535,7 @@ function RecordVersionNote({
       title={title}
       style={{
         fontSize: "var(--pnv-fs-10)",
-        color: v === "matches" ? "var(--pnv-text-faint)" : "var(--pnv-warning)",
+        color: v === "matches" ? "var(--pnv-text-faint)" : "var(--pnv-warning-text)",
       }}
     >
       {text}
@@ -1809,15 +1817,17 @@ function InputNodeEditor({
             onClick={() => onRemoveTrial(t)}
             disabled={cells.length <= 1}
             title="Remove this trial"
+            aria-label={`Remove trial ${t + 1}`}
           >
             ✕
           </Button>
         </div>
       ))}
-      <details style={{ marginTop: 2 }}>
-        <summary style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-hint)", cursor: "pointer" }}>
-          Paste CSV
-        </summary>
+      <DisclosureDetails
+        style={{ marginTop: 2 }}
+        summaryStyle={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-hint)", cursor: "pointer" }}
+        summary="Paste CSV"
+      >
         <textarea
           value={csvText}
           onChange={(e) => setCsvText(e.target.value)}
@@ -1850,7 +1860,7 @@ function InputNodeEditor({
         >
           Apply to cells
         </Button>
-      </details>
+      </DisclosureDetails>
     </div>
   );
 }
@@ -1909,6 +1919,8 @@ function TrialPorts({
         const error = check && !check.ok ? check.error : null;
         const id = multi ? `${node.name}-${trial + 1}-${portName(p)}` : `${node.name}-${trial + 1}`;
         const what = multi ? `${node.name} ${portName(p)}` : node.name;
+        // The error message's element id: no spaces, so aria-describedby reads it as one id.
+        const errorId = `run-trial-input-error-${id}`.replace(/\s+/g, "_");
         // The grid edits one element per box, so it serves a 1-D port; a
         // deeper one keeps its bracket field even with the setting on.
         if (cellGrid && portShape(shape).length === 1) {
@@ -1941,6 +1953,7 @@ function TrialPorts({
               data-testid={`run-trial-input-${id}`}
               aria-label={`${what}, trial ${trial + 1}`}
               aria-invalid={error ? true : undefined}
+              aria-describedby={error ? errorId : undefined}
               placeholder={placeholder}
               spellCheck={false}
               autoComplete="off"
@@ -1962,6 +1975,7 @@ function TrialPorts({
             {error && (
               <span
                 data-testid={`run-trial-input-error-${id}`}
+                id={errorId}
                 style={{ fontSize: "var(--pnv-fs-10)", color: "var(--pnv-danger)", whiteSpace: "nowrap" }}
               >
                 {error}
@@ -2029,6 +2043,7 @@ function InputCell({
       <input
         value={value}
         inputMode="decimal"
+        aria-invalid={invalid ? true : undefined}
         onChange={(ev) => onChange(ev.target.value)}
         title={extra ? "More elements than the node takes" : invalid ? "Not a number" : undefined}
         style={{
@@ -2089,6 +2104,8 @@ function GroupingToggle({
         "Only the view changes; the run is the same."
       }
       data-testid="run-grouping"
+      role="group"
+      aria-label="Arrange inputs"
       style={{
         display: "inline-flex",
         // #109: as tall as Reset and Run Model beside it; the segments
@@ -2176,6 +2193,7 @@ function TrialGroupedEditor({
               onClick={() => onRemoveTrial(t)}
               disabled={trialCount <= 1}
               title="Remove this trial"
+              aria-label={`Remove trial ${t + 1}`}
             >
               ✕
             </Button>
@@ -2405,7 +2423,9 @@ function TrialOutputs({
             borderRadius: 4,
             border: showTrialDeltas ? "1px solid var(--pnv-selection-border)" : "1px solid var(--pnv-border-light)",
             background: showTrialDeltas ? "var(--pnv-selection-fill)" : "var(--pnv-surface)",
-            color: showTrialDeltas ? "var(--pnv-selection-text)" : "var(--pnv-text-hint)",
+            // Off: the secondary text, which reads at WCAG AA on white (the
+            // hint grey did not).
+            color: showTrialDeltas ? "var(--pnv-selection-text)" : "var(--pnv-text-secondary)",
           }}
           aria-pressed={showTrialDeltas}
         >
@@ -2450,6 +2470,7 @@ function TrialOutputs({
               ref={active ? activeCardRef : undefined}
               data-testid={`run-trial-card-${trialPos + 1}`}
               data-active={active ? "true" : "false"}
+              aria-current={active ? "true" : undefined}
               onClick={clickable ? () => setTraceStep(stepTarget) : undefined}
               title={
                 clickable
@@ -2674,7 +2695,7 @@ function WithinTrialSteps({
           fontFamily: "var(--pnv-font-mono)",
         }}
       >
-        {open ? "▾" : "▸"} ×{series.length} steps
+        <DisclosureArrow open={open} small />×{series.length} steps
       </button>
       {scalars && <Sparkline values={scalars} />}
       {open && (
@@ -2771,7 +2792,8 @@ function ValueText({ text }: { text: string }) {
 // in the card's padding (negative margin), so the rows don't move.
 // #365: in the current trial card, `step` says where the node stands at the
 // trace step: "active" rows get the selection-blue highlight the graph's step
-// ring uses, "pending" rows (not reached yet this trial) are dimmed, "done"
+// ring uses, "pending" rows (not reached yet this trial) are in a grey that still
+// reads at AA (.pnv-step-pending, #412), "done"
 // rows read normally. The highlight is a background and an inset ring, so the
 // rows don't move. The band itself stays the role colour, and says so.
 function NodeBand({
@@ -2794,7 +2816,10 @@ function NodeBand({
       data-testid="run-trial-node-band"
       data-node={node.replace(/-\d+$/, "")}
       data-step={step}
-      className={step === "active" ? "pnv-step-active" : undefined}
+      // The active row is told apart by more than its blue: the inset ring
+      // marks it on screen, and aria-current names it to assistive tech.
+      aria-current={step === "active" ? "step" : undefined}
+      className={step === "active" ? "pnv-step-active" : step === "pending" ? "pnv-step-pending" : undefined}
       title={`Band: role colour (${role}), as on the graph. The current step is shown in blue.`}
       style={{
         ...style,
@@ -2807,9 +2832,7 @@ function NodeBand({
               boxShadow: "inset 0 0 0 1px var(--pnv-step-active-ring)",
               borderRadius: "0 3px 3px 0",
             }
-          : step === "pending"
-            ? { opacity: "var(--pnv-step-pending-opacity)" }
-            : {}),
+          : {}),
       }}
     >
       {children}
@@ -2839,7 +2862,7 @@ function ValueRow({
       <div style={{ display: "flex", gap: 6, lineHeight: 1.5 }}>
         <span
           style={{
-            color: kind === "in" ? "var(--pnv-primary)" : "var(--pnv-trace-value)",
+            color: kind === "in" ? "var(--pnv-primary-text)" : "var(--pnv-trace-value)",
             fontFamily: "var(--pnv-font-mono)",
             flexShrink: 0,
           }}
@@ -2851,7 +2874,7 @@ function ValueRow({
       {delta && (
         <div
           style={{
-            color: "var(--pnv-warning)",
+            color: "var(--pnv-warning-text)",
             fontFamily: "var(--pnv-font-mono)",
             fontSize: "var(--pnv-fs-10)",
             lineHeight: 1.4,
@@ -2964,14 +2987,19 @@ function DebuggerSnapshotTable() {
   }, [traceStep, snapshotToStep]);
 
   return (
-    <details style={{ marginTop: 12 }}>
-      <summary style={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}>
-        Debugger snapshots {snapshots.length > 0 && (
-          <span style={{ color: "var(--pnv-text-faint)" }}>
-            ({filterActive ? `${visibleCount} of ${snapshots.length} shown` : snapshots.length})
-          </span>
-        )}
-      </summary>
+    <DisclosureDetails
+      style={{ marginTop: 12 }}
+      summaryStyle={{ fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)", cursor: "pointer" }}
+      summary={
+        <>
+          Debugger snapshots {snapshots.length > 0 && (
+            <span style={{ color: "var(--pnv-text-faint)" }}>
+              ({filterActive ? `${visibleCount} of ${snapshots.length} shown` : snapshots.length})
+            </span>
+          )}
+        </>
+      }
+    >
       {snapshots.length === 0 ? (
         <div style={{ fontSize: "var(--pnv-fs-11)", color: "var(--pnv-text-faint)", padding: "6px 0" }}>
           No snapshots captured. The PsyNeuLink build in use does not include
@@ -3143,7 +3171,7 @@ function DebuggerSnapshotTable() {
         </div>
         </>
       )}
-    </details>
+    </DisclosureDetails>
   );
 }
 

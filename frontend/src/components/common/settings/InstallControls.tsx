@@ -22,6 +22,7 @@
  * Gated by `/api/settings/install/capabilities`.
  */
 
+import { DisclosureArrow } from "@/components/common/Disclosure";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Combobox } from "../Combobox";
 import { useNotificationStore } from "@/stores/notificationStore";
@@ -688,7 +689,7 @@ function ManageKnownSources({
         onClick={() => setShown((v) => !v)}
         style={{ fontSize: "var(--pnv-fs-12)" }}
       >
-        {shown ? "▼" : "▶"} Manage known sources ({sources.length})
+        <DisclosureArrow open={shown} small /> Manage known sources ({sources.length})
       </Button>
       {shown && (
         <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>

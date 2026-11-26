@@ -35,8 +35,12 @@ export const EDGE_LINE_WIDTHS: number[] = Array.from(
 export const EDGE_LINE_HOVER_EXTRA = 1;
 /** How much heavier a line under the stepping cursor is. */
 export const EDGE_LINE_HIGHLIGHT_EXTRA = 0.5;
-/** The line width the Style tab's arrowhead size was tuned at. */
-export const EDGE_LINE_ARROWHEAD_REFERENCE = 3;
+/**
+ * The line width the Style tab's arrowhead size is drawn at unscaled: the
+ * default width, so the default arrowhead keeps its size (#278) now lines
+ * default to 2 px (#425).
+ */
+export const EDGE_LINE_ARROWHEAD_REFERENCE = 2;
 
 /** How much to scale the arrowhead for a line of this width. */
 export function edgeArrowheadScale(width: number): number {
@@ -70,7 +74,7 @@ interface EdgeLineState {
 
 export const useEdgeLineStore = create<EdgeLineState>((set) => ({
   chosen: load(),
-  defaultWidth: toEdgeLineWidth(RENDERING_DEFAULTS.arrowLineThickness) ?? 3,
+  defaultWidth: toEdgeLineWidth(RENDERING_DEFAULTS.arrowLineThickness) ?? 2,
   setWidth: (px) => {
     const w = toEdgeLineWidth(px);
     if (w === null) return;

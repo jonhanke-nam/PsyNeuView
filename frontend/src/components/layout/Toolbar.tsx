@@ -2,8 +2,11 @@
  * Top toolbar with file operations, model browser, and demo models.
  */
 
+import { DisclosureArrow } from "@/components/common/Disclosure";
 import { Z_MENU, DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
+import { ModelTitle } from "./ModelTitle";
+import { useModelIdentityStore } from "@/stores/modelIdentityStore";
 import { errorDetail } from "@/utils/errorDetail";
 import { Button } from "@/components/common/Button";
 import { MENU_ROW_HOVER, menuRowColours, toggleColours } from "@/components/common/toolbarStyles";
@@ -25,7 +28,7 @@ import { usePaletteStore } from "@/stores/paletteStore";
 import { displayBinding } from "@/shortcuts/binding";
 import { runCommand } from "@/shortcuts/commands";
 import { setPanelVisibleOrExplain } from "@/shortcuts/lastPanel";
-import { useResolvedShortcuts } from "@/shortcuts/useAppShortcuts";
+import { useResolvedShortcuts, useShortcutKeys } from "@/shortcuts/useAppShortcuts";
 import { focusComposition } from "@/utils/nodeActions";
 import { hasFileBridge, pickOpenPath, pickSavePath } from "@/utils/fileBridge";
 import { logLoadPerf } from "@/utils/loadPerf";
@@ -73,7 +76,8 @@ import { useUIStore } from "@/stores/uiStore";
 import { isManaged, isOwnCheckout, isProtected, usePnlSourceStore } from "@/stores/pnlSourceStore";
 import { useEditLockStore } from "@/stores/editLockStore";
 import { onPnlSourceChanged } from "@/utils/pnlSourceEvents";
-import { RECENT_PATHS_CHANGED, addRecentPath, getRecentPaths } from "@/utils/recentPaths";
+import { checkNameClashes } from "@/utils/nameClashes";
+import { RECENT_PATHS_CHANGED, addRecentPath, getRecentPaths, removeRecentPath } from "@/utils/recentPaths";
 import { pnlSourceLabel, sourceSwitchNote, type PsyNeuLinkInfo } from "@/utils/pnlSources";
 import { abbreviateHome } from "@/components/common/settings/shared";
 import { record as recordActivity } from "@/utils/activityLog";
@@ -95,7 +99,7 @@ import { applyTutorialViewModes } from "@/utils/tutorialView";
 import { SAVE_COPY_EVENT, requestSaveCopy } from "@/utils/saveRequest";
 import { stripProtectionLine } from "@/utils/protectionLine";
 import { AutosaveStatus } from "./AutosaveStatus";
-import { showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
+import { appendModelView, modelViewOptions, showGraphLoadRequest } from "@/utils/showGraphLoadRequest";
 import { beginModelOpen, isNewestModelOpen, reportFailedOpen } from "@/utils/modelOpenSequence";
 import { ioRowViolations } from "@/utils/ioRows";
 import { canvasTidyHandle } from "@/stores/ioRowsStore";
@@ -269,6 +273,8 @@ interface MdfGap {
 
 export function Toolbar() {
   const filePath = useModelStore((s) => s.filePath);
+  // #409: Save's tooltip names this platform's key, as rebound (⌘S on a Mac).
+  const saveKeys = useShortcutKeys("model.save");
   const source = useModelStore((s) => s.source);
   const savedSource = useModelStore((s) => s.savedSource);
   const setFilePath = useModelStore((s) => s.setFilePath);
@@ -563,15 +569,8 @@ export function Toolbar() {
           textAlign: "left",
         }}
       >
-        {/*
-          Same glyph and size as the Components palette, so the two fold
-          controls read as the same control. The small ▸/▾ pair sits well
-          inside its em box, so bumping its size alone still left a speck —
-          ▶/▼ fills the box and is legible at the same 11px.
-        */}
-        <span aria-hidden="true" style={{ fontSize: "var(--pnv-fs-11)", width: 13, color: "var(--pnv-text-hint)" }}>
-          {isSectionCollapsed(id) ? "▶" : "▼"}
-        </span>
+        {/* The one row arrow (#418), as in the Components panel and Settings. */}
+        <DisclosureArrow open={!isSectionCollapsed(id)} small />
         {/* The name stays on one line; a long source path is what shortens.
             It used to squeeze "My Project Folder" onto three lines. */}
         <span style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{label}</span>
@@ -649,9 +648,16 @@ export function Toolbar() {
         // The marks belonged to the old source's examples (#175).
         pnlStatusFetched.current = false;
         setPnlStatus({});
+        // #422: model files in the new source that share a name, named once.
+        void checkNameClashes((m) => addNotification("warning", m, { key: "pnl-name-clashes" }));
       }),
     [],
   );
+  // #422: and the PsyNeuLink this page started with.
+  useEffect(() => {
+    void checkNameClashes((m) => addNotification("warning", m, { key: "pnl-name-clashes" }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // And whenever the menu opens (#1395): the announcement above can come
   // while the server is restarting, and a failed fetch kept the old install's
   // label and paths until the window was reloaded. The Library header and its
@@ -840,7 +846,7 @@ export function Toolbar() {
       const resp = await fetch("/api/model/open-project", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bundle_path: bundlePath }),
+        body: JSON.stringify({ bundle_path: bundlePath, ...modelViewOptions() }), // #428
       });
       // #386: a newer open was asked for while this one was out.
       if (!isNewestModelOpen(ticket)) return;
@@ -934,7 +940,12 @@ export function Toolbar() {
       // #906: marked only once there is a model to open; a failed open leaves
       // the one on screen as it was.
       if (fresh) useModelStore.getState().markFreshOpen();
-      setFilePath(path);
+      useModelIdentityStore.getState().note(data.identity); // #422
+      // #422: a working copy from before each source had its own folder opens
+      // where it is now; Recent follows it.
+      const opened: string = data.file_path ?? path;
+      if (opened !== path) removeRecentPath(path);
+      setFilePath(opened);
       setSource(data.source);
       setStatus(`Building graph for ${fileName}…`);
       loadModelFromServer(data.model, data.layout, data.labels, data.bundle, data.sidecars);
@@ -953,7 +964,7 @@ export function Toolbar() {
         buildDoneAt: t3,
         backend: data.timings,
       });
-      addRecentPath(path);
+      addRecentPath(opened);
       setRecentPaths(getRecentPaths());
 
       // If this working copy was derived from a demo (#40), restore the
@@ -1014,7 +1025,11 @@ export function Toolbar() {
       const resp = await fetch("/api/demos/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(tutorial ? { demo_name: demo.name, tutorial } : { demo_name: demo.name }),
+        // #428: opened in the view the menu shows, as every open is.
+        body: JSON.stringify({
+          ...(tutorial ? { demo_name: demo.name, tutorial } : { demo_name: demo.name }),
+          ...modelViewOptions(),
+        }),
       });
       const apiDoneAt = performance.now();
       if (!isNewestModelOpen(ticket)) return;
@@ -1026,6 +1041,7 @@ export function Toolbar() {
       const data = await resp.json();
       const parseDoneAt = performance.now();
       if (!isNewestModelOpen(ticket)) return;
+      useModelIdentityStore.getState().note(data.identity); // #422
       // Use the working path the backend actually wrote to; fall back to the
       // pristine-derived guess only for older backends that don't return it.
       const workingPath =
@@ -1128,6 +1144,7 @@ export function Toolbar() {
                     body: JSON.stringify({
                       source: newModelTemplate(pnlVer).replace(/my_model/g, varName),
                       file_name: `${varName}.py`,
+                      ...modelViewOptions(), // #428
                     }),
                   });
                   if (!resp.ok) {
@@ -1202,7 +1219,12 @@ export function Toolbar() {
       const resp = await fetch("/api/reference-models/load", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(tutorial ? { name: rm.name, tutorial } : { name: rm.name, restore_pristine: restore }),
+        // #428: opened in the view the menu shows, as every open is. Left out,
+        // the model came back nested under "Flatten (all compositions)".
+        body: JSON.stringify({
+          ...(tutorial ? { name: rm.name, tutorial } : { name: rm.name, restore_pristine: restore }),
+          ...modelViewOptions(),
+        }),
       });
       const apiDoneAt = performance.now();
       if (!isNewestModelOpen(ticket)) return;
@@ -1214,6 +1236,7 @@ export function Toolbar() {
       const data = await resp.json();
       const parseDoneAt = performance.now();
       if (!isNewestModelOpen(ticket)) return;
+      useModelIdentityStore.getState().note(data.identity); // #422
       // Use the working path the backend actually wrote to; fall back to the
       // pristine-derived guess only for older backends that don't return it
       // (the guess is wrong when the working dir is isolated, e.g. in CI).
@@ -1268,9 +1291,14 @@ export function Toolbar() {
   // Load a live PsyNeuLink example (#843): the backend copies the *current*
   // source file into a working dir before loading, so the open reflects the
   // live source yet edits never mutate the PsyNeuLink source clone.
-  const loadPnlExample = async (m: LibraryModel) => {
-    if (!(await guardOpen({ kind: "file", name: m.label }))) return;
-    if (!confirmDiscard()) return;
+  const loadPnlExample = async (m: LibraryModel, { restore = false }: { restore?: boolean } = {}) => {
+    if (restore) {
+      // #1010 for examples (#422): putting it back is asked for, never inferred.
+      if (!window.confirm(`Put ${m.label} back to PsyNeuLink's version? Your edits to it will be lost.`)) return;
+    } else {
+      if (!(await guardOpen({ kind: "file", name: m.label }))) return;
+      if (!confirmDiscard()) return;
+    }
     setDropdownOpen(false);
     clearNotifications();
     setStatus(`Loading PsyNeuLink example: ${m.label}…`);
@@ -1282,7 +1310,7 @@ export function Toolbar() {
       const resp = await fetch("/api/psyneulink-examples/load", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: m.name }),
+        body: JSON.stringify({ name: m.name, ...(restore ? { restore_pristine: true } : {}), ...modelViewOptions() }), // #422, #428
       });
       const apiDoneAt = performance.now();
       if (!isNewestModelOpen(ticket)) return;
@@ -1294,6 +1322,7 @@ export function Toolbar() {
       const data = await resp.json();
       const parseDoneAt = performance.now();
       if (!isNewestModelOpen(ticket)) return;
+      useModelIdentityStore.getState().note(data.identity); // #422
       noteModelOrigin(data.file_path ?? m.path, { kind: "example", section: "examples" });
       setFilePath(data.file_path ?? m.path);
       // setFilePath clears currentReference; re-arm it so the Open dropdown marks
@@ -1311,6 +1340,18 @@ export function Toolbar() {
         buildDoneAt: performance.now(),
         backend: data.timings,
       });
+      // #1010 for examples (#422): an edited copy is kept, and said so; the
+      // toolbar's Reset to Original puts it back.
+      setReferenceEdited(!!data.workingCopy?.diverged);
+      if (data.workingCopy?.diverged) {
+        addNotification(
+          "info",
+          `Loaded your edited copy of ${m.label} — your changes were kept. PsyNeuLink's version is unchanged.`,
+          8000,
+        );
+      } else if (data.workingCopy?.restored) {
+        addNotification("info", `Restored ${m.label} to PsyNeuLink's version.`, 6000);
+      }
       setCurrentDemo(null);
       setPristineSource(null);
       addRecentPath(data.file_path ?? m.path);
@@ -1368,7 +1409,7 @@ export function Toolbar() {
         const resp = await fetch("/api/models/save-as", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ source: file.content, file_name: name }),
+          body: JSON.stringify({ source: file.content, file_name: name, ...modelViewOptions() }), // #428
         });
         if (resp.ok) {
           saved = await resp.json();
@@ -1440,6 +1481,7 @@ export function Toolbar() {
             // those to no-ops, which would surface as "NoneType is not
             // iterable" on any test that consumes its own results.
             developer_mode: true,
+            ...modelViewOptions(), // #428
           }),
         });
         if (resp.ok) {
@@ -1521,6 +1563,7 @@ export function Toolbar() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      appendModelView(formData); // #428
       const resp = await fetch("/api/model/import-mdf", {
         method: "POST",
         body: formData,
@@ -1574,6 +1617,7 @@ export function Toolbar() {
           overwrite,
           // #1244: the copy takes this model's layout, labels and index.
           source_path: filePath || null,
+          ...modelViewOptions(), // #428
         }),
       });
       if (!resp.ok) {
@@ -2214,6 +2258,8 @@ export function Toolbar() {
                   {!isRoot && (
                     <button
                       onClick={() => toggleFolder(folder)}
+                      aria-expanded={isExpanded}
+                      data-testid="open-menu-folder-toggle"
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -2230,9 +2276,7 @@ export function Toolbar() {
                       }}
                       title={isExpanded ? "Collapse folder" : "Expand folder"}
                     >
-                      <span style={{ width: 10, display: "inline-block", color: "var(--pnv-text-faint)" }}>
-                        {isExpanded ? "▾" : "▸"}
-                      </span>
+                      <DisclosureArrow open={isExpanded} small />
                       <span>{folder}/</span>
                       <span style={{ marginLeft: "auto", fontSize: "var(--pnv-fs-10)", color: "var(--pnv-text-faint)", fontWeight: 400 }}>
                         {models.length}
@@ -2374,7 +2418,7 @@ export function Toolbar() {
               ? "No file loaded"
               : source === savedSource
               ? "No unsaved changes"
-              : "Save changes to the current file (Ctrl+S)"
+              : `Save changes to the current file (${saveKeys})`
           }
         >
           Save
@@ -2471,11 +2515,6 @@ export function Toolbar() {
           filePath={filePath}
           bundleOrigin={bundleOrigin}
           dirty={source !== savedSource}
-          onCopy={() => {
-            const toCopy = bundleOrigin || filePath || "";
-            navigator.clipboard.writeText(toCopy);
-            addNotification("info", "File path copied to clipboard");
-          }}
         />
       )}
 
@@ -2506,7 +2545,13 @@ export function Toolbar() {
         <button
           onClick={() => {
             const rm = referenceModels.find((r) => r.name === currentReference);
-            if (rm) void loadReference(rm, { restore: true });
+            if (rm) {
+              void loadReference(rm, { restore: true });
+              return;
+            }
+            // A PsyNeuLink example's edited copy, too (#422).
+            const ex = pnlExamples.find((e) => e.name === currentReference);
+            if (ex) void loadPnlExample(ex, { restore: true });
           }}
           data-testid="reference-reset"
           style={{
@@ -2889,39 +2934,60 @@ export function Toolbar() {
 }
 
 // Model-identity chip (#504 Phase C; was the file-path chip from #344).
-// The editor header owns the filename (#504 Phases A/B), so the toolbar
-// shows model-level identity — the composition name — instead of
-// duplicating the path. The full path stays one hover away in the
-// tooltip and one click away via copy.
+// Since #422 it shows which model is open as the menus name it — the menu
+// label, the file name and where it came from — from the identity the server
+// returns with every open (ModelTitle.tsx). The composition name is in the
+// composition selector beside it. The full path is in the hover text and the
+// model card.
+/** The least width the model title keeps; below it the badges beside it give way (#422). */
+const MIN_TITLE_WIDTH = 120;
+
 function FilePathChip({
   filePath,
   bundleOrigin,
   dirty,
-  onCopy,
 }: {
   filePath: string;
   bundleOrigin?: string | null;
   dirty: boolean;
-  onCopy: () => void;
 }) {
   const showChangesSinceSave = useChangesSinceSaveStore((s) => s.show);
-  const activeComposition = useModelStore((s) => s.activeComposition);
-  const compositionNames = useModelStore((s) => s.compositionNames);
-  const compositionDisplayNames = useModelStore((s) => s.compositionDisplayNames);
-  // For an opened .pnlproject, the tooltip / copy target is the bundle (not
-  // the hashed working dir): Save round-trips into that bundle, so it's the
-  // user's real artifact.
-  const shownPath = bundleOrigin || filePath;
-  const parts = shownPath.split("/").filter(Boolean);
-  const basename = parts[parts.length - 1] || shownPath;
-  // #515: render the composition's canonical display label (name= attribute),
-  // matching the selector/breadcrumb/status bar. Fall back to the .py
-  // basename until diagnostics yield a composition.
-  const compKey = activeComposition || compositionNames[0];
-  const display = (compKey && compositionDisplayNames[compKey]) || compKey || basename;
+  const chipRef = useRef<HTMLSpanElement | null>(null);
+  const titleRef = useRef<HTMLSpanElement | null>(null);
+  const [available, setAvailable] = useState(0);
+
+  const badgesRef = useRef<HTMLSpanElement | null>(null);
+  // The room the title has: the chip's width less the unsaved dot, the BUNDLE
+  // tag and the badges after the title at their full width — but never less
+  // than MIN_TITLE_WIDTH. Below that the badges give way (they are cut off at
+  // the right) rather than the label (#422).
+  useLayoutEffect(() => {
+    const chip = chipRef.current;
+    if (!chip) return;
+    const update = () => {
+      let others = 0;
+      let count = 0;
+      for (const child of Array.from(chip.children)) {
+        count += 1;
+        if (child === titleRef.current) continue;
+        others += child === badgesRef.current
+          ? (child as HTMLElement).scrollWidth
+          : (child as HTMLElement).getBoundingClientRect().width;
+      }
+      const gaps = 6 * Math.max(0, count - 1);
+      setAvailable(Math.max(MIN_TITLE_WIDTH, Math.floor(chip.clientWidth - others - gaps)));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(chip);
+    for (const child of Array.from(chip.children)) if (child !== titleRef.current) ro.observe(child);
+    if (badgesRef.current) for (const b of Array.from(badgesRef.current.children)) ro.observe(b);
+    return () => ro.disconnect();
+  });
 
   return (
     <span
+      ref={chipRef}
       data-testid="model-name"
       style={{
         fontSize: "var(--pnv-fs-12)",
@@ -2929,9 +2995,11 @@ function FilePathChip({
         display: "flex",
         alignItems: "center",
         gap: 6,
-        // Grow into the toolbar's free space so the model name shows in full
-        // when there's room, and only ellipsize when genuinely cramped (#471).
-        flex: "1 1 auto",
+        // A fixed starting width, not the title's own (#422): the toolbar wraps
+        // whole controls onto a second row when they don't fit, so a long
+        // label must shorten rather than push the chip onto a new row. The
+        // chip grows into the free space and the title fits what it gets.
+        flex: "1 1 160px",
         minWidth: 0,
       }}
     >
@@ -2970,28 +3038,21 @@ function FilePathChip({
           BUNDLE
         </span>
       )}
-      <span
-        style={{
-          cursor: "pointer",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          fontFamily: "var(--pnv-font-mono)",
-          minWidth: 0,
-        }}
-        onClick={onCopy}
-        title={
-          bundleOrigin
-            ? `${bundleOrigin}\n(opened in place; working copy: ${filePath})\n(click to copy bundle path)`
-            : `${filePath}\n(click to copy full path)`
-        }
-      >
-        {display}
+      <span ref={titleRef} style={{ display: "flex", flex: "0 0 auto" }}>
+        <ModelTitle filePath={filePath} bundleOrigin={bundleOrigin} available={available} />
       </span>
-      <FormatBadge />
-      <EditModeBadge />
-      <PnlSourceBadge />
-      <AutosaveStatus />
+      {/* Cut off at the right when the window is too narrow for them and the
+          title's least width; clipped across only, so a badge's pop-up
+          below still shows. */}
+      <span
+        ref={badgesRef}
+        style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flex: "0 1 auto", overflowX: "clip", overflowY: "visible" }}
+      >
+        <FormatBadge />
+        <EditModeBadge />
+        <PnlSourceBadge />
+        <AutosaveStatus />
+      </span>
     </span>
   );
 }
@@ -3359,7 +3420,7 @@ function ManagedSourceBadge({ from, title, style }: { from: string; title?: stri
             position: "absolute",
             top: "calc(100% + 4px)",
             left: 0,
-            // Above the panel dividers (Allotment sashes, z-index 35), like the Open menu (#1391).
+            // Above the panel dividers (panel-edge handles, z-index 35), like the Open menu (#1391).
             zIndex: Z_MENU,
             width: 320,
             display: "flex",
@@ -3556,7 +3617,7 @@ function WalkthroughMenu() {
             position: "absolute",
             top: "calc(100% + 4px)",
             left: 0,
-            // Above the panel dividers (Allotment sashes, z-index 35), like the Open menu (#1391).
+            // Above the panel dividers (panel-edge handles, z-index 35), like the Open menu (#1391).
             zIndex: Z_MENU,
             minWidth: 340,
             // The list outgrows a short window; scroll inside the window instead of off its bottom.
@@ -3625,10 +3686,8 @@ function WalkthroughMenu() {
                   lineHeight: "inherit",
                 }}
               >
-                {/* Same fold glyph as the Open menu's section headings. */}
-                <span aria-hidden="true" style={{ fontSize: "var(--pnv-fs-9)", width: 10, color: "var(--pnv-text-hint)" }}>
-                  {folded.has(group.id) ? "\u25b6" : "\u25bc"}
-                </span>
+                {/* The one row arrow (#418), as in the Open menu's section headings. */}
+                <DisclosureArrow open={!folded.has(group.id)} small />
                 <span>{group.title}</span>
                 {folded.has(group.id) && (
                   <span style={{ marginLeft: "auto", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
@@ -3768,7 +3827,7 @@ function LayoutMenu() {
             position: "absolute",
             top: "calc(100% + 4px)",
             left: 0,
-            // Above the panel dividers (Allotment sashes, z-index 35), like the Open menu (#1391).
+            // Above the panel dividers (panel-edge handles, z-index 35), like the Open menu (#1391).
             zIndex: Z_MENU,
             // Wide enough for "Components panel" and its key on one line (#191).
             minWidth: 240,

@@ -64,7 +64,8 @@ export function AutoInstallOffer({
           <p style={{ margin: 0, fontSize: "var(--pnv-fs-12)", color: "var(--pnv-text-muted)" }}>{AUTO_INSTALL_QUESTION_HINT}</p>
         </div>
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "12px 20px 16px", borderTop: "1px solid var(--pnv-border-faint)" }}>
-          <Button data-testid="auto-install-offer-no" onClick={() => onAnswer(false)} kind="secondary" size="compact">
+          {/* Focus starts in the dialog, on the choice that keeps things as they are. */}
+          <Button data-testid="auto-install-offer-no" onClick={() => onAnswer(false)} kind="secondary" size="compact" autoFocus>
             No, ask me each time
           </Button>
           <Button data-testid="auto-install-offer-yes" onClick={() => onAnswer(true)} kind="primary" size="compact">

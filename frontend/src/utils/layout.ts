@@ -14,7 +14,8 @@ import { acyclicEdges } from "./roleRanks";
 import { applyShowGraphPlacementWithCurves, knownSize } from "./showGraphLayout";
 import { useShowGraphCurves } from "@/stores/showGraphCurvesStore";
 import { placeCims } from "./cimPlacement";
-import { ovalBoxFor } from "./nodeBox";
+import { shapedBoxFor } from "./nodeBox";
+import { nodeShapeFor } from "./nodeShape";
 import { tidyIoRows } from "./ioRows";
 import { ioRowsNotApplying, useIoRowsStore, type IoRows } from "@/stores/ioRowsStore";
 import { currentSpacingFactor } from "@/stores/layoutSpacingStore";
@@ -101,7 +102,8 @@ function drawnBox(node: Node): { w: number; h: number } {
   const known = knownSize(node);
   if (known.w !== undefined && known.h !== undefined) return { w: known.w, h: known.h };
   const label = (node.data as { label?: string } | undefined)?.label;
-  const box = ovalBoxFor(label ?? node.id);
+  // #385: in its shape, at show_graph's proportions.
+  const box = shapedBoxFor(label ?? node.id, nodeShapeFor(node.data as any));
   return { w: known.w ?? box.width, h: known.h ?? box.height };
 }
 

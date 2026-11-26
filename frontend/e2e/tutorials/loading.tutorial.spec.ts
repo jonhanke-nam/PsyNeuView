@@ -69,7 +69,9 @@ test.describe("Tutorial: Loading a model", () => {
 
     // Guarantee: every bundled reference model is offered in the menu.
     for (const m of MODELS) {
-      await expect(page.getByText(m.label)).toBeVisible();
+      // A model in both Reference Models and the Library has one name in
+      // both (#422); the Reference Models entry comes first.
+      await expect(page.getByText(m.label).first()).toBeVisible();
     }
   });
 
@@ -88,7 +90,7 @@ test.describe("Tutorial: Loading a model", () => {
         // can exceed the default timeout under CI load. De-flake (#818/#662).
         { timeout: 60000 },
       );
-      await page.getByText(m.label).click();
+      await page.getByText(m.label).first().click();
       await loaded;
 
       // Guarantee: the graph renders, including a known node from the model.

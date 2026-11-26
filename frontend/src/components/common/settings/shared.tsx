@@ -7,6 +7,7 @@
  * (docs/settings-etiquette.md).
  */
 
+import { DisclosureArrow } from "@/components/common/Disclosure";
 import { useState, type CSSProperties, type ReactNode } from "react";
 
 export function Group({
@@ -48,9 +49,7 @@ export function Group({
           marginBottom: folded ? 4 : 8,
         }}
       >
-        <span aria-hidden="true" style={{ fontSize: "var(--pnv-fs-10)", width: 12, color: "var(--pnv-text-hint)" }}>
-          {folded ? "▶" : "▼"}
-        </span>
+        <DisclosureArrow open={!folded} small />
         <span
           style={{
             fontSize: "var(--pnv-fs-12)",

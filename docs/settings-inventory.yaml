@@ -539,8 +539,9 @@ settings:
     storage: browser localStorage (psyneuview.graph.edgeLineWidth)
     control: setting-edge-line-width
     notes: >-
-      An ordinary (Mapping) projection line, 1–4 px in whole pixels; 3 px by
-      default, the width lines were already drawn at (#107). Other projection
+      An ordinary (Mapping) projection line, 1–4 px in whole pixels; 2 px by
+      default, show_graph's weight against the node outlines (#425; 3 px
+      before). Other projection
       types keep their weight relative to it, arrowheads scale with it, and a
       hovered line stays 1 px heavier (0.5 px under the stepping cursor).
       Replaces the Style tab's Line thickness slider, which now links here.
@@ -684,8 +685,8 @@ settings:
     notes: >-
       Starts as the icon strip (default since #345, listed first) or Starts
       open, as the word list (#113). A stored choice is kept.
-      Decides how the Components panel opens. The panel's own ◀ button (› in the strip)
-      collapses or opens it for the current session without changing this
+      Decides how the Components panel opens. The arrow tab on the panel's
+      right edge (‹ on the full panel, › on the strip, #418) collapses or opens it for the current session without changing this
       setting; it is no longer remembered, and the old remembered value
       (psyneuview_palette_compact) is not read, so nobody stays stuck on the
       strip. Which sections are unfolded is still remembered by the panel.
