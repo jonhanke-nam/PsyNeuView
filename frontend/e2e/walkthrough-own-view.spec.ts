@@ -22,6 +22,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const EGO = path.resolve(__dirname, "..", "..", "backend", "reference_models", "Giallanza2024_ego_study2.py");
 
 const ego = loadWalkthrough("ego");
+const demo = loadWalkthrough("demo");
 const memory = ego.steps.findIndex((s) => s.id === "the-memory");
 
 test.use({ viewport: { width: 1600, height: 1000 } });
@@ -73,5 +74,35 @@ test.describe("a walkthrough opens in its own view (#428)", { tag: "@ci" }, () =
     await page.getByTestId("tour-dismiss").click();
     await expect(page.getByTestId("tour-bar")).toHaveCount(0);
     await expect(viewMenu(page)).toHaveValue("__flat__", { timeout: 60_000 });
+  });
+
+  test("ending a walkthrough on Stroop, which every view draws the same, loads nothing again", async ({ page }) => {
+    test.setTimeout(120_000);
+    expect(demo.view).toBe("nested");
+    await page.goto("/");
+    await closePalette(page);
+    await page.getByTestId("open-menu").click();
+    await page.getByText(demo.model!, { exact: true }).first().click();
+    await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 60_000 });
+
+    await page.getByTestId("walkthrough-menu").click();
+    await page.getByTestId("walkthrough-demo").click();
+    const choice = page.getByTestId("tutorial-choice");
+    await expect(page.getByTestId("tour-bar").or(choice).first()).toBeVisible({ timeout: 15_000 });
+    if (await choice.isVisible()) await choice.getByRole("button", { name: "Replace what's in this window" }).click();
+    await expect(page.getByTestId("tour-instruction")).toHaveText(demo.steps[0].instruct, { timeout: 15_000 });
+    // Its fresh copy has opened (#172).
+    await expect(page.getByTestId("status-bar")).toHaveCount(0, { timeout: 60_000 });
+
+    const loads: string[] = [];
+    page.on("request", (r) => {
+      if (r.url().includes("/api/model/load")) loads.push(r.url());
+    });
+    await page.getByTestId("tour-dismiss").click();
+    await expect(page.getByTestId("tour-bar")).toHaveCount(0);
+    // Long enough for a redraw to have been asked for.
+    await page.waitForTimeout(1500);
+    expect(loads, "ending it reloaded a model every view draws the same").toEqual([]);
+    await expect(page.locator(".react-flow__node").first()).toBeVisible();
   });
 });
