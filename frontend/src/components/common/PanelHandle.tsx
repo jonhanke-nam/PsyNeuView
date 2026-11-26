@@ -102,7 +102,10 @@ export class PressTracker {
 
 /** What a tab's hit area must not cover: a control of the pane beside it. Graph content pans, so it doesn't count. */
 const INTERACTIVE =
-  'button, a[href], input, select, textarea, [role="button"], [role="separator"], [role="option"], [tabindex]:not([tabindex="-1"])';
+  'button, a[href], input, select, textarea, [role="button"], [role="separator"], [role="option"], [tabindex]:not([tabindex="-1"]), [draggable="true"], .pnv-palette-tile';
+
+/** Taller than this, a focusable element is a region (a pane, the canvas), not a control. */
+const MAX_CONTROL_HEIGHT = 80;
 
 /**
  * The first offset along a vertical edge, from `from` on, where the tab's
@@ -255,7 +258,12 @@ export function PanelHandle({
       const t = tab.getBoundingClientRect();
       const isControlAt = (x: number, y: number) =>
         document.elementsFromPoint(x, y).some(
-          (el) => !root.contains(el) && el.matches(INTERACTIVE) && !el.closest(".react-flow__viewport"),
+          (el) =>
+            !root.contains(el) &&
+            el.matches(INTERACTIVE) &&
+            !el.closest(".react-flow__viewport") &&
+            // A focusable pane (the graph canvas takes keys) is not a control under the tab.
+            el.getBoundingClientRect().height <= MAX_CONTROL_HEIGHT,
         );
       // The hit area is the tab plus 5px each side (index.css).
       setClearOffset(clearTabOffset(r.top, r.height, t.left - 5, t.right + 5, t.height, tabOffset, isControlAt));

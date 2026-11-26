@@ -42,7 +42,8 @@ async function expectHitAreaClear(page: Page, tab: Locator) {
   expect(meets(hit, toggle), "the tab's hit area overlaps the palette toggle").toBe(false);
   const others = await page.evaluate((h) => {
     const tabEl = document.querySelector('[data-testid="code-pane-toggle"]');
-    return [...document.querySelectorAll("button, input, select, textarea, [role=button]")]
+    // The strip's category tiles are clickable too.
+    return [...document.querySelectorAll("button, input, select, textarea, [role=button], .pnv-palette-tile")]
       .filter((el) => el !== tabEl && !el.closest(".react-flow__viewport"))
       .map((el) => ({ el, r: el.getBoundingClientRect() }))
       .filter(({ r }) => r.width > 0 && r.height > 0 && r.x < h.x + h.width && h.x < r.x + r.width && r.y < h.y + h.height && h.y < r.y + r.height)
