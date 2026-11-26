@@ -18,6 +18,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app.services.file_writer import write_model_source
 from app.services.layout import load_layout, save_layout, sidecar_path
 
 # Bumped from "1.0": adds the named ``runData`` / ``mdf`` manifest slots and a
@@ -184,7 +185,9 @@ def extract_bundle(bundle_path: str | Path) -> dict:
     work = working_dir_for(bundle_path)
     work.mkdir(parents=True, exist_ok=True)
     working_py = work / f"{model_name}.py"
-    working_py.write_text(source)
+    # Through write_model_source: reopening a bundle rewrites a working copy
+    # a window may already be watching (#450).
+    write_model_source(working_py, source)
 
     if layout_data is not None:
         save_layout(
