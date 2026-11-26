@@ -61,7 +61,9 @@ async function openFromPath(page: Page, file: string) {
  */
 async function expectStroopOpen(page: Page, code = "Model: stroop_basic") {
   const canvas = page.getByTestId("graph-canvas");
-  await expect(page.getByTestId("model-name")).toContainText("stroop_model", { timeout: 60_000 });
+  // The title names the model by its menu label and file (#422).
+  await expect(page.getByTestId("model-title")).toHaveAttribute("data-model-file", "stroop_reference_basic.py", { timeout: 60_000 });
+  await expect(page.getByTestId("model-title")).toHaveAttribute("aria-label", /Stroop — Basic/);
   await expect(canvas.locator('.react-flow__node[data-id="color_input"]')).toBeVisible();
   await expect(canvas.locator('.react-flow__node[data-id="decision"]')).toBeVisible();
   await expect(page.locator(".cm-content")).toContainText(code);
