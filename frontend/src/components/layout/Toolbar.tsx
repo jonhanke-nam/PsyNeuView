@@ -11,7 +11,7 @@ import { useModelStore } from "@/stores/modelStore";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useTourStore } from "@/stores/tourStore";
 import { useCatalogOpener } from "@/stores/catalogOpenerStore";
-import { menuGroups, orientationWalkthroughs } from "@/utils/tourStep";
+import { getWalkthrough, menuGroups, orientationWalkthroughs } from "@/utils/tourStep";
 import { useTutorialsMenuStore, visibleMenuGroups } from "@/stores/tutorialsMenuStore";
 import { loadFoldedSections, saveFoldedSections, toggleFolded, unfoldActive } from "@/utils/tutorialsMenuFold";
 import { readOfferChoice, shouldRemindFromMenu, writeOfferChoice } from "@/utils/orientationOffer";
@@ -1002,7 +1002,7 @@ export function Toolbar() {
     // last one's edits without asking: that is what starting over is.
     const tutorial = tutorialCopyFor(demo.label);
     if (!(byTutorial && isTutorialCopy(useModelStore.getState().filePath)) && !confirmDiscard()) return;
-    if (tutorial) applyTutorialViewModes();
+    if (tutorial) applyTutorialViewModes(getWalkthrough(tutorial)); // #428: its own view
     setDropdownOpen(false);
     clearNotifications();
     setStatus(`Loading demo: ${demo.label}…`);
@@ -1195,7 +1195,7 @@ export function Toolbar() {
     if (restore) {
       if (!window.confirm(`Put ${rm.label} back to the bundled version? Your edits to it will be lost.`)) return;
     } else if (!(byTutorial && isTutorialCopy(useModelStore.getState().filePath)) && !confirmDiscard()) return;
-    if (tutorial) applyTutorialViewModes();
+    if (tutorial) applyTutorialViewModes(getWalkthrough(tutorial)); // #428: its own view
     setDropdownOpen(false);
     clearNotifications();
     setStatus(`Loading reference model: ${rm.label}…`);

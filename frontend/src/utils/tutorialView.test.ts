@@ -74,3 +74,50 @@ describe("the graph's view during a tutorial (#172)", () => {
     expect(g().showNodeNames).toBe(false);
   });
 });
+
+describe("a walkthrough's own view (#428)", () => {
+  beforeEach(() => {
+    resetTutorialViewForTests();
+    useGraphSettings.setState(useGraphSettings.getInitialState());
+    useCatalogOpener.setState({ reloadView });
+    reloadView.mockClear();
+    useModelStore.setState({ filePath: "/t.py", source: "a", savedSource: "a" });
+  });
+
+  it("opens its model in the view it names, with its folds, and gives the learner's back", () => {
+    expect(g().flat).toBe(true);
+    applyTutorialView({ view: "nested", compositions: { EM: "folded" } }, { opensOnStart: true });
+    // Its model is about to open: nothing is redrawn under the old one.
+    expect(reloadView).not.toHaveBeenCalled();
+    applyTutorialViewModes({ view: "nested", compositions: { EM: "folded" } });
+    expect(g()).toMatchObject({ flat: false, pytorch: false });
+    expect(g().collapsedCompositions.has("EM")).toBe(true);
+    expect(g().seededCollapseDefaults.has("EM")).toBe(true);
+    restoreTutorialView();
+    expect(g()).toMatchObject({ flat: true, pytorch: false });
+    expect(reloadView).toHaveBeenCalledTimes(1);
+  });
+
+  it("redraws the model on screen in its view when it opens none on start", () => {
+    applyTutorialView({ view: "pytorch" });
+    expect(g()).toMatchObject({ flat: false, pytorch: true });
+    expect(reloadView).toHaveBeenCalledTimes(1);
+    restoreTutorialView();
+    expect(g()).toMatchObject({ flat: true, pytorch: false });
+    expect(reloadView).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves the view alone over unsaved changes, so the menu still says how the model is drawn", () => {
+    useModelStore.setState({ source: "edited" });
+    applyTutorialView({ view: "nested" });
+    expect(g().flat).toBe(true);
+    expect(reloadView).not.toHaveBeenCalled();
+  });
+
+  it("an open composition stays open, though the nested view folds on first sight", () => {
+    useGraphSettings.setState({ collapsedCompositions: new Set(["inner"]) });
+    applyTutorialViewModes({ view: "nested", compositions: { inner: "open" } });
+    expect(g().collapsedCompositions.has("inner")).toBe(false);
+    expect(g().seededCollapseDefaults.has("inner")).toBe(true);
+  });
+});

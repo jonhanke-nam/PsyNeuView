@@ -42,7 +42,7 @@ import { tourIdFromUrl, useTourStore } from "@/stores/tourStore";
 import { useUIStore } from "@/stores/uiStore";
 import { openSettings } from "./settings/sections";
 import { narrationAvailable, narrationVoiceName, pauseSpeaking, resumeSpeaking, speakCaption, stopSpeaking, type SpeechEngine } from "@/utils/narration";
-import { matchesNodeName, type TourStep } from "@/utils/tourStep";
+import { getWalkthrough, matchesNodeName, type TourStep } from "@/utils/tourStep";
 import {
   isTutorialCopy,
   noteTutorialModel,
@@ -168,7 +168,11 @@ export function TourBar() {
   // another, goes through the cleanup too: the view is put back, then set again.
   useEffect(() => {
     if (!tourKey) return;
-    applyTutorialView();
+    // #428: in the view it was written for. One that opens its model now gets
+    // that view as the model loads; otherwise the model on screen is redrawn.
+    const w = getWalkthrough(useTourStore.getState().activeTourId);
+    const opensOnStart = !!w?.model && !w.steps.some((s) => s.opens === w.model);
+    applyTutorialView(w, { opensOnStart });
     // A selection left from before would finish a "select this node" step on
     // its own: starting over with color_hidden still selected went straight
     // to step 2. Every start begins with nothing selected (#172, #173).
