@@ -18,6 +18,7 @@ import { Z_MENU } from "@/constants/zLayers";
 import { useModelIdentity, useModelIdentityStore } from "@/stores/modelIdentityStore";
 import {
   SOURCE_DESCRIPTION,
+  SOURCE_TAG,
   abbreviateHome,
   fitTitle,
   titleParts,
@@ -37,7 +38,9 @@ const STYLE: Record<keyof TitleParts, CSSProperties> = {
     fontWeight: 600,
     color: "var(--pnv-primary-text-on-tint)",
     background: "var(--pnv-primary-tint)",
-    border: "1px solid var(--pnv-primary-tint-border)",
+    // An inset outline, not a border: the tag's box is then exactly its line's
+    // height and sits on the same top as the file name beside it.
+    boxShadow: "inset 0 0 0 1px var(--pnv-primary-tint-border)",
     borderRadius: 3,
     padding: "0 5px",
   },
@@ -48,7 +51,7 @@ const STYLE: Record<keyof TitleParts, CSSProperties> = {
 const SMALL: Partial<Record<keyof TitleParts, CSSProperties>> = {
   label: { fontSize: "var(--pnv-fs-10)", fontWeight: 400, fontFamily: "var(--pnv-font-mono)", color: "var(--pnv-text-hint)" },
   folder: { fontSize: "var(--pnv-fs-10)" },
-  tag: { lineHeight: "10px", padding: "0 4px" },
+  tag: { lineHeight: "12px", height: 12, padding: "0 4px" },
 };
 
 const ONE_LINE: CSSProperties = { whiteSpace: "nowrap", flexShrink: 0 };
@@ -63,6 +66,8 @@ function useMeasure(small: boolean) {
     Object.assign(el.style, STYLE[part], small ? SMALL[part] : {});
     el.textContent = text;
     const w = el.getBoundingClientRect().width;
+    // Left empty, so the page never holds a second, hidden copy of the title.
+    el.textContent = "";
     return w;
   };
   const hidden: CSSProperties = { position: "absolute", visibility: "hidden", whiteSpace: "nowrap", left: -10000, top: 0 };
@@ -152,6 +157,8 @@ export function ModelTitle({
         type="button"
         data-testid="model-title"
         data-model-source={id.source}
+        data-model-file={id.file}
+        aria-label={`${id.label ? `${id.label}, ${id.file}` : id.file} (${SOURCE_TAG[id.source]}): model details`}
         aria-expanded={cardOpen}
         aria-haspopup="dialog"
         onClick={() => setCardOpen((o) => !o)}
