@@ -21,6 +21,24 @@ The file is the narrative record; the label is the filter. (We deliberately
 don't use a single GitHub issue as the ledger — it gets noisy and is awkward to
 format.) Tracked as a process in #709.
 
+## Two bundled layouts drew nodes over each other on Linux (2026-11-26)
+
+**Caught by:** `e2e` → `saved-layouts-no-overlap.spec.ts`, "every reference
+model's saved layout: no two nodes overlap", both variants, on the 0.6.16-rc1
+batch ([#456](https://github.com/jonhanke-nam/PsyNeuView/pull/456)), on CI's
+Linux runner only
+
+With #423's show_graph proportions a mechanism drawn as a circle is as tall as
+its name is wide, so its height follows the font. Kalanthroff's RESPONSE_LAYER
+(176 px tall on a Mac) sat 4 px above COLOR_LAYER, and Nieuwenhuis's RESPONSE
+LAYER 11 px above DECISION LAYER. Linux's wider font metrics made the circles
+taller, and they overlapped by 1 and 2 px: an outline running into the next
+node, on screen for anyone on Linux. It passed on a Mac, where the same layouts
+just fit. Fixed in the layout data, not the test: each bundled layout now
+leaves room for nodes 10% bigger than a Mac draws them, with the type and role
+tags on (Kalanthroff's rows moved apart and its inputs spread out; Nieuwenhuis's
+RESPONSE LAYER moved up), so no node is nudged on any platform.
+
 ## Stepping a run stopped the trial card short, under a row that wasn't there (2026-11-24)
 
 **Caught by:** `e2e` → `tour-ring-clear-of-text.spec.ts`, "no step's ring
