@@ -188,10 +188,22 @@ export function useFileWatcher() {
           const more = files.length > 3 ? ` and ${files.length - 3} more` : "";
           const { source, savedSource, filePath: open } = useModelStore.getState();
           const unsaved = source !== savedSource;
-          const applied = !!(message.model && message.filePath === open && !unsaved);
+          const applied = !!(message.filePath && message.filePath === open && !unsaved);
           record("file", `PsyNeuLink code changed on disk: ${names}${more}`, { files: files.length, applied });
           if (applied) {
-            applyChange(message.source, message.model);
+            // The message says the code changed, not how the model now looks
+            // (#451, as #442 for file_changed): this window reads the model
+            // again in the view it shows, not the backend's default (nested).
+            const changed: string = message.filePath;
+            const seq = ++changeSeq.current;
+            void readDiskVersion(changed).then((disk) => {
+              if (seq !== changeSeq.current) return;
+              const now = useModelStore.getState();
+              if (now.filePath !== changed || now.source !== now.savedSource) return;
+              // Can't be read now: a backend from before #451 pushed a graph.
+              const fresh = disk ?? (message.model ? { source: message.source, model: message.model } : null);
+              if (fresh) applyChange(fresh.source, fresh.model);
+            });
           }
           // One notice however many times it changes: saving PsyNeuLink files
           // one after another replaces the notice rather than stacking them
