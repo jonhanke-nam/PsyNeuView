@@ -95,6 +95,8 @@ interface PaletteState {
   favorites: string[];
   recentlyUsed: string[];
   compactFlyoutNodeId: string | null;
+  /** #411: the strip menu was opened from the keyboard, so it takes focus. */
+  compactFlyoutFromKeyboard: boolean;
   /** #372: favourites and recents shown in the icon strip (a setting). */
   showStripShortcuts: boolean;
   setShowStripShortcuts: (show: boolean) => void;
@@ -106,7 +108,20 @@ interface PaletteState {
    * where it goes. Clicking a component used to add it at once, wherever the
    * layout put it, sometimes off-screen.
    */
-  armed: { type: string; defaults: Record<string, string>; label: string } | null;
+  armed: {
+    type: string;
+    defaults: Record<string, string>;
+    label: string;
+    /**
+     * #411: picked up from the keyboard. The graph then shows where it would
+     * go and takes focus (Enter puts it down, arrows move it, Esc cancels);
+     * a function chooses its mechanism with Tab or the arrows. A pick made
+     * with the mouse waits for a click, as before.
+     */
+    viaKeyboard?: boolean;
+    /** #411: where keyboard focus goes back to once it is put down or cancelled. */
+    returnFocus?: HTMLElement | null;
+  } | null;
   setArmed: (armed: PaletteState["armed"]) => void;
   /**
    * #354: the function being dragged from the panel, while it is dragged, so
@@ -125,7 +140,7 @@ interface PaletteState {
   collapseNode: (nodeId: string) => void;
   toggleFavorite: (type: string) => void;
   addRecentlyUsed: (type: string) => void;
-  openCompactFlyout: (nodeId: string) => void;
+  openCompactFlyout: (nodeId: string, fromKeyboard?: boolean) => void;
   closeCompactFlyout: () => void;
 
 }
@@ -138,6 +153,7 @@ export const usePaletteStore = create<PaletteState>((set, get) => ({
   favorites: loadJson<string[]>(LS_FAVORITES, []),
   recentlyUsed: loadJson<string[]>(LS_RECENTS, []),
   compactFlyoutNodeId: null,
+  compactFlyoutFromKeyboard: false,
   showStripShortcuts: loadStripShortcuts(),
   setShowStripShortcuts: (show) => {
     try {
@@ -208,6 +224,6 @@ export const usePaletteStore = create<PaletteState>((set, get) => ({
     localStorage.setItem(LS_RECENTS, JSON.stringify(recents));
     set({ recentlyUsed: recents });
   },
-  openCompactFlyout: (nodeId) => set({ compactFlyoutNodeId: nodeId }),
-  closeCompactFlyout: () => set({ compactFlyoutNodeId: null }),
+  openCompactFlyout: (nodeId, fromKeyboard = false) => set({ compactFlyoutNodeId: nodeId, compactFlyoutFromKeyboard: fromKeyboard }),
+  closeCompactFlyout: () => set({ compactFlyoutNodeId: null, compactFlyoutFromKeyboard: false }),
 }));

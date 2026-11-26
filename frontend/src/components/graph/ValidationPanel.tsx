@@ -5,6 +5,7 @@
  * shape mismatch (#1235).
  */
 
+import { DisclosureArrow } from "@/components/common/Disclosure";
 import { useState } from "react";
 import { useModelStore } from "@/stores/modelStore";
 
@@ -44,6 +45,8 @@ export function ValidationPanel() {
     >
       <button
         onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        data-testid="validation-toggle"
         style={{
           width: "100%",
           textAlign: "left",
@@ -60,11 +63,10 @@ export function ValidationPanel() {
         }}
         title={expanded ? "Hide list" : "Show list"}
       >
+        {/* #418: the one row arrow, at the start of the row. */}
+        <DisclosureArrow open={expanded} />
         <span style={{ fontSize: "var(--pnv-fs-14)" }}>⚠</span>
         <span data-testid="validation-summary" title={`${issueCount} to fix`}>{kinds.join(", ")}</span>
-        <span style={{ marginLeft: "auto", fontFamily: "sans-serif", fontSize: "var(--pnv-fs-10)" }}>
-          {expanded ? "▾" : "▸"}
-        </span>
       </button>
       {expanded && (
         <ul

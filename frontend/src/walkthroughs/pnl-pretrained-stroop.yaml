@@ -27,6 +27,8 @@ docs:
 # What stays in the notebook: show_graph and reportOutputPref. The last step
 # says so.
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: open-the-demo
     anchor:

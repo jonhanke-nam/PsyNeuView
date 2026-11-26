@@ -40,7 +40,11 @@ export interface RenderingDefaults {
 
 // show_graph-parity values. Prior defaults were 2 / 5 / 0.5.
 export const RENDERING_DEFAULTS: RenderingDefaults = {
-  arrowLineThickness: 3, // ordinary lines 3 px (#107: the Line width default)
+  // Ordinary lines 2 px (#107: the Line width default). #425: show_graph draws
+  // a line at 1 pt against an input or output node's 3 pt outline; 2 px
+  // against the canvas's 6 px keeps that weight (it was 3 px, half as heavy
+  // again as show_graph's).
+  arrowLineThickness: 2,
   arrowheadSize: 10, // #278: larger, so an arrow's direction reads at a glance (was 7)
   arrowheadPosition: 1, // at the target, where show_graph draws it (was 0.5, mid-line)
   nodeBorderWidth: 4, // ordinary roles (#42: was 1, too light to read; 4 since rc testing)

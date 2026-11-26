@@ -17,9 +17,16 @@
  * Its styling lives here and nowhere else: it is the one icon button of
  * docs/ui-style-conventions.md (#1302), its colours palette tokens and its
  * three sizes (full, `compact`, `inline`) its own, not a Button kind's.
+ *
+ * The header also looks after the keyboard focus of the dialog around it
+ * (#415, dialogFocus.ts): into the dialog when it opens, kept inside while a
+ * modal one is open, and back to where it was when it closes. Every dialog
+ * has this header, so every dialog gets that without code of its own.
  */
 
-import type { CSSProperties, ReactNode } from "react";
+import { useRef, type CSSProperties, type ReactNode } from "react";
+
+import { useDialogFocus } from "./dialogFocus";
 
 interface CloseProps {
   onClick: () => void;
@@ -113,11 +120,14 @@ interface Props {
 }
 
 export function DialogHeader({ title, onClose, titleId, compact = false, children }: Props) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  useDialogFocus(ref);
   const style: CSSProperties = compact
     ? { gap: 8, padding: "6px 8px 6px 12px" }
     : { gap: 12, padding: "12px 16px 12px 20px" };
   return (
     <div
+      ref={ref}
       data-testid="dialog-header"
       style={{
         display: "flex",

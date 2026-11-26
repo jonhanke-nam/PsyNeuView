@@ -37,3 +37,13 @@ export function userAgentForHost(userAgent: string, platform: string = process.p
 export function modLabel(key: string): string {
   return HOST_IS_MAC ? `⌘${key.toUpperCase()}` : `Ctrl+${key.toUpperCase()}`;
 }
+
+/** The same with Shift: "⇧⌘Z" on a Mac, "Ctrl+Shift+Z" elsewhere (#409). */
+export function modShiftLabel(key: string): string {
+  return HOST_IS_MAC ? `⇧⌘${key.toUpperCase()}` : `Ctrl+Shift+${key.toUpperCase()}`;
+}
+
+/** A label as a literal piece of a regular expression ("Ctrl+Z" has a "+"). */
+export function literal(label: string): string {
+  return label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

@@ -1197,6 +1197,27 @@ def task_introspect(params):
             )
         except Exception:  # an extra; never let it break loading the model
             pass
+    if compositions and not developer_mode:
+        # #385: the shape show_graph draws each node in, so the canvas draws
+        # the same one (a circle where show_graph draws a circle); #425: and
+        # how it draws each projection.
+        try:
+            t_shapes = time.time()
+            shapes, edges, asked = _show_graph_looks(module, compositions, pnl, result.get("showGraph"))
+            _sys.stderr.write(f"[perf] show_graph shapes: {time.time() - t_shapes:.3f}s "
+                              f"({'asked' if asked else 'reused'})\n")
+            if shapes:
+                result["showGraphShapes"] = shapes
+            if edges:
+                # #425: each projection's arrowhead, line and colour, as
+                # show_graph draws it.
+                result["showGraphEdges"] = edges
+            if asked:
+                # Kept like the layout's answers, so "Like show_graph" with
+                # these options needn't ask again.
+                result.setdefault("showGraph", []).append(asked)
+        except Exception:  # an extra; never let it break loading the model
+            pass
     try:
         input_sets = _find_input_sets(module, all_comps)
     except Exception:  # never let an optional extra break loading the model
@@ -1272,6 +1293,145 @@ def task_introspect(params):
 _SHOW_GRAPH_MAX_COMPOSITIONS = 2
 
 
+def _outermost_composition(compositions):
+    """The page's rule (modelStore): the first composition whose name isn't a
+    node inside another composition."""
+    def clean(n):
+        return re.sub(r'-\d+$', '', n) if n else n
+
+    nested = set()
+    for c in compositions:
+        for node in c.get("nodes") or []:
+            if node.get("kind") == "composition":
+                n = node.get("varName") or node.get("name")
+                nested.update({n, clean(n)})
+    names = [c["varName"] for c in compositions if c.get("varName")]
+    return next((n for n in names if n not in nested and clean(n) not in nested),
+                names[0] if names else None)
+
+
+# A node statement in show_graph's Graphviz source: its name, then its
+# attributes. An edge ("a" -> "b" [...]) has an arrow after the name, so it
+# doesn't match.
+_DOT_NODE = re.compile(r'^\s*("(?:[^"\\]|\\.)*"|[A-Za-z_][\w.]*)\s*\[(.*)\]\s*;?\s*$')
+_DOT_SHAPE = re.compile(r'(?:^|[\s,])shape="?(\w+)"?')
+
+
+def show_graph_node_shapes(dot):
+    """The Graphviz shape show_graph gives each node, by node name (#385).
+
+    Read from show_graph's own description, so the canvas draws what show_graph
+    draws: ``doublecircle`` for a node on a cycle, ``octagon`` for a feedback
+    sender, and so on, including any shape a model sets on show_graph itself.
+    The ``node [...]`` default line and nodes with no shape of their own are
+    skipped. A label comes before ``shape`` in Graphviz's sorted attributes,
+    so the last ``shape=`` on the line is the node's own.
+    """
+    shapes = {}
+    for line in (dot or "").splitlines():
+        m = _DOT_NODE.match(line)
+        if not m:
+            continue
+        name = m.group(1)
+        if name.startswith('"'):
+            name = re.sub(r'\\(.)', r'\1', name[1:-1])
+        if name in ("node", "edge", "graph"):
+            continue
+        found = _DOT_SHAPE.findall(m.group(2))
+        if found:
+            shapes[name] = found[-1]
+    return shapes
+
+
+# An edge statement: its two ends (each a name, maybe with a :port), then its
+# attributes.
+_DOT_NAME = r'(?:"(?:[^"\\]|\\.)*"|[A-Za-z_][\w.]*)'
+_DOT_EDGE = re.compile(
+    rf'^\s*({_DOT_NAME})(?::{_DOT_NAME})*\s*->\s*({_DOT_NAME})(?::{_DOT_NAME})*\s*\[(.*)\]\s*;?\s*$'
+)
+_DOT_ATTR = re.compile(r'(\w+)=("(?:[^"\\]|\\.)*"|[^\s\]]+)')
+
+
+def _dot_unquote(text):
+    if text.startswith('"'):
+        return re.sub(r'\\(.)', r'\1', text[1:-1])
+    return text
+
+
+def show_graph_edge_looks(dot):
+    """How show_graph draws each projection, from its own description (#425).
+
+    One entry per drawn edge, in show_graph's order: the two nodes it joins
+    (by name) and the edge's ``arrowhead`` (``normal``, or ``box`` for a
+    control projection), ``color``, ``style`` and ``penwidth`` as show_graph
+    gave them. The invisible edges show_graph adds to rank its nodes are
+    left out, and so are attributes it didn't set.
+    """
+    looks = []
+    for line in (dot or "").splitlines():
+        m = _DOT_EDGE.match(line)
+        if not m:
+            continue
+        attrs = {k: _dot_unquote(v) for k, v in _DOT_ATTR.findall(m.group(3))}
+        if attrs.get("style") == "invis":
+            continue
+        look = {"sender": _dot_unquote(m.group(1)), "receiver": _dot_unquote(m.group(2))}
+        for key in ("arrowhead", "color", "style", "penwidth"):
+            if attrs.get(key):
+                look[key] = attrs[key]
+        looks.append(look)
+    return looks
+
+
+def _show_graph_looks(module, compositions, pnl, answers=None):
+    """show_graph's shape for each node of the model (#385), and how it draws
+    each projection (#425).
+
+    Uses show_graph's description of the outermost composition with nested
+    compositions open, which names every node. An answer this load already
+    has (the "Like show_graph" layout's) is reused; otherwise show_graph is
+    asked once, about 0.04-0.09 s. Returns the shapes, the edges (see
+    show_graph_edge_looks) and, when it asked, the answer, for the route to
+    keep.
+    """
+    outer = _outermost_composition(compositions)
+    if not outer:
+        return {}, [], None
+    shapes = {}
+    edges = None
+    # The plain picture first; one with learning shown only adds its learning
+    # nodes, and draws a projection that learns as a node of its own, so its
+    # edges aren't used. A PyTorch picture (an answer with a note, #72) draws
+    # the model differently, so it isn't used.
+    usable = [a for a in answers or []
+              if a.get("composition") == outer
+              and (a.get("options") or {}).get("show_nested") == "nested"
+              and "dot" in (a.get("answer") or {})
+              and not (a.get("answer") or {}).get("note")]
+    for a in sorted(usable, key=lambda a: bool(a["options"].get("show_learning"))):
+        for name, shape in show_graph_node_shapes(a["answer"]["dot"]).items():
+            shapes.setdefault(name, shape)
+        if edges is None and not a["options"].get("show_learning"):
+            edges = show_graph_edge_looks(a["answer"]["dot"])
+    if shapes and edges is not None:
+        return shapes, edges, None
+    comp = _resolve_composition(module, outer)
+    if comp is None or not isinstance(comp, pnl.Composition):
+        return shapes, edges or [], None
+    options = {
+        "show_controller": True,
+        "show_learning": False,
+        "show_cim": False,
+        "show_nested": "nested",
+    }
+    answer = _show_graph_source(pnl, comp, options)
+    if "dot" not in answer:
+        return shapes, edges or [], None
+    for name, shape in show_graph_node_shapes(answer["dot"]).items():
+        shapes.setdefault(name, shape)
+    return shapes, show_graph_edge_looks(answer["dot"]), {"composition": outer, "options": options, "answer": answer}
+
+
 def _show_graph_while_loaded(module, compositions, request, pnl):
     """Ask show_graph about the model this load just built (#27).
 
@@ -1292,20 +1452,8 @@ def _show_graph_while_loaded(module, compositions, request, pnl):
     Never fails the load: a failure is recorded as show_graph's own refusal,
     which is what asking separately would have returned.
     """
-    # The page's rule (modelStore): the outermost composition is the first
-    # whose name isn't a node inside another composition.
-    def clean(n):
-        return re.sub(r'-\d+$', '', n) if n else n
-
-    nested = set()
-    for c in compositions:
-        for node in c.get("nodes") or []:
-            if node.get("kind") == "composition":
-                n = node.get("varName") or node.get("name")
-                nested.update({n, clean(n)})
     names = [c["varName"] for c in compositions if c.get("varName")]
-    outermost = next((n for n in names if n not in nested and clean(n) not in nested),
-                     names[0] if names else None)
+    outermost = _outermost_composition(compositions)
     wanted = []
     for name in (outermost, request.get("composition")):
         if name and name in names and name not in wanted:
@@ -3078,12 +3226,28 @@ def _resolve_cim(mech, comp, direction):
 
 
 def _get_node_roles(comp, node):
-    """Get the set of role names for a node in a composition."""
+    """Get the set of role names for a node in a composition.
+
+    Adds ``CONTROL`` for a ControlMechanism that is one of the composition's
+    nodes rather than its controller (an LCControlMechanism, #425):
+    show_graph draws such a node in its ``control_color``, and PsyNeuLink has
+    no node role that says so. The composition's controller is drawn apart,
+    as ``CONTROLLER``.
+    """
     try:
         roles = comp.get_roles_by_node(node)
-        return sorted(r.name for r in roles) if roles else []
+        names = sorted(r.name for r in roles) if roles else []
     except Exception:
-        return []
+        names = []
+    try:
+        import psyneulink as pnl
+        if (isinstance(node, pnl.ControlMechanism)
+                and node is not getattr(comp, "controller", None)
+                and "CONTROL" not in names):
+            names = sorted(names + ["CONTROL"])
+    except Exception:
+        pass
+    return names
 
 
 def _ensure_graph_analyzed(comp):
@@ -3670,7 +3834,11 @@ def _flatten_graph(comp, line_map, proj_name_lookup, name_to_var):
             # show_graph draws both; the same projection reached twice
             # through the interfaces is still one edge.
             edge_key = (id(start.sender), id(proj.receiver))
-            if edge_key in seen_edges or id(sender) == id(receiver):
+            if edge_key in seen_edges:
+                continue
+            # A node's own recurrent projection is a self-loop show_graph
+            # draws (#425); one that only comes back through an interface is not.
+            if id(sender) == id(receiver) and len(chain) > 1:
                 continue
             seen_edges.add(edge_key)
             flat_projections.append(
@@ -3743,8 +3911,10 @@ def _pytorch_flatten(comp, line_map, proj_name_lookup, name_to_var):
             if mech is not None:
                 rank[id(mech)] = i
 
-    # Provenance: the nested-composition path each mechanism was inlined from.
+    # Provenance: the nested-composition path each mechanism was inlined from,
+    # and where it is declared, walking the compositions in their node order.
     comp_path = {}
+    declared = {}
 
     def walk_paths(c, path):
         for node in c.nodes:
@@ -3752,12 +3922,21 @@ def _pytorch_flatten(comp, line_map, proj_name_lookup, name_to_var):
                 walk_paths(node, path + [node.name])
             elif not is_cim(node):
                 comp_path[id(node)] = path
+                declared.setdefault(id(node), len(declared))
 
     walk_paths(comp, [])
 
+    # #432: the wrapper fills nodes_map from a set of the composition's nodes,
+    # so its order follows memory addresses and changes from one run to the
+    # next. The layered layout places nodes by the order it is given them, so
+    # the same model came out laid out differently each time it was opened.
+    # Give the nodes, and the edges below, in the order the model declares them.
+    def node_order(mech):
+        return (declared.get(id(mech), len(declared)), getattr(mech, "name", ""))
+
     node_ids = set(id(m) for m in nodes_map.keys())
     nodes = []
-    for mech, wrapper in nodes_map.items():
+    for mech, wrapper in sorted(nodes_map.items(), key=lambda kv: node_order(kv[0])):
         node_data = serialize_mechanism(mech)
         node_data["kind"] = "mechanism"
         node_data["roles"] = _get_node_roles(comp, mech)
@@ -3823,11 +4002,16 @@ def _pytorch_flatten(comp, line_map, proj_name_lookup, name_to_var):
         if edge_key in seen_edges or id(sender) == id(receiver):
             continue
         seen_edges.add(edge_key)
-        projections.append(
-            _serialize_flat_projection(sender, receiver, [proj], proj_name_lookup, via_cim=via_cim)
-        )
+        projections.append((
+            (node_order(sender), node_order(receiver),
+             getattr(s_port, "name", ""), getattr(r_port, "name", "")),
+            _serialize_flat_projection(sender, receiver, [proj], proj_name_lookup, via_cim=via_cim),
+        ))
 
-    return nodes, projections
+    # In declared order too (#432): nested projections are added in the
+    # wrapper's set order.
+    projections.sort(key=lambda kp: kp[0])
+    return nodes, [p for _, p in projections]
 
 
 def serialize_composition(var_name, comp, line_map, proj_name_lookup=None, name_to_var=None, flat=False, pytorch=False):
@@ -3891,8 +4075,11 @@ def serialize_composition(var_name, comp, line_map, proj_name_lookup=None, name_
         if sender_name not in visible_names or receiver_name not in visible_names:
             continue
 
-        # Skip self-loops (can happen with CIM resolution)
-        if sender_name == receiver_name:
+        # A projection from a node to itself (a RecurrentTransferMechanism's
+        # or an LCA's recurrent projection) is a self-loop show_graph draws
+        # (#425). Two different ends that resolve to one name (a nested
+        # composition's own interfaces) are not, and are skipped.
+        if sender_name == receiver_name and sender_mech is not receiver_mech:
             continue
 
         # Deduplicate (multiple CIM projections can resolve to the same edge),

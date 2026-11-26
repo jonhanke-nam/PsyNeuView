@@ -44,6 +44,8 @@ docs:
 # projection back to hidden, whose timing is the Primer's Dynamics of
 # Execution (lesson 9). The last step says so.
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: open-the-demo
     anchor:

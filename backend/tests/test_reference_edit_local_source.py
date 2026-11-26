@@ -231,8 +231,9 @@ def test_an_outside_save_to_an_open_library_model_updates_the_app_once_and_quick
     """#1242 cases 1 and 2.
 
     Case 1: a PyCharm save of the open Library model reaches the app as
-    ``file_changed``, carrying the new source and a graph re-read from it,
-    within the time budget. The measured time is printed (run with ``-s``).
+    ``file_changed``, carrying the new source, and the window's re-read of
+    the graph in its own view (#442) follows it, all within the time budget.
+    The measured time is printed (run with ``-s``).
 
     Case 2: that one save is reported once. The PsyNeuLink code watcher is
     watching the same checkout, but ignores the open model's own file, so no
@@ -253,15 +254,18 @@ def test_an_outside_save_to_an_open_library_model_updates_the_app_once_and_quick
             edited = _rename_prediction(library_file.read_text(), "PREDICTION_1242")
             saved_at = _safe_write(library_file, edited)
             message = _await(socket, "file_changed", seen)
+            # What the window does next (#442): re-read in its view.
+            reread = client.post("/api/model/load", json={"file_path": str(library_file), "flat": True})
             elapsed = time.monotonic() - saved_at
-            print(f"\n[#1242] outside save -> file_changed: {elapsed:.2f}s (budget {EDIT_TO_UPDATE_BUDGET_S:.0f}s)")
+            print(f"\n[#1242] outside save -> file_changed and re-read: {elapsed:.2f}s (budget {EDIT_TO_UPDATE_BUDGET_S:.0f}s)")
 
             _drain_quietly(socket, seen, QUIET_WINDOW_S)
 
     # Case 1: the editor text and the graph both follow the outside save.
     assert Path(message["filePath"]).resolve() == library_file.resolve()
     assert message["source"] == edited
-    nodes = _node_names(message["model"])
+    assert reread.status_code == 200, reread.text
+    nodes = _node_names(reread.json()["model"])
     assert "PREDICTION_1242" in nodes and "PREDICTION" not in nodes, sorted(nodes)
     assert elapsed <= EDIT_TO_UPDATE_BUDGET_S, f"outside save took {elapsed:.2f}s to reach the app"
 
@@ -318,7 +322,7 @@ def test_an_edit_to_the_psyneulink_original_does_not_reach_the_reference_copy(lo
         assert loaded.status_code == 200, loaded.text
         body = loaded.json()
         working = Path(body["file_path"])
-        assert working.parent == (local_checkout.parent / "working").resolve()
+        assert working.parent == (local_checkout.parent / "working" / "reference-models").resolve()
         before = working.read_text()
         before_nodes = _node_names(body["model"])
         assert "PREDICTION" in before_nodes

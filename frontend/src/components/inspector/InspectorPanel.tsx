@@ -4,6 +4,7 @@
  * Edits are sent to the backend, which updates the .py file and re-introspects.
  */
 
+import { DisclosureDetails } from "@/components/common/Disclosure";
 import { modelViewOptions } from "@/utils/showGraphLoadRequest";
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useModelStore } from "@/stores/modelStore";
@@ -232,6 +233,7 @@ async function sendParamUpdate(
       is_default: isDefault,
       skip_introspect: skipIntrospect,
       function_class: functionClass,
+      ...modelViewOptions(), // #431: the model sent back is in the view shown
     }),
     signal,
   });
@@ -259,6 +261,7 @@ async function sendFunctionTypeUpdate(
       file_path: filePath,
       var_name: varName,
       new_function_class: newFunctionClass,
+      ...modelViewOptions(), // #431
     }),
     signal,
   });
@@ -294,6 +297,7 @@ async function sendPortRename(
       current_names: currentNames,
       old_name: oldName,
       new_name: newName,
+      ...modelViewOptions(), // #431
     }),
     signal,
   });
@@ -325,6 +329,7 @@ async function sendPortAdd(
       port_kind: portKind,
       current_names: currentNames,
       new_name: newName,
+      ...modelViewOptions(), // #431
     }),
     signal,
   });
@@ -356,6 +361,7 @@ async function sendPortRemove(
       port_kind: portKind,
       current_names: currentNames,
       port_name: portName,
+      ...modelViewOptions(), // #431
     }),
     signal,
   });
@@ -408,7 +414,7 @@ export function SchedulerModeToggle({ mode, fontPx }: { mode: string; fontPx: nu
       title={`Scheduling mode: ${mode}. Click to switch to ${next}.`}
       style={{
         fontSize: fontPx, fontWeight: 600, fontFamily: "var(--pnv-font-mono)",
-        color: "var(--pnv-on-primary)", background: mode === "STANDARD" ? "var(--pnv-primary)" : "var(--pnv-warning)",
+        color: "var(--pnv-on-primary)", background: mode === "STANDARD" ? "var(--pnv-primary)" : "var(--pnv-warning-badge)",
         padding: "1px 8px", borderRadius: 8, border: "none", cursor: "pointer",
       }}
     >
@@ -2237,6 +2243,8 @@ function PortRow({
       ) : (
         <input
           type="text"
+          // Stable handle per port, as port-shape-<name> (#431).
+          data-testid={`port-name-${name}`}
           value={draft}
           onChange={(e) => { setDraft(e.target.value); setEditing(true); }}
           onFocus={() => setEditing(true)}
@@ -2556,10 +2564,11 @@ function ParamSection({
       )}
 
       {inherited.length > 0 && (
-        <details style={{ marginTop: 6 }}>
-          <summary style={{ fontSize: s(11), color: "var(--pnv-text-faint)", cursor: "pointer", userSelect: "none", padding: "2px 0" }}>
-            Inherited ({inherited.length})
-          </summary>
+        <DisclosureDetails
+          style={{ marginTop: 6 }}
+          summaryStyle={{ fontSize: s(11), color: "var(--pnv-text-faint)", cursor: "pointer", userSelect: "none", padding: "2px 0" }}
+          summary={<>Inherited ({inherited.length})</>}
+        >
           <div style={{ marginTop: 4 }}>
             {inherited.map(([key, meta]) => (
               <div
@@ -2579,7 +2588,7 @@ function ParamSection({
               </div>
             ))}
           </div>
-        </details>
+        </DisclosureDetails>
       )}
     </div>
   );

@@ -28,10 +28,13 @@ export function NotificationBar() {
   const notifications = useNotificationStore((s) => s.notifications);
   const dismiss = useNotificationStore((s) => s.dismissNotification);
 
-  if (notifications.length === 0) return null;
-
+  // The stack is always in the page, empty when there is nothing to say, so
+  // screen readers are already listening when a message arrives: a live
+  // region added along with its first message is often not read out.
   return (
     <div
+      aria-live="polite"
+      data-testid="notification-stack"
       style={{
         position: "fixed",
         top: 8,
@@ -51,6 +54,8 @@ export function NotificationBar() {
             key={notif.id}
             data-testid="notification"
             data-notification-type={notif.type}
+            // An error interrupts; the others wait their turn.
+            role={notif.type === "error" ? "alert" : "status"}
             style={{
               display: "flex",
               alignItems: "flex-start",

@@ -4,6 +4,7 @@
  * Collapsible, shown after file load.
  */
 
+import { DisclosureArrow } from "@/components/common/Disclosure";
 import { useState, useEffect } from "react";
 import { useModelStore } from "@/stores/modelStore";
 import { useNotificationStore } from "@/stores/notificationStore";
@@ -13,6 +14,7 @@ import { useDismiss } from "./dialog/useDismiss";
 import { Button } from "./Button";
 import { SyncIndicator } from "./SyncIndicator";
 import { DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
+import { modelViewOptions } from "@/utils/showGraphLoadRequest";
 
 /** Format a load-time total (ms) as seconds: "2.3s" (1 decimal under 10s). */
 function fmtLoadSeconds(ms: number): string {
@@ -90,7 +92,6 @@ export function DiagnosticPanel() {
     return (
       <div
         className="diagnostics-collapsed-bar"
-        onClick={() => setCollapsed(false)}
         data-tone={hasIssues ? "attention" : "neutral"}
         // #109: the bar says it expands on hover, not in a line of text.
         title="Model Diagnostics: click to expand"
@@ -99,11 +100,23 @@ export function DiagnosticPanel() {
           ...barColours,
           fontSize: "var(--pnv-fs-11)",
           color: "var(--pnv-text-muted)",
-          cursor: "pointer",
           display: "flex",
           gap: 8,
         }}
       >
+        {/* #418: a real button, so the keyboard reaches it and it says it is
+            folded. It fills the bar up to the file-watch status, which is a
+            control of its own. */}
+        <button
+          type="button"
+          className="diagnostics-toggle"
+          data-testid="diagnostics-toggle"
+          aria-expanded={false}
+          aria-controls="pnv-model-diagnostics"
+          onClick={() => setCollapsed(false)}
+          title="Model Diagnostics: click to expand"
+        >
+        <DisclosureArrow open={false} small />
         <span>
           {compLabel}: {diagnostics.mechanismCount} mechanisms, {diagnostics.projectionCount} projections
         </span>
@@ -113,9 +126,9 @@ export function DiagnosticPanel() {
           </span>
         )}
         {hasIssues && (
-          <span style={{
+          <span data-testid="diagnostics-warning-count" style={{
             color: "var(--pnv-on-primary)",
-            background: "var(--pnv-warning)",
+            background: "var(--pnv-warning-badge)",
             fontSize: "var(--pnv-fs-10)",
             fontWeight: 700,
             padding: "0 5px",
@@ -127,6 +140,7 @@ export function DiagnosticPanel() {
             {diagnostics.warnings.length}
           </span>
         )}
+        </button>
         {/* #103: the file-watch status lives here, not in a row of its own,
             at the right end of the bar. */}
         <span style={{ marginLeft: "auto", display: "flex" }}>
@@ -138,6 +152,7 @@ export function DiagnosticPanel() {
 
   return (
     <div
+      id="pnv-model-diagnostics"
       style={{
         padding: "8px 12px",
         ...barColours,
@@ -151,6 +166,9 @@ export function DiagnosticPanel() {
         </span>
         <button
           onClick={() => setCollapsed(true)}
+          aria-expanded={true}
+          aria-controls="pnv-model-diagnostics"
+          data-testid="diagnostics-toggle"
           style={{
             fontSize: "var(--pnv-fs-10)", border: "none", background: "none",
             color: "var(--pnv-text-faint)", cursor: "pointer",
@@ -213,7 +231,7 @@ export function DiagnosticPanel() {
                 const resp = await fetch("/api/model/undo-star-convert", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ file_path: filePath }),
+                  body: JSON.stringify({ file_path: filePath, ...modelViewOptions() }), // #431
                 });
                 if (resp.ok) {
                   const data = await resp.json();
@@ -336,7 +354,7 @@ function RevertButton({ filePath }: { filePath: string }) {
           const copyResp = await fetch("/api/model/save-source", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ file_path: filePath, source: backupData.source }),
+            body: JSON.stringify({ file_path: filePath, source: backupData.source, ...modelViewOptions() }), // #431
           });
           if (copyResp.ok) {
             const data = await copyResp.json();
@@ -370,7 +388,7 @@ function ConvertButton({ filePath }: { filePath: string }) {
       const resp = await fetch("/api/model/convert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file_path: filePath, backup: true }),
+        body: JSON.stringify({ file_path: filePath, backup: true, ...modelViewOptions() }), // #431
       });
       if (resp.ok) {
         const data = await resp.json();

@@ -18,6 +18,8 @@ docs:
   - tutorials/04-debugger-stepping.md
 model: Bistable Attractor
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: the-run-tab
     anchor:

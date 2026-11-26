@@ -32,14 +32,20 @@ async function openPath(page: Page, file: string) {
   await closePalette(page);
 }
 
-/** Node positions in flow coordinates (unaffected by zoom), by id. */
+/**
+ * Node positions in flow coordinates (unaffected by zoom), by id, with each
+ * drawn size to a tenth of a pixel. The sizes are on screen, so a zoom refit
+ * that differs in the fifth decimal (260 vs 260.00003, on CI with #423's
+ * show_graph proportions) is not a change.
+ */
 async function positions(page: Page) {
   return page.locator(".react-flow__node").evaluateAll((ns) =>
     Object.fromEntries(
       ns.map((n) => {
         const m = (n as HTMLElement).style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/)!;
         const r = n.getBoundingClientRect();
-        return [(n as HTMLElement).dataset.id!, { x: +m[1], y: +m[2], w: r.width, h: r.height }];
+        const tenth = (v: number) => Math.round(v * 10) / 10;
+        return [(n as HTMLElement).dataset.id!, { x: +m[1], y: +m[2], w: tenth(r.width), h: tenth(r.height) }];
       }),
     ),
   );

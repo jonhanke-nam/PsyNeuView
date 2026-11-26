@@ -700,6 +700,15 @@ describe("parseWalkthrough — the orientation's fields (#1310)", () => {
     expect(() => parseWalkthrough(doc("", "    say: [a, b]\n"))).toThrow(/say must be text/);
   });
 
+  it("lets an instruction name a {key:…}, but only with a caption of its own (#409)", () => {
+    const keyed = (step: string) =>
+      "id: x\ntitle: X\nsteps:\n  - id: s\n    anchor: {testid: t}\n    instruct: Press Undo (or {key:history.undo})\n" +
+      step + "    done: {next: true}\n";
+    expect(parseWalkthrough(keyed("    say: Undo takes it back.\n")).steps[0].instruct).toBe("Press Undo (or {key:history.undo})");
+    expect(() => parseWalkthrough(keyed(""))).toThrow(/needs its own say/);
+    expect(() => parseWalkthrough(keyed("    say: Press {key:history.undo}\n"))).toThrow(/say can't name/);
+  });
+
   it("takes within only as a testid, on a step with a testid anchor (#170)", () => {
     expect(parseWalkthrough(doc("", "    within: open-menu\n")).steps[0].within).toBe("open-menu");
     expect(() => parseWalkthrough(doc("", "    within: [open-menu]\n"))).toThrow(/within must be/);
@@ -712,5 +721,48 @@ describe("parseWalkthrough — the orientation's fields (#1310)", () => {
     expect(parseWalkthrough(doc("", "    say: Where it has been.\n    say_phonemes: Where it has [[ bˈɪn ]].\n")).steps[0].say_phonemes)
       .toBe("Where it has [[ bˈɪn ]].");
     expect(() => parseWalkthrough(doc("", "    say_phonemes: Where it has [[ bˈɪn ]].\n"))).toThrow(/needs a say/);
+  });
+});
+
+describe("a walkthrough's view (#428)", () => {
+  const base = `id: v
+title: V
+steps:
+  - id: s
+    anchor: { node: a }
+    instruct: Select a.
+    done: { selectedNode: a }
+`;
+
+  it("reads view and compositions", () => {
+    const w = parseWalkthrough(`view: nested\ncompositions:\n  EM: folded\n  inner: open\n${base}`);
+    expect(w.view).toBe("nested");
+    expect(w.compositions).toEqual({ EM: "folded", inner: "open" });
+    expect(parseWalkthrough(`view: flattened\n${base}`).view).toBe("flattened");
+    expect(parseWalkthrough(`view: pytorch\n${base}`).view).toBe("pytorch");
+    expect(parseWalkthrough(base).view).toBeUndefined();
+  });
+
+  it("refuses a view it doesn't know", () => {
+    expect(() => parseWalkthrough(`view: flat\n${base}`)).toThrow(/view must be one of nested, flattened, pytorch/);
+    expect(() => parseWalkthrough(`view: true\n${base}`)).toThrow(/view must be one of/);
+  });
+
+  it("refuses a fold that is neither folded nor open, and folds outside the nested view", () => {
+    expect(() => parseWalkthrough(`view: nested\ncompositions:\n  EM: closed\n${base}`)).toThrow(
+      /composition "EM" must be folded or open/,
+    );
+    expect(() => parseWalkthrough(`view: nested\ncompositions: [EM]\n${base}`)).toThrow(/compositions must map/);
+    expect(() => parseWalkthrough(`view: flattened\ncompositions:\n  EM: folded\n${base}`)).toThrow(/needs view: nested/);
+    expect(() => parseWalkthrough(`compositions:\n  EM: folded\n${base}`)).toThrow(/needs view: nested/);
+  });
+
+  it("every shipped walkthrough says which view it was written for", () => {
+    const missing = Object.values(WALKTHROUGHS).filter((w) => !w.view).map((w) => w.id);
+    expect(missing).toEqual([]);
+  });
+
+  it("EGO's is the nested view, with EM folded to the node its steps select", () => {
+    expect(getWalkthrough("ego")).toMatchObject({ view: "nested", compositions: { EM: "folded" } });
   });
 });

@@ -2,15 +2,15 @@
   "version": 1,
   "positions": {
     "words_input_layer": {
-      "x": 18,
+      "x": 10,
       "y": 900
     },
     "bias_input": {
-      "x": 188,
+      "x": 210,
       "y": 900
     },
     "colors_input_layer": {
-      "x": 358,
+      "x": 410,
       "y": 900
     },
     "task_input_layer": {
@@ -19,19 +19,19 @@
     },
     "word_feature_layer": {
       "x": -2,
-      "y": 720
+      "y": 640
     },
     "color_feature_layer": {
       "x": 338,
-      "y": 720
+      "y": 640
     },
     "task_demand_layer": {
       "x": 698,
-      "y": 720
+      "y": 640
     },
     "response_layer": {
       "x": 168,
-      "y": 540
+      "y": 380
     }
   }
 }

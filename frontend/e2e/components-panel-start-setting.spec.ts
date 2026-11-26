@@ -54,18 +54,23 @@ test.describe("Components panel opening setting (#113)", { tag: "@ci" }, () => {
     // The setting names the fold button's two faces as the panel shows them.
     await page.getByTestId("settings-button").click();
     await page.getByTestId("settings-section-appearance").click();
-    await expect(page.locator('label[for="setting-components-start"]')).toContainText("◀ when open, › in the strip");
+    await expect(page.locator('label[for="setting-components-start"]')).toContainText("‹ when open, › in the strip");
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("settings-panel")).toBeHidden();
 
-    await expect(palette.getByTitle("Compact mode")).toHaveText("◀");
-    await palette.getByTitle("Compact mode").click();
+    // #418: the fold is the arrow tab on the panel's right edge, pointing the way the panel will go.
+    const fold = palette.getByTestId("palette-fold");
+    await expect(fold).toHaveAttribute("aria-expanded", "true");
+    await expect(fold.locator("svg")).toHaveAttribute("data-direction", "left");
+    await fold.click();
     await expect(palette.getByPlaceholder("Search components…")).toHaveCount(0);
-    await expect(palette.getByTestId("palette-strip-expand")).toHaveText("›");
+    const expand = palette.getByTestId("palette-strip-expand");
+    await expect(expand).toHaveAttribute("aria-expanded", "false");
+    await expect(expand.locator("svg")).toHaveAttribute("data-direction", "right");
 
     await page.reload();
     await expect(palette).toBeVisible();
     await expect(palette.getByPlaceholder("Search components…")).toBeVisible();
-    await expect(palette.getByTitle("Compact mode")).toBeVisible();
+    await expect(palette.getByTestId("palette-fold")).toBeVisible();
   });
 });

@@ -89,6 +89,8 @@ export function SidecarPlacementPicker() {
       <button
         data-testid="sidecar-placement-button"
         onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
         title="Where this model's sidecar files (layouts, labels) are stored on disk"
         style={{
           fontSize: "var(--pnv-fs-11)",

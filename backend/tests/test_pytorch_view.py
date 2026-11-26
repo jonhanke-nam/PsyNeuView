@@ -139,6 +139,27 @@ def test_parallel_projections_on_different_ports_are_kept(ego, view):
     assert all(n <= 2 for n in pairs.values())
 
 
+def test_pytorch_view_is_in_declared_order(ego):
+    # #432: PsyNeuLink fills the wrapper's nodes_map from a set of the
+    # composition's nodes, so its order followed memory addresses and changed
+    # on every open; the layered layout then placed EGO's PyTorch view
+    # differently each time. The nodes come in the order the model declares
+    # them, the same order the flattened view gives, and the edges by their
+    # ends in that order.
+    pytorch = serialize_composition("EGO_comp", ego, {}, {}, {}, pytorch=True)
+    flat = serialize_composition("EGO_comp", ego, {}, {}, {}, flat=True)
+    names = [clean_name(n["name"]) for n in pytorch["nodes"]]
+    in_flat = [clean_name(n["name"]) for n in flat["nodes"]]
+    assert names == [n for n in in_flat if n in set(names)]
+
+    place = {n: i for i, n in enumerate(names)}
+    ends = [
+        (place[clean_name(e["sender"]["mechanism"])], place[clean_name(e["receiver"]["mechanism"])])
+        for e in pytorch["projections"]
+    ]
+    assert ends == sorted(ends)
+
+
 # ─────────────────────────── non-autodiff fallback ─────────────────────────
 
 

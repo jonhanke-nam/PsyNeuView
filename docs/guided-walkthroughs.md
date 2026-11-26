@@ -38,6 +38,10 @@ docs:                           # optional: the docs pages it relies on, under d
   - what-you-can-edit.md        #   (shown in the bar, so drift is caught in review)
 developerMode: true             # optional: turn developer mode on while it runs,
                                 #   and put it back after (the developer track only)
+view: nested                    # the view it was written for: nested, flattened
+                                #   or pytorch (every shipped walkthrough says, #428)
+compositions:                   # optional, nested view only: fold or open these
+  EM: folded                    #   compositions by name (folded | open)
 
 steps:
   - id: learn-and               # unique within the file
@@ -80,6 +84,13 @@ steps:
   instruction is **what you'd point at**, with the exact control names. Every
   step has a caption (a unit test fails otherwise), with no code names, and
   any label it quotes is named in the instruction too (`narrationCaptions.test.ts`, #87).
+- **Name a keyboard shortcut by its id, never as "⌘Z".** Write
+  `{key:history.undo}` in the instruction (the ids are in
+  `frontend/src/shortcuts/registry.ts`); the bar shows ⌘Z on a Mac, Ctrl+Z
+  elsewhere, and the key as rebound in Settings (#409). Only the instruction
+  may: a step that names one needs its own `say:`, which can't, since
+  narration reads recorded lines as written. Keys the Mac app's own menus keep
+  (⌘, for Settings) are Mac-only and are written out.
 - `pointer: true` is for a step whose point is "look here": the pointer glides
   from where it last was to the anchor (700 ms), and only then does the bar
   show the instruction. The ring is drawn at once either way. Replay sends it
@@ -92,6 +103,18 @@ steps:
   while it says the menu is closed. Leave it off a step whose action is to
   pick something from the menu, since picking closes it.
 - Quote node names that contain brackets: `node: "1 [QUERY]"`.
+- `view:` is the graph view the steps were written against, as the view menu
+  names it: `nested` (each composition on its own, nested ones folded on
+  first sight, #395), `flattened` ("Flatten (all compositions)", every
+  composition a frame) or `pytorch`. A step that selects a nested
+  composition's node needs `nested`: flattened, the composition is a frame,
+  and the bar says the node "isn't in the model you have open". Every shipped
+  walkthrough declares one (a unit test checks), and all of today's say
+  `nested`, the view their models opened in when they were written. See
+  **Known view settings** below for when it applies.
+- `compositions:` folds or opens named compositions in the nested view when a
+  step needs one a certain way (EGO's `EM: folded`, so "Select EM" has a
+  node). It needs `view: nested`; the others keep the nested view's default.
 - Then **register** the walkthrough in `frontend/src/utils/tourStep.ts`: add an
   `import …Yaml from "@/walkthroughs/<id>.yaml?raw"` and an entry in
   `WALKTHROUGHS`. A malformed file fails at app startup, on purpose.
@@ -128,6 +151,19 @@ inset compositions, and the nested and PyTorch views. The ones the server draws
 for change only as the walkthrough opens its model, and changing them back
 reloads the model, unless it has unsaved changes. Settings' own preferences
 (the automatic layout, port dots) are left as they are.
+
+The nested, flattened or PyTorch view is the walkthrough's own `view:`, not
+a fresh window's (#428), with its `compositions:` folded or opened. A
+walkthrough that opens its model on start gets that view as the model loads,
+through the same view options every open sends. One that opens none on start
+(it builds its model, or a step teaches opening it) redraws the model on
+screen in that view as it starts, unless that model has unsaved changes, so
+the view menu always says how the graph is drawn. The learner's own view
+comes back when it ends. When the two views draw the model the same (no
+nested composition, one composition, interface mechanisms hidden, and no
+AutodiffComposition for PyTorch), only the setting changes, at start and at
+the end: nothing is loaded again (`viewsDrawAlike`; performance is a
+requirement).
 
 **Ways back.** The code as each step began is kept (`stepStart`), taken when the
 step starts on the walkthrough's model or when that model opens during it, so
