@@ -749,7 +749,9 @@ class ModelViewRequest(BaseModel):
     The page opens models flattened by default while the backend's default is
     nested, so an open that left these out came back nested under a view menu
     reading "Flatten (all compositions)": EGO's EM showed folded, and Expand
-    could not open it. Every route that opens a model takes them.
+    could not open it. Every route that opens a model takes them, and so does
+    every route that edits one and sends it back re-read (#431): a parameter, a
+    port, a node name, saving typed code, converting the file.
     """
     # Flat view (#658): inline every nested composition into one graph.
     flat: bool = False
@@ -895,7 +897,7 @@ class ActivityRemoveRequest(BaseModel):
     kinds: list[str]
 
 
-class UpdateParamRequest(BaseModel):
+class UpdateParamRequest(ModelViewRequest):
     file_path: str
     var_name: str
     param_name: str
@@ -921,14 +923,14 @@ class SaveLabelsRequest(BaseModel):
     variant: str | None = None
 
 
-class UpdateFunctionTypeRequest(BaseModel):
+class UpdateFunctionTypeRequest(ModelViewRequest):
     file_path: str
     var_name: str
     new_function_class: str
     skip_introspect: bool = False
 
 
-class RenamePortRequest(BaseModel):
+class RenamePortRequest(ModelViewRequest):
     file_path: str
     var_name: str
     port_kind: Literal["input", "output"]
@@ -937,7 +939,7 @@ class RenamePortRequest(BaseModel):
     new_name: str
 
 
-class RenameNodeRequest(BaseModel):
+class RenameNodeRequest(ModelViewRequest):
     file_path: str
     var_name: str
     new_name: str
@@ -946,7 +948,7 @@ class RenameNodeRequest(BaseModel):
     current_name: str | None = None
 
 
-class AddPortRequest(BaseModel):
+class AddPortRequest(ModelViewRequest):
     file_path: str
     var_name: str
     port_kind: Literal["input", "output"]
@@ -954,7 +956,7 @@ class AddPortRequest(BaseModel):
     new_name: str
 
 
-class RemovePortRequest(BaseModel):
+class RemovePortRequest(ModelViewRequest):
     file_path: str
     var_name: str
     port_kind: Literal["input", "output"]
@@ -962,7 +964,7 @@ class RemovePortRequest(BaseModel):
     port_name: str
 
 
-class SaveSourceRequest(BaseModel):
+class SaveSourceRequest(ModelViewRequest):
     file_path: str
     source: str
     #: What the client believes is currently on disk — the text it last loaded
@@ -1490,7 +1492,7 @@ def update_param(request: UpdateParamRequest):
     if request.skip_introspect:
         return {"source": updated_source}
 
-    model = load_and_introspect(request.file_path)
+    model = load_and_introspect(request.file_path, flat=request.flat, pytorch=request.pytorch)
     layout = load_layout(request.file_path)
     return LoadModelResponse(model=_attach_dangling(model, updated_source), source=updated_source, layout=layout)
 
@@ -1519,7 +1521,7 @@ def update_function_type(request: UpdateFunctionTypeRequest):
     if request.skip_introspect:
         return {"source": updated_source}
 
-    model = load_and_introspect(request.file_path)
+    model = load_and_introspect(request.file_path, flat=request.flat, pytorch=request.pytorch)
     layout = load_layout(request.file_path)
     return LoadModelResponse(model=_attach_dangling(model, updated_source), source=updated_source, layout=layout)
 
@@ -1543,7 +1545,7 @@ def rename_port(request: RenamePortRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    model = load_and_introspect(request.file_path)
+    model = load_and_introspect(request.file_path, flat=request.flat, pytorch=request.pytorch)
     layout = load_layout(request.file_path)
     return LoadModelResponse(model=_attach_dangling(model, updated_source), source=updated_source, layout=layout)
 
@@ -1571,7 +1573,7 @@ def rename_node(request: RenameNodeRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    model = load_and_introspect(request.file_path)
+    model = load_and_introspect(request.file_path, flat=request.flat, pytorch=request.pytorch)
     layout = load_layout(request.file_path)
     return LoadModelResponse(model=_attach_dangling(model, updated_source), source=updated_source, layout=layout)
 
@@ -1594,7 +1596,7 @@ def add_port(request: AddPortRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    model = load_and_introspect(request.file_path)
+    model = load_and_introspect(request.file_path, flat=request.flat, pytorch=request.pytorch)
     layout = load_layout(request.file_path)
     return LoadModelResponse(model=_attach_dangling(model, updated_source), source=updated_source, layout=layout)
 
@@ -1623,7 +1625,7 @@ def remove_port(request: RemovePortRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    model = load_and_introspect(request.file_path)
+    model = load_and_introspect(request.file_path, flat=request.flat, pytorch=request.pytorch)
     layout = load_layout(request.file_path)
     return LoadModelResponse(model=_attach_dangling(model, updated_source), source=updated_source, layout=layout)
 
@@ -1726,7 +1728,7 @@ def save_source_endpoint(request: SaveSourceRequest):
         on_disk = path.read_text()
         if on_disk != request.base_source:
             try:
-                disk_model = load_and_introspect(str(path))
+                disk_model = load_and_introspect(str(path), flat=request.flat, pytorch=request.pytorch)
             except Exception as e:
                 disk_model = {"compositions": [], "lineMap": {}, "error": str(e)}
             raise HTTPException(
@@ -1752,7 +1754,7 @@ def save_source_endpoint(request: SaveSourceRequest):
     sync_preview(request.file_path, request.source)
 
     try:
-        model = load_and_introspect(request.file_path)
+        model = load_and_introspect(request.file_path, flat=request.flat, pytorch=request.pytorch)
     except Exception as e:
         # If the code is invalid, still save but return error in model.
         # Still surface dangling-projection info so the validation surface
@@ -2059,7 +2061,7 @@ def undo_star_convert(request: LoadModelRequest):
     shutil.copy2(backup, path)
     backup.unlink()
     source = path.read_text()
-    model = load_and_introspect(str(path))
+    model = load_and_introspect(str(path), flat=request.flat, pytorch=request.pytorch)
     layout = load_layout(str(path))
     return LoadModelResponse(model=_attach_dangling(model, source), source=source, layout=layout)
 
@@ -2478,7 +2480,7 @@ def open_project(request: OpenProjectRequest):
     }
 
 
-class SaveProjectRequest(BaseModel):
+class SaveProjectRequest(ModelViewRequest):
     file_path: str  # the working .py extracted from the bundle
     source: str
     bundle_path: str  # the origin .pnlproject to re-zip into
@@ -2517,7 +2519,7 @@ def save_project(request: SaveProjectRequest):
     (working.parent / "manifest.json").write_text(json_mod.dumps(new_manifest, indent=2))
 
     try:
-        model = load_and_introspect(request.file_path)
+        model = load_and_introspect(request.file_path, flat=request.flat, pytorch=request.pytorch)
     except Exception as e:
         return {
             "model": _attach_dangling(
@@ -2746,13 +2748,11 @@ async def import_mdf(
     }
 
 
-class StructuralChangeRequest(BaseModel):
+class StructuralChangeRequest(ModelViewRequest):
+    # The view the page shows (ModelViewRequest): the model sent back is
+    # re-read in it, or a flattened view turns nested after every change (#252).
     file_path: str
     changes: dict  # {action, var_name, type?, params?, sender?, receiver?, composition?}
-    # The view the page shows (as LoadModelRequest): the model sent back is
-    # re-read in it, or a flattened view turns nested after every change (#252).
-    flat: bool = False
-    pytorch: bool = False
 
 
 @router.post("/model/structural-change", response_model=LoadModelResponse)
@@ -2795,7 +2795,7 @@ def structural_change(request: StructuralChangeRequest):
     return LoadModelResponse(model=_attach_dangling(model, updated_source), source=updated_source, layout=layout)
 
 
-class ConvertRequest(BaseModel):
+class ConvertRequest(ModelViewRequest):
     file_path: str
     backup: bool = True
 
@@ -2815,7 +2815,7 @@ def convert_model(request: ConvertRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Conversion failed: {e}")
 
-    model = load_and_introspect(request.file_path)
+    model = load_and_introspect(request.file_path, flat=request.flat, pytorch=request.pytorch)
     layout = load_layout(request.file_path)
     return LoadModelResponse(
         model=_attach_dangling(model, new_source),

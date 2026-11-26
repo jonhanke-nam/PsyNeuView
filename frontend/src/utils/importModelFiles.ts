@@ -14,7 +14,7 @@
 import { useModelStore } from "@/stores/modelStore";
 import { useLayoutStore } from "@/stores/layoutStore";
 import { useNotificationStore } from "@/stores/notificationStore";
-import { appendModelView, modelLoadOptions } from "@/utils/showGraphLoadRequest";
+import { appendModelView, modelLoadOptions, modelViewOptions } from "@/utils/showGraphLoadRequest";
 import { guardOpen } from "@/utils/tutorialGuard";
 import { beginModelOpen, isNewestModelOpen } from "@/utils/modelOpenSequence";
 
@@ -86,7 +86,7 @@ async function importPython(file: File): Promise<void> {
     const saveResp = await fetch("/api/model/save-source", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: fullPath, source }),
+      body: JSON.stringify({ file_path: fullPath, source, ...modelViewOptions() }), // #431
     });
     if (saveResp.status === 404) {
       // A new name: save-source only writes files that exist, so create it

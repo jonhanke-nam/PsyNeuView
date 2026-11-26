@@ -13,6 +13,7 @@ import { useDismiss } from "./dialog/useDismiss";
 import { Button } from "./Button";
 import { SyncIndicator } from "./SyncIndicator";
 import { DIALOG_SCRIM_BOTTOM } from "@/constants/zLayers";
+import { modelViewOptions } from "@/utils/showGraphLoadRequest";
 
 /** Format a load-time total (ms) as seconds: "2.3s" (1 decimal under 10s). */
 function fmtLoadSeconds(ms: number): string {
@@ -213,7 +214,7 @@ export function DiagnosticPanel() {
                 const resp = await fetch("/api/model/undo-star-convert", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ file_path: filePath }),
+                  body: JSON.stringify({ file_path: filePath, ...modelViewOptions() }), // #431
                 });
                 if (resp.ok) {
                   const data = await resp.json();
@@ -336,7 +337,7 @@ function RevertButton({ filePath }: { filePath: string }) {
           const copyResp = await fetch("/api/model/save-source", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ file_path: filePath, source: backupData.source }),
+            body: JSON.stringify({ file_path: filePath, source: backupData.source, ...modelViewOptions() }), // #431
           });
           if (copyResp.ok) {
             const data = await copyResp.json();
@@ -370,7 +371,7 @@ function ConvertButton({ filePath }: { filePath: string }) {
       const resp = await fetch("/api/model/convert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file_path: filePath, backup: true }),
+        body: JSON.stringify({ file_path: filePath, backup: true, ...modelViewOptions() }), // #431
       });
       if (resp.ok) {
         const data = await resp.json();

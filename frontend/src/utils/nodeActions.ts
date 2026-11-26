@@ -222,6 +222,7 @@ async function renameDeclaration(
         new_name: trimmed,
         existing_names: existing,
         current_name: currentName,
+        ...modelViewOptions(), // #431: the model sent back is in the view shown
       }),
     });
     const text = await resp.text();
@@ -498,7 +499,7 @@ export async function setMechanismFunction(
     const resp = await fetch("/api/model/update-function-type", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath, var_name: varName, new_function_class: fnType }),
+      body: JSON.stringify({ file_path: filePath, var_name: varName, new_function_class: fnType, ...modelViewOptions() }), // #431
     });
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) throw new Error(data.detail || "Function change failed");
