@@ -14,7 +14,7 @@
 import { useModelStore } from "@/stores/modelStore";
 import { useLayoutStore } from "@/stores/layoutStore";
 import { useNotificationStore } from "@/stores/notificationStore";
-import { modelLoadOptions } from "@/utils/showGraphLoadRequest";
+import { appendModelView, modelLoadOptions } from "@/utils/showGraphLoadRequest";
 import { guardOpen } from "@/utils/tutorialGuard";
 import { beginModelOpen, isNewestModelOpen } from "@/utils/modelOpenSequence";
 
@@ -40,6 +40,7 @@ async function importProject(file: File): Promise<void> {
   try {
     const formData = new FormData();
     formData.append("file", file);
+    appendModelView(formData); // #428
     const resp = await fetch("/api/model/import-project", {
       method: "POST",
       body: formData,

@@ -15,6 +15,8 @@ course: "0.2"
 # — so in PsyNeuLink those settings give 1.38. The horizontal shift the
 # notebook means is x_0. Every number below was measured in the app.
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: start-a-new-model
     anchor:

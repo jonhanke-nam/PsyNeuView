@@ -28,6 +28,8 @@ docs:
 # noisy cue, the in-between cue going to Z, and, with four letters stored,
 # the same cue settling on X.
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: open-hopfield
     anchor:

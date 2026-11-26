@@ -19,6 +19,8 @@ title: Building a Drift Diffusion Model
 course: "2.1"
 # No `model:` — this walkthrough creates its own.
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: start-a-new-model
     anchor:

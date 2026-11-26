@@ -17,6 +17,8 @@ minutes: 3
 docs:
   - where-things-live.md
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: open-the-menu
     anchor:

@@ -12,6 +12,8 @@ model: Logic Gate Network
 # measures every time (50 epochs, learning rate 10): AND 0.32 -> 0.0007,
 # XOR 0.57 -> 0.251.
 
+view: nested                    # the view it was written for (#428)
+
 steps:
   - id: open-network
     anchor:

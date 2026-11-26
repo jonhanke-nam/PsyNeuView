@@ -328,6 +328,12 @@ export interface TourStep {
 /** `opens: new model`: the step teaches Open ▸ New Model…. */
 export const OPENS_NEW_MODEL = "new model";
 
+/** The graph view a walkthrough was written for (#428): what the view menu shows. */
+export const WALKTHROUGH_VIEWS = ["nested", "flattened", "pytorch"] as const;
+export type WalkthroughView = (typeof WALKTHROUGH_VIEWS)[number];
+/** How a walkthrough wants one of its model's compositions drawn in the nested view. */
+export type WalkthroughFold = "folded" | "open";
+
 export interface Walkthrough {
   id: string;
   title: string;
@@ -365,6 +371,17 @@ export interface Walkthrough {
   developerMode?: boolean;
   /** About how long it takes, in minutes, for the menu (#1310). */
   minutes?: number;
+  /**
+   * The view the walkthrough was written for (#428). Starting it switches the
+   * graph to this view before step 1, and the learner's own comes back after.
+   * Every shipped walkthrough declares one (a unit test checks).
+   */
+  view?: WalkthroughView;
+  /**
+   * Compositions to fold or open, by name, when the steps need one a certain
+   * way in the nested view (#428). Others keep the nested view's default (#395).
+   */
+  compositions?: Record<string, WalkthroughFold>;
   steps: TourStep[];
 }
 
@@ -529,7 +546,7 @@ function sameTrials(wanted: TrialInputs, actual: Record<string, unknown[]>): boo
 export function parseWalkthrough(text: string): Walkthrough {
   const raw = yaml.load(text) as Partial<Walkthrough> | undefined;
   if (!raw || typeof raw !== "object") throw new Error("walkthrough: not a mapping");
-  const { id, title, model, course, orientation, psyneulink, docs, developerMode, minutes, steps } = raw;
+  const { id, title, model, course, orientation, psyneulink, docs, developerMode, minutes, view, compositions, steps } = raw;
   if (!id || !title) throw new Error("walkthrough: needs id and title");
   if (!Array.isArray(steps) || steps.length === 0) throw new Error("walkthrough: needs steps");
   steps.forEach((step, i) => {
@@ -581,6 +598,22 @@ export function parseWalkthrough(text: string): Walkthrough {
   if (minutes !== undefined && (typeof minutes !== "number" || minutes <= 0)) {
     throw new Error(`walkthrough "${id}": minutes must be a number`);
   }
+  if (view !== undefined && !(WALKTHROUGH_VIEWS as readonly unknown[]).includes(view)) {
+    throw new Error(`walkthrough "${id}": view must be one of ${WALKTHROUGH_VIEWS.join(", ")}, got ${JSON.stringify(view)}`);
+  }
+  if (compositions !== undefined) {
+    if (!compositions || typeof compositions !== "object" || Array.isArray(compositions)) {
+      throw new Error(`walkthrough "${id}": compositions must map a composition's name to folded or open`);
+    }
+    for (const [name, fold] of Object.entries(compositions)) {
+      if (fold !== "folded" && fold !== "open") {
+        throw new Error(`walkthrough "${id}": composition "${name}" must be folded or open, got ${JSON.stringify(fold)}`);
+      }
+    }
+    if (view !== "nested") {
+      throw new Error(`walkthrough "${id}": compositions fold only in the nested view, so it needs view: nested`);
+    }
+  }
   return {
     id,
     title,
@@ -591,6 +624,8 @@ export function parseWalkthrough(text: string): Walkthrough {
     docs: docList,
     developerMode,
     minutes,
+    view,
+    compositions,
     steps,
   };
 }
