@@ -24,7 +24,7 @@ const MODELS_DIR = path.resolve(__dirname, "..", "..", "backend", "reference_mod
 const model = (file: string) => path.join(MODELS_DIR, file);
 
 interface Expected {
-  /** Text the title (the model name in the toolbar) shows. */
+  /** Text the title (the model name in the toolbar) shows: its menu label (#422). */
   title: string;
   /** Nodes the graph must draw. */
   nodes: string[];
@@ -35,25 +35,25 @@ interface Expected {
 }
 
 const COHEN_HUSTON: Expected = {
-  title: "Bidirectional Stroop Model",
+  title: "Stroop — Bidirectional (Cohen & Huston 1994)",
   nodes: ["TASK DEMAND", "COLOR HIDDEN"],
   code: "Cohen_Huston1994.py",
 };
 // Same nodes and arrows as Cohen & Huston: only the title and code tell them apart.
 const CONFLICT_MONITORING: Expected = {
-  title: "CONFLICT MONITORING_SYSTEM",
+  title: "Conflict Monitoring — Stroop (Botvinick et al. 2001)",
   nodes: ["TASK DEMAND", "COLOR HIDDEN"],
   // Opened from the PsyNeuLink Library: the upstream file, no vendored header.
   code: "Conflict monitoring and cognitive control",
 };
 const GILZENRAT: Expected = {
-  title: "Composition",
+  title: "Locus Coeruleus — gain model (Gilzenrat et al.)",
   nodes: ["LC", "DECISION LAYER"],
   gone: ["TASK DEMAND"],
   code: "GilzenratModel.py",
 };
 const STROOP: Expected = {
-  title: "stroop_model",
+  title: "Stroop — Basic",
   nodes: ["color_input", "decision"],
   gone: ["TASK DEMAND", "LC"],
   code: "Model: stroop_basic",
@@ -73,7 +73,9 @@ async function openFromPath(page: Page, file: string) {
 
 async function expectShowing(page: Page, want: Expected) {
   const canvas = page.getByTestId("graph-canvas");
-  await expect(page.getByTestId("model-name")).toContainText(want.title, { timeout: 60_000 });
+  // The title shortens a long label to fit (#422); its accessible name has it whole.
+  const whole = new RegExp(want.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  await expect(page.getByTestId("model-title")).toHaveAttribute("aria-label", whole, { timeout: 60_000 });
   for (const id of want.nodes) {
     await expect(canvas.locator(`.react-flow__node[data-id="${id}"]`)).toBeVisible();
   }
