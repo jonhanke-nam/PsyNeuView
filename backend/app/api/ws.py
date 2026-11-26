@@ -92,8 +92,12 @@ def _is_open_model(path: str) -> bool:
 def _on_psyneulink_changed(changed: list[str]) -> None:
     """PsyNeuLink's own code changed in the local checkout (#1225).
 
-    The runner has already restarted by now. Re-read the open model so what's
-    on screen reflects the new code, and say which files changed.
+    The runner has already restarted by now. Say which files changed, with the
+    open model's text, but not a graph (#451, as #442 did for ``file_changed``):
+    each window shows the model in its own view (nested, flattened, PyTorch,
+    show_graph's layout), so each re-reads it through /api/model/load with its
+    own options. One graph built here came back nested in a window showing
+    the flattened view.
     """
     try:
         loop = _loop
@@ -104,11 +108,11 @@ def _on_psyneulink_changed(changed: list[str]) -> None:
             asyncio.run_coroutine_threadsafe(
                 broadcast({"type": "psyneulink_changed", "changedFiles": changed, "filePath": None}), loop)
             return
-        # Each open model re-read for those who have it open (#272).
+        # Each open model, to those who have it open (#272).
         for file_path in paths:
             message = {
                 "type": "psyneulink_changed", "changedFiles": changed, "filePath": file_path,
-                "source": Path(file_path).read_text(), "model": load_and_introspect(file_path),
+                "source": Path(file_path).read_text(),
             }
             asyncio.run_coroutine_threadsafe(send_to(file_watcher.subscribers(file_path), message), loop)
     except Exception as e:
