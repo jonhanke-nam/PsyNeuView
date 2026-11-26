@@ -22,16 +22,25 @@ export function DisclosureArrow({
   open,
   small = false,
   hidden = false,
+  line,
 }: {
   open: boolean;
   small?: boolean;
   /** Keep the space but draw nothing: a row that does not fold, lined up with those that do. */
   hidden?: boolean;
+  /**
+   * The line height the row's old glyph gave it, in px, where the row's
+   * height came from that glyph (restyles keep layout). Omit elsewhere.
+   */
+  line?: number;
 }) {
   return (
     <span
       aria-hidden="true"
-      style={hidden ? { visibility: "hidden" } : undefined}
+      style={{
+        ...(hidden ? { visibility: "hidden" as const } : {}),
+        ...(line ? { ["--disclosure-line" as string]: `${line}px` } : {}),
+      }}
       data-disclosure-arrow=""
       data-open={open ? "true" : "false"}
       className={`pnv-disclosure-arrow${small ? " pnv-disclosure-arrow--small" : ""}`}

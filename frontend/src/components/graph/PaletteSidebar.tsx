@@ -471,7 +471,8 @@ function TreeNode({
         }}
       >
         {/* #418: the standard row arrow, turned; the row says whether it is open. */}
-        <DisclosureArrow open={isExpanded} small />
+        {/* line: the 15px line the old ▶ glyph gave the row, so rows keep their height. */}
+        <DisclosureArrow open={isExpanded} small line={15} />
         {node.label}
         {!isTopLevel && node.children && (
           <span style={{ fontSize: "var(--pnv-fs-9)", color: "var(--pnv-text-faint)", marginLeft: 4 }}>

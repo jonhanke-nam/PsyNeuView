@@ -255,12 +255,15 @@ body.pnv-resizing-row, body.pnv-resizing-row * { cursor: row-resize !important; 
   align-items: center;
   justify-content: center;
   width: 16px;
-  /* 16px tall in a row of normal text; never taller than the line it sits on,
-     so a section heading keeps its height. */
-  height: min(16px, 1.2em);
+  /* No height of its own: the arrow is centred on the text's middle and
+     overflows its box, so it never changes the height of the row it sits in
+     (restyles keep layout, #418). A row that used to be as tall as the old
+     glyph's line keeps that with --disclosure-line. */
+  height: var(--disclosure-line, 0);
+  overflow: visible;
   flex-shrink: 0;
   color: var(--pnv-text-hint);
-  vertical-align: -0.15em;
+  vertical-align: middle;
 }
 .pnv-disclosure-arrow > svg { transition: transform 0.12s; }
 .pnv-disclosure-arrow[data-open="true"] > svg { transform: rotate(90deg); }
