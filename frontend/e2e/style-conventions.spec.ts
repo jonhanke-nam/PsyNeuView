@@ -188,6 +188,11 @@ mutatingTest("Settings: Close is primary and the default button; small and dange
     await expect(move).toHaveCount(0);
     await expect(settings).toBeVisible();
 
+    // The focus is back on Move… (#415), where Return would press Move…
+    // again; off any control, Return is Settings' Close.
+    await expect(page.getByTestId("project-folder-move")).toBeFocused();
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+
     // Now Return activates Close: Settings closes.
     await page.keyboard.press("Enter");
     await expect(settings).toHaveCount(0);
