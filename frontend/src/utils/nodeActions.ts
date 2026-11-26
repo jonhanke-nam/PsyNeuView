@@ -5,7 +5,7 @@
 
 import { visibleCentre } from "@/utils/graphViewport";
 import { keepAutoLayoutAcrossFold, NODE_HEIGHT, NODE_WIDTH, useModelStore, usesFlatPositions } from "@/stores/modelStore";
-import { ovalBoxFor } from "@/utils/nodeBox";
+import { shapedBoxFor } from "@/utils/nodeBox";
 import { useGraphSettings } from "@/stores/graphSettingsStore";
 import { useStatusStore } from "@/stores/statusStore";
 import { recordAction } from "@/utils/history";
@@ -374,7 +374,7 @@ export async function addNodeToModel(
  */
 export function expectedNodeSize(varName: string): { width: number; height: number } {
   if (useGraphSettings.getState().showNodeElements) return { width: NODE_WIDTH, height: NODE_HEIGHT };
-  return ovalBoxFor(varName);
+  return shapedBoxFor(varName, "oval");
 }
 
 /** How many frames to wait for a new node to be drawn. */

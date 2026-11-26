@@ -43,8 +43,11 @@ const FRAME_MARGIN = 10;
 export interface ShowGraphPlacement {
   /** Which graph and options this was computed for (see `placementKey`). */
   signature: string;
-  /** show_graph's node centers and sizes, in points, y growing downward. */
-  nodes: Map<string, { x: number; y: number; w: number; h: number }>;
+  /**
+   * show_graph's node centers and sizes, in points, y growing downward, and
+   * the shape show_graph gives each node (Graphviz's `shape`, #385).
+   */
+  nodes: Map<string, { x: number; y: number; w: number; h: number; shape?: string }>;
   /** show_graph's cluster boxes (top-left + size), keyed by composition name. */
   clusters: Map<string, { x: number; y: number; w: number; h: number }>;
   /**
@@ -125,6 +128,7 @@ function clusterNameOf(frame: Node): string {
 interface GvObject {
   name: string;
   pos?: string;
+  shape?: string;
   width?: string;
   height?: string;
   bb?: string;
@@ -171,7 +175,7 @@ function parsePair(s: string): [number, number] {
  */
 export function placementFromGraphviz(json: GvJson, signature: string): ShowGraphPlacement {
   const [, , , bbH] = json.bb.split(",").map(Number);
-  const nodes = new Map<string, { x: number; y: number; w: number; h: number }>();
+  const nodes: ShowGraphPlacement["nodes"] = new Map();
   const clusters = new Map<string, { x: number; y: number; w: number; h: number }>();
   for (const o of json.objects ?? []) {
     if (o.pos) {
@@ -181,6 +185,7 @@ export function placementFromGraphviz(json: GvJson, signature: string): ShowGrap
         y: bbH - y,
         w: Number(o.width ?? 1) * 72,
         h: Number(o.height ?? 0.5) * 72,
+        ...(o.shape ? { shape: o.shape } : {}),
       });
     } else if (o.bb && o.name.startsWith("cluster_")) {
       const [x1, y1, x2, y2] = o.bb.split(",").map(Number);

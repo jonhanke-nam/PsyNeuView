@@ -42,6 +42,8 @@ import {
   SOFT_TENSION, anchorHandles, handlePath, handleTip, hasPinnedHandles, pinFromDrag, type Anchor,
 } from "@/utils/curveHandles";
 import { targetStatus, useConnectTargets } from "@/stores/connectTargetsStore";
+import { selfLoopGeometry, selfLoopSide } from "@/utils/selfLoop";
+import type { Arrowhead } from "@/utils/projectionLook";
 
 // #388: the room each arrow between the same two nodes gets, at its ends
 // and again at its middle, so a pair is ~2x this apart along its length.
@@ -166,7 +168,11 @@ export function ProjectionEdge({
   const nodeLookup = useStore((s) => s.nodeLookup);
   // All edges — needed to find the siblings that share this edge's hub so a
   // fan-out can spread its attachment points (lever 2). Reactive to node moves.
-  const rfEdges = useStore((s) => s.edges);
+  const allEdges = useStore((s) => s.edges);
+  // #425: a node's projection to itself is drawn as a loop on the node, apart
+  // from the lanes and fans the other arrows share.
+  const selfLoop = source === target;
+  const rfEdges = allEdges.filter((e) => e.source !== e.target);
   // #282: manual per-port placement overrides (Alt-dragged). When present for
   // this edge's source/target port, they win over auto attachment.
   const portOverrides = usePortLayout((s) => s.overrides);
@@ -242,7 +248,10 @@ export function ProjectionEdge({
   // at the node (#946). `hub` says which end is the shared one.
   // An arrow sharing its two nodes with another takes its pair offset as its
   // bow (#388), on top of attaching apart from it below.
-  const lane = bundleSize > 1
+  // A self-loop keeps out of the lanes (#425).
+  const lane = selfLoop
+    ? { hubOffset: 0, hub: null as "source" | "target" | null, bowOffset: 0 }
+    : bundleSize > 1
     ? { hubOffset: 0, hub: null as "source" | "target" | null, bowOffset: pairOffset }
     : bundleEdges
       ? laneOffsetFor(id, source, sourceHandleId, target, targetHandleId, rfEdges as any, nodeLookup as any, edgeLaneGap)
@@ -257,7 +266,24 @@ export function ProjectionEdge({
   // handle coords React Flow provides. Falls back to handles if a node box
   // isn't measured yet.
   let sx = sourceX, sy = sourceY, tx = targetX, ty = targetY;
-  if (floatingPorts) {
+  // #425: a self-loop leaves the node at one point and comes back at
+  // another, on the side the node's other arrows leave free.
+  const loopOval = selfLoop ? ovalOf(nodeLookup.get(source) as any) : null;
+  const loop = loopOval
+    ? (() => {
+        const others: { x: number; y: number }[] = [];
+        for (const e of rfEdges) {
+          if (e.source !== source && e.target !== source) continue;
+          const o = ovalOf(nodeLookup.get(e.source === source ? e.target : e.source) as any);
+          if (o) others.push({ x: o.cx, y: o.cy });
+        }
+        const shape = nodeShapeFor(nodeLookup.get(source)?.data as any);
+        return selfLoopGeometry(loopOval, selfLoopSide(loopOval, others), (p) => onShapeBoundary(loopOval, shape, p));
+      })()
+    : null;
+  if (loop) {
+    sx = loop.start.x; sy = loop.start.y; tx = loop.end.x; ty = loop.end.y;
+  } else if (floatingPorts) {
     const sOval = ovalOf(nodeLookup.get(source) as any);
     const tOval = ovalOf(nodeLookup.get(target) as any);
     if (sOval && tOval) {
@@ -315,8 +341,9 @@ export function ProjectionEdge({
   };
 
   // #39: a pinned handle shapes the curve, as a bend does.
-  const pinned = hasPinnedHandles(waypoints, endHandles);
-  const manual = !!(waypoints && waypoints.length > 0) || pinned;
+  // A self-loop keeps its own shape (#425).
+  const pinned = !selfLoop && hasPinnedHandles(waypoints, endHandles);
+  const manual = !selfLoop && (!!(waypoints && waypoints.length > 0) || pinned);
   // Handles shape a Smooth curve; the other styles draw corners, which have none.
   const handleCurve = pinned && edgeRouting === "spline";
   // #23: in the "Like show_graph" layout, follow show_graph's own course for
@@ -341,7 +368,9 @@ export function ProjectionEdge({
       ? curveBends(curve.points)
       : routeWaypoints({ x: sx, y: sy }, { x: tx, y: ty }, collectObstacles(), { lateralOffset: bowOffset, margin: edgeNodeClearance });
   let edgePath: string;
-  if (curve) {
+  if (loop) {
+    edgePath = loop.path;
+  } else if (curve) {
     edgePath = curvePath(curve.points);
   } else if (handleCurve) {
     // #39: a curve shaped with handles is drawn exactly as shaped, through
@@ -396,7 +425,7 @@ export function ProjectionEdge({
   // sharing their two nodes (#388) route through here too, bowed by their
   // offset, so their separate courses still avoid every node (1c — never pass
   // behind a node). Returns null when the straight line is clear and unbowed.
-  if (avoidNodes && !manual && !curve) {
+  if (avoidNodes && !manual && !curve && !loop) {
     const obstacles: Rect[] = [];
     nodeLookup.forEach((n, nid) => {
       if (nid === source || nid === target) return;
@@ -426,7 +455,7 @@ export function ProjectionEdge({
   // Label sits at the staggered offset along the straight source→target
   // line (matches existing behavior; not strictly on-curve, but close
   // enough for the bow magnitudes in play).
-  const onCurve = curve ? pointAlong(curve.points, labelOffset) : null;
+  const onCurve = loop ? loop.apex : curve ? pointAlong(curve.points, labelOffset) : null;
   // #388: an arrow bowed sideways (a pair, or a lane) carries its label out
   // with it, by the same tapered amount, so each of a pair keeps its own.
   const bowAt = !onCurve && bowOffset ? bowOffset * Math.sin(Math.PI * labelOffset) : 0;
@@ -525,6 +554,12 @@ export function ProjectionEdge({
   const startDotDrag = (end: EdgeEnd) => (e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    // A self-loop's ends are placed with the loop (#425); a click still
+    // selects the node.
+    if (selfLoop) {
+      dotDragged.current = false;
+      return;
+    }
     const alt = e.altKey;
     const nodeId = end === "s" ? source : target;
     const handleId = end === "s" ? sourceHandleId : targetHandleId;
@@ -570,6 +605,11 @@ export function ProjectionEdge({
   const startEdgeShape = (e: React.PointerEvent) => {
     if (e.altKey) return;
     e.stopPropagation();
+    // A self-loop isn't bent: a press selects it (#425).
+    if (selfLoop) {
+      setSelectedEdgeId(id);
+      return;
+    }
     const startX = e.clientX, startY = e.clientY;
     let idx = -1;
     const move = (ev: PointerEvent) => {
@@ -650,7 +690,9 @@ export function ProjectionEdge({
   // are freely editable (forced: false); geometry-driven bends (node detour,
   // lane bow) are "forced" — shown as a distinct dot that promotes to a user
   // waypoint on grab, so every bend has a dot and its origin is legible.
-  const cornerPts: { x: number; y: number; forced: boolean }[] = handleCurve
+  const cornerPts: { x: number; y: number; forced: boolean }[] = selfLoop
+    ? []
+    : handleCurve
     // #39: a handle-shaped curve goes through the user's bends and nothing else.
     ? (waypoints ?? []).map((p) => ({ x: p.x, y: p.y, forced: false }))
     : manual
@@ -674,7 +716,7 @@ export function ProjectionEdge({
   // is a control point of the curve. Dragging one pins it (the bends the curve
   // goes through become the user's own first, so the shape holds); dragging an
   // anchor moves it, handles and all.
-  const curveAnchors: Anchor[] = isSelected && edgeRouting === "spline"
+  const curveAnchors: Anchor[] = isSelected && edgeRouting === "spline" && !selfLoop
     ? [
         { x: sx, y: sy },
         ...(handleCurve ? (waypoints ?? []) : cornerPts.map((p) => ({ x: p.x, y: p.y }))),
@@ -751,6 +793,11 @@ export function ProjectionEdge({
   // The arrowhead grows and shrinks with the line (#107); at the default
   // width it is the size chosen in the Style tab.
   const headSize = arrowheadSize * edgeArrowheadScale(lineWidth);
+  // #425: what the line ends in, as show_graph draws it: an arrow, or a
+  // small box for a control projection.
+  const arrowhead: Arrowhead = (data as { arrowhead?: Arrowhead } | undefined)?.arrowhead ?? "normal";
+  const lineStyle = (data as { lineStyle?: string } | undefined)?.lineStyle ?? "solid";
+  const boxSide = headSize * 1.2;
   return (
     <>
       {/* #253: an arrow a learning mechanism could train: a pulsing teal
@@ -774,6 +821,11 @@ export function ProjectionEdge({
         // The nodes the edge is drawn between (#209): a member inside an open
         // frame, where the projection goes through the frame's interface.
         data-ends={`${source}\u0000${target}`}
+        // #425: how it is drawn, for the show_graph agreement check.
+        data-projection-type={(data as { type?: string } | undefined)?.type}
+        data-arrowhead={arrowhead}
+        data-line-style={lineStyle}
+        data-self-loop={selfLoop ? "true" : undefined}
         interactionWidth={0}
         style={{
           // Spread per-type style first (color, dasharray, base width), then
@@ -832,10 +884,13 @@ export function ProjectionEdge({
           style={{ pointerEvents: "none" }}
         />
       ))}
-      {showArrowheads && arrow && (
+      {showArrowheads && arrow && arrowhead !== "none" && (
         <polygon
-          points={`0,0 ${-2 * headSize},${-headSize * 0.6} ${-2 * headSize},${headSize * 0.6}`}
+          points={arrowhead === "box"
+            ? `0,${-boxSide / 2} 0,${boxSide / 2} ${-boxSide},${boxSide / 2} ${-boxSide},${-boxSide / 2}`
+            : `0,0 ${-2 * headSize},${-headSize * 0.6} ${-2 * headSize},${headSize * 0.6}`}
           data-testid="edge-arrowhead"
+          data-arrowhead-kind={arrowhead}
           data-head-size={headSize}
           fill={effectiveStroke}
           transform={`translate(${arrow.x} ${arrow.y}) rotate(${arrow.angle})`}

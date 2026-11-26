@@ -40,21 +40,21 @@ test("lines between nodes: a width in Settings, arrowheads follow, remembered", 
   await expect(page.locator(".react-flow__edge").first()).toBeVisible({ timeout: 60_000 });
   await expect(page.locator('[data-testid="edge-arrowhead"]').first()).toBeAttached();
 
-  // The default: 3 px, the width lines were drawn at before the setting.
+  // The default: 2 px, show_graph's weight against the node outlines (#425).
   const before = await firstEdge(page);
-  expect(before.stroke).toBe(3);
-  if (process.env.EDGE107_SHOTS) await page.screenshot({ path: path.join(process.env.EDGE107_SHOTS, "stroop-default-3px.png") });
+  expect(before.stroke).toBe(2);
+  if (process.env.EDGE107_SHOTS) await page.screenshot({ path: path.join(process.env.EDGE107_SHOTS, "stroop-default-2px.png") });
 
   await page.getByTestId("settings-button").click();
   await page.getByTestId("settings-section-appearance").click();
-  await expect(page.getByTestId("setting-edge-line-width")).toHaveValue("3");
+  await expect(page.getByTestId("setting-edge-line-width")).toHaveValue("2");
   await page.getByTestId("setting-edge-line-width").selectOption("4");
   await page.keyboard.press("Escape");
 
   // The canvas follows without a reload; the arrowhead grows in proportion.
   await expect.poll(async () => (await firstEdge(page)).stroke).toBe(4);
   const after = await firstEdge(page);
-  expect(after.headLength / before.headLength).toBeCloseTo(4 / 3, 2);
+  expect(after.headLength / before.headLength).toBeCloseTo(4 / 2, 2);
   if (process.env.EDGE107_SHOTS) await page.screenshot({ path: path.join(process.env.EDGE107_SHOTS, "stroop-4px.png") });
 
   // Remembered across a reload.
