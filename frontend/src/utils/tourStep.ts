@@ -562,6 +562,16 @@ export function parseWalkthrough(text: string): Walkthrough {
     if (step.say !== undefined && typeof step.say !== "string") {
       throw new Error(`walkthrough: step "${step.id}" say must be text`);
     }
+    // #409: a key is named as {key:<shortcut id>} in the instruction only.
+    // Narration reads fixed, recorded lines, so the caption is written out and
+    // must exist: without one, narration would read the instruction, token
+    // and all.
+    if (/\{key:/.test(step.instruct) && step.say === undefined) {
+      throw new Error(`walkthrough: step "${step.id}" names a {key:…} in its instruction, so needs its own say`);
+    }
+    if (step.say !== undefined && /\{key:/.test(step.say)) {
+      throw new Error(`walkthrough: step "${step.id}" say can't name a {key:…}; narration reads it as written`);
+    }
     if (step.say_phonemes !== undefined && (typeof step.say_phonemes !== "string" || step.say === undefined)) {
       throw new Error(`walkthrough: step "${step.id}" say_phonemes must be text, and needs a say`);
     }

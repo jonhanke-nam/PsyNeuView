@@ -40,6 +40,8 @@ import { useModelStore } from "@/stores/modelStore";
 import { useTourHighlightStore } from "@/stores/tourHighlightStore";
 import { tourIdFromUrl, useTourStore } from "@/stores/tourStore";
 import { useUIStore } from "@/stores/uiStore";
+import { fillShortcutKeys } from "@/shortcuts/keyLabels";
+import { useResolvedShortcuts } from "@/shortcuts/useAppShortcuts";
 import { openSettings } from "./settings/sections";
 import { narrationAvailable, narrationVoiceName, pauseSpeaking, resumeSpeaking, speakCaption, stopSpeaking, type SpeechEngine } from "@/utils/narration";
 import { getWalkthrough, matchesNodeName, type TourStep } from "@/utils/tourStep";
@@ -75,6 +77,9 @@ export function TourBar() {
   const modelPath = useTourStore((s) => s.modelPath);
   const notice = useTourStore((s) => s.notice);
   const stepStart = useTourStore((s) => s.stepStart);
+  // #409: an instruction naming a shortcut, as `{key:history.undo}`, shows
+  // this platform's key as rebound.
+  const shortcuts = useResolvedShortcuts();
   const filePath = useModelStore((s) => s.filePath);
   const source = useModelStore((s) => s.source);
   const anchorOffScreen = useTourStore((s) => s.anchorOffScreen);
@@ -383,7 +388,7 @@ export function TourBar() {
       ? "✓ Done."
       : holdForPointer
         ? "…"
-        : step?.instruct;
+        : step && fillShortcutKeys(step.instruct, shortcuts);
 
   return (
     <div

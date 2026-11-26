@@ -44,6 +44,7 @@ import {
 import { targetStatus, useConnectTargets } from "@/stores/connectTargetsStore";
 import { selfLoopGeometry, selfLoopSide } from "@/utils/selfLoop";
 import type { Arrowhead } from "@/utils/projectionLook";
+import { optionKeyName } from "@/shortcuts/keyLabels";
 
 // #388: the room each arrow between the same two nodes gets, at its ends
 // and again at its middle, so a pair is ~2x this apart along its length.
@@ -922,7 +923,7 @@ export function ProjectionEdge({
                   // (index.css); it has nothing to say under Auto, so it is
                   // left as it is there.
                   className="nodrag nopan graph-control-point"
-                  title={`${d.label}\ndrag: move this edge · Option-drag: move the whole port${autoLayout ? "\n(the layout becomes Custom)" : ""}`}
+                  title={`${d.label}\ndrag: move this edge · ${optionKeyName()}-drag: move the whole port${autoLayout ? "\n(the layout becomes Custom)" : ""}`}
                   onPointerDown={startDotDrag(d.end)}
                   // #250: the dot sits on the node's rim, above it, so a click
                   // on it is a click on the node: hand it on, and stop it here.

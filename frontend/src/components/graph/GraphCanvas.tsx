@@ -64,6 +64,7 @@ import { isProjectionType, findDefByType } from "@/constants/pnlTypes";
 import { inNodeLayer } from "./canvasLayers";
 import { registerCommand } from "@/shortcuts/commands";
 import { useShortcutKeys } from "@/shortcuts/useAppShortcuts";
+import { optionKeyName } from "@/shortcuts/keyLabels";
 import { useFitButtonStyleStore } from "@/stores/fitButtonStyleStore";
 import { LastGoodDiff } from "./LastGoodDiff";
 import { serializeRoutes, type RoutableEdge } from "@/utils/edgeRoutes";
@@ -1314,7 +1315,7 @@ export function GraphCanvas() {
               ) : (
                 <>
                   Click where the new <b>{armed.label}</b> should go.{" "}
-                  <span>Option-click to put down several. Esc to cancel.</span>
+                  <span>{optionKeyName()}-click to put down several. Esc to cancel.</span>
                 </>
               )}
             </div>
