@@ -27,6 +27,7 @@ import { currentSpacingFactor } from "@/stores/layoutSpacingStore";
 import { withBusy } from "@/stores/busyStore";
 import type { Edge, Node } from "@xyflow/react";
 import type { Point, ShowGraphCurve } from "@/stores/showGraphCurvesStore";
+import { boundaryDir, nodeShapeFor, type NodeShape, type ShapedNodeData } from "@/utils/nodeShape";
 
 // Never shrink show_graph's picture, and cap the enlargement so one node with
 // a very short name (a narrow oval) doesn't spread the whole graph out.
@@ -573,46 +574,127 @@ export function sampleCourse(spline: Point[], tip?: Point): Point[] {
 }
 
 type Box = { x: number; y: number; w: number; h: number };
-// Mechanisms are drawn as the oval that fills their box, so a course is
-// trimmed at the oval, not the box's corners.
-const inside = (p: Point, b: Box) => {
-  const rx = b.w / 2, ry = b.h / 2;
-  if (rx <= 0 || ry <= 0) return false;
-  const dx = (p.x - (b.x + rx)) / rx, dy = (p.y - (b.y + ry)) / ry;
-  return dx * dx + dy * dy <= 1;
-};
 
-// Where the segment from `a` (inside the box) to `b` (outside) leaves it.
-function exitPoint(a: Point, b: Point, box: Box): Point {
-  let lo = 0, hi = 1;
-  for (let i = 0; i < 20; i++) {
-    const mid = (lo + hi) / 2;
-    const p = { x: a.x + (b.x - a.x) * mid, y: a.y + (b.y - a.y) * mid };
-    if (inside(p, box)) lo = mid;
-    else hi = mid;
-  }
-  return { x: a.x + (b.x - a.x) * hi, y: a.y + (b.y - a.y) * hi };
+/** One cubic Bézier piece: its start, two control points and end. */
+export type Cubic = [Point, Point, Point, Point];
+
+const lerp = (a: Point, b: Point, t: number): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+
+/** A straight piece from `a` to `b`, as a cubic. */
+function linePiece(a: Point, b: Point): Cubic {
+  return [a, lerp(a, b, 1 / 3), lerp(a, b, 2 / 3), b];
 }
 
 /**
- * Fit a course to run from the edge of the source oval to the edge of the
- * target oval (each filling its node's box). Enlarged, show_graph's ovals and PsyNeuView's boxes differ: a
- * course that starts inside a box is trimmed where it leaves it, and one that
- * starts short of it (an oval taller than the box) gets a short straight
- * lead-in from the box's edge. Null when nothing is left outside both boxes
- * (the nodes overlap, or the course never leaves one).
+ * show_graph's course as Graphviz draws it: its cubic Bézier pieces, then a
+ * straight piece on to the arrow's tip (#416).
  */
-export function trimToBoxes(points: Point[], source: Box, target: Box): Point[] | null {
-  let first = 0;
-  while (first < points.length && inside(points[first], source)) first++;
-  let last = points.length - 1;
-  while (last >= 0 && inside(points[last], target)) last--;
-  if (first >= points.length || last < 0 || first > last) return null;
-  const out = points.slice(first, last + 1);
-  const center = (b: Box): Point => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
-  out.unshift(exitPoint(first > 0 ? points[first - 1] : center(source), points[first], source));
-  out.push(exitPoint(last < points.length - 1 ? points[last + 1] : center(target), points[last], target));
+export function coursePieces(spline: Point[], tip?: Point): Cubic[] {
+  const out: Cubic[] = [];
+  for (let i = 0; i + 3 < spline.length; i += 3) out.push([spline[i], spline[i + 1], spline[i + 2], spline[i + 3]]);
+  const end = out.length ? out[out.length - 1][3] : undefined;
+  if (tip && end && Math.hypot(tip.x - end.x, tip.y - end.y) > 0.01) out.push(linePiece(end, tip));
   return out;
+}
+
+/** Split a piece at `t` into the two pieces either side (de Casteljau). */
+export function splitCubic([p0, p1, p2, p3]: Cubic, t: number): [Cubic, Cubic] {
+  const a = lerp(p0, p1, t), b = lerp(p1, p2, t), c = lerp(p2, p3, t);
+  const d = lerp(a, b, t), e = lerp(b, c, t);
+  const m = lerp(d, e, t);
+  return [[p0, a, d, m], [m, e, c, p3]];
+}
+
+/**
+ * Whether a point is inside the node's drawn outline: the oval (or circle)
+ * that fills its box, or the polygon of an octagon or rectangle (#192).
+ */
+function insideShape(p: Point, b: Box, shape: NodeShape): boolean {
+  const rx = b.w / 2, ry = b.h / 2;
+  if (rx <= 0 || ry <= 0) return false;
+  const dx = (p.x - (b.x + rx)) / rx, dy = (p.y - (b.y + ry)) / ry;
+  const r = Math.hypot(dx, dy);
+  if (r === 0) return true;
+  const [nx, ny] = boundaryDir(shape, dx, dy);
+  return r <= Math.hypot(nx, ny);
+}
+
+// Steps each piece is scanned in for where it crosses an outline, before the
+// crossing is found exactly by halving.
+const CUT_SCAN = 32;
+
+/**
+ * The pieces from where they first leave a node's outline: the piece that
+ * crosses it is cut there. A course that starts outside the outline gets a
+ * straight lead-in from the outline, on the line from the node's centre.
+ * Null when the course never leaves it.
+ */
+function leaveOutline(pieces: Cubic[], inside: (p: Point) => boolean, center: Point): Cubic[] | null {
+  const start = pieces[0][0];
+  if (!inside(start)) {
+    if (!inside(center)) return pieces;
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 30; i++) {
+      const mid = (lo + hi) / 2;
+      if (inside(lerp(center, start, mid))) lo = mid;
+      else hi = mid;
+    }
+    const edge = lerp(center, start, hi);
+    return Math.hypot(start.x - edge.x, start.y - edge.y) > 0.01 ? [linePiece(edge, start), ...pieces] : pieces;
+  }
+  for (let i = 0; i < pieces.length; i++) {
+    for (let k = 1; k <= CUT_SCAN; k++) {
+      if (inside(bezierPoint(...pieces[i], k / CUT_SCAN))) continue;
+      let lo = (k - 1) / CUT_SCAN, hi = k / CUT_SCAN;
+      for (let j = 0; j < 30; j++) {
+        const mid = (lo + hi) / 2;
+        if (inside(bezierPoint(...pieces[i], mid))) lo = mid;
+        else hi = mid;
+      }
+      return [splitCubic(pieces[i], hi)[1], ...pieces.slice(i + 1)];
+    }
+  }
+  return null;
+}
+
+const reversed = (pieces: Cubic[]): Cubic[] => pieces.map(([a, b, c, d]): Cubic => [d, c, b, a]).reverse();
+
+/**
+ * Cut a course to run from the source's outline to the target's (#416).
+ * The pieces are kept exactly, only cut where they cross an outline, so the
+ * line drawn is show_graph's own. Enlarged, show_graph's ovals and
+ * PsyNeuView's nodes differ: a course that starts short of an outline gets a
+ * straight lead-in from it. Null when nothing is left outside both (the nodes
+ * overlap, or the course never leaves one).
+ */
+export function cutToOutlines(
+  pieces: Cubic[],
+  source: Box,
+  target: Box,
+  sourceShape: NodeShape = "oval",
+  targetShape: NodeShape = "oval",
+): Cubic[] | null {
+  if (!pieces.length) return null;
+  const center = (b: Box): Point => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
+  const fromSource = leaveOutline(pieces, (p) => insideShape(p, source, sourceShape), center(source));
+  if (!fromSource) return null;
+  const fromTarget = leaveOutline(reversed(fromSource), (p) => insideShape(p, target, targetShape), center(target));
+  return fromTarget ? reversed(fromTarget) : null;
+}
+
+/** The pieces as a polyline, `perPiece` points to a piece. */
+export function samplePieces(pieces: Cubic[], perPiece = SAMPLES_PER_SEGMENT): Point[] {
+  const out: Point[] = pieces.length ? [pieces[0][0]] : [];
+  for (const c of pieces) for (let k = 1; k <= perPiece; k++) out.push(bezierPoint(...c, k / perPiece));
+  return out;
+}
+
+/** The pieces as an SVG path. */
+export function piecesPath(pieces: Cubic[]): string {
+  if (!pieces.length) return "";
+  const n = (v: number) => Math.round(v * 100) / 100;
+  const pt = (p: Point) => `${n(p.x)} ${n(p.y)}`;
+  return `M ${pt(pieces[0][0])}` + pieces.map(([, c1, c2, e]) => ` C ${pt(c1)} ${pt(c2)} ${pt(e)}`).join("");
 }
 
 /** Drop points that add nothing to the shape (Ramer–Douglas–Peucker). */
@@ -654,14 +736,19 @@ function edgeCurves(edges: Edge[], placement: ShowGraphPlacement, placed: Placed
     const tBox = placed.boxes.get(edge.target);
     const [tailBox, headBox] = [placed.boxes.get(tail), placed.boxes.get(head)];
     if (!course || !sBox || !tBox || !tailBox || !headBox) continue;
-    const onCanvas = sampleCourse(course.spline, course.tip).map(placed.toFlow);
-    const trimmed = trimToBoxes(onCanvas, tailBox, headBox);
-    if (!trimmed) continue;
+    // #416: show_graph's Bézier pieces, drawn exactly. The placement only
+    // scales and shifts show_graph's picture, and a scaled Bézier is still a
+    // Bézier, so mapping the control points maps the curve.
+    const onCanvas = coursePieces(course.spline, course.tip).map((c) => c.map(placed.toFlow) as Cubic);
+    const shapeOf = (id: string) => nodeShapeFor(byId.get(id)?.data as ShapedNodeData | undefined);
+    const pieces = cutToOutlines(onCanvas, tailBox, headBox, shapeOf(tail), shapeOf(head));
+    if (!pieces) continue;
     const inner = [tail, head]
       .filter((id) => id !== edge.source && id !== edge.target)
       .map((id) => ({ id, at: { x: placed.boxes.get(id)!.x, y: placed.boxes.get(id)!.y } }));
     curves[edge.id] = {
-      points: simplify(trimmed),
+      pieces,
+      points: samplePieces(pieces),
       source: { x: sBox.x, y: sBox.y },
       target: { x: tBox.x, y: tBox.y },
       ends: [tail, head],
@@ -694,51 +781,6 @@ export function memberAtPort(
     .sort((a, b) => b.id.length - a.id.length)[0];
   if (!member) return id;
   return memberAtPort(member.id, rest.slice(member.id.length + 1), prefix, byId, nodes);
-}
-
-/**
- * A smooth SVG path through the points: a centripetal Catmull–Rom curve, as
- * cubic Béziers (#63). The points are unevenly spaced (a course thinned out
- * by `simplify` keeps many near its bends and few along a straight run), and
- * the uniform curve, which assumes even spacing, overshoots there into
- * spikes. The centripetal one weighs each step by its length and can't form
- * cusps or loops.
- */
-export function curvePath(points: Point[]): string {
-  if (points.length < 2) return "";
-  // Step weights: the square root of each step's length (alpha = 0.5).
-  const w = (a: Point, b: Point) => Math.sqrt(Math.hypot(b.x - a.x, b.y - a.y));
-  let d = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 0; i < points.length - 1; i++) {
-    const p1 = points[i];
-    const p2 = points[i + 1];
-    const p0 = points[i - 1];
-    const p3 = points[i + 2];
-    const d2 = w(p1, p2);
-    let c1 = p1;
-    let c2 = p2;
-    if (d2 > 0) {
-      const d1 = p0 ? w(p0, p1) : 0;
-      const d3 = p3 ? w(p2, p3) : 0;
-      // At an end (no neighbour beyond it) the tangent runs along the step.
-      c1 =
-        d1 > 0
-          ? {
-              x: (d1 * d1 * p2.x - d2 * d2 * p0!.x + (2 * d1 * d1 + 3 * d1 * d2 + d2 * d2) * p1.x) / (3 * d1 * (d1 + d2)),
-              y: (d1 * d1 * p2.y - d2 * d2 * p0!.y + (2 * d1 * d1 + 3 * d1 * d2 + d2 * d2) * p1.y) / (3 * d1 * (d1 + d2)),
-            }
-          : { x: p1.x + (p2.x - p1.x) / 3, y: p1.y + (p2.y - p1.y) / 3 };
-      c2 =
-        d3 > 0
-          ? {
-              x: (d3 * d3 * p1.x - d2 * d2 * p3!.x + (2 * d3 * d3 + 3 * d3 * d2 + d2 * d2) * p2.x) / (3 * d3 * (d3 + d2)),
-              y: (d3 * d3 * p1.y - d2 * d2 * p3!.y + (2 * d3 * d3 + 3 * d3 * d2 + d2 * d2) * p2.y) / (3 * d3 * (d3 + d2)),
-            }
-          : { x: p2.x - (p2.x - p1.x) / 3, y: p2.y - (p2.y - p1.y) / 3 };
-    }
-    d += ` C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${p2.x} ${p2.y}`;
-  }
-  return d;
 }
 
 /** The point `fraction` of the way along the polyline, by length. */

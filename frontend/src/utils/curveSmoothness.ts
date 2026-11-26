@@ -1,5 +1,5 @@
 /**
- * How sharply a drawn course turns (#63): the largest change of direction,
+ * How smooth a drawn line is. `sharpestTurn` (#63): the largest change of direction,
  * in degrees, between successive short steps along an SVG path made of
  * cubic Béziers (`M x y C …`). A smooth curve turns a few degrees per step;
  * a spike turns back on itself, close to 180.
@@ -49,4 +49,88 @@ export function sharpestTurn(d: string, step = 4): number {
     worst = Math.max(worst, (turn * 180) / Math.PI);
   }
   return worst;
+}
+
+/** A polyline resampled every `step` units along its length. */
+export function resample(pts: Point[], step = 2): Point[] {
+  if (pts.length < 2) return pts.slice();
+  const out: Point[] = [pts[0]];
+  let carry = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i];
+    const L = Math.hypot(b.x - a.x, b.y - a.y);
+    let d = step - carry;
+    while (d <= L) {
+      out.push({ x: a.x + ((b.x - a.x) * d) / L, y: a.y + ((b.y - a.y) * d) / L });
+      d += step;
+    }
+    carry = L - (d - step);
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+
+/**
+ * How smooth one drawn line is (#416).
+ *  - changes: how often the line changes the way it turns (0: straight or
+ *    one bend; 1: an S; 2+: more);
+ *  - wiggles: bumps between two changes of direction shorter than
+ *    `wiggleLen` units (ripples, as opposed to a long detour round a node);
+ *  - ripple: the tallest such bump, in units;
+ *  - hooks: one stretch turning back on itself by more than 150° within 150
+ *    units (a loop or a hairpin), which counting changes can't see.
+ */
+export interface Smoothness { changes: number; wiggles: number; ripple: number; hooks: number }
+
+/**
+ * Smoothness of a line sampled every `step` units (see `resample`). Turning
+ * is measured over `win` units either side of each sample, so pixel noise
+ * doesn't count, and a stretch turning one way counts once it has turned
+ * `minRunDeg` in all. The first and last `trimEnds` units are left out.
+ */
+export function smoothness(
+  pts: Point[],
+  { step = 2, win = 8, minRunDeg = 3, trimEnds = 6, wiggleLen = 80, hookDeg = 150, hookLen = 150 } = {},
+): Smoothness {
+  const w = Math.max(1, Math.round(win / step));
+  const t = Math.round(trimEnds / step);
+  const ang = (a: Point, b: Point) => Math.atan2(b.y - a.y, b.x - a.x);
+  const turns: number[] = [];
+  for (let k = w + t; k < pts.length - w - t; k++) {
+    let d = ang(pts[k], pts[k + w]) - ang(pts[k - w], pts[k]);
+    while (d > Math.PI) d -= 2 * Math.PI;
+    while (d < -Math.PI) d += 2 * Math.PI;
+    turns.push(d);
+  }
+  type Run = { sign: number; from: number; to: number; turn: number };
+  const runs: Run[] = [];
+  const eps = (0.15 * Math.PI) / 180;
+  turns.forEach((d, i) => {
+    const sign = d > eps ? 1 : d < -eps ? -1 : 0;
+    if (!sign) return;
+    const last = runs[runs.length - 1];
+    if (last && last.sign === sign) { last.to = i; last.turn += Math.abs(d) / w; }
+    else runs.push({ sign, from: i, to: i, turn: Math.abs(d) / w });
+  });
+  const deg = (r: number) => (r * 180) / Math.PI;
+  const merged: Run[] = [];
+  for (const r of runs.filter((r) => deg(r.turn) >= minRunDeg)) {
+    const last = merged[merged.length - 1];
+    if (last && last.sign === r.sign) { last.to = r.to; last.turn += r.turn; }
+    else merged.push({ ...r });
+  }
+  const hooks = merged.filter((r) => deg(r.turn) > hookDeg && (r.to - r.from) * step < hookLen).length;
+  let ripple = 0, wiggles = 0;
+  for (const r of merged.slice(1, -1)) {
+    if ((r.to - r.from) * step >= wiggleLen) continue;
+    const a = pts[r.from + w + t], b = pts[r.to + w + t];
+    const L = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    let bulge = 0;
+    for (let k = r.from + w + t; k <= r.to + w + t; k++) {
+      const p = pts[k];
+      bulge = Math.max(bulge, Math.abs((b.x - a.x) * (a.y - p.y) - (a.x - p.x) * (b.y - a.y)) / L);
+    }
+    if (bulge > 0.5) { wiggles++; ripple = Math.max(ripple, bulge); }
+  }
+  return { changes: Math.max(0, merged.length - 1), wiggles, ripple: Math.round(ripple * 10) / 10, hooks };
 }
