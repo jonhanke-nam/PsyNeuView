@@ -38,6 +38,10 @@ docs:                           # optional: the docs pages it relies on, under d
   - what-you-can-edit.md        #   (shown in the bar, so drift is caught in review)
 developerMode: true             # optional: turn developer mode on while it runs,
                                 #   and put it back after (the developer track only)
+view: nested                    # the view it was written for: nested, flattened
+                                #   or pytorch (every shipped walkthrough says, #428)
+compositions:                   # optional, nested view only: fold or open these
+  EM: folded                    #   compositions by name (folded | open)
 
 steps:
   - id: learn-and               # unique within the file
@@ -92,6 +96,18 @@ steps:
   while it says the menu is closed. Leave it off a step whose action is to
   pick something from the menu, since picking closes it.
 - Quote node names that contain brackets: `node: "1 [QUERY]"`.
+- `view:` is the graph view the steps were written against, as the view menu
+  names it: `nested` (each composition on its own, nested ones folded on
+  first sight, #395), `flattened` ("Flatten (all compositions)", every
+  composition a frame) or `pytorch`. A step that selects a nested
+  composition's node needs `nested`: flattened, the composition is a frame,
+  and the bar says the node "isn't in the model you have open". Every shipped
+  walkthrough declares one (a unit test checks), and all of today's say
+  `nested`, the view their models opened in when they were written. See
+  **Known view settings** below for when it applies.
+- `compositions:` folds or opens named compositions in the nested view when a
+  step needs one a certain way (EGO's `EM: folded`, so "Select EM" has a
+  node). It needs `view: nested`; the others keep the nested view's default.
 - Then **register** the walkthrough in `frontend/src/utils/tourStep.ts`: add an
   `import …Yaml from "@/walkthroughs/<id>.yaml?raw"` and an entry in
   `WALKTHROUGHS`. A malformed file fails at app startup, on purpose.
@@ -128,6 +144,15 @@ inset compositions, and the nested and PyTorch views. The ones the server draws
 for change only as the walkthrough opens its model, and changing them back
 reloads the model, unless it has unsaved changes. Settings' own preferences
 (the automatic layout, port dots) are left as they are.
+
+The nested, flattened or PyTorch view is the walkthrough's own `view:`, not
+a fresh window's (#428), with its `compositions:` folded or opened. A
+walkthrough that opens its model on start gets that view as the model loads,
+through the same view options every open sends. One that opens none on start
+(it builds its model, or a step teaches opening it) redraws the model on
+screen in that view as it starts, unless that model has unsaved changes, so
+the view menu always says how the graph is drawn. The learner's own view
+comes back when it ends.
 
 **Ways back.** The code as each step began is kept (`stepStart`), taken when the
 step starts on the walkthrough's model or when that model opens during it, so
