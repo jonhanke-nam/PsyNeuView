@@ -16,7 +16,7 @@ docs:
 #   https://github.com/PrincetonUniversity/PsyNeuLink/blob/docs/refactor-documentation/docs/source/tutorials/cognitive_neuroscience_course/index.rst
 # Validated against PsyNeuLink 0.21.0.0.
 #
-# Why a demo and not the PsyNeuLink Library's "Giallanza2024 EGO Study2": the
+# Why a demo and not the PsyNeuLink Library's Giallanza2024_EGO_Study2.py: the
 # library file builds the model in construct_model(), whose memory holds 2
 # episodes unless told otherwise, and opened as it is a run predicts nothing
 # (measured: 0 on every predictable state). Its own experiment passes

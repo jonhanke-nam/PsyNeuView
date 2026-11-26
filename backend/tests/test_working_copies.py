@@ -333,7 +333,8 @@ def _load(**body):
 def test_a_reference_model_opens_as_a_working_copy_in_the_new_folder(home):
     body = _load()
     working = wc.Path(body["file_path"])
-    assert working.parent == home / ".psyneuview" / "working-copies"
+    # In the Reference Models' own folder there (#422).
+    assert working.parent == home / ".psyneuview" / "working-copies" / "reference-models"
     assert working.exists()
     assert not working.is_relative_to(wc.install_root())
     assert body["workingCopy"] == {"diverged": False, "restored": False}
@@ -353,7 +354,7 @@ def test_your_edited_copy_is_kept_from_the_new_folder(home):
 def test_a_demo_resets_into_the_new_folder(home):
     r = client.post("/api/demos/reset", json={"demo_name": "scheduling_demo"})
     assert r.status_code == 200, r.text
-    assert wc.Path(r.json()["file_path"]).parent == home / ".psyneuview" / "working-copies"
+    assert wc.Path(r.json()["file_path"]).parent == home / ".psyneuview" / "working-copies" / "demos"
 
 
 def test_locations_say_where_working_copies_are(home, tmp_path):

@@ -60,6 +60,7 @@ Escape, which every row has.
 | Open PsyNeuLink test as model | dialog | `common/DeveloperTestsModal.tsx` | `developer-tests-modal` | Open ▾ Developer / Tests… (developer mode) | ×, click outside, Cancel, Open |
 | Save a copy as… | dialog | `layout/Toolbar.tsx` | `save-copy-dialog` | the toolbar's Save a copy as… | ×, click outside, Cancel, Save (not while saving) |
 | Why this file is read only | dialog | `layout/Toolbar.tsx` | `pnl-read-only-note` | the "PsyNeuLink from … · read only" tag beside the model name (a managed PsyNeuLink) | ×, click outside, the tag again, Save a copy as… |
+| This model (the model card) | dialog | `layout/ModelTitle.tsx` | `model-card` | the model title in the toolbar (#422) | ×, click outside, the title again |
 | Layout menu | menu | `layout/Toolbar.tsx` | `layout-menu-list` | Layout ▾ | the Layout button, click outside, a pick |
 | Tutorials menu | menu | `layout/Toolbar.tsx` | `walkthrough-menu-list` | Tutorials ▾; Help ▸ Tutorials and walkthroughs | the Tutorials button, click outside, a pick |
 | Help menu | menu | `layout/HelpMenu.tsx` | `help-menu-list` | Help ▾ | the Help button, click outside, a pick |

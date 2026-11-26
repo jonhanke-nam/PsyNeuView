@@ -79,6 +79,9 @@ async def lifespan(app: FastAPI):
         # kept them — the install's own backend/ folder, which an app update
         # replaces (#1319).
         working_copies.migrate_legacy_working_copies()
+        # Then into a folder per source, so two models that share a file name
+        # never share a working copy (#422).
+        working_copies.separate_by_source()
         # And the layouts and labels written for read-only PsyNeuLink files:
         # out of site-packages and the old managed-copy artifacts tree, into
         # ~/.psyneuview/layouts, where a reinstall can't lose them (#1321).

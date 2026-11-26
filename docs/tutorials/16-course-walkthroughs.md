@@ -344,7 +344,8 @@ notebooks:
   model's. The notebook's task-demand sweep and reaction-time plots are numpy
   over many runs and aren't in the walkthrough; one edit makes their point.
 - **EGO's model and data.** The walkthrough opens a demo rather than the
-  PsyNeuLink Library's *Giallanza2024 EGO Study2*: the library file builds the
+  PsyNeuLink Library's *EGO — Giallanza et al. 2024 (Study 2)*
+  (`Giallanza2024_EGO_Study2.py`): the library file builds the
   model with a memory of two episodes unless told otherwise, so opened as it is
   a run predicts nothing. The demo is the library model with the memory sized to
   the day, as the library's own experiment does. The notebook builds the same

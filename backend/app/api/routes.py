@@ -796,6 +796,9 @@ class LoadModelResponse(BaseModel):
     # consistent end-to-end breakdown instead of guessing where the seconds go.
     # {introspect_ms, total_ms, misc_ms?}. None on paths that don't measure.
     timings: dict | None = None
+    # #422: which model this is, as the menus name it — label, file, source.
+    # Set by every route that opens a model, so the toolbar never guesses.
+    identity: dict | None = None
 
 
 class GetSidecarRequest(BaseModel):
@@ -1145,6 +1148,10 @@ def load_model(request: LoadModelRequest):
     t0 = time.time()
     path = Path(request.file_path)
     if not path.exists():
+        # #422: a Recent entry for a working copy from before working copies
+        # had a folder per source opens the copy where it is now.
+        path = working_copies.relocated(path) or path
+    if not path.exists():
         raise HTTPException(status_code=404, detail=f"File not found: {path}")
 
     classification = classify_file(path)
@@ -1205,6 +1212,8 @@ def load_model(request: LoadModelRequest):
         formatIssues=issues,
         starImportConverted=star_converted,
         timings=_load_timings((t2 - t1) * 1000, t0, misc_ms=(t3 - t2) * 1000),
+        file_path=str(path),
+        identity=model_identity(path).model_dump(),
     )
 
 
@@ -2811,6 +2820,10 @@ def _demo_working_dir() -> Path:
     — a per-user folder outside every install, so edits survive an app
     update. It used to be ``backend/`` itself; working copies left there are
     moved on startup (``working_copies.migrate_legacy_working_copies``).
+
+    Since #422 each source has its own folder inside it (reference-models/,
+    demos/, psyneulink-examples/<source>/, tutorials/<id>/); this is the
+    folder that holds them.
     """
     return working_copies.working_copies_dir()
 
@@ -2868,7 +2881,7 @@ def reset_demo(request: ResetDemoRequest):
 
     # Working copy lives in the configured working dir (default: backend/),
     # or a tutorial's own folder (#172).
-    folder = _tutorial_working_dir(request.tutorial) if request.tutorial else _demo_working_dir()
+    folder = _tutorial_working_dir(request.tutorial) if request.tutorial else working_copies.demo_copies_dir()
     working = folder / f"{request.demo_name}.py"
     shutil.copy2(pristine, working)
 
@@ -2888,6 +2901,7 @@ def reset_demo(request: ResetDemoRequest):
         layout=layout,
         file_path=str(working),
         timings=_load_timings(introspect_ms, t0),
+        identity=model_identity(working).model_dump(),
     )
 
 
@@ -2921,18 +2935,32 @@ async def demo_pristine_source(name: str):
 REFERENCE_DIR = Path(__file__).resolve().parent.parent.parent / "reference_models"
 
 # Curated, ordered. `name` is the bundled filename stem; `label` is shown.
+# `library` declares that the model is the PsyNeuLink Library model of that
+# name (a pinned copy of it): the one case two models may share a file name,
+# and the Library then shows the same label (#422). A shared name that is not
+# declared fails test_model_names.py.
 REFERENCE_MODELS = [
-    {"name": "Giallanza2024_ego_study2", "label": "EGO — Giallanza et al. 2024 (Study 2)"},
+    {"name": "Giallanza2024_ego_study2", "label": "EGO — Giallanza et al. 2024 (Study 2)", "library": "Giallanza2024_EGO_Study2"},
     {"name": "stroop_reference_basic", "label": "Stroop — Basic"},
     {"name": "stroop_reference_with_lc", "label": "Stroop — with Locus Coeruleus (LC)"},
-    {"name": "Cohen_Huston1994", "label": "Stroop — Bidirectional (Cohen & Huston 1994)"},
-    {"name": "Cohen_Huston1994_horse_race", "label": "Stroop — Horse Race (Cohen & Huston 1994)"},
-    {"name": "Kalanthroff_PCTC_2018", "label": "Stroop — PCTC (Kalanthroff, Davelaar & Usher 2018)"},
-    {"name": "GilzenratModel", "label": "Locus Coeruleus — gain model (Gilzenrat et al.)"},
-    {"name": "Nieuwenhuis2005Model", "label": "Locus Coeruleus / P300 (Nieuwenhuis et al. 2005)"},
-    {"name": "MontagueDayanSejnowski96", "label": "TD Learning / dopamine (Montague, Dayan & Sejnowski 1996)"},
-    {"name": "Botvinick_conflict_monitoring_model", "label": "Conflict Monitoring — Stroop (Botvinick et al. 2001)"},
+    {"name": "Cohen_Huston1994", "label": "Stroop — Bidirectional (Cohen & Huston 1994)", "library": "Cohen_Huston1994"},
+    {"name": "Cohen_Huston1994_horse_race", "label": "Stroop — Horse Race (Cohen & Huston 1994)", "library": "Cohen_Huston1994_horse_race"},
+    {"name": "Kalanthroff_PCTC_2018", "label": "Stroop — PCTC (Kalanthroff, Davelaar & Usher 2018)", "library": "Kalanthroff_PCTC_2018"},
+    {"name": "GilzenratModel", "label": "Locus Coeruleus — gain model (Gilzenrat et al.)", "library": "GilzenratModel"},
+    {"name": "Nieuwenhuis2005Model", "label": "Locus Coeruleus / P300 (Nieuwenhuis et al. 2005)", "library": "Nieuwenhuis2005Model"},
+    {"name": "MontagueDayanSejnowski96", "label": "TD Learning / dopamine (Montague, Dayan & Sejnowski 1996)", "library": "MontagueDayanSejnowski96"},
+    {"name": "Botvinick_conflict_monitoring_model", "label": "Conflict Monitoring — Stroop (Botvinick et al. 2001)", "library": "Botvinick_conflict_monitoring_model"},
 ]
+
+
+def library_label(name: str) -> str:
+    """The Library's name for a model: the Reference Model's label when it is
+    declared as the same model (``library`` in REFERENCE_MODELS), so one model
+    has one name everywhere (#422); otherwise made from the file name."""
+    for entry in REFERENCE_MODELS:
+        if entry.get("library", "").lower() == name.lower():
+            return entry["label"]
+    return _format_label(name)
 
 
 @router.get("/reference-models")
@@ -2983,8 +3011,11 @@ def load_reference_model(request: LoadReferenceRequest):
     if request.tutorial:
         working = _tutorial_working_dir(request.tutorial) / f"{request.name}.py"
     else:
-        working_copies.adopt_renamed_working_copy(request.name, _demo_working_dir())
-        working = _demo_working_dir() / f"{request.name}.py"
+        # #422: each source has its own folder; a copy an older version left in
+        # the shared folder moves there first, edits and all.
+        working_copies.separate_by_source()
+        working_copies.adopt_renamed_working_copy(request.name, working_copies.reference_copies_dir())
+        working = working_copies.reference_copies_dir() / f"{request.name}.py"
     pristine_text = pristine.read_text()
     had_edits = working.exists() and working.read_text() != pristine_text
     restored = bool(had_edits and request.restore_pristine)
@@ -3052,6 +3083,7 @@ def load_reference_model(request: LoadReferenceRequest):
         },
         file_path=str(working),
         timings=_load_timings(introspect_ms, t0),
+        identity=model_identity(working).model_dump(),
     )
 
 
@@ -3161,6 +3193,9 @@ def psyneulink_examples_status():
 
 class LoadPnlExampleRequest(BaseModel):
     name: str
+    # #422/#1010: opt in to discarding working-copy edits and copying the
+    # example afresh. Reopening keeps the edits; restoring has to be asked for.
+    restore_pristine: bool = False
 
 
 @router.post("/psyneulink-examples/load", response_model=LoadModelResponse)
@@ -3181,11 +3216,22 @@ def load_psyneulink_example(request: LoadPnlExampleRequest):
     if not src.resolve().is_relative_to(d.resolve()) or not src.exists():
         raise HTTPException(status_code=404, detail=f"Unknown PsyNeuLink example: {request.name}")
 
+    working_copy = None
     if pnl_source_guard.active_kind() == "local":
         working = src
     else:
-        working = _demo_working_dir() / src.name
-        shutil.copy2(src, working)
+        # #422: in the active source's own folder, so the same example from
+        # two PsyNeuLink sources never shares a file.
+        working = working_copies.example_copies_dir() / src.name
+        # #1010 applies here too: reopening is a re-read. Copy only when there
+        # is nothing to lose; otherwise keep the edits and say so, and copy
+        # afresh only when asked (restore_pristine).
+        pristine_text = src.read_text()
+        had_edits = working.exists() and working.read_text() != pristine_text
+        restored = bool(had_edits and request.restore_pristine)
+        if not had_edits or restored:
+            shutil.copy2(src, working)
+        working_copy = {"diverged": bool(had_edits and not restored), "restored": restored}
     source = working.read_text()
     t0 = time.time()
     model = load_and_introspect(str(working))
@@ -3207,8 +3253,10 @@ def load_psyneulink_example(request: LoadPnlExampleRequest):
         labels=labels,
         bundle=[{"kind": "source", "name": working.name}],
         sidecars=sidecars,
+        workingCopy=working_copy,
         file_path=str(working),
         timings=_load_timings(introspect_ms, t0),
+        identity=model_identity(working).model_dump(),
     )
 
 
@@ -3230,12 +3278,114 @@ LIBRARY_MODEL_NAMES = [
 ]
 
 
+class ModelIdentity(BaseModel):
+    """Which model is open, as the menus name it (#422).
+
+    Worked out on the server from the file's path, the one place that knows
+    every catalog, so the toolbar never has to guess. ``source`` says where
+    the model came from: ``reference`` (the bundled Reference Models),
+    ``library`` (the PsyNeuLink Library), ``example`` (PsyNeuLink's own
+    examples), ``demo`` (the bundled demos) or ``user`` (the user's own file).
+    ``label`` is the name the menu shows; None for a user's file, whose file
+    name is its name. ``file`` is the file name, always shown beside the
+    label. ``path`` is the full path of the file that is open, and
+    ``original`` the catalog file it was copied from, when it is a working
+    copy.
+    """
+
+    source: Literal["reference", "library", "example", "demo", "user"]
+    label: str | None = None
+    file: str
+    path: str
+    original: str | None = None
+    workingCopy: bool = False
+
+
+def _within(path: Path, folder: Path | None) -> bool:
+    if folder is None:
+        return False
+    try:
+        path.resolve().relative_to(folder.resolve())
+        return True
+    except (ValueError, OSError):
+        return False
+
+
+def model_identity(file_path: str | Path) -> ModelIdentity:
+    """The menu label and source of the model at ``file_path`` (#422).
+
+    Matched by where the file is: in a catalog's own folder, or in the
+    working-copies folder (including a tutorial's copy) under a catalog
+    model's file name. Anything else is the user's own file.
+    """
+    path = Path(file_path)
+    stem, name = path.stem, path.name
+    references = {e["name"]: e["label"] for e in REFERENCE_MODELS}
+    working = _within(path, _demo_working_dir())
+    in_examples = _within(path, _demo_working_dir() / working_copies.EXAMPLES_SUBDIR)
+
+    if stem in references and not in_examples and (working or _within(path, REFERENCE_DIR)):
+        return ModelIdentity(
+            source="reference", label=references[stem], file=name, path=str(path),
+            original=str(REFERENCE_DIR / name), workingCopy=working,
+        )
+    if not in_examples and (working or _within(path, DEMOS_DIR)) and (DEMOS_DIR / name).exists():
+        return ModelIdentity(
+            source="demo", label=_format_label(stem), file=name, path=str(path),
+            original=str(DEMOS_DIR / name), workingCopy=working,
+        )
+    lib = _library_models_dir()
+    if _within(path, lib):
+        known = {n.lower(): n for n in LIBRARY_MODEL_NAMES}
+        return ModelIdentity(
+            source="library", label=library_label(known.get(stem.lower(), stem)), file=name, path=str(path),
+        )
+    scripts = _pnl_scripts_dir()
+    if _within(path, scripts) or (working and scripts is not None and (scripts / name).exists()):
+        return ModelIdentity(
+            source="example", label=_format_label(stem), file=name, path=str(path),
+            original=str(scripts / name) if scripts else None, workingCopy=working,
+        )
+    return ModelIdentity(source="user", label=None, file=name, path=str(path))
+
+
+@router.get("/model/identity", response_model=ModelIdentity)
+def get_model_identity(file_path: str):
+    """The menu label and source of a model file (#422), for a model opened
+    without one of the load routes below (a Recent entry, a saved copy)."""
+    return model_identity(file_path)
+
+
 def _library_models_dir() -> Path | None:
     pkg = active_psyneulink_package_dir()
     if pkg is None:
         return None
     d = pkg / "library" / "models"
     return d if d.is_dir() else None
+
+
+@router.get("/psyneulink/name-clashes")
+def psyneulink_name_clashes():
+    """Model files that share a name in the active PsyNeuLink (#422).
+
+    The page asks after a source switch, and at start: when there are any, it
+    shows a one-time notice naming them and records them in the activity log.
+    ``key`` names the source and commit, so the notice is shown once per
+    source rather than on every start. Sync: it reads the file tree.
+    """
+    from app.services import model_names
+
+    pkg = active_psyneulink_package_dir()
+    if pkg is None:
+        return {"clashes": [], "key": None, "message": None}
+    clashes = model_names.find_clashes(pkg.parent, REFERENCE_MODELS)
+    info = get_psyneulink_info() or {}
+    key = f"{info.get('source')}:{info.get('repo') or info.get('path') or ''}:{info.get('commit') or info.get('version') or ''}"
+    return {
+        "clashes": clashes,
+        "key": key,
+        "message": model_names.describe(clashes) if clashes else None,
+    }
 
 
 @router.get("/library-models")
@@ -3248,7 +3398,7 @@ async def list_library_models():
     for name, path in library_model_files(models_dir):
         models.append({
             "name": name,
-            "label": _format_label(name),
+            "label": library_label(name),
             "path": str(path),
         })
     return {"models": models}
