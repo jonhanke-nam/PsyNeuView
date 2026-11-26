@@ -128,7 +128,7 @@ def test_import_stays_in_the_models_folder(tmp_path, monkeypatch):
 
     models = tmp_path / "models"
     monkeypatch.setattr(routes, "get_default_save_dir", lambda: models)
-    monkeypatch.setattr(routes, "load_and_introspect", lambda path: {"compositions": []})
+    monkeypatch.setattr(routes, "load_and_introspect", lambda path, **view: {"compositions": []})
     monkeypatch.setattr(routes, "load_layout", lambda path: None)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
