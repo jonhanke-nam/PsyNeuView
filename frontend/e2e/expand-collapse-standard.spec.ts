@@ -11,7 +11,7 @@
  * The shared setup turns the code editor and the bottom panel on and opens
  * the Components panel in full.
  */
-import { readOnlyTest as test, mutatingTest, expect } from "./test-base";
+import { readOnlyTest as test, mutatingTest, expect, closePalette } from "./test-base";
 import type { Locator, Page } from "@playwright/test";
 
 async function openStroop(page: Page) {
@@ -32,24 +32,31 @@ async function drag(page: Page, x: number, y: number, dx: number, dy: number) {
   await page.mouse.up();
 }
 
-/** A tab's hit area (5px either side of a vertical edge's tab, index.css) covers no button but its own. */
-async function expectHitAreaClear(page: Page, tab: Locator) {
-  const t = (await tab.boundingBox())!;
-  const hit = { x: t.x - 5, y: t.y, width: t.width + 10, height: t.height };
-  const toggle = (await page.getByTestId("palette-toggle").boundingBox())!;
-  const meets = (a: typeof hit, b: typeof hit) =>
-    a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
-  expect(meets(hit, toggle), "the tab's hit area overlaps the palette toggle").toBe(false);
-  const others = await page.evaluate((h) => {
-    const tabEl = document.querySelector('[data-testid="code-pane-toggle"]');
-    // The strip's category tiles are clickable too.
-    return [...document.querySelectorAll("button, input, select, textarea, [role=button], .pnv-palette-tile")]
-      .filter((el) => el !== tabEl && !el.closest(".react-flow__viewport"))
-      .map((el) => ({ el, r: el.getBoundingClientRect() }))
-      .filter(({ r }) => r.width > 0 && r.height > 0 && r.x < h.x + h.width && h.x < r.x + r.width && r.y < h.y + h.height && h.y < r.y + r.height)
-      .map(({ el }) => el.getAttribute("data-testid") ?? el.getAttribute("title") ?? el.textContent?.trim().slice(0, 30));
-  }, hit);
-  expect(others, "controls under the tab's hit area").toEqual([]);
+/**
+ * A tab's hit box lies over nothing it shouldn't (#418): not the graph
+ * canvas's pane, not the graph toolbar's palette toggle, and no other control.
+ * The hit box is the tab itself (index.css, .pnv-handle--side-*).
+ */
+async function expectTabClear(page: Page, tab: Locator) {
+  const hit = (await tab.boundingBox())!;
+  expect(hit.width >= 24 || hit.height >= 24, "the target is 24px or more along the line").toBe(true);
+  const meets = (b: { x: number; y: number; width: number; height: number }) =>
+    hit.x < b.x + b.width - 0.5 && b.x < hit.x + hit.width - 0.5 && hit.y < b.y + b.height - 0.5 && b.y < hit.y + hit.height - 0.5;
+  const canvas = await page.locator(".react-flow__pane").boundingBox();
+  if (canvas) expect(meets(canvas), "the tab's hit box overlaps the graph canvas").toBe(false);
+  const toggle = await page.getByTestId("palette-toggle").boundingBox();
+  if (toggle) expect(meets(toggle), "the tab's hit box overlaps the palette toggle").toBe(false);
+  const tabId = await tab.getAttribute("data-testid");
+  const others = await page.evaluate(
+    ({ h, tabId }) =>
+      [...document.querySelectorAll("button, input, select, textarea, [role=button], .pnv-palette-tile")]
+        .filter((el) => el.getAttribute("data-testid") !== tabId && !el.closest(".react-flow__viewport"))
+        .map((el) => ({ el, r: el.getBoundingClientRect() }))
+        .filter(({ r }) => r.width > 0 && r.height > 0 && r.x < h.x + h.width - 0.5 && h.x < r.x + r.width - 0.5 && r.y < h.y + h.height - 0.5 && h.y < r.y + r.height - 0.5)
+        .map(({ el }) => el.getAttribute("data-testid") ?? el.getAttribute("title") ?? el.textContent?.trim().slice(0, 30)),
+    { h: hit, tabId },
+  );
+  expect(others, "controls under the tab's hit box").toEqual([]);
 }
 
 /** Every row arrow on the page sits in a button or summary that says whether it is open. */
@@ -122,10 +129,9 @@ test.describe("panel-edge handles (#418)", { tag: "@ci" }, () => {
     await expect(tab.locator("svg")).toHaveAttribute("data-direction", "right");
     const collapsedBox = (await tab.boundingBox())!;
     expect(collapsedBox.x).toBeGreaterThanOrEqual(0);
-    // Collapsed, the tab lies over the graph's side of the window. Its hit
-    // area (the tab plus 5px each side) covers none of the buttons there: not
-    // the graph toolbar's palette toggle, nor any other.
-    await expectHitAreaClear(page, tab);
+    // Collapsed, the tab lies in the graph toolbar's left margin: not over
+    // the canvas, the palette toggle or any other control.
+    await expectTabClear(page, tab);
     // ...and restores to the width it had.
     await tab.click();
     await expect(tab).toHaveAttribute("aria-expanded", "true");
@@ -214,19 +220,35 @@ test.describe("panel-edge handles (#418)", { tag: "@ci" }, () => {
     await expect.poll(() => height(panel)).toBeGreaterThan(h0 + 55);
   });
 
-  test("collapsed beside the icon strip, the code pane's tab clears the strip's and the toolbar's buttons", async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem("psyneuview.components.start", "strip"));
+  test("no tab lies over the graph canvas or a control, open or collapsed", async ({ page }) => {
     await openStroop(page);
-    await page.getByTestId("palette-sidebar").getByTestId("palette-strip-expand").waitFor();
-    const tab = page.getByTestId("code-pane-toggle");
-    await tab.click();
-    await expect(tab).toHaveAttribute("aria-expanded", "false");
-    await expect.poll(async () => (await tab.boundingBox())!.y).toBeGreaterThan(100);
-    await expectHitAreaClear(page, tab);
-    // Back open, it returns to the top of the edge.
-    await tab.click();
-    await expect(tab).toHaveAttribute("aria-expanded", "true");
-    await expectHitAreaClear(page, tab);
+    // With the Components panel closed the canvas reaches the code pane's edge;
+    // with it as the strip or open in full, the panel's own tab must stay inside it.
+    await closePalette(page);
+    const code = page.getByTestId("code-pane-toggle");
+    const bottom = page.getByTestId("bottom-panel-collapse");
+    await expectTabClear(page, code);
+    await expectTabClear(page, bottom);
+    await code.click();
+    await expect(code).toHaveAttribute("aria-expanded", "false");
+    await expectTabClear(page, code);
+    await bottom.click();
+    await expect(bottom).toHaveAttribute("aria-expanded", "false");
+    await expectTabClear(page, bottom);
+    await expectTabClear(page, code);
+    // Collapsed, the bottom panel leaves a gutter for its tab at the window's foot, below the canvas.
+    const gutter = (await page.getByTestId("split-inner-gutter").boundingBox())!;
+    const canvas = (await page.locator(".react-flow__pane").boundingBox())!;
+    expect(canvas.y + canvas.height).toBeLessThanOrEqual(gutter.y + 0.5);
+    // The Components panel's tab, as the strip and open in full.
+    await page.getByTestId("palette-toggle").click();
+    const palette = page.getByTestId("palette-sidebar");
+    await expectTabClear(page, palette.getByTestId("palette-fold"));
+    await palette.getByTestId("palette-fold").click();
+    await expectTabClear(page, palette.getByTestId("palette-strip-expand"));
+    // The graph's own clicks still land: a node selects.
+    await page.locator(".react-flow__node").first().click();
+    await expect(page.locator(".react-flow__node.selected").first()).toBeVisible();
   });
 
   test("the Components panel folds to the strip from its edge tab, and back", async ({ page }) => {
@@ -238,7 +260,8 @@ test.describe("panel-edge handles (#418)", { tag: "@ci" }, () => {
     // On the panel's right edge, not in its column of buttons.
     const p = (await palette.boundingBox())!;
     const f = (await fold.boundingBox())!;
-    expect(Math.abs(f.x + f.width / 2 - (p.x + p.width))).toBeLessThan(3);
+    expect(Math.abs(f.x + f.width - (p.x + p.width))).toBeLessThanOrEqual(2.5);
+    expect(f.x).toBeGreaterThanOrEqual(p.x);
     // The panel doesn't resize, so the line itself is no separator.
     await expect(page.getByTestId("palette-handle").getByRole("separator")).toHaveCount(0);
 

@@ -138,7 +138,14 @@ splitter is the control: a 1px line with a small rounded tab holding the arrow.
   round, so it always comes back from where it went. No pane can vanish
   leaving nothing on screen.
 - **Tab placement:** the top of a vertical edge, the right end of a horizontal
-  one.
+  one, and **never over the graph canvas** or another control. Each tab sits
+  wholly on one side of its line:
+  - the code pane's in the graph toolbar's 12px left margin, before the palette
+    toggle (open or collapsed);
+  - the bottom panel's below its line, in the tab bar's empty right end; when
+    the panel is collapsed, a 16px gutter at the window's foot holds it, so the
+    canvas ends above it;
+  - the Components panel's inside the panel, in the strip's right margin.
 - **Keyboard and ARIA, the WAI-ARIA "window splitter" pattern:** the line is
   `role="separator"`, focusable, with `aria-valuenow` (the pane's share, in
   percent). The arrow keys along its axis resize it (10px, Shift for 50px),
@@ -148,12 +155,14 @@ splitter is the control: a 1px line with a small rounded tab holding the arrow.
   is the line's sibling, because a separator's children are presentational.
 - **Looks:** the line thickens to 3px `--pnv-primary` on hover, drag and
   focus; the tab turns `--pnv-primary` on `--pnv-primary-tint`; keyboard focus
-  gets a 2px `--pnv-primary` ring. Its hit area is at least 24×24, wide rather
-  than tall (14×36 visible on a vertical edge, 40×14 on a horizontal one).
+  gets a 2px `--pnv-primary` ring. Its target is the tab itself: 24px or more
+  along the line (28 or 36 on a vertical edge, 40 on a horizontal one), and as
+  thick as the room on its side allows (7 to 14px).
 - Used on: the code pane, the bottom (Inspector) panel, and the Components
   panel's right edge (fold to the icon strip; that edge only folds, so only
   the tab acts). The two splits are `components/layout/SplitPane.tsx`, which
-  replaced Allotment; stored sizes keep their proportions.
+  replaced Allotment; stored sizes keep their proportions, rounded to a whole
+  pixel in CSS so a window resize moves the panes in the same frame.
 
 **Rows and sections: the same arrow, turned** (`DisclosureArrow`, and
 `DisclosureDetails` for a native `<details>`, in

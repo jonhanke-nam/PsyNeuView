@@ -27,7 +27,7 @@
  * docs/ui-interaction-conventions.md ("Expand and collapse") is the standard.
  */
 
-import { useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
+import { useRef, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 
 /** A press that moves this far is a drag, not a click. */
 export const DRAG_THRESHOLD_PX = 3;
@@ -100,39 +100,6 @@ export class PressTracker {
   }
 }
 
-/** What a tab's hit area must not cover: a control of the pane beside it. Graph content pans, so it doesn't count. */
-const INTERACTIVE =
-  'button, a[href], input, select, textarea, [role="button"], [role="separator"], [role="option"], [tabindex]:not([tabindex="-1"]), [draggable="true"], .pnv-palette-tile';
-
-/** Taller than this, a focusable element is a region (a pane, the canvas), not a control. */
-const MAX_CONTROL_HEIGHT = 80;
-
-/**
- * The first offset along a vertical edge, from `from` on, where the tab's
- * hit area covers no control of the window: the collapsed code pane's tab
- * lies over the graph's own toolbar and the Components strip (#418), and
- * must not hide part of them. Null when there is no such place.
- */
-export function clearTabOffset(
-  edgeTop: number,
-  edgeHeight: number,
-  hitLeft: number,
-  hitRight: number,
-  tabHeight: number,
-  from: number,
-  isControlAt: (x: number, y: number) => boolean,
-): number | null {
-  const xs = [hitLeft + 1, (hitLeft + hitRight) / 2, hitRight - 1];
-  for (let o = from; o + tabHeight + 4 <= edgeHeight; o += 4) {
-    let clear = true;
-    for (let y = edgeTop + o - 2; y <= edgeTop + o + tabHeight + 2 && clear; y += 4) {
-      for (const x of xs) if (isControlAt(x, y)) { clear = false; break; }
-    }
-    if (clear) return o;
-  }
-  return null;
-}
-
 /** The standard chevron, pointing `direction`. Shared by panel edges; rows use DisclosureArrow. */
 export function Chevron({ direction, size = 10 }: { direction: Direction; size?: number }) {
   return (
@@ -198,12 +165,14 @@ export interface PanelHandleProps {
   /** Offset of the tab from that end, in px. */
   tabOffset?: number;
   /**
-   * Collapsed, on the window's edge (a vertical line only): move the tab down
-   * from `tabOffset` until its hit area covers none of the controls drawn
-   * there. Rechecked when `recheckKey` changes and when the window resizes.
+   * Which side of the line the tab sits on: centred across it, or wholly
+   * "before" (left / above) or "after" (right / below) it, so it never lies
+   * over the pane on the other side (the graph canvas, #418).
    */
-  collapsedAvoidsControls?: boolean;
-  recheckKey?: string;
+  tabSide?: "center" | "before" | "after";
+  /** The tab's length along the line (at least 24) and its thickness across it, in px. */
+  tabAlong?: number;
+  tabCross?: number;
   /** The handle is on the split's start or end edge (a pane hidden): it is drawn inside the window. */
   at?: "start" | "end";
   testId?: string;
@@ -224,8 +193,9 @@ export function PanelHandle({
   resize,
   tabAt,
   tabOffset = 8,
-  collapsedAvoidsControls = false,
-  recheckKey,
+  tabSide = "center",
+  tabAlong,
+  tabCross = 14,
   at,
   testId,
   tabTestId,
@@ -239,43 +209,6 @@ export function PanelHandle({
   const suppressClick = useRef(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const canResize = !!resize && expanded && !resize.disabled;
-
-  // The collapsed tab's offset once moved clear of the controls beside it.
-  const [clearOffset, setClearOffset] = useState<number | null>(null);
-  const tabRef = useRef<HTMLButtonElement>(null);
-  const avoiding = collapsedAvoidsControls && vertical && !expanded;
-  useLayoutEffect(() => {
-    if (!avoiding) {
-      setClearOffset(null);
-      return;
-    }
-    let frame = 0;
-    const place = () => {
-      const root = rootRef.current;
-      const tab = tabRef.current;
-      if (!root || !tab) return;
-      const r = root.getBoundingClientRect();
-      const t = tab.getBoundingClientRect();
-      const isControlAt = (x: number, y: number) =>
-        document.elementsFromPoint(x, y).some(
-          (el) =>
-            !root.contains(el) &&
-            el.matches(INTERACTIVE) &&
-            !el.closest(".react-flow__viewport") &&
-            // A focusable pane (the graph canvas takes keys) is not a control under the tab.
-            el.getBoundingClientRect().height <= MAX_CONTROL_HEIGHT,
-        );
-      // The hit area is the tab plus 5px each side (index.css).
-      setClearOffset(clearTabOffset(r.top, r.height, t.left - 5, t.right + 5, t.height, tabOffset, isControlAt));
-    };
-    // After the panes beside it have drawn.
-    frame = requestAnimationFrame(() => (frame = requestAnimationFrame(place)));
-    window.addEventListener("resize", place);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("resize", place);
-    };
-  }, [avoiding, tabOffset, recheckKey]);
 
   // The latest resize callbacks, for the window listeners a press installs.
   const resizeRef = useRef(resize);
@@ -337,7 +270,9 @@ export function PanelHandle({
   const placement = tabAt ?? (vertical ? "start" : "end");
   // The tab's place is set in CSS from a class and a custom property, so the
   // button carries no style of its own.
-  const rootStyle = { ...style, ["--handle-tab-offset" as string]: `${avoiding && clearOffset !== null ? clearOffset : tabOffset}px` } as CSSProperties;
+  const rootStyle = { ...style, ["--handle-tab-offset" as string]: `${tabOffset}px`,
+    ["--tab-along" as string]: `${tabAlong ?? (vertical ? 36 : 40)}px`,
+    ["--tab-cross" as string]: `${tabCross}px` } as CSSProperties;
   const label = expanded ? collapseLabel : expandLabel;
 
   return (
@@ -347,7 +282,7 @@ export function PanelHandle({
       data-pnv-panel-handle={orientation}
       data-expanded={expanded ? "true" : "false"}
       data-at={at}
-      className={`pnv-handle pnv-handle--${vertical ? "v" : "h"} pnv-handle--tab-${placement}${canResize ? " pnv-handle--resizable" : ""}${className ? ` ${className}` : ""}`}
+      className={`pnv-handle pnv-handle--${vertical ? "v" : "h"} pnv-handle--tab-${placement} pnv-handle--side-${tabSide}${canResize ? " pnv-handle--resizable" : ""}${className ? ` ${className}` : ""}`}
       style={rootStyle}
       onPointerDown={onPointerDown}
     >
@@ -369,7 +304,6 @@ export function PanelHandle({
       )}
       <button
         type="button"
-        ref={tabRef}
         className="pnv-handle__tab"
         data-testid={tabTestId}
         aria-expanded={expanded}
@@ -384,7 +318,7 @@ export function PanelHandle({
           onToggle();
         }}
       >
-        <Chevron direction={arrowDirection(foldToward, expanded)} />
+        <Chevron direction={arrowDirection(foldToward, expanded)} size={Math.min(10, tabCross - 1)} />
       </button>
     </div>
   );

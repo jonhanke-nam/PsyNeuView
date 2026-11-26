@@ -169,6 +169,9 @@ export function PaletteSidebar() {
         testId="palette-handle"
         tabTestId={isCompact ? "palette-strip-expand" : "palette-fold"}
         tabOffset={6}
+        // Inside the panel, in the strip's 7px right margin, never over the canvas (#418).
+        tabSide="before"
+        tabCross={7}
         // Over the panel's own border, so the line and the border are one.
         style={{ left: "calc(100% - 1px)" }}
       />

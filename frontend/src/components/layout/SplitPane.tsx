@@ -4,7 +4,7 @@
  *
  * Sizes work as Allotment's did, so a stored layout keeps its shape: the
  * stored pair is a proportion (pixels from a drag, or the defaults' 25/75),
- * each pane grows in that proportion, and a window resize scales both. Each
+ * first pane takes that share (rounded to a pixel), and a window resize scales both. Each
  * pane has a minimum. A hidden pane stays mounted at zero size (its state is
  * kept); the other fills the split.
  *
@@ -37,10 +37,17 @@ export interface SplitPaneProps {
   onToggle: () => void;
   /** e.g. "the code editor": the tab says "Collapse the code editor" / "Show the code editor". */
   paneName: string;
-  /** Collapsed, the tab moves down clear of the controls beside it (PanelHandle). */
-  collapsedAvoidsControls?: boolean;
-  /** What, when it changes, may have moved those controls. */
-  recheckKey?: string;
+  /** Where the tab sits (PanelHandle): its side of the line, offset, and size. */
+  tabSide?: "center" | "before" | "after";
+  tabOffset?: number;
+  tabAlong?: number;
+  tabCross?: number;
+  /**
+   * The collapsible pane is the second and collapsed: leave a gutter this
+   * many px deep at the far edge to hold the tab, so it never lies over the
+   * first pane (the graph canvas, #418).
+   */
+  collapsedGutter?: number;
   testId?: string;
   handleTestId?: string;
   tabTestId?: string;
@@ -60,8 +67,11 @@ export function SplitPane({
   paneId,
   onToggle,
   paneName,
-  collapsedAvoidsControls,
-  recheckKey,
+  tabSide,
+  tabOffset,
+  tabAlong,
+  tabCross,
+  collapsedGutter,
   testId,
   handleTestId,
   tabTestId,
@@ -75,15 +85,13 @@ export function SplitPane({
   // The total and the first pane's size when a drag began.
   const dragStart = useRef<{ total: number; first: number } | null>(null);
   // Re-render on container resize, so the separator's aria-value stays true.
-  // The container's length along the split, kept as the window resizes.
-  const [length, setLength] = useState(0);
+  // Re-render on container resize, so the separator's aria-value stays true.
+  // (The panes' sizes themselves are pure CSS, so they never lag a resize.)
+  const [, setTick] = useState(0);
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver((entries) => {
-      const r = entries[0].contentRect;
-      setLength(row ? r.width : r.height);
-    });
+    const ro = new ResizeObserver(() => setTick((t) => t + 1));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -141,6 +149,8 @@ export function SplitPane({
     },
   };
 
+  const gutter = collapsedGutter && collapsible === "second" && !secondVisible && firstVisible ? collapsedGutter : 0;
+
   const foldToward: Direction =
     collapsible === "first" ? (row ? "left" : "up") : row ? "right" : "down";
 
@@ -149,22 +159,19 @@ export function SplitPane({
   // both hidden (a blank screen, #215), the first keeps the space, still
   // invisible: the graph inside it must have a size to start a walkthrough
   // opened by its link.
-  // Both showing: the first pane gets whole pixels, its share rounded, as
-  // Allotment laid them out, and the second the rest. So a stored split
-  // lands on the same pixel it did before (#418).
-  const firstPx =
-    both && length > 0
-      ? Math.max(firstMin, Math.min(length - secondMin, Math.round((length * live[0]) / (live[0] + live[1]))))
-      : null;
-  const paneStyle = (grow: number, min: number, visible: boolean, isFirst: boolean): React.CSSProperties => {
+  // Both showing: the first pane gets its share rounded to a whole pixel,
+  // as Allotment laid them out, and the second the rest, so a stored split
+  // lands on the same pixel it did before (#418). In CSS, not from a measured
+  // length, so a window resize moves the panes in the same frame: a frame
+  // late, a scroll inside a pane that started then would land elsewhere.
+  const firstShare = `round(${((100 * live[0]) / (live[0] + live[1])).toFixed(4)}%, 1px)`;
+  const paneStyle = (min: number, visible: boolean, isFirst: boolean): React.CSSProperties => {
     const keepsSpace = visible || (isFirst && !firstVisible && !secondVisible);
-    const flex = !keepsSpace
-      ? "0 0 0px"
-      : both && firstPx !== null
-        ? isFirst ? `0 0 ${firstPx}px` : "1 1 0px"
-        : both ? `${grow} 1 0px` : "1 1 0px";
+    const flex = !keepsSpace ? "0 0 0px" : both ? (isFirst ? `0 0 ${firstShare}` : "1 1 0px") : "1 1 0px";
     return {
       flex,
+      // The second pane keeps its minimum: the first stops short of it.
+      ...(both && isFirst ? { [row ? "maxWidth" : "maxHeight"]: `calc(100% - ${secondMin}px)` } : {}),
       visibility: visible ? undefined : "hidden",
       [row ? "minWidth" : "minHeight"]: visible && both ? min : 0,
       [row ? "minHeight" : "minWidth"]: 0,
@@ -187,11 +194,16 @@ export function SplitPane({
         overflow: "hidden",
       }}
     >
-      <div ref={firstRef} id={collapsible === "first" ? paneId : undefined} style={paneStyle(live[0], firstMin, firstVisible, true)}>
+      <div ref={firstRef} id={collapsible === "first" ? paneId : undefined} style={paneStyle(firstMin, firstVisible, true)}>
         {first}
       </div>
-      {/* A zero-size slot on the edge: the handle sits across it and takes no space. */}
-      <div style={{ flex: "0 0 0px", position: "relative", zIndex: 35 }}>
+      {/* A zero-size slot on the edge: the handle sits across it and takes no
+          space; or, for a collapsed second pane, the gutter that holds its tab. */}
+      <div
+        className={gutter ? "pnv-split-gutter" : undefined}
+        data-testid={gutter && testId ? `${testId}-gutter` : undefined}
+        style={{ flex: `0 0 ${gutter}px`, position: "relative", zIndex: 35 }}
+      >
         <PanelHandle
           orientation={row ? "vertical" : "horizontal"}
           foldToward={foldToward}
@@ -204,12 +216,14 @@ export function SplitPane({
           resize={resize}
           testId={handleTestId}
           tabTestId={tabTestId}
-          collapsedAvoidsControls={collapsedAvoidsControls}
-          recheckKey={recheckKey}
-          at={edgeAt(firstVisible, secondVisible)}
+          tabSide={tabSide}
+          tabOffset={tabOffset}
+          tabAlong={tabAlong}
+          tabCross={tabCross}
+          at={gutter ? undefined : edgeAt(firstVisible, secondVisible)}
         />
       </div>
-      <div id={collapsible === "second" ? paneId : undefined} style={paneStyle(live[1], secondMin, secondVisible, false)}>
+      <div id={collapsible === "second" ? paneId : undefined} style={paneStyle(secondMin, secondVisible, false)}>
         {second}
       </div>
     </div>
