@@ -164,6 +164,23 @@ test.describe("step highlight (#365)", { tag: "@ci" }, () => {
     await page.getByRole("button", { name: /Open/ }).first().click();
     await page.getByText("EGO").first().click();
     await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 90_000 });
+    // EGO opens in the view the view menu names, flattened, with EM open
+    // (#428). EM folds to one node in the nested view, so switch to it.
+    const viewMenu = page
+      .locator("select")
+      .filter({ has: page.locator("option", { hasText: "Flatten (all compositions)" }) })
+      .first();
+    const nested = await viewMenu.locator("option").filter({ hasText: /^EGO$/ }).first().getAttribute("value");
+    await Promise.all([
+      page.waitForResponse(
+        (r) => /\/api\/(model\/load|reference-models\/load)/.test(r.url()) && r.request().method() === "POST",
+        { timeout: 60_000 },
+      ),
+      viewMenu.selectOption(nested!),
+    ]);
+    await expect(page.locator('.react-flow__node[data-id="EM"] [data-testid="mechanism-node-body"]').first()).toBeVisible({
+      timeout: 60_000,
+    });
     await closePalette(page);
     await page.getByTestId("tab-run").click();
     await page.getByRole("button", { name: /Run Model/ }).click();
