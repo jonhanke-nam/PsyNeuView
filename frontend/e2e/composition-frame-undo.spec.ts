@@ -14,6 +14,7 @@
  * Tried on the EGO model's EM composition, as the frame buttons' own tests are.
  */
 import { mutatingTest as test, expect, closePalette } from "./test-base";
+import { modLabel, modShiftLabel } from "./hostPlatform";
 import type { Page } from "@playwright/test";
 import { copyFileSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
@@ -71,8 +72,8 @@ async function step(page: Page, which: "undo" | "redo") {
 
 /** The Undo and Redo tooltips name the step they would take (#204). */
 async function expectTooltips(page: Page, undo: string | null, redo: string | null) {
-  await expect(page.getByTestId("undo-button")).toHaveAttribute("title", undo ? `Undo: ${undo} (⌘Z)` : "Nothing to undo");
-  await expect(page.getByTestId("redo-button")).toHaveAttribute("title", redo ? `Redo: ${redo} (⌘⇧Z)` : "Nothing to redo");
+  await expect(page.getByTestId("undo-button")).toHaveAttribute("title", undo ? `Undo: ${undo} (${modLabel("z")})` : "Nothing to undo");
+  await expect(page.getByTestId("redo-button")).toHaveAttribute("title", redo ? `Redo: ${redo} (${modShiftLabel("z")})` : "Nothing to redo");
 }
 
 const frame = (page: Page, label: string) =>
