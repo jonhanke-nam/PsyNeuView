@@ -23,7 +23,7 @@ FIXTURE_EXPECTATIONS = [
     ("single_transfer", 1, 0),
     ("two_mech_projection", 2, 1),
     ("with_controller", 1, 0),       # controller is comp.controller, not a node
-    ("recurrent_self", 1, 0),        # auto/hetero live on the mechanism
+    ("recurrent_self", 1, 1),        # its projection to itself, kept as a self-loop (#425)
     ("nested_minimal", 3, 2),        # outer composition counts inner as 1 node
 ]
 
