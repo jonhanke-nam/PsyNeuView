@@ -245,6 +245,9 @@ test.describe("panel-edge handles (#418)", { tag: "@ci" }, () => {
     const palette = page.getByTestId("palette-sidebar");
     await expectTabClear(page, palette.getByTestId("palette-fold"));
     await palette.getByTestId("palette-fold").click();
+    // The panel narrows over 0.15s; measure the strip once it has (CI's slower
+    // runner measured the tab mid-way, still over the canvas).
+    await expect.poll(() => width(palette)).toBe(48);
     await expectTabClear(page, palette.getByTestId("palette-strip-expand"));
     // The graph's own clicks still land: a node selects.
     await page.locator(".react-flow__node").first().click();
