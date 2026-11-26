@@ -606,6 +606,11 @@ interface ModelState {
   // a switch between the nested and the other view. A reload after an edit
   // (add, move, delete, a code change) leaves it alone, so the view stays put.
   graphFitSeq: number;
+  // #420: bumped when saved positions are applied to the graph (a Custom
+  // layout built, a layout variant switched, a step undone). The canvas then
+  // nudges apart any nodes the saved positions put on top of one another,
+  // once their drawn sizes are known (utils/nodeOverlap.ts).
+  savedLayoutSeq: number;
 
   // WebSocket
   ws: WebSocket | null;
@@ -833,6 +838,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
   autoLayout: true,
   lastLayoutPositions: {},
   graphFitSeq: 0,
+  savedLayoutSeq: 0,
   ws: null,
 
   // Clears bundleOrigin: every fresh load routes through setFilePath, and
@@ -1019,7 +1025,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
       const p = positions[vn] ?? positions[n.id];
       return p ? { ...n, position: { x: p.x, y: p.y } } : n;
     });
-    set({ nodes });
+    set({ nodes, savedLayoutSeq: get().savedLayoutSeq + 1 });
   },
   switchVariant: async (kind, name) => {
     const filePath = get().filePath;
@@ -2321,6 +2327,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
       // A load that brings no layout leaves what is saved as it was (#164).
       lastLayoutPositions: layout === undefined && isReload ? get().lastLayoutPositions : savedPositions,
       ...(fitAfterLoad ? { graphFitSeq: get().graphFitSeq + 1 } : {}),
+      ...(!autoLayout && hasPlaced ? { savedLayoutSeq: get().savedLayoutSeq + 1 } : {}),
     });
     // #282: hydrate dragged-port overrides from the sidecar. Persisted keyed by
     // varName (like positions); remap to the runtime node ids the graph uses.
