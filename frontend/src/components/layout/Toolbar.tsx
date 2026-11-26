@@ -3373,6 +3373,18 @@ function PnlSourceBadge() {
 function ManagedSourceBadge({ from, title, style }: { from: string; title?: string; style: React.CSSProperties }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement | null>(null);
+  // Where the note goes: under the tag, kept inside the window. Fixed rather
+  // than absolute, because the badges beside the model title are cut off at
+  // the right when space is short (#422), and that would cut the note off and
+  // leave its button under the canvas.
+  const [at, setAt] = useState<{ top: number; left: number } | null>(null);
+  const toggle = () => {
+    if (!open && ref.current) {
+      const r = ref.current.getBoundingClientRect();
+      setAt({ top: r.bottom + 4, left: Math.max(8, Math.min(r.left, window.innerWidth - 328)) });
+    }
+    setOpen((o) => !o);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -3396,7 +3408,7 @@ function ManagedSourceBadge({ from, title, style }: { from: string; title?: stri
         data-testid="pnl-source-badge"
         aria-expanded={open}
         aria-haspopup="dialog"
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggle}
         title={`${title ? `${title} ` : ""}Click to see why, and how to work on a copy.`}
         style={{ ...style, cursor: "pointer" }}
       >
@@ -3408,9 +3420,9 @@ function ManagedSourceBadge({ from, title, style }: { from: string; title?: stri
           aria-labelledby="pnl-read-only-note-title"
           data-testid="pnl-read-only-note"
           style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
+            position: "fixed",
+            top: at?.top ?? 0,
+            left: at?.left ?? 0,
             // Above the panel dividers (Allotment sashes, z-index 35), like the Open menu (#1391).
             zIndex: Z_MENU,
             width: 320,
