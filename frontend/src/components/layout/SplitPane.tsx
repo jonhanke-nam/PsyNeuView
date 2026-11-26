@@ -75,11 +75,15 @@ export function SplitPane({
   // The total and the first pane's size when a drag began.
   const dragStart = useRef<{ total: number; first: number } | null>(null);
   // Re-render on container resize, so the separator's aria-value stays true.
-  const [, setTick] = useState(0);
+  // The container's length along the split, kept as the window resizes.
+  const [length, setLength] = useState(0);
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => setTick((t) => t + 1));
+    const ro = new ResizeObserver((entries) => {
+      const r = entries[0].contentRect;
+      setLength(row ? r.width : r.height);
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -145,10 +149,22 @@ export function SplitPane({
   // both hidden (a blank screen, #215), the first keeps the space, still
   // invisible: the graph inside it must have a size to start a walkthrough
   // opened by its link.
+  // Both showing: the first pane gets whole pixels, its share rounded, as
+  // Allotment laid them out, and the second the rest. So a stored split
+  // lands on the same pixel it did before (#418).
+  const firstPx =
+    both && length > 0
+      ? Math.max(firstMin, Math.min(length - secondMin, Math.round((length * live[0]) / (live[0] + live[1]))))
+      : null;
   const paneStyle = (grow: number, min: number, visible: boolean, isFirst: boolean): React.CSSProperties => {
     const keepsSpace = visible || (isFirst && !firstVisible && !secondVisible);
+    const flex = !keepsSpace
+      ? "0 0 0px"
+      : both && firstPx !== null
+        ? isFirst ? `0 0 ${firstPx}px` : "1 1 0px"
+        : both ? `${grow} 1 0px` : "1 1 0px";
     return {
-      flex: !keepsSpace ? "0 0 0px" : both ? `${grow} 1 0px` : "1 1 0px",
+      flex,
       visibility: visible ? undefined : "hidden",
       [row ? "minWidth" : "minHeight"]: visible && both ? min : 0,
       [row ? "minHeight" : "minWidth"]: 0,
