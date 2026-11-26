@@ -93,7 +93,7 @@ How the app looks and feels, remembered per browser:
 - **Graph legend** — how the legend opens: Starts collapsed (default) or Starts expanded (#7)
   - the legend's own Show/Hide folds it for the open model
 - **Components panel** — how the panel opens: Starts as the icon strip (default since #345) or Starts open, as the word list (#113)
-  - the panel's own ◀ (fold to the strip) and › (open the full panel) switch it for the session only
+  - the arrow tab on the panel's right edge (‹ folds it to the strip, › opens the full panel, #418) switches it for the session only
   - **Show favourite and recently used components in the icon strip**, off by default: the strip shows the category menus under an "All" heading, and with this on, your favourites and recent picks below them under "Recent" (#372)
 - **Panels** (#215) — **Allow a blank screen**, off by default: on, the graph, the code editor and the Inspector panel can all be hidden, with a hint on the blank screen saying how to bring one back; off, the last of them stays, with the notice (#213), and turning it off while blank brings the graph back
   - **Panels to open when a model loads on a blank screen** — the graph (default), the code editor, the Inspector panel, the Components panel; greyed out while the first is off; one of the first three stays ticked

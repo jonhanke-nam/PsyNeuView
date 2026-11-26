@@ -13,6 +13,7 @@
  * neighboring rows in the same dropdown.
  */
 
+import { DisclosureArrow } from "@/components/common/Disclosure";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DialogHeader } from "./dialog/DialogHeader";
 import { useDismiss } from "./dialog/useDismiss";
@@ -103,6 +104,14 @@ const listStyle: React.CSSProperties = {
 };
 
 const fileHeaderStyle: React.CSSProperties = {
+  // #418: a real button now, so the browser's own button look is undone here.
+  display: "flex",
+  alignItems: "center",
+  width: "100%",
+  border: "none",
+  textAlign: "left",
+  fontFamily: "inherit",
+  zIndex: 1,
   padding: "6px 10px",
   fontSize: "var(--pnv-fs-11)",
   textTransform: "uppercase",
@@ -386,14 +395,18 @@ export function DeveloperTestsModal({ onCancel, onExtracted }: DeveloperTestsMod
                 const collapsed = collapsedFiles.has(g.file);
                 return (
                   <div key={g.file}>
-                    <div
+                    <button
+                      type="button"
+                      className="pnv-disclosure-toggle"
+                      data-testid="developer-tests-file-toggle"
+                      aria-expanded={!collapsed}
                       style={fileHeaderStyle}
                       onClick={() => toggleFile(g.file)}
                       title={g.file}
                     >
-                      {collapsed ? "▸ " : "▾ "}
+                      <DisclosureArrow open={!collapsed} small />
                       {g.shortFile}
-                    </div>
+                    </button>
                     {!collapsed &&
                       g.classes.map((c) => (
                         <div key={`${g.file}::${c.className ?? "__module__"}`}>

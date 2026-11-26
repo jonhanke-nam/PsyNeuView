@@ -4,6 +4,7 @@
  * Edits are sent to the backend, which updates the .py file and re-introspects.
  */
 
+import { DisclosureDetails } from "@/components/common/Disclosure";
 import { modelViewOptions } from "@/utils/showGraphLoadRequest";
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useModelStore } from "@/stores/modelStore";
@@ -2563,10 +2564,11 @@ function ParamSection({
       )}
 
       {inherited.length > 0 && (
-        <details style={{ marginTop: 6 }}>
-          <summary style={{ fontSize: s(11), color: "var(--pnv-text-faint)", cursor: "pointer", userSelect: "none", padding: "2px 0" }}>
-            Inherited ({inherited.length})
-          </summary>
+        <DisclosureDetails
+          style={{ marginTop: 6 }}
+          summaryStyle={{ fontSize: s(11), color: "var(--pnv-text-faint)", cursor: "pointer", userSelect: "none", padding: "2px 0" }}
+          summary={<>Inherited ({inherited.length})</>}
+        >
           <div style={{ marginTop: 4 }}>
             {inherited.map(([key, meta]) => (
               <div
@@ -2586,7 +2588,7 @@ function ParamSection({
               </div>
             ))}
           </div>
-        </details>
+        </DisclosureDetails>
       )}
     </div>
   );

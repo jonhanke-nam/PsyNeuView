@@ -32,6 +32,7 @@
  * opened it.
  */
 
+import { DisclosureArrow } from "@/components/common/Disclosure";
 import { toggleColours } from "@/components/common/toolbarStyles";
 import { useEffect, useRef, useState } from "react";
 import { useHistoryStore, type Snapshot } from "@/stores/historyStore";
@@ -371,13 +372,24 @@ export function HistoryPanel() {
               const back = i < currentIndex;
               return (
                 <div key={i}>
-                  <div
+                  {/* #418: a real button, so the keyboard reaches a step and
+                      it says whether it is open. A step that opens nothing
+                      (the first, while current) is disabled. */}
+                  <button
+                    type="button"
                     data-testid="history-step"
                     data-current={isCurrent ? "true" : undefined}
                     data-opens={opens ? "true" : undefined}
                     className="pnv-history-step"
+                    disabled={!opens}
+                    aria-expanded={opens ? isExpanded : undefined}
                     onClick={() => opens && setExpanded(isExpanded ? null : i)}
                     style={{
+                      width: "100%",
+                      border: "none",
+                      textAlign: "left",
+                      fontFamily: "inherit",
+                      alignItems: "center",
                       padding: "4px 12px",
                       fontSize: "var(--pnv-fs-12)",
                       display: "flex",
@@ -398,6 +410,7 @@ export function HistoryPanel() {
                     }
                   >
                     <span>
+                      <DisclosureArrow open={isExpanded} small hidden={!opens} />
                       {isCurrent ? "→ " : ""}
                       {entry.description || (i === 0 ? "Initial state" : "Action")}
                       {i === diskIndex && (
@@ -422,7 +435,7 @@ export function HistoryPanel() {
                         {summary}
                       </span>
                     )}
-                  </div>
+                  </button>
                   {isExpanded && previous && (
                     <DiffView before={previous.source} after={entry.source} />
                   )}

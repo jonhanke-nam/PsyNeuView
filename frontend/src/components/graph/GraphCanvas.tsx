@@ -403,7 +403,7 @@ export function GraphCanvas() {
       return;
     }
     if (!graphVisible) return;
-    // Wait for the Allotment reflow to settle before measuring.
+    // Wait for the panel layout reflow to settle before measuring.
     const t = setTimeout(fitGraph, 120);
     return () => clearTimeout(t);
   }, [codeVisible, graphVisible, bottomVisible, failedOpenShowing, fitGraph]);
@@ -1200,7 +1200,7 @@ export function GraphCanvas() {
   );
 
   // Defer rendering ReactFlow until the container has non-zero dimensions.
-  // Allotment assigns dimensions asynchronously, so on first render the
+  // The panes settle their dimensions after mount, so on first render the
   // container is 0×0, which triggers React Flow's "parent needs width/height" warning.
   const containerRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);

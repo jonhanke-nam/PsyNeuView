@@ -148,6 +148,71 @@ changing what the mouse does. Adding a component is the worked example:
 Tell the two apart by how the gesture started (a key press), never by
 changing what a click does.
 
+## Expand and collapse (#418)
+
+One control for everything that folds, so an arrow means the same thing
+everywhere. Two forms, one arrow:
+
+**Panel edges: `PanelHandle`** (`components/common/PanelHandle.tsx`). The
+splitter is the control: a 1px line with a small rounded tab holding the arrow.
+
+- **Drag the line to resize; click the tab to collapse or restore.** A press
+  that moves less than 3px is a click, so a click never resizes and a drag
+  never collapses. The tab can be dragged too.
+- **A collapsed pane keeps its handle on the edge**, with the arrow turned
+  round, so it always comes back from where it went. No pane can vanish
+  leaving nothing on screen.
+- **Tab placement:** the top of a vertical edge, the right end of a horizontal
+  one.
+- **Keyboard and ARIA, the WAI-ARIA "window splitter" pattern:** the line is
+  `role="separator"`, focusable, with `aria-valuenow` (the pane's share, in
+  percent). The arrow keys along its axis resize it (10px, Shift for 50px),
+  Home and End take it to its limits, and Enter collapses and restores. The
+  tab is a `<button>` with `aria-expanded`, `aria-controls` (the pane) and a
+  label naming the action and the panel ("Collapse the code editor"). The tab
+  is the line's sibling, because a separator's children are presentational.
+- **Looks:** the line thickens to 3px `--pnv-primary` on hover, drag and
+  focus; the tab turns `--pnv-primary` on `--pnv-primary-tint`; keyboard focus
+  gets a 2px `--pnv-primary` ring. Its hit area is at least 24×24, wide rather
+  than tall (14×36 visible on a vertical edge, 40×14 on a horizontal one).
+- Used on: the code pane, the bottom (Inspector) panel, and the Components
+  panel's right edge (fold to the icon strip; that edge only folds, so only
+  the tab acts). The two splits are `components/layout/SplitPane.tsx`, which
+  replaced Allotment; stored sizes keep their proportions.
+
+**Rows and sections: the same arrow, turned** (`DisclosureArrow`, and
+`DisclosureDetails` for a native `<details>`, in
+`components/common/Disclosure.tsx`).
+
+- **`▸` closed, `▾` open:** the same chevron, turned 90° over 0.12s, in a box
+  at the start of the row (16px wide; 12px in a tight list).
+- **The whole row is the target**, and it is a real `<button>` (or a
+  `<summary>`) with `aria-expanded`. Hover tints it `--pnv-selection-hover`;
+  focus gets the 2px primary ring.
+- Used on: Inspector and Run panel sections, Run State, Settings sections and
+  lists, the Components tree, the Open and Tutorials menus, Validation, Model
+  Diagnostics, Developer tests and History steps.
+
+**The arrow points the way the content will move.** An open pane's arrow points
+to the edge it folds into; a collapsed pane's points into the window.
+
+**Not disclosures, and they keep their own marks:**
+
+- a menu trigger keeps its trailing `Label ▾` text (it opens a menu; it still
+  says `aria-expanded`);
+- composition `−` / `+` on the graph (collapse to a node, expand from one) are
+  graph operations, not panels; they carry `aria-expanded` too;
+- `⤵` (enter) and `▣` (inset) do not fold anything.
+
+**Never** a bordered square in a column of buttons (that is what made #414's
+strip chevron read as a palette button), and never a clickable `<div>`.
+
+`frontend/src/disclosureConventions.test.ts` holds the app to this: it fails on
+a toggle without `aria-expanded`, a `<div>` or `<span>` toggle, a ternary that
+picks between the old glyphs (`▶ ▼ ▸ ▾ ◀ › ⌄`) for open and closed, a raw
+`<details>`, or an Allotment splitter. `e2e/expand-collapse-standard.spec.ts`
+checks the handles and every listed fold with the mouse and the keyboard.
+
 ## Checklist for a new control
 
 - Is it a `<button>`? Then you are done.
@@ -155,6 +220,8 @@ changing what a click does.
 - Is the highlight trigger at least as large as the clickable area?
 - If hovering reveals it, does hovering *it* keep it revealed?
 - Repeated element? Use a CSS class, not `onMouseEnter`.
+- Does it fold something? Use `PanelHandle` (a panel edge) or `DisclosureArrow`
+  in a button with `aria-expanded` (a row), as above.
 
 ## History
 

@@ -60,12 +60,14 @@ test.describe("Components icon strip (#372, #395)", { tag: "@ci" }, () => {
     }
     const first = (await categories.first().boundingBox())!;
 
-    // The fold-out chevron is much smaller than a component icon, and says what it does.
+    // The fold-out is the arrow tab on the strip's right edge (#418), out of
+    // the icons' column, narrower than an icon, and it says what it does.
     const chevron = palette.getByTestId("palette-strip-expand");
     await expect(chevron).toHaveAttribute("title", "Show the full Components panel");
     const c = (await chevron.boundingBox())!;
     expect(c.width).toBeLessThan(first.width / 2);
-    expect(c.height).toBeLessThan(first.height / 2);
+    // It sits across the strip's edge, clear of the icons' column.
+    expect(c.x + c.width / 2).toBeGreaterThan(first.x + first.width);
     // The strip keeps its width and the icons their size.
     expect(first).toMatchObject({ width: 32, height: 32 });
     expect((await palette.boundingBox())!.width).toBe(48);

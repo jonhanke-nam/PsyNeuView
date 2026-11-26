@@ -163,6 +163,9 @@ export function GraphToolbar() {
           lineHeight: 1,
         }}
         title={paletteOpen ? "Hide object palette" : "Show object palette"}
+        // #418: it shows and hides a panel, so it says whether that panel is open.
+        aria-expanded={paletteOpen}
+        data-testid="palette-toggle"
       >
         {paletteOpen ? "◨" : "◧"}
       </button>
