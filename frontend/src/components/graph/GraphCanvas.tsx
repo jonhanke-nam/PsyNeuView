@@ -26,12 +26,14 @@ import {
   type OnNodeDrag,
   type Connection,
   type NodeChange,
+  type Node,
   addEdge,
 } from "@xyflow/react";
 import { useFitGraph } from "@/hooks/useFitGraph";
 import { computeShiftTable, shiftPosition, unshiftPosition } from "@/utils/viewTransform";
 
-import { useModelStore, type MechanismData, autoSizeGroups, fitFramesAndMakeRoom, usesFlatPositions } from "@/stores/modelStore";
+import { useModelStore, type MechanismData, autoSizeGroups, fitFramesAndMakeRoom, usesFlatPositions, NODE_WIDTH, NODE_HEIGHT } from "@/stores/modelStore";
+import { overlapNotice, separateOverlappingNodes } from "@/utils/nodeOverlap";
 import { recordAction } from "@/utils/history";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useStatusStore } from "@/stores/statusStore";
@@ -106,6 +108,9 @@ const edgeTypes = {
 };
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** #420: the overlap nudges already reported this session, by model and nodes moved. */
+const overlapNoticesShown = new Set<string>();
 
 function saveLayoutDebounced(filePath: string, nodes: any[]) {
   // Every move the user makes is saved through here: count it, so a layout
@@ -480,6 +485,57 @@ export function GraphCanvas() {
     });
     setEdges(displayEdges);
   }, [storeNodes, storeEdges, setNodes, setEdges, showProjectionLabels, showDimensions, schedulingArrows]);
+
+  // #420: nodes never overlap (#389, principle 3). When saved positions have
+  // just been applied, wait until the nodes are drawn (their sizes depend on
+  // the name, the tags shown and the outline), then nudge apart any two the
+  // saved positions put on top of each other. Only the store's nodes change:
+  // the layout file keeps what it says until the next layout change saves
+  // the positions on screen, as a drag does. Said once per nudge.
+  const savedLayoutSeq = useModelStore((s) => s.savedLayoutSeq);
+  useEffect(() => {
+    if (!savedLayoutSeq) return;
+    let frame = 0;
+    let frames = 0;
+    const settle = () => {
+      const onScreen = nodesRef.current;
+      const sized = (n: Node) => {
+        const m = getInternalNode(n.id)?.measured;
+        return m?.width && m?.height ? { w: m.width, h: m.height } : null;
+      };
+      const unsized = onScreen.some(
+        (n) => !n.hidden && (n.type === "mechanismNode" || n.type === "compositionNode") && !sized(n),
+      );
+      // Two frames for React Flow to measure what was just drawn; more only
+      // while some node still has no size.
+      if (++frames < 2 || (unsized && frames < 30)) {
+        frame = requestAnimationFrame(settle);
+        return;
+      }
+      const copies = onScreen.map((n) => ({ ...n }));
+      const moved = separateOverlappingNodes(copies, (n) => sized(n) ?? { w: NODE_WIDTH, h: NODE_HEIGHT });
+      if (moved.length === 0) return;
+      const at = new Map(copies.filter((n) => moved.includes(n.id)).map((n) => [n.id, n.position]));
+      const store = useModelStore.getState();
+      useModelStore.setState({
+        nodes: store.nodes.map((n) => (at.has(n.id) ? { ...n, position: at.get(n.id)! } : n)),
+      });
+      const labels = moved.map((id) => {
+        const n = copies.find((c) => c.id === id);
+        return String((n?.data as { label?: string } | undefined)?.label || id);
+      });
+      const key = `${store.filePath}|${moved.join(",")}`;
+      if (!overlapNoticesShown.has(key)) {
+        overlapNoticesShown.add(key);
+        useNotificationStore.getState().addNotification("info", overlapNotice(labels), {
+          key: "node-overlap-nudge",
+          durationMs: 8000,
+        });
+      }
+    };
+    frame = requestAnimationFrame(settle);
+    return () => cancelAnimationFrame(frame);
+  }, [savedLayoutSeq, getInternalNode]);
 
   // #346: fit the graph in view only when what is shown changes: a model
   // opened, a switch of view (nested or not, the composition shown or
