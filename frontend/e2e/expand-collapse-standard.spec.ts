@@ -50,7 +50,10 @@ async function expectTabClear(page: Page, tab: Locator) {
   const others = await page.evaluate(
     ({ h, tabId }) =>
       [...document.querySelectorAll("button, input, select, textarea, [role=button], .pnv-palette-tile")]
+        // A collapsed pane is visibility: hidden, and its controls keep their
+        // boxes; they are not on screen, so nothing is under the tab.
         .filter((el) => el.getAttribute("data-testid") !== tabId && !el.closest(".react-flow__viewport"))
+        .filter((el) => el.checkVisibility({ visibilityProperty: true, opacityProperty: true }))
         .map((el) => ({ el, r: el.getBoundingClientRect() }))
         .filter(({ r }) => r.width > 0 && r.height > 0 && r.x < h.x + h.width - 0.5 && h.x < r.x + r.width - 0.5 && r.y < h.y + h.height - 0.5 && h.y < r.y + r.height - 0.5)
         .map(({ el }) => el.getAttribute("data-testid") ?? el.getAttribute("title") ?? el.textContent?.trim().slice(0, 30)),
