@@ -112,12 +112,12 @@ async function setLayout(page: Page, style: "layered" | "showgraph") {
   await settled(page);
 }
 
-interface Line { id: string; ends: string; pts: { x: number; y: number }[] }
+interface Line { id: string; self: boolean; ends: string; pts: { x: number; y: number }[] }
 
 /** Every visible line, sampled every STEP flow units along its drawn path. */
 async function readLines(page: Page): Promise<Line[]> {
   return page.getByTestId("graph-canvas").locator(".react-flow__edge").evaluateAll((gs, STEP) => {
-    const out: { id: string; ends: string; pts: { x: number; y: number }[] }[] = [];
+    const out: { id: string; self: boolean; ends: string; pts: { x: number; y: number }[] }[] = [];
     for (const g of gs) {
       const path = g.querySelector("path.react-flow__edge-path") as SVGPathElement | null;
       if (!path) continue;
@@ -132,6 +132,7 @@ async function readLines(page: Page): Promise<Line[]> {
       pts.push({ x: q.x, y: q.y });
       out.push({
         id: (g.getAttribute("aria-label") ?? g.getAttribute("data-id") ?? "").replace(/^Edge from /, ""),
+        self: /^Edge from (.+) to \1$/.test(g.getAttribute("aria-label") ?? ""),
         ends: path.classList.contains("pnv-edge-showgraph") ? (path.getAttribute("data-showgraph-ends") ?? "") : "",
         pts,
       });
@@ -205,6 +206,10 @@ test("lines are smooth in every reference model, Layered and Like show_graph (#4
         }
         measured++;
         for (const line of drawn) {
+          // A node's projection to itself is drawn as a loop on the node
+          // (#425): it turns back by design, and selfLoop.test.ts and
+          // show-graph-edges.spec.ts check its shape.
+          if (line.self) continue;
           lines++;
           const s = smoothness(line.pts, { step: STEP });
           if (s.wiggles) problems.push(`${where}: ${line.id} has ${s.wiggles} wiggle(s), ripple ${s.ripple}`);
